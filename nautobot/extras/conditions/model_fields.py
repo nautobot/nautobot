@@ -19,7 +19,7 @@ from nautobot.extras.conditions.operators import KIND_BOOLEAN, KIND_DATE, KIND_L
 # What the operators compare against, keyed by what the serializer renders. Most specific first, because
 # `EmailField` is a `CharField` and `DateTimeField` is not a `DateField`. A field matching none of these
 # is left without a kind, which `operators_for_kind` reads as "offer everything".
-KINDS = (
+KIND_BY_SERIALIZER_FIELD = (
     ((serializers.BooleanField,), KIND_BOOLEAN),
     ((serializers.DateTimeField, serializers.DateField), KIND_DATE),
     ((serializers.IntegerField, serializers.FloatField, serializers.DecimalField), KIND_NUMBER),
@@ -44,16 +44,16 @@ def addressable_fields(*models):
     if not models:
         return []
     labels = [f"{model._meta.app_label}.{model._meta.model_name}" for model in models]
-    return reduce(_in_both, (_fields_of(model, labels) for model in models))
+    return reduce(_in_both, (_described_fields_of(model, labels) for model in models))
 
 
-def _fields_of(model, labels):
+def _described_fields_of(model, labels):
     # The context `serialize_object_v2` serializes with, so this lists what a record actually holds.
     serializer = get_serializer_for_model(model)(context={"request": None, "depth": 1, "exclude_m2m": False})
-    return [_describe(name, field, labels, model) for name, field in _payload_fields(serializer, model)]
+    return [_entry_for(name, field, labels, model) for name, field in _payload_fields(serializer, model)]
 
 
-def _values_url(model, name, related_model, labels):
+def _where_values_are_listed(model, name, related_model, labels):
     """Where a form can read the objects this relation can point at, or None if it cannot be reached.
 
     A relation whose choices the declaring model narrows, a status or a role, is asked for only the ones
@@ -110,13 +110,13 @@ def _model_field(model, name):
 
 
 def _kind_of(field):
-    for classes, kind in KINDS:
+    for classes, kind in KIND_BY_SERIALIZER_FIELD:
         if isinstance(field, classes):
             return kind
     return None
 
 
-def _describe(name, field, labels, model):
+def _entry_for(name, field, labels, model):
     described = {"name": name, "label": field.label or name}
     kind = _kind_of(field)
     if kind is not None:
@@ -127,13 +127,13 @@ def _describe(name, field, labels, model):
     nested = getattr(field, "fields", None)
     related_model = getattr(getattr(field, "Meta", None), "model", None)
     if nested is not None and related_model is not None:
-        values_url = _values_url(model, name, related_model, labels)
+        values_url = _where_values_are_listed(model, name, related_model, labels)
         if values_url is not None:
             described["values_url"] = values_url
         # One level only. A path that stops at a mapping matches nothing, so a relation inside a
         # relation is not worth offering.
         described["subfields"] = [
-            _describe(sub_name, sub_field, (), related_model)
+            _entry_for(sub_name, sub_field, (), related_model)
             for sub_name, sub_field in _payload_fields(field, related_model)
             if not _stands_for_another_object(sub_field)
         ]

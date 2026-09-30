@@ -286,14 +286,6 @@ FIELD_OPERATORS = tuple((operator.key, operator.label) for operator in OPERATORS
 FIELD_OPERATOR_KEYS = tuple(operator.key for operator in OPERATORS)
 
 
-_BY_KEY = {operator.key: operator for operator in OPERATORS}
-
-
-def operator_for(key):
-    """The operator a stored key names, or None when the table does not describe it."""
-    return _BY_KEY.get(key)
-
-
 def operators_for_kind(kind):
     """Return the operators meaningful for a value kind, for the form and save-time validation.
 

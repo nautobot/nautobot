@@ -31,7 +31,7 @@ from nautobot.extras.conditions.operators import (
     KIND_DATE,
     KIND_NUMBER,
     KIND_TEXT,
-    operator_for,
+    OPERATOR_REGISTRY,
     operators_for_kind,
     takes_a_set,
 )
@@ -244,7 +244,9 @@ def _build_operator_control(parameter, kind):
     does not describe stays on offer, as does everything when no kind is known.
     """
     allowed = {operator.key for operator in operators_for_kind(kind)}
-    offered = [(value, label) for value, label in parameter.choices if operator_for(value) is None or value in allowed]
+    offered = [
+        (value, label) for value, label in parameter.choices if value not in OPERATOR_REGISTRY or value in allowed
+    ]
     return _build_parameter_control(parameter, StaticSelect2(choices=add_blank_choice(offered)))
 
 
@@ -261,7 +263,7 @@ def _build_boolean_select():
 
 
 # The control a value gets from the kind of the field it is compared with, once nothing more specific
-# about that field applies. Mirrors `model_fields.KINDS`, which settles the kind in the first place.
+# about that field applies. Mirrors `model_fields.KIND_BY_SERIALIZER_FIELD`, which settles the kind in the first place.
 WIDGET_BY_FIELD_KIND = {
     KIND_BOOLEAN: _build_boolean_select,
     KIND_NUMBER: forms.NumberInput,
@@ -547,5 +549,5 @@ class ConditionRowForm(forms.Form):
             )
         )
         compares_with = _parameter_of_kind(preset, PARAM_KIND_CHOICE)
-        operator = operator_for(self._current_value(compares_with.name)) if compares_with else None
+        operator = OPERATOR_REGISTRY.get(self._current_value(compares_with.name)) if compares_with else None
         return target.compared_with(operator)
