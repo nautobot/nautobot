@@ -27,7 +27,7 @@ EMPTY_PANEL_TEXT = {
 
 
 class DeviceDetailTestCase:
-    """Tests that the Device detail page renders its expected panels and shows the device's data correctly."""
+    """Device detail view: heading, action buttons, panels, panel values and deferred rendering."""
 
     def test_heading_and_action_buttons(self, auth_page, base_url, created_device):
         """The heading shows the device's name, and the Add Components and Edit Device buttons are rendered."""
