@@ -77,7 +77,7 @@ dependencies = [
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "gitpython (>=3.1.62,<3.2)",
+    "gitpython (>=3.2.0,<3.3)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -134,7 +134,7 @@ dependencies = [
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
     # Enhanced HTTP client library
-    "urllib3 (>=2.7.0,<3.0.0)",
+    "urllib3 (>=2.8.0,<3.0.0)",
 ]
 
 [project.optional-dependencies]
