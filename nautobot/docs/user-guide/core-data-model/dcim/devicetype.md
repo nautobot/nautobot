@@ -57,4 +57,4 @@ Once component templates have been created, every new device that you create as 
     The Parent/child status field now supports a "Parent and Child" option which allows the modeling of more deeply nested [Device](device.md) hierarchies. The "Parent and Child" option for "Parent/child status" can be used for Devices between the topmost Parent and the last Child.
 
 +++ 3.3.0
-    The optional `depth`/`depth_unit` and `weight`/`weight_unit` fields have been added. Weight is also included when importing or exporting a device type in the [devicetype-library](https://github.com/nautobot/devicetype-library) YAML format.
+    The optional `depth`/`depth_unit` and `weight`/`weight_unit` fields have been added. They are also included when importing or exporting a single device type in the [devicetype-library](https://github.com/nautobot/devicetype-library) YAML or JSON format.

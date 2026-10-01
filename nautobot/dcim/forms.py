@@ -1024,6 +1024,8 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
             "part_number",
             "u_height",
             "is_full_depth",
+            "depth",
+            "depth_unit",
             "weight",
             "weight_unit",
             "subdevice_role",
@@ -1125,12 +1127,15 @@ class ModuleTypeForm(NautobotModelForm):
             "model",
             "module_family",
             "part_number",
+            "weight",
+            "weight_unit",
             "front_image",
             "rear_image",
             "comments",
             "tags",
         ]
         widgets = {
+            "weight_unit": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
             "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
             "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
@@ -1154,6 +1159,8 @@ class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
             "manufacturer",
             "model",
             "part_number",
+            "weight",
+            "weight_unit",
             "comments",
         ]
 
@@ -1163,10 +1170,16 @@ class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, label="Family")
     part_number = forms.CharField(required=False)
+    weight = forms.DecimalField(required=False, min_value=0, max_digits=8, decimal_places=2)
+    weight_unit = forms.ChoiceField(
+        choices=add_blank_choice(WeightUnitChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = ["module_family"]
+        nullable_fields = ["module_family", "weight", "weight_unit"]
 
 
 class ModuleTypeFilterForm(NautobotFilterForm):

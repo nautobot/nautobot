@@ -892,13 +892,19 @@ module_types = (
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
-        exclude = ("has_part_number", "has_comments")
+        exclude = ("has_part_number", "has_comments", "has_weight")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
     module_family = random_instance(ModuleFamily, allow_null=True)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    has_weight = NautobotBoolIterator()
+    weight = factory.Maybe(
+        "has_weight", factory.Faker("pydecimal", left_digits=2, right_digits=2, min_value=0, max_value=50), None
+    )
+    weight_unit = factory.Maybe("has_weight", factory.Faker("random_element", elements=WeightUnitChoices.values()), "")
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))

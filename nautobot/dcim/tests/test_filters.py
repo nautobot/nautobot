@@ -4550,11 +4550,20 @@ class ModuleTypeTestCase(FilterTestCases.FilterTestCase):
         ("module_bay_templates", "module_bay_templates__id"),
         ("module_family", "module_family__id"),
         ("module_family", "module_family__name"),
+        ("weight",),
+        ("weight_unit",),
     ]
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+        ModuleType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="Weighed Module Type",
+            weight=Decimal("0.45"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
 
     def test_compatible_with_module_bay(self):
         """Test filtering module types that are compatible with a specific module bay based on module family."""

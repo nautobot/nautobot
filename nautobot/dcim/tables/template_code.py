@@ -164,7 +164,7 @@ DEVICETYPE_DEPTH = """
 {% endif %}
 """
 
-DEVICETYPE_WEIGHT = """
+WEIGHT = """
 {% if record.weight is not None %}
     {{ record.weight }} {{ record.get_weight_unit_display }}
 {% else %}

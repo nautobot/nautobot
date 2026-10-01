@@ -1518,6 +1518,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
         "part_number": "ABC123",
         "comments": "changed comment",
     }
+    choices_fields = ["weight_unit"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1529,10 +1530,14 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
                 "model": "Module Type 1",
                 "part_number": "123456",
                 "comments": "test comment",
+                "weight": 0.5,
+                "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Module Type 2",
+                "weight": 2.25,
+                "weight_unit": WeightUnitChoices.UNIT_POUND,
             },
             {
                 "manufacturer": manufacturer_id,

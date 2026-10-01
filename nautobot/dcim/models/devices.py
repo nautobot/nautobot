@@ -257,6 +257,9 @@ class DeviceType(PrimaryModel):
                 ("comments", self.comments),
             )
         )
+        if self.depth is not None:
+            data["depth"] = self.depth
+            data["depth_unit"] = self.depth_unit
         if self.weight is not None:
             data["weight"] = float(self.weight)
             data["weight_unit"] = self.weight_unit
@@ -401,6 +404,13 @@ class DeviceType(PrimaryModel):
             raise ValidationError({"weight_unit": "Must specify a unit when setting a weight."})
         elif self.weight is None:
             self.weight_unit = ""
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert a float weight to a string to avoid floating-point precision errors."""
+        if isinstance(self.weight, float):
+            decimal_places = self._meta.get_field("weight").decimal_places
+            self.weight = f"{self.weight:.{decimal_places}f}"
+        super().clean_fields(exclude)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -1819,6 +1829,15 @@ class ModuleType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    weight = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Physical weight of the module",
+    )
+    weight_unit = models.CharField(max_length=50, choices=WeightUnitChoices, blank=True)
     front_image = models.ImageField(upload_to="moduletype-images", blank=True)
     rear_image = models.ImageField(upload_to="moduletype-images", blank=True)
     comments = models.TextField(blank=True)
@@ -1826,6 +1845,8 @@ class ModuleType(PrimaryModel):
     clone_fields = [
         "manufacturer",
         "module_family",
+        "weight",
+        "weight_unit",
     ]
 
     class Meta:
@@ -1886,6 +1907,22 @@ class ModuleType(PrimaryModel):
         self._original_front_image = self.front_image
         self._original_rear_image = self.rear_image
 
+    def clean(self):
+        super().clean()
+
+        # Validate weight and its unit
+        if self.weight is not None and not self.weight_unit:
+            raise ValidationError({"weight_unit": "Must specify a unit when setting a weight."})
+        elif self.weight is None:
+            self.weight_unit = ""
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert a float weight to a string to avoid floating-point precision errors."""
+        if isinstance(self.weight, float):
+            decimal_places = self._meta.get_field("weight").decimal_places
+            self.weight = f"{self.weight:.{decimal_places}f}"
+        super().clean_fields(exclude)
+
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
 
@@ -1905,6 +1942,9 @@ class ModuleType(PrimaryModel):
                 ("comments", self.comments),
             )
         )
+        if self.weight is not None:
+            data["weight"] = float(self.weight)
+            data["weight_unit"] = self.weight_unit
 
         # Component templates
         if self.console_port_templates.exists():

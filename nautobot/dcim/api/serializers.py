@@ -1501,6 +1501,7 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    weight_unit = ChoiceField(choices=WeightUnitChoices, allow_blank=True, required=False)
     front_image = serializers.ImageField(allow_null=True, required=False)
     rear_image = serializers.ImageField(allow_null=True, required=False)
 
