@@ -1,0 +1,2 @@
+Fixed duplication of form fields when a NautobotUIViewSet-based embedded "create" modal failed form validation.
+Fixed an exception being raised when viewing the detail view of an IPAddress with a null `parent`.
