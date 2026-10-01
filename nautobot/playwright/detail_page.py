@@ -79,7 +79,7 @@ class DetailPage(BasePage):
         expect(self.panel(title)).to_have_count(0)
 
     def expect_panel_to_contain(self, title, text):
-        """Assert (auto-retrying) that the panel titled *title* shows *text*, scoped to that one card."""
+        """Assert (auto-retrying) that in panel *title*, the row whose first cell is *key* shows *value* in its second cell."""
         expect(self.panel(title)).to_contain_text(text)
 
     def expect_panel_field(self, title, key, value):
