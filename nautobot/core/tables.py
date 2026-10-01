@@ -18,7 +18,7 @@ from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
-from django_tables2.utils import Accessor, OrderBy, OrderByTuple
+from django_tables2.utils import Accessor
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -454,46 +454,6 @@ class BaseTable(django_tables2.Table):
         """
         paths = self.serializer_paths_by_visible_column(serializer_class).values()
         return list(dict.fromkeys(path for path in paths if path))
-
-    @property
-    def order_by(self):
-        return self._order_by
-
-    @order_by.setter
-    def order_by(self, value):
-        """
-        Order the rows of the table based on columns.
-
-        Arguments:
-            value: iterable or comma separated string of order by aliases.
-        """
-        # The below block of code is copied from Table.order_by()
-        # due to limitations in directly calling parent class methods within a property setter.
-        # See Python bug report: https://bugs.python.org/issue14965
-
-        # collapse empty values to ()
-        order_by = () if not value else value
-        # accept string
-        order_by = order_by.split(",") if isinstance(order_by, str) else order_by
-        valid = []
-
-        for alias in order_by:
-            name = OrderBy(alias).bare
-            if name in self.columns and self.columns[name].orderable:
-                valid.append(alias)
-        self._order_by = OrderByTuple(valid)
-
-        # Nautobot-specific logic begins here
-        if self._order_by:
-            self.hide_hierarchy_ui = True
-            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "without_tree_fields"):
-                self.data.data = self.data.data.without_tree_fields()
-        elif not self.hide_hierarchy_ui:
-            if isinstance(self.data.data, QuerySet) and hasattr(self.data.data, "with_tree_fields"):
-                self.data.data = self.data.data.with_tree_fields()
-
-        # Resume base class implementation
-        self.data.order_by(self._order_by)
 
     def add_conditional_prefetch(self, table_field, db_column=None, prefetch=None):
         """Conditionally prefetch the specified database column if the related table field is visible.
