@@ -149,7 +149,7 @@ def create_object(api):
 
     The single factory behind every per-app `created_*` fixture:
 
-        parent = create_object("dcim/locations", name=name, location_type=lt["id"], status=status_id)
+        parent = create_object("dcim/locations/", name=name, location_type=lt["id"], status=status_id)
 
     Objects are deleted in reverse creation order at teardown. A 404 is expected and
     ignored, since a child may already have been removed by a parent's cascade delete.
@@ -160,9 +160,9 @@ def create_object(api):
     created = []
 
     def _create(endpoint, **fields):
-        response = api.post(f"/api/{endpoint}/", data=fields)
+        response = api.post(f"/api/{endpoint}", data=fields)
         if not response.ok:
-            pytest.fail(f"POST /api/{endpoint}/ returned {response.status}: {response.text()}")
+            pytest.fail(f"POST /api/{endpoint} returned {response.status}: {response.text()}")
         record = response.json()
         created.append((endpoint, record["id"]))
         return record
@@ -171,9 +171,9 @@ def create_object(api):
 
     failures = []
     for endpoint, pk in reversed(created):
-        response = api.delete(f"/api/{endpoint}/{pk}/")
+        response = api.delete(f"/api/{endpoint}{pk}/")
         if not response.ok and response.status != 404:
-            failures.append(f"DELETE /api/{endpoint}/{pk}/ returned {response.status}: {response.text()[:200]}")
+            failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
     if failures:
         pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
 
@@ -189,9 +189,9 @@ def api_count(api):
     """
 
     def _count(endpoint, **params):
-        response = api.get(f"/api/{endpoint}/", params={**params, "limit": 1})
+        response = api.get(f"/api/{endpoint}", params={**params, "limit": 1})
         if not response.ok:
-            pytest.fail(f"GET /api/{endpoint}/ returned {response.status}: {response.text()}")
+            pytest.fail(f"GET /api/{endpoint} returned {response.status}: {response.text()}")
         return response.json()["count"]
 
     return _count

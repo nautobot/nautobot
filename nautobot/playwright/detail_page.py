@@ -29,7 +29,8 @@ class DetailPage(BasePage):
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
-    # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0, which Playwright still counts as visible, so assert the count.
+    # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0,
+    # which Playwright still counts as visible, so assert the count.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
     # The placeholder's follow-up request.
     _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
@@ -82,7 +83,7 @@ class DetailPage(BasePage):
         expect(self.panel(title)).to_contain_text(text)
 
     def expect_panel_field(self, title, key, value):
-        """Assert (auto-retrying) that in panel title, the row whose first cell is key shows value in its second cell."""
+        """Assert (auto-retrying) that in panel *title*, the row whose first cell is *key* shows *value* in its second cell."""
         key_cell = self.page.locator("td:first-child").filter(has_text=re.compile(rf"^\s*{re.escape(key)}\s*$"))
         row = self.panel(title).locator("tr").filter(has=key_cell)
         expect(row.locator("td").nth(1)).to_contain_text(value)

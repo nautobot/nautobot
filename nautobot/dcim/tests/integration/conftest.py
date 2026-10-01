@@ -26,11 +26,11 @@ def created_location_tree(create_object, status_for):
     """
     unique = unique_name()
     status = status_for("dcim.location")["id"]
-    location_type = create_object("dcim/location-types", name=f"{unique}-type", nestable=True)
-    parent = create_object("dcim/locations", name=f"{unique}-parent", location_type=location_type["id"], status=status)
+    location_type = create_object("dcim/location-types/", name=f"{unique}-type", nestable=True)
+    parent = create_object("dcim/locations/", name=f"{unique}-parent", location_type=location_type["id"], status=status)
     children = [
         create_object(
-            "dcim/locations",
+            "dcim/locations/",
             name=f"{unique}-child-{index}",
             location_type=location_type["id"],
             status=status,
@@ -38,9 +38,9 @@ def created_location_tree(create_object, status_for):
         )
         for index in (1, 2)
     ]
-    decoy = create_object("dcim/locations", name=f"{unique}-decoy", location_type=location_type["id"], status=status)
+    decoy = create_object("dcim/locations/", name=f"{unique}-decoy", location_type=location_type["id"], status=status)
     decoy_child = create_object(
-        "dcim/locations",
+        "dcim/locations/",
         name=f"{unique}-decoy-child",
         location_type=location_type["id"],
         status=status,
@@ -52,7 +52,7 @@ def created_location_tree(create_object, status_for):
 @pytest.fixture
 def created_manufacturer(create_object):
     """A manufacturer owned by this test."""
-    return create_object("dcim/manufacturers", name=unique_name())
+    return create_object("dcim/manufacturers/", name=unique_name())
 
 
 @pytest.fixture
@@ -64,23 +64,23 @@ def created_device(create_object, status_for):
     """
     unique = unique_name()
     # Nautobot rejects a device whose location type does not list dcim.device in its content types.
-    location_type = create_object("dcim/location-types", name=f"{unique}-location-type", content_types=["dcim.device"])
+    location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
     location = create_object(
-        "dcim/locations",
+        "dcim/locations/",
         name=f"{unique}-location",
         location_type=location_type["id"],
         status=status_for("dcim.location")["id"],
     )
-    manufacturer = create_object("dcim/manufacturers", name=f"{unique}-manufacturer")
+    manufacturer = create_object("dcim/manufacturers/", name=f"{unique}-manufacturer")
     device_type = create_object(
-        "dcim/device-types",
+        "dcim/device-types/",
         model=f"{unique}-model",
         manufacturer=manufacturer["id"],
     )
-    role = create_object("extras/roles", name=f"{unique}-role", content_types=["dcim.device"])
+    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
     status = status_for("dcim.device")
     device = create_object(
-        "dcim/devices",
+        "dcim/devices/",
         name=unique,
         location=location["id"],
         device_type=device_type["id"],
@@ -101,6 +101,6 @@ def created_pdu(create_object, created_device):
     """created_device plus a power port and a power outlet. The Power Utilization panel renders only for a device with both."""
     device_id = created_device["device"]["id"]
     # The panel's first column header is "Input", so a port with that name would pass on the header alone.
-    power_port = create_object("dcim/power-ports", device=device_id, name="Inlet A")
-    power_outlet = create_object("dcim/power-outlets", device=device_id, name="Outlet A", power_port=power_port["id"])
+    power_port = create_object("dcim/power-ports/", device=device_id, name="Inlet A")
+    power_outlet = create_object("dcim/power-outlets/", device=device_id, name="Outlet A", power_port=power_port["id"])
     return {**created_device, "power_port": power_port, "power_outlet": power_outlet}

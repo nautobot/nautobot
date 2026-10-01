@@ -32,7 +32,7 @@ class ListViewFilterTestCase:
         locations.filter_by_parent(parent["name"])
 
         locations.expect_url_contains("parent=")
-        expected = api_count("dcim/locations", parent=parent["id"])
+        expected = api_count("dcim/locations/", parent=parent["id"])
         assert expected < total, "Applying the parent filter should narrow the list"
         locations.expect_row_count(expected)
         names = locations.get_column_values_by_header("Name")
