@@ -1,0 +1,1 @@
+Fixed issue where `nautobot-server -c` CLI argument shadowed subcommand arguments such as `nautobot-server shell -c`.

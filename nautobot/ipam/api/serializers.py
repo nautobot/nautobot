@@ -214,6 +214,8 @@ class PrefixSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Prefix
         fields = "__all__"
+        # The natural key's `network` and `prefix_length` are written together, as `prefix`
+        import_match_fields = ["prefix", "namespace"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "namespace": {"default": get_default_namespace},
@@ -320,6 +322,8 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = IPAddress
         fields = "__all__"
+        # The natural key's `host` is written as part of `address`, and `parent__namespace` as part of `parent`
+        import_match_fields = ["address", "parent"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "mask_length": {"read_only": True},
@@ -364,6 +368,8 @@ class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     class Meta:
         model = IPAddressRange
         fields = "__all__"
+        # The natural key's `start_host` is written as `start_address`, and `parent__namespace` as part of `parent`
+        import_match_fields = ["start_address", "parent"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "parent": {"required": False},

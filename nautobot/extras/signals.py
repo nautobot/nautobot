@@ -406,6 +406,50 @@ def _object_change_branch_name(instance):
     return DOLT_DEFAULT_BRANCH  # need to switch temporarily to the default `main` branch for this record
 
 
+def _m2m_clear_would_touch_anything(instance, through, reverse, model):
+    """
+    Determine whether an m2m_changed `pre_clear` for this relation is actually about to delete anything.
+
+    `m2m_changed` identifies the relation only by its `through` model, `reverse` direction, and the model
+    on the other side (`model`), not by field name, so the field first has to be found by matching those
+    against `instance`'s model. Matching `through` alone is not enough: distinct fields can share one
+    through model, distinguished only by `through_fields` (`VRF.devices`/`.virtual_machines`/
+    `.virtual_device_contexts`, or `Cable`'s several termination accessors) — `model`, which is always the
+    field's `related_model`, disambiguates them.
+
+    Once the field is found, checking *its own* manager for existing rows is not enough either: Django's
+    `.clear()` deletes by filtering the through model on the source side only (e.g. `vrf=<instance>`), not
+    also on the specific target column, whenever the target's own default queryset carries no filters of
+    its own (true for ordinary models) — see `ManyRelatedManager._build_remove_filters()`. So for fields
+    that share a through model, clearing one of them deletes every sibling relation's rows for this
+    instance too, even though that field's own manager reports nothing to clear. The no-op check has to
+    ask the same question `.clear()` will actually answer: does any row for this source exist in the
+    through model at all, not just for this specific field.
+    """
+    for field in instance._meta.get_fields():
+        if not getattr(field, "many_to_many", False) or field.concrete == reverse:
+            continue
+        if field.related_model is not model:
+            continue
+        field_through = getattr(field, "through", None) or getattr(field.remote_field, "through", None)
+        if field_through is not through:
+            continue
+        forward_field = field if field.concrete else field.field
+        try:
+            source_field_name = forward_field.m2m_reverse_field_name() if reverse else forward_field.m2m_field_name()
+        except AttributeError:
+            # Not a plain Django many-to-many (e.g. django-taggit's `TaggedItem`, which relates back to
+            # its tagged object through a GenericForeignKey rather than a named FK field). Such managers
+            # scope their own `.clear()` precisely to this instance, so the field's own manager already
+            # answers the right question.
+            accessor_name = field.name if field.concrete else field.get_accessor_name()
+            return getattr(instance, accessor_name).exists()
+        return through._default_manager.filter(**{source_field_name: instance}).exists()
+    # No matching field found (should not normally happen): assume there is something to clear, so the
+    # change is recorded rather than silently dropped.
+    return True
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -436,6 +480,22 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
             return
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
+        action = ObjectChangeActionChoices.ACTION_UPDATE
+    elif kwargs.get("action") == "pre_clear":
+        # `post_clear` fires after the relationship is already empty, so a `.clear()` on an already-empty
+        # relationship is indistinguishable from one that actually removed something. Checking here, before
+        # the clear happens, is the only way to tell a no-op clear from a real one. The instance isn't
+        # serialized yet, though: that has to wait for `post_clear`, once the relation actually reflects
+        # its new, empty state, so the verdict is stashed for that handler to read.
+        instance._m2m_clear_has_data = _m2m_clear_would_touch_anything(
+            instance, sender, kwargs.get("reverse", False), kwargs.get("model")
+        )
+        return
+    elif kwargs.get("action") == "post_clear":
+        if not instance.__dict__.pop("_m2m_clear_has_data", True):
+            # Nothing was cleared: no-op, so no change to record.
+            return
+        # Clearing a relationship sends no pk_set, but its empty state must still be recorded.
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
