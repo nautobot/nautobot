@@ -111,7 +111,7 @@ class ListPage(BasePage):
 
     @property
     def _edit_selected(self):
-        """Finds the Edit Selected button. Its formaction can end with the current filter, and unlike Edit All it has no name."""
+        """Selector for Edit Selected. The formaction carries the active filter, and it has no name."""
         return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
 
     def select_row(self, name):
@@ -132,7 +132,7 @@ class ListPage(BasePage):
         return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
 
     def apply_bulk_edit(self) -> str:
-        """Submit the form and return the job result id from the redirect URL."""
+        """Submit the form and return the job result ID once the redirect commits."""
         self.page.locator(self._BULK_EDIT_APPLY).click()
         self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
         return self._JOB_RESULT_URL.search(self.page.url).group("pk")

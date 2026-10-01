@@ -6,7 +6,7 @@ from nautobot.wireless.tests.integration.pages.radio_profiles_page import RadioP
 
 
 class RadioProfileTestCase:
-    """Playwright port of ``wireless/tests/selenium/test_radio_profile.py::RadioProfileTestCase``."""
+    """Bulk edit of radio profiles from the list view."""
 
     @pytest.mark.behavioral
     def test_radio_profile_bulk_edit(self, auth_page, base_url, api, created_radio_profile):
