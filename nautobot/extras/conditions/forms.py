@@ -225,21 +225,22 @@ def _mark_for_editor_script(widget, role, *, key=None, rebuild_index=None):
     return widget
 
 
-def _build_control(label, widget, *, help_text="", placeholder=None):
-    """Build a form field around `widget`. A `CharField` throughout, since nothing here validates."""
-    if help_text:
-        # As a tooltip: a stacked row gives each parameter one line, and a paragraph would undo that.
-        widget.attrs.setdefault("title", help_text)
+def _build_control(label, widget, *, placeholder=None):
+    """Build a form field around `widget`. A `CharField` throughout, since nothing here validates.
+
+    The `help_text` field for the parameter was intentionally omitted.
+    Parameters in the row are stacked vertically,so a sentence placed beneath each one
+    would double the row height by repeating the label content.
+    """
     return forms.CharField(
         label=label,
-        help_text=help_text,
         required=False,
         widget=_apply_bootstrap_styling(widget, label if placeholder is None else placeholder),
     )
 
 
 def _build_parameter_control(parameter, widget):
-    return _build_control(parameter.label, widget, help_text=parameter.help_text)
+    return _build_control(parameter.label, widget)
 
 
 def _build_operator_control(parameter, kind):
@@ -462,7 +463,6 @@ class ConditionRowForm(forms.Form):
             self.fields[parameter.name] = _build_control(
                 parameter.label,
                 _mark_for_editor_script(closed, ROLE_PATH, key=parameter.name),
-                help_text=parameter.help_text,
                 placeholder="",
             )
             return
