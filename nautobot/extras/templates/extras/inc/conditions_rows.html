@@ -1,15 +1,16 @@
 {% comment %}
-    The body of the conditions table, rebuilt whenever the JSON behind it changes.
+    What the conditions list holds, rebuilt whenever the JSON behind it changes. The list itself is in
+    `extras/inc/conditions_editor.html`, which is what HTMX swaps this into.
 {% endcomment %}
 
 {% if condition_rows_unreadable %}
-    {# `js/conditions_editor.js` looks for this class and stops writing the field while it is here. #}
-    <tr class="nb-conditions-unreadable" hx-history="false">
-        <td colspan="3" class="text-danger">{{ condition_rows_unreadable }} Fix it on the JSON tab, or replace it with an empty list.</td>
-    </tr>
+    {# `ui/src/js/conditions-editor.js` looks for this class and stops writing the field while it is here. #}
+    <p class="nb-conditions-unreadable text-danger" hx-history="false">
+        {{ condition_rows_unreadable }} Fix it on the JSON tab, or replace it with an empty list.
+    </p>
 {% else %}
     {% for row in condition_rows %}
-        {# `only`, so the one thing the row template needs is the one thing it is handed. #}
+        {# `only`, because the row template needs nothing but the form. #}
         {% include 'extras/inc/conditions_row.html' with form=row only %}
     {% endfor %}
 {% endif %}

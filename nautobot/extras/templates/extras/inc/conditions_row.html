@@ -1,59 +1,35 @@
+{% load form_helpers %}
+
 {% comment %}
-    One condition row, read as a sentence: negation and the condition type open it on the left, and its
-    parameters run down the right, one to a line. `ConditionRowForm` settles which controls there are,
-    so this file settles only how they sit, and a change of layout is a change of this file alone.
+    One condition, read as a sentence: negation and the condition type open it on the left, its
+    parameters run down the right, one to a line. `ConditionRowForm` chooses the controls, this file
+    only places them.
+
+    The two selects that open the sentence are written out rather than passed to `render_field`,
+    which would put a visible label in front of each and break the reading.
 {% endcomment %}
 
-<tr data-condition-index="{{ form.index }}" hx-history="false">
-    <td>
-        {% comment %}
-            Laid out one box in, so the cell stays a table cell and rules across the row join up. Each
-            control is boxed again because select2 swaps it for a container the row cannot size.
-        {% endcomment %}
-        <div class="nb-condition-kind">
-            <div class="nb-condition-negate">
-                <label class="visually-hidden" for="{{ form.negate.id_for_label }}">{{ form.negate.label }}</label>
-                {{ form.negate }}
-            </div>
-            <div class="nb-condition-type">
-                <label class="visually-hidden" for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
-                {{ form.type }}
-            </div>
-        </div>
-    </td>
-    <td>
-        {% for fault in form.row_faults %}
-            <p class="text-danger mb-6">{{ fault }}</p>
+<div class="nb-condition" data-nb-condition-index="{{ form.index }}" hx-history="false">
+    <div class="nb-condition-negate">
+        <label class="visually-hidden" for="{{ form.negate.id_for_label }}">{{ form.negate.label }}</label>
+        {{ form.negate }}
+    </div>
+    <div class="nb-condition-type">
+        <label class="visually-hidden" for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
+        {{ form.type }}
+    </div>
+    <div class="nb-condition-parameters">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% for control in form.parameter_controls %}
+            {% render_field control %}
         {% endfor %}
-        <div class="nb-condition-values">
-            {% for control, faults in form.parameter_controls %}
-                <label class="form-label" for="{{ control.id_for_label }}">{{ control.label }}</label>
-                <div>
-                    {{ control }}
-                    {% if control.help_text %}
-                        {% comment %}
-                            Shown as the control's `title`. Kept here too because Django points the
-                            control's `aria-describedby` at this id, and a reference that dangles is
-                            announced as nothing at all.
-                        {% endcomment %}
-                        <span class="visually-hidden" id="{{ control.auto_id }}_helptext">{{ control.help_text }}</span>
-                    {% endif %}
-                    {% if faults %}
-                        {# One box, because the control's `aria-describedby` names one id. #}
-                        <div id="{{ control.auto_id }}_error">
-                            {% for fault in faults %}
-                                <p class="text-danger mb-0 mt-2">{{ fault }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-    </td>
-    <td class="text-end">
-        <button type="button" class="btn btn-danger delete-row" title="Remove this condition">
+    </div>
+    <div class="nb-condition-remove">
+        <button type="button" class="btn btn-danger nb-delete-row" title="Remove this condition">
             <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
             <span class="visually-hidden">Remove this condition</span>
         </button>
-    </td>
-</tr>
+    </div>
+</div>

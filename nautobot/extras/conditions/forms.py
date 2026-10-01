@@ -1,26 +1,29 @@
 """The controls one condition row is edited with.
 
-A *control* is one editable box in a row.
+A control is one form field of a row, with the widget that renders it. Not `field`, which in a
+condition already means the model field being compared. Which widget a parameter gets follows from
+the field it names and the operator it compares with.
 
-Which control a parameter gets follows from what the row already names: the kind of the field it
-addresses and the operator it compares with. That rule lives here, beside the tables it reads, so the
-browser does not have to carry a second copy of it.
-
-Nothing here validates. A row's canonical value is the JSON the `conditions` field holds, and
-`validate_conditions` checks that on save.
+Nothing here validates. The row's value is the JSON the `conditions` field holds, checked on save by
+`validate_conditions`. What that refuses is put back on the controls as the form's own errors, so the
+editor shows it the way every other Nautobot form shows a refusal.
 """
 
 from dataclasses import dataclass, replace
 import json
 
 from django import forms
+from django.core.exceptions import NON_FIELD_ERRORS
+from django.forms.utils import ErrorDict
 from django.urls import reverse
 
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.utils import add_blank_choice
 from nautobot.core.forms.widgets import (
     APISelect,
     APISelectMultiple,
     ColorSelect,
+    ColorSelectMultiple,
     DatePicker,
     MultiValueCharInput,
     StaticSelect2,
@@ -41,14 +44,14 @@ from nautobot.extras.conditions.presets import (
     PARAM_KIND_CHOICE,
     PARAM_KIND_FIELD,
 )
-from nautobot.extras.conditions.validation import row_problems
+from nautobot.extras.conditions.validation import row_errors
 
 # What the type select calls a row holding a raw expression rather than a preset.
 EXPRESSION_LABEL = "Raw expression"
 
-# The two words a row can open with. Blank is "when", which is also how an un-negated row is stored.
-NEGATION_DEFAULT = "When"
-NEGATION_CHOICES = (("", NEGATION_DEFAULT), ("not", "When not"))
+# Both words carry a value, because Select2 takes a blank-valued option for its placeholder and hides it.
+NEGATION_PLACEHOLDER = "When / When not"
+NEGATION_CHOICES = (("", NEGATION_PLACEHOLDER), ("when", "When"), ("not", "When not"))
 
 # Said by the field select while the rule watches nothing, there being no fields to offer yet.
 PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
@@ -56,16 +59,14 @@ PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
 # The controls every row has, as against the ones its chosen type brings.
 CONTROLS_EVERY_ROW_HAS = ("type", "negate")
 
-# What a rendered control says about itself. `project-static/js/conditions_editor.js` reads these back
-# to rebuild the stored JSON, so the two files are one contract: rename a role on this side only and the
-# browser writes rows with a piece missing, saying nothing. `data-condition-index` completes the set,
-# written by hand in `extras/inc/conditions_row.html`, which is the one place it appears.
-ROLE_ATTR = "data-condition-role"
-KEY_ATTR = "data-condition-key"
-CAST_ATTR = "data-condition-cast"
+# What a rendered control says about itself. `ui/src/js/conditions-editor.js` reads these back, so a
+# role renamed on this side alone leaves rows written with a piece missing, and nothing complains.
+ROLE_ATTR = "data-nb-condition-role"
+KEY_ATTR = "data-nb-condition-key"
+CAST_ATTR = "data-nb-condition-cast"
 
-# A control's part in the row. `PATH` and `SUBFIELD` are the two halves of a field path, joined by a
-# dot when the row is written; `VALUE` is a parameter the preset declares; the rest are the row's own.
+# Where a control's answer lands in the stored row. `PATH`, `SUBFIELD` and `VALUE` go inside `values`,
+# a path being the two selects joined by a dot. `TYPE`, `NEGATE` and `SOURCE` are keys of the row itself.
 ROLE_TYPE = "type"
 ROLE_NEGATE = "negate"
 ROLE_SOURCE = "source"
@@ -77,31 +78,28 @@ ROLE_VALUE = "value"
 CAST_BOOLEAN = "boolean"
 
 
-class ColorSelectMultiple(ColorSelect, forms.SelectMultiple):
-    """`ColorSelect` for an operator that compares against several colors at once."""
-
-
 @dataclass(frozen=True)
-class Target:
-    """The field a row addresses, as far as choosing a control for its value goes.
+class ComparedField:
+    """The field a row compares, and how the operator compares it.
 
-    `values_url` and `key` are set only for a sub-field of a relation, being where the objects on the
-    other side are listed and which of their keys the condition compares.
+    `kind` is one of the value kinds `operators` declares, such as `text` or `date`. `picker` names a
+    form control the field asks for whatever its kind, which today is only a colour swatch. The two
+    URL fields address a relation's sub-field, and the two flags come from `compared_with`.
     """
 
     kind: str | None = None
-    widget: str | None = None
+    picker: str | None = None
     values_url: str | None = None
     key: str | None = None
     whole: bool = True
     many: bool = False
 
     def compared_with(self, operator):
-        """The same field, with `whole` and `many` settled by the operator that compares it.
+        """The same field, with the two flags only the operator decides.
 
-        `whole` is why a fragment match offers no list: the values that exist are no help when what is
-        matched is a piece of one. `many` is why a set operator offers several at once. A preset with no
-        operator of its own keeps the defaults, which are one whole value.
+        `whole` is a comparison against a complete value rather than part of one, `many` one against a
+        set. `operator` is an `operators.Operator`, or None where the row has not named one yet, which
+        counts as one whole value.
         """
         return replace(
             self,
@@ -111,34 +109,40 @@ class Target:
 
     @staticmethod
     def for_path(addressable, name, subname):
-        """What a field path names among `addressable`, or an empty target when it names nothing."""
+        """The field a dotted path such as `status.name` names, or an empty one when it names nothing.
+
+        Args:
+            addressable (list): `addressable_fields` for the watched models. Each entry is a dict
+                with a `name`, and perhaps `kind`, `widget`, `values_url` and `subfields`.
+            name (str): The half of the path before the dot, a field every watched model carries.
+            subname (str): The half after the dot, a subfield of that field's relation, or empty.
+        """
         top = next((entry for entry in addressable if entry["name"] == name), None)
         if top is None:
-            return Target()
+            return ComparedField()
         if not subname:
-            return Target(kind=top.get("kind"), widget=top.get("widget"))
+            return ComparedField(kind=top.get("kind"), picker=top.get("picker"))
         sub = next((entry for entry in top.get("subfields", ()) if entry["name"] == subname), None)
         if sub is None:
-            return Target()
-        return Target(kind=sub.get("kind"), widget=sub.get("widget"), values_url=top.get("values_url"), key=sub["name"])
+            return ComparedField()
+        return ComparedField(
+            kind=sub.get("kind"), picker=sub.get("picker"), values_url=top.get("values_url"), key=sub["name"]
+        )
 
     @property
     def values_worth_listing(self):
-        """Whether the values this field already holds are worth offering as a list.
+        """Whether to offer the values themselves instead of a box to type one into.
 
-        Only a sub-field of a relation has somewhere to read them from, and only one that reads as a
-        label is helped by seeing them. A date wants a calendar and a number a number box, however many
-        of each the objects on the other side happen to carry.
+        Only ever a sub-field of a relation, such as `status.name`, where the select lists the real
+        Status objects and stores the sub-field's value. `for_path` carries no `values_url` for the
+        relation on its own, a sub-field that is a date or a number gets the widget its kind asks for,
+        and a partial comparison such as `contains` wants typing rather than picking.
         """
         return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT))
 
 
 def _subfield_name(name):
-    """The second of the two selects a field parameter is edited through.
-
-    Internal to this form. The script pairs a path with its sub-field through `data-condition-key`,
-    never through this name.
-    """
+    """The second of the two selects a field parameter is edited through."""
     return f"{name}_subfield"
 
 
@@ -159,6 +163,18 @@ def _name_choices(entries):
     return add_blank_choice((entry["name"], entry["name"]) for entry in entries)
 
 
+def _subfield_choices(subfields):
+    """Sub-field names, with no blank among them.
+
+    A path that stops at a relation addresses a mapping, which nothing a condition compares can equal,
+    so there is no such thing as a relation with no sub-field chosen. `name` leads where there is one,
+    being what a reader of a change record recognises the related object by.
+    """
+    names = [entry["name"] for entry in subfields]
+    ordered = ["name", *(name for name in names if name != "name")] if "name" in names else names
+    return [(name, name) for name in ordered]
+
+
 def _condition_type_choices():
     """Every preset the catalog offers, plus the raw expression a row may hold instead of one."""
     return add_blank_choice(
@@ -170,17 +186,16 @@ def _condition_type_choices():
 
 
 def _apply_bootstrap_styling(widget, placeholder=""):
-    """Give a widget the Bootstrap class and placeholder `BootstrapMixin` gives every other form here.
+    """Give a widget the Bootstrap class and placeholder, which `BootstrapMixin` cannot reach here.
 
-    The mixin dresses the fields a form declares, and a row's are built after it has run, so it never
-    sees them. A select takes `data-placeholder` rather than the real one, because
-    `initializeSelect2Fields` overwrites that with `---------`. The editor reads ours from there.
+    It dresses the fields a form declares, and a row's are built after it has run.
     """
     classes = widget.attrs.get("class", "").split()
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
     if placeholder:
+        # A select takes `data-placeholder`: `initializeSelect2Fields` overwrites the real one.
         widget.attrs.setdefault("data-placeholder" if isinstance(widget, forms.Select) else "placeholder", placeholder)
     return widget
 
@@ -188,42 +203,32 @@ def _apply_bootstrap_styling(widget, placeholder=""):
 def _attrs_to_refetch_row(index):
     """What makes a control fetch its row again when it is changed.
 
-    Spelled out on every control that needs them rather than once on the row: `disableInheritance` is
-    set in `inc/javascript.html`, so nothing is picked up from an ancestor.
+    On every control that needs them, because `inc/javascript.html` sets `disableInheritance`.
     """
     return {
         "hx-get": reverse("extras:condition_row"),
         "hx-trigger": "change",
-        "hx-target": "closest tr",
+        "hx-target": "closest .nb-condition",
         "hx-swap": "outerHTML",
-        "hx-include": "closest tr, #id_content_types",
+        "hx-include": "closest .nb-condition, #id_content_types",
         "hx-vals": json.dumps({"index": index}),
     }
 
 
-def _mark_for_editor_script(widget, role, *, key=None, rebuild=None):
-    """Say what a control holds, so the browser can read the row back out of it.
-
-    `role` is what the row does with the value: `path` and `subfield` are the two halves of a field
-    path, `value` is a preset parameter, and `type`, `negate` and `source` are the row's own. `rebuild`
-    is the row's index, given only for a control whose value decides which controls follow it.
-    """
+def _mark_for_editor_script(widget, role, *, key=None, rebuild_index=None):
+    """Say what a control holds, and for one that changes the rest of the row, which row to fetch again."""
     widget.attrs[ROLE_ATTR] = role
     if key:
         widget.attrs[KEY_ATTR] = key
-    if rebuild is not None:
-        widget.attrs.update(_attrs_to_refetch_row(rebuild))
+    if rebuild_index is not None:
+        widget.attrs.update(_attrs_to_refetch_row(rebuild_index))
     return widget
 
 
 def _build_control(label, widget, *, help_text="", placeholder=None):
-    """Build a form field around `widget`, always a `CharField` because the widget is the point of it.
-
-    Nothing here validates, so no field needs a type of its own. The help text is hung on the control
-    as a tooltip as well: a stacked row gives each parameter one line, and a paragraph under every one
-    of them would undo that.
-    """
+    """Build a form field around `widget`. A `CharField` throughout, since nothing here validates."""
     if help_text:
+        # As a tooltip: a stacked row gives each parameter one line, and a paragraph would undo that.
         widget.attrs.setdefault("title", help_text)
     return forms.CharField(
         label=label,
@@ -238,11 +243,7 @@ def _build_parameter_control(parameter, widget):
 
 
 def _build_operator_control(parameter, kind):
-    """The operator select, narrowed to what the named field's kind can be compared with.
-
-    The parameter declares the choices and the operator table only takes away, so an operator the table
-    does not describe stays on offer, as does everything when no kind is known.
-    """
+    """The operator select, narrowed to what the named field's kind can be compared with."""
     allowed = {operator.key for operator in operators_for_kind(kind)}
     offered = [
         (value, label) for value, label in parameter.choices if value not in OPERATOR_REGISTRY or value in allowed
@@ -251,13 +252,9 @@ def _build_operator_control(parameter, kind):
 
 
 def _build_boolean_select():
-    """A true or false select that asks the browser for a real boolean.
-
-    `_equals` compares a boolean field only against a real boolean, never against the string a select
-    carries, so the cast happens before the row is written.
-    """
+    """The Yes or No select every other Nautobot form uses. The cast tells the browser to write a boolean."""
     return StaticSelect2(
-        choices=add_blank_choice((("true", "true"), ("false", "false"))),
+        choices=BOOLEAN_WITH_BLANK_CHOICES,
         attrs={CAST_ATTR: CAST_BOOLEAN},
     )
 
@@ -271,37 +268,30 @@ WIDGET_BY_FIELD_KIND = {
 }
 
 
-def _build_api_select(target, value):
+def _build_api_select(compared_field, value):
     """A select filled from the API. Its options' value is the key the condition compares, not the id."""
-    select = (APISelectMultiple if target.many else APISelect)(
-        api_url=target.values_url, choices=_options_for_chosen_values(value)
+    select = (APISelectMultiple if compared_field.many else APISelect)(
+        api_url=compared_field.values_url, choices=_options_for_chosen_values(value)
     )
-    select.attrs.update({"value-field": target.key, "display-field": target.key})
+    select.attrs.update({"value-field": compared_field.key, "display-field": compared_field.key})
     return select
 
 
-def _build_value_control(parameter, target, value):
-    """The control for a value compared against `target`, the most specific thing known about it first.
-
-    A field carrying a widget of its own beats one whose values can be listed, which beats an operator
-    taking several at once, which beats the kind of field it is on its own.
-    """
-    if target.widget == "color" and target.whole:
-        return _build_parameter_control(parameter, ColorSelectMultiple() if target.many else ColorSelect())
-    if target.values_worth_listing:
-        return _build_parameter_control(parameter, _build_api_select(target, value))
-    if target.many:
+def _build_value_control(parameter, compared_field, value):
+    """The control for a value compared against `compared_field`, most specific thing known about it first."""
+    if compared_field.picker == "color" and compared_field.whole:
+        return _build_parameter_control(parameter, ColorSelectMultiple() if compared_field.many else ColorSelect())
+    if compared_field.values_worth_listing:
+        return _build_parameter_control(parameter, _build_api_select(compared_field, value))
+    if compared_field.many:
         return _build_parameter_control(parameter, MultiValueCharInput(choices=_options_for_chosen_values(value)))
-    return _build_parameter_control(parameter, WIDGET_BY_FIELD_KIND.get(target.kind, forms.TextInput)())
+    return _build_parameter_control(parameter, WIDGET_BY_FIELD_KIND.get(compared_field.kind, forms.TextInput)())
 
 
 def _without_stale_values(data, prefix, triggered_by):
     """The request's data, minus what naming a different field has made meaningless.
 
-    A value compared against `status.name` says nothing once the row names `mtu` instead, so the
-    controls holding one are emptied rather than carried over. Naming a different field empties the
-    sub-field as well, that one having belonged to the relation just replaced. `triggered_by` is the
-    control the browser changed, which HTMX sends as `HX-Trigger-Name`.
+    `triggered_by` is the control the browser changed, which HTMX sends as `HX-Trigger-Name`.
     """
     if data is None or triggered_by is None:
         return data
@@ -328,7 +318,7 @@ def _stored_row_as_initial(row):
     """A stored row as a form's initial values. A dotted field path becomes the two selects that edit it."""
     if not row:
         return {}
-    negation = "not" if row.get("negate") else ""
+    negation = "not" if row.get("negate") else "when"
     if row.get("type") == ConditionTypeChoices.TYPE_EXPRESSION:
         return {
             "type": ConditionTypeChoices.TYPE_EXPRESSION,
@@ -352,22 +342,24 @@ def _stored_row_as_initial(row):
     return initial
 
 
-def faults_by_row_and_control(rows):
-    """What a save would refuse about each row, keyed by its position and then by the control to blame.
+def errors_by_row_and_control(rows):
+    """What a save would refuse about the stored condition rows, keyed by row and then by the control.
 
-    A complaint names the parameter or the row key at fault, and a control is named after whichever of
-    those it edits, so the two meet without either side guessing. The complaints are the ones
-    `validate_conditions` reports, so the editor cannot reach a different verdict than the save will.
+    The same complaints `validate_conditions` reports, so the editor cannot reach a different verdict.
+    A complaint naming no parameter is the row's own, and is keyed by `NON_FIELD_ERRORS`.
+
+    Args:
+        rows (list): The `conditions` field as stored, a list of condition row mappings.
     """
-    faults = {}
-    for index, error in row_problems(rows).items():
+    errors = {}
+    for index, error in row_errors(rows).items():
         by_control = {}
-        for problem in error.error_list:
-            params = getattr(problem, "params", None) or {}
-            control = params.get("parameter") or params.get("key")
-            by_control.setdefault(control, []).extend(problem.messages)
-        faults[index] = by_control
-    return faults
+        for message in error.error_list:
+            params = getattr(message, "params", None) or {}
+            control = params.get("parameter") or params.get("key") or NON_FIELD_ERRORS
+            by_control.setdefault(control, []).extend(message.messages)
+        errors[index] = by_control
+    return errors
 
 
 class ConditionRowForm(forms.Form):
@@ -383,79 +375,51 @@ class ConditionRowForm(forms.Form):
             names when it reports which row is at fault.
         addressable (list): `addressable_fields` for the object types the rule watches.
         row (dict): The stored row, for the first render, when no `data` has been sent yet.
-        faults (dict): What a save would refuse about this row, keyed by the control at fault.
+        errors (dict): What a save would refuse about this row, keyed by the control to blame.
         triggered_by (str): The control the browser changed, which decides what is no longer meant.
     """
 
-    def __init__(self, data=None, *, index, addressable=(), row=None, faults=None, triggered_by=None):
+    def __init__(self, data=None, *, index, addressable=(), row=None, errors=None, triggered_by=None):
         prefix = f"condition-{index}"
         super().__init__(
             data=_without_stale_values(data, prefix, triggered_by), prefix=prefix, initial=_stored_row_as_initial(row)
         )
         self.index = index
         self.addressable = list(addressable)
-        self.faults = dict(faults or {})
+        # The form shows what a save would refuse rather than deciding it, so it never cleans itself.
+        # Its errors are put in by hand, which needs the two places cleaning would otherwise fill.
+        self.cleaned_data = {}
+        self._errors = ErrorDict(renderer=self.renderer)
         self.fields["type"] = _build_control(
             "Condition type",
-            _mark_for_editor_script(StaticSelect2(choices=_condition_type_choices()), ROLE_TYPE, rebuild=index),
+            _mark_for_editor_script(StaticSelect2(choices=_condition_type_choices()), ROLE_TYPE, rebuild_index=index),
         )
         # The row reads as a sentence, so negation opens it rather than hiding in a box at the end.
         self.fields["negate"] = _build_control(
             "Negate",
             _mark_for_editor_script(StaticSelect2(choices=NEGATION_CHOICES), ROLE_NEGATE),
-            placeholder=NEGATION_DEFAULT,
+            placeholder=NEGATION_PLACEHOLDER,
         )
         self._add_chosen_controls(self._current_value("type"))
-        self._flag_faults()
+        chosen = set(self._chosen_control_names)
+        for name, messages in (errors or {}).items():
+            # Only a parameter control carries its own complaint. One about the type, or about a control
+            # the row no longer brings, has nowhere to sit, so the row says it on their behalf.
+            self.add_error(name if name in chosen else NON_FIELD_ERRORS, messages)
 
     @property
     def parameter_controls(self):
-        """The controls the chosen type brought with it, each with what a save would refuse about it.
-
-        A layout arranges these. Which ones there are is settled above, so a change of layout is a change
-        of template alone.
-        """
-        return [(self[name], self.faults.get(name, ())) for name in self._chosen_control_names]
-
-    @property
-    def row_faults(self):
-        """The faults no parameter control can carry, so that none goes unsaid.
-
-        A row is refused over its type, or over its values as a whole, as readily as over one parameter,
-        and neither of those has a control of its own to sit under.
-        """
-        placed = set(self._chosen_control_names)
-        return [message for name, messages in self.faults.items() if name not in placed for message in messages]
+        """The controls the chosen type brought, as against the two every row has."""
+        return [self[name] for name in self._chosen_control_names]
 
     @property
     def _chosen_control_names(self):
         return [name for name in self.fields if name not in CONTROLS_EVERY_ROW_HAS]
 
-    def _flag_faults(self):
-        """Mark every control a fault names, so it is red before its message is read, and announced.
-
-        `aria-describedby` is set here rather than left to Django, which builds it from the field's own
-        errors, and a fault is not one of those: it comes from a save that was refused, not from this
-        form cleaning itself. Both ids go in, because Django would otherwise have put the help text
-        there and an id nothing points at is announced as nothing.
-        """
-        for name in self.faults:
-            if name not in self.fields:
-                continue
-            field = self.fields[name]
-            described = [f"{self.auto_id % self.add_prefix(name)}_error"]
-            if field.help_text:
-                described.insert(0, f"{self.auto_id % self.add_prefix(name)}_helptext")
-            field.widget.attrs["class"] = f"{field.widget.attrs.get('class', '')} is-invalid".strip()
-            field.widget.attrs["aria-invalid"] = "true"
-            field.widget.attrs["aria-describedby"] = " ".join(described)
-
     def _current_value(self, name):
-        """The value this row already carries for one control.
+        """The value this row carries for one control, from the request or from `initial`.
 
-        Read before any control exists, because which ones exist depends on these values, so Django's
-        `BoundField.value()` is not available yet. A rebuild carries them in the request, a first render
-        in `initial`. Several come back as a list, `QueryDict.get` keeping only the last of them.
+        Read before any control exists, so `BoundField.value()` is not available yet.
         """
         if not self.is_bound:
             return self.initial.get(name, "")
@@ -466,11 +430,7 @@ class ConditionRowForm(forms.Form):
         return held[0] if held else ""
 
     def _add_chosen_controls(self, chosen):
-        """The controls the chosen type brings, beyond the two every row has.
-
-        A raw expression brings one. A preset brings one per parameter it declares, and the field and
-        the operator among them are read first, because they settle what the rest of them look like.
-        """
+        """The controls the chosen type brings, beyond the two every row has."""
         if chosen == ConditionTypeChoices.TYPE_EXPRESSION:
             self.fields["source"] = _build_control(
                 "Expression",
@@ -481,26 +441,22 @@ class ConditionRowForm(forms.Form):
         preset = get_condition_preset(chosen)
         if preset is None:
             return
-        target = self._target_this_row_compares(preset)
+        compared_field = self._field_this_row_compares(preset)
         for parameter in preset.parameters:
             if parameter.kind == PARAM_KIND_FIELD:
                 self._add_field_controls(parameter)
             elif parameter.kind == PARAM_KIND_CHOICE:
                 # The operator decides whether the value is typed or picked, so it fetches the row again.
-                control = _build_operator_control(parameter, target.kind)
-                _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name, rebuild=self.index)
+                control = _build_operator_control(parameter, compared_field.kind)
+                _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name, rebuild_index=self.index)
                 self.fields[parameter.name] = control
             else:
-                control = _build_value_control(parameter, target, self._current_value(parameter.name))
+                control = _build_value_control(parameter, compared_field, self._current_value(parameter.name))
                 _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name)
                 self.fields[parameter.name] = control
 
     def _add_field_controls(self, parameter):
-        """The field select, and a sub-field select when what it names is a relation.
-
-        Until an object type is chosen there is nothing to name, so the select says so and is closed
-        rather than offered empty. Being disabled, it never fires the change that would rebuild the row.
-        """
+        """The field select, and a sub-field select when what it names is a relation."""
         if not self.addressable:
             closed = StaticSelect2(choices=[("", PROMPT_FOR_OBJECT_TYPES)], attrs={"disabled": True})
             self.fields[parameter.name] = _build_control(
@@ -512,37 +468,42 @@ class ConditionRowForm(forms.Form):
             return
 
         control = _build_parameter_control(parameter, StaticSelect2(choices=_name_choices(self.addressable)))
-        _mark_for_editor_script(control.widget, ROLE_PATH, key=parameter.name, rebuild=self.index)
+        _mark_for_editor_script(control.widget, ROLE_PATH, key=parameter.name, rebuild_index=self.index)
         self.fields[parameter.name] = control
 
         subfields = self._subfields_of(self._current_value(parameter.name))
         if subfields:
-            self.fields[_subfield_name(parameter.name)] = _build_control(
+            choices = _subfield_choices(subfields)
+            name = _subfield_name(parameter.name)
+            self.fields[name] = _build_control(
                 "Sub-field",
                 _mark_for_editor_script(
-                    StaticSelect2(choices=_name_choices(subfields)),
+                    StaticSelect2(choices=choices),
                     ROLE_SUBFIELD,
                     key=parameter.name,
-                    rebuild=self.index,
+                    rebuild_index=self.index,
                 ),
+                placeholder="",
             )
+            # So the rendered select marks the one it is sending as chosen, rather than leaving the
+            # browser to fall back to the first and the two to disagree about what the row holds.
+            if self._current_value(name) not in dict(choices):
+                self.initial[name] = choices[0][0]
+                if self.is_bound:
+                    self.data = self.data.copy()
+                    self.data[self.add_prefix(name)] = choices[0][0]
 
     def _subfields_of(self, name):
         entry = next((entry for entry in self.addressable if entry["name"] == name), None)
         return entry.get("subfields", ()) if entry else ()
 
-    def _target_this_row_compares(self, preset):
-        """The field this row names, as the operator it names sees it.
-
-        Neither half answers anything alone. The field says what kind of value is being compared and
-        where its own values can be read, the operator says whole or fragment and one or several, and
-        only the two together decide what the value control is.
-        """
+    def _field_this_row_compares(self, preset):
+        """The field this row names, as the operator it names sees it. Neither decides alone."""
         named = _parameter_of_kind(preset, PARAM_KIND_FIELD)
-        target = (
-            Target()
+        compared_field = (
+            ComparedField()
             if named is None
-            else Target.for_path(
+            else ComparedField.for_path(
                 self.addressable,
                 self._current_value(named.name),
                 self._current_value(_subfield_name(named.name)),
@@ -550,4 +511,4 @@ class ConditionRowForm(forms.Form):
         )
         compares_with = _parameter_of_kind(preset, PARAM_KIND_CHOICE)
         operator = OPERATOR_REGISTRY.get(self._current_value(compares_with.name)) if compares_with else None
-        return target.compared_with(operator)
+        return compared_field.compared_with(operator)

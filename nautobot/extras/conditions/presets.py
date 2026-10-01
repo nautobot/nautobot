@@ -294,7 +294,7 @@ FIELD_COMPARE = ConditionPreset(
             name="value",
             label="Value",
             multiple=True,
-            help_text="Value to compare against. A set of values for `in`, and for `=` on a many-valued field.",
+            help_text="Value to compare against. Several for `in`, or for `=` on a list field such as tags.",
         ),
     ),
     example_values={"field": "mtu", "operator": "gt", "value": 9000},

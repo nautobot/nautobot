@@ -17,8 +17,3 @@
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' %}
 {% endblock form %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script src="{% versioned_static 'js/conditions_editor.js' %}" onerror="nb.media.handleFailure(this)"></script>
-{% endblock javascript %}

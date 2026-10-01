@@ -1446,6 +1446,48 @@ textarea {
   }
 }
 
+/*
+ * One condition of an event rule, laid out as a sentence: negation and the condition type, then the
+ * parameters running down beside them. Every condition is a subgrid of the list, so a control lines
+ * up with the same control in the condition above without being given a width.
+ */
+.nb-conditions {
+  column-gap: map.get($spacers, 10);
+  display: grid;
+  /* The parameters hold a label and a control apiece, so they are given twice the type select's share. */
+  grid-template-columns: max-content minmax(0, 1fr) minmax(0, 2fr) max-content;
+}
+
+.nb-condition {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  padding-block: map.get($spacers, 12);
+
+  & + & {
+    border-top: $border-width $border-style var(--#{$prefix}border-color);
+  }
+
+  /* Select2 replaces the control with a container that has no width of its own. */
+  .select2-container {
+    width: 100%;
+  }
+
+  /* Each part starts at the top rather than centring on the tallest. */
+  > * {
+    align-self: start;
+  }
+}
+
+.nb-condition-remove {
+  justify-self: end;
+}
+
+/* Stands in for the whole list when the stored JSON cannot be read. */
+.nb-conditions-unreadable {
+  grid-column: 1 / -1;
+}
+
 .nb-form-sticky-footer {
   @include transition($transition-base);
   align-items: center;

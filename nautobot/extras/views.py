@@ -101,7 +101,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
-from nautobot.extras.conditions.forms import ConditionRowForm, faults_by_row_and_control
+from nautobot.extras.conditions.forms import ConditionRowForm, errors_by_row_and_control
 from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
@@ -3573,19 +3573,19 @@ class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
     """
 
     def post(self, request):
-        rows, unreadable = self._rows_from_json(request.POST.get("conditions"))
+        stored_rows, unreadable = self._rows_from_json(request.POST.get("conditions"))
         addressable = _addressable_fields_for(request.POST)
-        # Faults are asked for in the query string because the body is the editor's own inputs, sent
-        # whole by `hx-include`. Only once a save has been refused: until then a row half filled in is
-        # a row being filled in, not a mistake.
-        faults = faults_by_row_and_control(rows) if request.GET.get("validate") else {}
+        # In the query string, because the body is the editor's own inputs. Only once a save was refused.
+        refused = errors_by_row_and_control(stored_rows) if request.GET.get("validate") else {}
+        # A form with nothing on it still offers one row, the way the other repeating forms here do.
+        # That row stands for nothing stored, so it is added for rendering and never validated.
         return render(
             request,
             "extras/inc/conditions_rows.html",
             {
                 "condition_rows": [
-                    ConditionRowForm(index=index, addressable=addressable, row=row, faults=faults.get(index))
-                    for index, row in enumerate(rows)
+                    ConditionRowForm(index=index, addressable=addressable, row=row, errors=refused.get(index))
+                    for index, row in enumerate(stored_rows or [None])
                 ],
                 "condition_rows_unreadable": unreadable,
             },
@@ -3595,21 +3595,19 @@ class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
     def _rows_from_json(conditions):
         """The stored rows, and why the field could not be read as rows at all when it could not.
 
-        This is the coarsest of the three ways this feature reports a fault, above `row_problems`,
-        which blames a row, and `faults_by_row_and_control`, which blames a control. Here there are no
-        rows to blame, so the editor shows the one message in place of the table.
-
-        A form with nothing on it still offers one row, the way the other repeating forms here do.
+        This is the coarsest of the three ways this feature reports a fault, above `row_errors`,
+        which blames a row, and `errors_by_row_and_control`, which blames a control. Here there are no
+        rows to blame, so the editor shows the one message in place of the rows.
         """
         try:
-            stored = json.loads(conditions or "[]")
+            stored_rows = json.loads(conditions or "[]")
         except json.JSONDecodeError as error:
             return [], f"The JSON tab does not parse: {error}."
-        if not isinstance(stored, list):
+        if not isinstance(stored_rows, list):
             return [], "The JSON tab holds something that is not a list of conditions."
-        if not all(isinstance(row, dict) for row in stored):
+        if not all(isinstance(row, dict) for row in stored_rows):
             return [], "The JSON tab holds a list, but something in it is not a condition."
-        return stored or [None], None
+        return stored_rows, None
 
 
 class ConditionsViewMixin:
