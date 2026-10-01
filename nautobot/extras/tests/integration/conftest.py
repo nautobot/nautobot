@@ -1,5 +1,9 @@
 """Extras Playwright fixtures: thin named fixtures over the shared `create_object` factory."""
 
+# pytest injects fixtures by parameter name, so a fixture that consumes another one
+# deliberately shadows it; pylint reads that as redefinition.
+# pylint: disable=redefined-outer-name
+
 import pytest
 
 from nautobot.playwright.helpers import unique_name
