@@ -1454,8 +1454,11 @@ textarea {
 .nb-conditions {
   column-gap: map.get($spacers, 10);
   display: grid;
-  /* The parameters hold a label and a control apiece, so they are given twice the type select's share. */
-  grid-template-columns: max-content minmax(0, 1fr) minmax(0, 2fr) max-content;
+  /*
+   * Shares, not content. Every condition is a subgrid of this grid, so a content sized track takes
+   * its width from the widest row, and picking `not When` in one would shift the type select in all.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 4fr) max-content;
 }
 
 .nb-condition {

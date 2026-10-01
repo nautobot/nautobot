@@ -49,9 +49,9 @@ from nautobot.extras.conditions.validation import row_errors
 # What the type select calls a row holding a raw expression rather than a preset.
 EXPRESSION_LABEL = "Raw expression"
 
-# Both words carry a value, because Select2 takes a blank-valued option for its placeholder and hides it.
-NEGATION_PLACEHOLDER = "When / When not"
-NEGATION_CHOICES = (("", NEGATION_PLACEHOLDER), ("when", "When"), ("not", "When not"))
+# Both words carry a value, because Select2 takes a blank-valued option for its placeholder, which
+# greys it out and drops it from the list, leaving nothing to choose to go back to.
+NEGATION_CHOICES = (("when", "When"), ("not", "not When"))
 
 # Said by the field select while the rule watches nothing, there being no fields to offer yet.
 PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
@@ -399,7 +399,7 @@ class ConditionRowForm(forms.Form):
         self.fields["negate"] = _build_control(
             "Negate",
             _mark_for_editor_script(StaticSelect2(choices=NEGATION_CHOICES), ROLE_NEGATE),
-            placeholder=NEGATION_PLACEHOLDER,
+            placeholder="",
         )
         self._add_chosen_controls(self._current_value("type"))
         chosen = set(self._chosen_control_names)
