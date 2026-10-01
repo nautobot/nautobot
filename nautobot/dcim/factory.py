@@ -32,6 +32,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.component_creation import SkipAutoComponentCreation
 from nautobot.dcim.constants import (
@@ -365,8 +366,10 @@ class DeviceTypeFactory(PrimaryModelFactory):
         model = DeviceType
         exclude = (
             "has_comments",
+            "has_depth",
             "has_device_family",
             "has_part_number",
+            "has_weight",
             "is_subdevice_child",
         )
 
@@ -399,6 +402,18 @@ class DeviceTypeFactory(PrimaryModelFactory):
     u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
     is_full_depth = NautobotBoolIterator()
+
+    has_depth = NautobotBoolIterator()
+    depth = factory.Maybe("has_depth", factory.Faker("pyint", min_value=1, max_value=1200), None)
+    depth_unit = factory.Maybe(
+        "has_depth", factory.Faker("random_element", elements=RackDimensionUnitChoices.values()), ""
+    )
+
+    has_weight = NautobotBoolIterator()
+    weight = factory.Maybe(
+        "has_weight", factory.Faker("pydecimal", left_digits=3, right_digits=2, min_value=0, max_value=500), None
+    )
+    weight_unit = factory.Maybe("has_weight", factory.Faker("random_element", elements=WeightUnitChoices.values()), "")
 
     # If randomly a subdevice, also set subdevice_role to "child" or "parent-child". We might want to reconsider this.
     subdevice_role = factory.Maybe(

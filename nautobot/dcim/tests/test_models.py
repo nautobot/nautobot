@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
+import yaml
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core import settings
@@ -33,7 +34,9 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
@@ -2966,6 +2969,57 @@ class DeviceBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
                 )
                 template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template OK")
                 template.full_clean()
+
+
+class DeviceTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceType
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.manufacturer = Manufacturer.objects.first()
+
+    def test_depth_and_weight_require_unit(self):
+        """A depth or weight set without a unit is rejected."""
+        for field, value in (("depth", 600), ("weight", Decimal("12.50"))):
+            with self.subTest(field=field):
+                device_type = DeviceType(manufacturer=self.manufacturer, model=f"No {field} unit", **{field: value})
+                with self.assertRaises(ValidationError) as cm:
+                    device_type.full_clean()
+                self.assertIn(f"{field}_unit", cm.exception.message_dict)
+
+    def test_unit_without_value_is_cleared(self):
+        """A depth or weight unit set without a value is discarded."""
+        device_type = DeviceType(
+            manufacturer=self.manufacturer,
+            model="Units only",
+            depth_unit=RackDimensionUnitChoices.UNIT_INCH,
+            weight_unit=WeightUnitChoices.UNIT_POUND,
+        )
+        device_type.validated_save()
+        self.assertEqual(device_type.depth_unit, "")
+        self.assertEqual(device_type.weight_unit, "")
+
+    def test_to_yaml_weight(self):
+        """The devicetype-library YAML export includes the weight when set, and never the depth."""
+        device_type = DeviceType.objects.create(
+            manufacturer=self.manufacturer,
+            model="Weighed",
+            depth=600,
+            depth_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+            weight=Decimal("12.50"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        data = yaml.safe_load(device_type.to_yaml())
+        self.assertEqual(data["weight"], 12.5)
+        self.assertEqual(data["weight_unit"], WeightUnitChoices.UNIT_KILOGRAM)
+        self.assertNotIn("depth", data)
+        self.assertNotIn("depth_unit", data)
+
+        device_type.weight = None
+        device_type.validated_save()
+        data = yaml.safe_load(device_type.to_yaml())
+        self.assertNotIn("weight", data)
+        self.assertNotIn("weight_unit", data)
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):

@@ -24,7 +24,7 @@ from nautobot.dcim.models import (
     PowerPortTemplate,
     RearPortTemplate,
 )
-from nautobot.dcim.tables.template_code import DeviceComponentNameColumn
+from nautobot.dcim.tables.template_code import DeviceComponentNameColumn, DEVICETYPE_DEPTH, DEVICETYPE_WEIGHT
 
 __all__ = (
     "ConsolePortTemplateTable",
@@ -116,6 +116,8 @@ class DeviceTypeTable(BaseTable):
     model = tables.Column(linkify=True, verbose_name="Device Type")
     device_family = tables.Column(linkify=True)
     is_full_depth = BooleanColumn(verbose_name="Full Depth")
+    depth = tables.TemplateColumn(template_code=DEVICETYPE_DEPTH)
+    weight = tables.TemplateColumn(template_code=DEVICETYPE_WEIGHT)
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
         url_params={"device_type": "pk"},
@@ -134,6 +136,8 @@ class DeviceTypeTable(BaseTable):
             "part_number",
             "u_height",
             "is_full_depth",
+            "depth",
+            "weight",
             "subdevice_role",
             "device_count",
             "tags",

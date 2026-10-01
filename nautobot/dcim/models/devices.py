@@ -26,8 +26,10 @@ from nautobot.dcim.choices import (
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     DeviceUniquenessChoices,
+    RackDimensionUnitChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
 from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
@@ -181,6 +183,17 @@ class DeviceType(PrimaryModel):
         verbose_name="Is full depth",
         help_text="Device consumes both front and rear rack faces",
     )
+    depth = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Physical depth of the device")
+    depth_unit = models.CharField(max_length=50, choices=RackDimensionUnitChoices, blank=True)
+    weight = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Physical weight of the device",
+    )
+    weight_unit = models.CharField(max_length=50, choices=WeightUnitChoices, blank=True)
     # todoindex:
     subdevice_role = models.CharField(
         max_length=50,
@@ -205,6 +218,10 @@ class DeviceType(PrimaryModel):
         "manufacturer",
         "u_height",
         "is_full_depth",
+        "depth",
+        "depth_unit",
+        "weight",
+        "weight_unit",
         "subdevice_role",
     ]
 
@@ -240,6 +257,9 @@ class DeviceType(PrimaryModel):
                 ("comments", self.comments),
             )
         )
+        if self.weight is not None:
+            data["weight"] = float(self.weight)
+            data["weight_unit"] = self.weight_unit
 
         # Component templates
         if self.console_port_templates.exists():
@@ -371,6 +391,16 @@ class DeviceType(PrimaryModel):
 
         if self.u_height and self.is_child_device:
             raise ValidationError({"u_height": "Child device types must be 0U."})
+
+        # Validate depth/weight and their units
+        if self.depth is not None and not self.depth_unit:
+            raise ValidationError({"depth_unit": "Must specify a unit when setting a depth."})
+        elif self.depth is None:
+            self.depth_unit = ""
+        if self.weight is not None and not self.weight_unit:
+            raise ValidationError({"weight_unit": "Must specify a unit when setting a weight."})
+        elif self.weight is None:
+            self.weight_unit = ""
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

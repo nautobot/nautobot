@@ -1,4 +1,5 @@
 # pylint: disable=no-member  # it doesn't recognize the class attributes assigned in common_test_data()
+from decimal import Decimal
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -26,6 +27,7 @@ from nautobot.dcim.choices import (
     RackTypeChoices,
     RackWidthChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
@@ -1446,6 +1448,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cus
         ("console_port_templates", "console_port_templates__name"),
         ("console_server_port_templates", "console_server_port_templates__id"),
         ("console_server_port_templates", "console_server_port_templates__name"),
+        ("depth",),
+        ("depth_unit",),
         ("device_bay_templates", "device_bay_templates__id"),
         ("device_bay_templates", "device_bay_templates__name"),
         ("device_family", "device_family__id"),
@@ -1469,6 +1473,8 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cus
         ("software_image_files", "software_image_files__id"),
         ("software_image_files", "software_image_files__image_file_name"),
         ("u_height",),
+        ("weight",),
+        ("weight_unit",),
     ]
 
     @classmethod
@@ -1483,6 +1489,10 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cus
             part_number="Part Number 4",
             u_height=4,
             is_full_depth=True,
+            depth=600,
+            depth_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+            weight=Decimal("12.50"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
         )
         device_type.tags.set(Tag.objects.get_for_model(DeviceType))
 
