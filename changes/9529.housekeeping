@@ -1,1 +1,1 @@
-Replaced the Selenium authentication test with a Playwright AuthenticationEnforcedTestCase.
+Added a Playwright `AuthenticationEnforcedTestCase` and moved the Django test-client view-authentication sweep into `test_views.py` as a unit test.

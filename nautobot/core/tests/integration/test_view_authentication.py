@@ -17,12 +17,10 @@ PROTECTED_UI_VIEWS = (
 API_ROOT = "/api/"
 
 
-# Drops the session login state from `browser_context_args`, so the standard `page`
-# fixture arrives logged out while keeping the base URL, the debug-toolbar header,
-# and `--tracing`/`--screenshot`.
+# storage_state=None drops the session login, so page arrives logged out.
 @pytest.mark.browser_context_args(storage_state=None)
 class AuthenticationEnforcedTestCase:
-    """A chosen sample of protected views (home, a list, a detail, the API root) is not served to an anonymous browser."""
+    """A chosen sample of protected views (home, a list, a detail, the API root) is refused to an anonymous browser."""
 
     @pytest.mark.parametrize("path", PROTECTED_UI_VIEWS)
     def test_ui_view_redirects_anonymous_request_to_login(self, page, base_url, path):
