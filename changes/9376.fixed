@@ -1,0 +1,1 @@
+Fixed VLAN Group detail view not allowing pagination through available and assigned VLANs.
