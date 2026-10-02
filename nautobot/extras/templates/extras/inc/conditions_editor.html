@@ -43,7 +43,7 @@
         <div class="nb-conditions"
              id="conditions-rows"
              hx-post="{% url 'extras:condition_rows' %}{% if form.conditions.errors %}?validate=1{% endif %}"
-             hx-trigger="load, conditions:reload"
+             hx-trigger="load, nb-conditions:reload"
              hx-target="this"
              hx-swap="innerHTML"
              hx-include="#id_conditions, #id_content_types"></div>
@@ -56,7 +56,11 @@
         <button type="button"
                 class="btn btn-primary nb-add-row"
                 id="conditions-add"
-                data-nb-row-url="{% url 'extras:condition_row' %}">
+                hx-get="{% url 'extras:condition_row' %}"
+                hx-target="#conditions-rows"
+                hx-swap="beforeend"
+                hx-include="#id_content_types"
+                hx-vals="js:{index: window.nb.conditions.nextIndex()}">
             <span class="mdi mdi-plus-thick me-4" aria-hidden="true"></span>Add another Condition
         </button>
     </div>

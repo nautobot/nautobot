@@ -16,9 +16,8 @@ const Role = {
 };
 const CAST_BOOLEAN = 'boolean';
 
-/* Written by hand, in `extras/inc/conditions_row.html` and `extras/inc/conditions_editor.html`. */
+/* Written by hand, in `extras/inc/conditions_row.html`. */
 const INDEX_ATTRIBUTE = 'data-nb-condition-index';
-const ROW_URL_ATTRIBUTE = 'data-nb-row-url';
 
 const CONDITION_CLASS = 'nb-condition';
 const REMOVE_BUTTON_CLASS = 'nb-delete-row';
@@ -27,7 +26,7 @@ const REMOVE_BUTTON_CLASS = 'nb-delete-row';
 const UNREADABLE_CLASS = 'nb-conditions-unreadable';
 
 /* Dispatched on the list whenever the rows have to be drawn from the field again. */
-const RELOAD_EVENT = 'conditions:reload';
+const RELOAD_EVENT = 'nb-conditions:reload';
 
 /* On the form while the rows are drawn from the field. They show less than it holds, so they must not write back. */
 const DRAWING_ATTRIBUTE = 'data-nb-drawing';
@@ -48,7 +47,6 @@ export const initializeConditionsEditor = () => {
 
   const contentTypes = document.getElementById('id_content_types');
   const counter = document.getElementById('conditions-count');
-  const rowUrl = addButton.getAttribute(ROW_URL_ATTRIBUTE);
 
   const setDrawing = (drawing) => field.form.setAttribute(DRAWING_ATTRIBUTE, String(drawing));
   const isDrawing = () => field.form.getAttribute(DRAWING_ATTRIBUTE) === 'true';
@@ -103,7 +101,10 @@ export const initializeConditionsEditor = () => {
     field.value = JSON.stringify(rows, null, 4);
   };
 
-  /* One past the highest in use, so a row removed from the middle never lends its index to a new one. */
+  /*
+   * One past the highest in use, so a row removed from the middle never lends its index to a new one.
+   * The add button asks for this through `hx-vals`, which is why it is published on `window.nb`.
+   */
   const nextIndex = () => {
     const used = [...list.children].map((line) => Number(line.getAttribute(INDEX_ATTRIBUTE))).filter(Number.isInteger);
     return used.length ? Math.max(...used) + 1 : 0;
@@ -124,9 +125,6 @@ export const initializeConditionsEditor = () => {
     const count = list.querySelectorAll(`.${CONDITION_CLASS}`).length;
     counter.textContent = count === 1 ? '1 condition' : `${count} conditions`;
   };
-
-  const chosenContentTypes = () =>
-    (contentTypes ? [...contentTypes.selectedOptions].map((option) => option.value) : []).filter(Boolean);
 
   const initializeControls = (scope) => {
     /*
@@ -159,7 +157,7 @@ export const initializeConditionsEditor = () => {
    * Select2 sets a value through jQuery, which fires no native event. `input` writes the field and
    * `change` is what the control's own `hx-trigger` waits for, so both are raised by hand.
    */
-  $(list).on('select2:select select2:clear', 'select', (event) => {
+  $(list).on('select2:select select2:unselect select2:clear', 'select', (event) => {
     ['input', 'change'].forEach((name) => event.currentTarget.dispatchEvent(new Event(name)));
   });
 
@@ -172,14 +170,8 @@ export const initializeConditionsEditor = () => {
     }
   });
 
-  addButton.addEventListener('click', () => {
-    htmx.ajax('GET', rowUrl, {
-      source: addButton,
-      swap: 'beforeend',
-      target: list,
-      values: { content_types: chosenContentTypes(), index: nextIndex() },
-    });
-  });
+  window.nb ??= {};
+  window.nb.conditions = { nextIndex };
 
   htmx.onLoad((content) => {
     if (content !== list && !list.contains(content)) {
