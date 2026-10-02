@@ -664,7 +664,7 @@ class _RowFailed(Exception):
 class ImportObjects(Job):
     """System Job to import CSV/JSON/YAML data to create and/or update a set of objects."""
 
-    # Custom HTMX job-modal template that renders the standard job form plus the field-reference table.
+    # Custom HTMX job-modal template that renders the standard job form plus a link to the full-page field reference.
     htmx_template_name = "system_jobs/import_job_form_modal.html"
 
     content_type = ObjectVar(

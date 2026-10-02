@@ -2526,26 +2526,30 @@ class ExportResultModalTests(ImportExportJobTestCase):
 # Import job modal
 # ===========================================================================
 class ImportModalTests(ImportExportJobTestCase):
-    def test_import__modal_renders_field_table(self):
-        """The ImportObjects job form renders via its custom modal template with the field-reference table."""
+    def test_import__modal_links_to_full_form(self):
+        """The ImportObjects job modal links to the full-page form for the selected content type."""
         get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
         self.add_permissions("extras.run_job")
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        content_type_pk = ContentType.objects.get_for_model(Status).pk
         response = self.client.post(
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+            url,
             data={
                 "render_job_form": True,
                 "job_modal_button": "core.import_objects",
-                "content_type": ContentType.objects.get_for_model(Status).pk,
+                "content_type": content_type_pk,
             },
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
-        # As above: an unloadable htmx_template_name silently falls back to the generic job modal.
+        # An unloadable htmx_template_name silently falls back to the generic job modal, so check it explicitly.
         self.assertTemplateUsed(response, "system_jobs/import_job_form_modal.html")
-        self.assertTemplateUsed(response, "system_jobs/inc/csv_fields_table.html")
         content = response.content.decode(response.charset)
-        self.assertIn("csv-fields-table", content)
-        self.assertIn("csv-fields-tbody", content)
+        self.assertIn(f'href="{url}?content_type={content_type_pk}"', content)
+        self.assertNotIn('id="csv-fields-table"', content)
+        # File and text inputs are alternatives, presented as tabs as on the full-page form.
+        self.assertIn('id="csv-file"', content)
+        self.assertIn('id="csv-text"', content)
 
 
 # ===========================================================================

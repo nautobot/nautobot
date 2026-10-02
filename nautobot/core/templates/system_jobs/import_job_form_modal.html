@@ -1,22 +1,46 @@
 {% extends "extras/htmx/job_form_modal.html" %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% comment %}
-Custom job-form modal for the ImportObjects system job. Renders the standard job form plus the
-field-reference table (available columns for the selected content type), ported from the full-page
-system_jobs/import_objects.html so the guidance is available in the modal too.
+Custom job-form modal for the ImportObjects system job. Renders the job form with the same layout as the
+full-page form (system_jobs/import_objects.html), plus brief guidance; the full field reference for each
+content type is only on the full-page form, which this links to.
 {% endcomment %}
 
-{% block job_form_wrapper %}
-    {{ block.super }}
+{% block job_form %}
     <div class="row justify-content-center">
         <div class="col-md-9 offset-md-3">
-            {% include "system_jobs/inc/csv_fields_table.html" %}
+            <div class="alert alert-info" role="note">
+                <span aria-hidden="true" class="mdi mdi-information-outline"></span>
+                Data may be given as CSV, JSON, or YAML. Related objects may be identified by UUID or by any
+                field(s) that uniquely identify them, such as <code>status__name</code>.
+                <a href="{% url 'extras:job_run_by_class_path' class_path=class_path %}{% with content_type=job_form.content_type.value %}{% if content_type %}?content_type={{ content_type }}{% endif %}{% endwith %}"
+                   id="import-full-form-link">
+                    Open the full import form
+                </a>
+                for a list of the available fields and their valid values.
+            </div>
         </div>
     </div>
-{% endblock job_form_wrapper %}
-
-{% block javascript %}
-    {{ block.super }}
-    {% include "system_jobs/inc/csv_fields_table_script.html" %}
-{% endblock javascript %}
+    {% render_field job_form.roll_back_if_error %}
+    {% render_field job_form.import_format %}
+    {% render_field job_form.content_type %}
+    {% render_field job_form.match_fields %}
+    <div class="row justify-content-center">
+        <div class="col-md-9 offset-md-3">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">File Upload</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">Text Input</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane fade show active py-16" id="csv-file">
+            {% render_field job_form.csv_file %}
+        </div>
+        <div role="tabpanel" class="tab-pane fade py-16" id="csv-text">
+            {% render_field job_form.csv_data %}
+        </div>
+    </div>
+{% endblock job_form %}
