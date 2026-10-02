@@ -104,6 +104,32 @@ A row that cannot be checked is written to the Nautobot log at `ERROR` level, na
 
 All rows are checked even after one has failed, so the full verdict exists (which row passed, which failed and which could not be checked). Showing that verdict comes with the dry run feature, which is not available yet.
 
+## Setting conditions in the web UI
+
+The Conditions card on a Webhook or Job Hook edit form has two tabs. **Form** builds the rows for you. **JSON** holds the field that is actually saved. They are the same conditions seen two ways, and switching to Form reads the rows back from whatever the JSON tab holds.
+
+Choose the object types first. Until you do, the field picker is empty and disabled, because the fields a condition may name are only those that every selected object type carries. Change the object types later and every row is offered the new set of fields.
+
+A row reads as a sentence from left to right:
+
+| Part | What it is |
+| --- | --- |
+| **When** or **not When** | Whether the row passes when what follows is true, or when it is false |
+| **Condition type** | A preset from the catalog above, or **Raw expression** |
+| The rest | The parameters that preset declares, one to a line |
+
+The parameters change with the type, so choosing a different one rebuilds the row. Naming a different field does the same, and clears the value that was being compared, because a value that meant something under the old field means nothing under the new one.
+
+Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first.
+
+What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. An operator that matches part of a value, such as `contains`, gives a plain box instead, because the values that exist are no help in typing a fragment.
+
+**Add another Condition** adds a row at the end, and the bin beside a row removes it. Every row must pass, so rows narrow the action down rather than widening it.
+
+Nothing is complained about while you fill a row in. A row half filled in is a row being filled in. Press **Create** or **Update** and anything a save refuses appears beside the control at fault, and stays there until you fix it.
+
+You can paste into the JSON tab instead, in the format below. If what you paste cannot be read as conditions, the Form tab shows a message where the rows would be, and leaves your text alone so you can go back and fix it.
+
 ## Row format
 
 This section is for setting conditions through the REST API. In the web UI the form builds the rows for you.

@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
@@ -26,6 +27,7 @@ from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
+from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
@@ -33,6 +35,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import CeleryWorkerNotRunningException, FilterSetFieldNotFound
@@ -98,6 +101,8 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.conditions.forms import ConditionRowForm, errors_by_row_and_control
+from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
@@ -3506,11 +3511,134 @@ class ScheduledJobUIViewSet(
 
 
 #
+# Conditions
+#
+
+
+def _addressable_fields_for(data):
+    """The fields every object type named in `data` carries, for the conditions editor.
+
+    A content type that no longer resolves is skipped and a model with no serializer yields nothing,
+    because the row still has to render: an empty field select is recoverable, a swap that failed is not.
+    """
+    chosen = [value for value in data.getlist("content_types") if value.isdigit()]
+    models = [content_type.model_class() for content_type in ContentType.objects.filter(pk__in=chosen)]
+    try:
+        return addressable_fields(*[model for model in models if model is not None])
+    except SerializerNotFound:
+        return []
+
+
+class HtmxOnlyMixin:
+    """Refuse a request the editor did not make.
+
+    Both views below answer with a fragment of a page, which is meaningless on its own, so neither is
+    an address to visit. HTMX sets `HX-Request` on everything it sends, `htmx.ajax` included, and the
+    four views in `nautobot.core.views` that serve fragments turn away what lacks it in the same words.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.headers.get("HX-Request", False):
+            return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ConditionRowView(LoginRequiredMixin, HtmxOnlyMixin, View):
+    """One row of the conditions editor, rendered for the state the request carries.
+
+    The editor asks for a row again whenever a choice decides what the rest of it should be: the
+    condition type, the field it names, and the operator it compares with. The row's own inputs come
+    back with the request, so the answer is built from the choices made so far rather than from
+    anything stored.
+    """
+
+    def get(self, request):
+        given = request.GET.get("index") or "0"
+        index = int(given) if given.isdigit() else 0
+        form = ConditionRowForm(
+            request.GET,
+            index=index,
+            addressable=_addressable_fields_for(request.GET),
+            triggered_by=request.headers.get("HX-Trigger-Name"),
+        )
+        return render(request, "extras/inc/conditions_row.html", {"form": form})
+
+
+class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
+    """Every row of the conditions editor, drawn from the JSON the `conditions` field holds.
+
+    The rows are a view of that field rather than a second copy of it, so they are rebuilt from it: when
+    the page loads, when the JSON tab has been edited by hand, and when the watched object types change
+    and with them the fields a condition may name.
+    """
+
+    def post(self, request):
+        stored_rows, unreadable = self._rows_from_json(request.POST.get("conditions"))
+        addressable = _addressable_fields_for(request.POST)
+        # In the query string, because the body is the editor's own inputs. Only once a save was refused.
+        refused = errors_by_row_and_control(stored_rows) if request.GET.get("validate") else {}
+        # A form with nothing on it still offers one row, the way the other repeating forms here do.
+        # That row stands for nothing stored, so it is added for rendering and never validated.
+        return render(
+            request,
+            "extras/inc/conditions_rows.html",
+            {
+                "condition_rows": [
+                    ConditionRowForm(index=index, addressable=addressable, row=row, errors=refused.get(index))
+                    for index, row in enumerate(stored_rows or [None])
+                ],
+                "condition_rows_unreadable": unreadable,
+            },
+        )
+
+    @staticmethod
+    def _rows_from_json(conditions):
+        """The stored rows, and why the field could not be read as rows at all when it could not.
+
+        This is the coarsest of the three ways this feature reports a fault, above `row_errors`,
+        which blames a row, and `errors_by_row_and_control`, which blames a control. Here there are no
+        rows to blame, so the editor shows the one message in place of the rows.
+        """
+        try:
+            stored_rows = json.loads(conditions or "[]")
+        except json.JSONDecodeError as error:
+            return [], f"The JSON tab does not parse: {error}."
+        if not isinstance(stored_rows, list):
+            return [], "The JSON tab holds something that is not a list of conditions."
+        if not all(isinstance(row, dict) for row in stored_rows):
+            return [], "The JSON tab holds a list, but something in it is not a condition."
+        return stored_rows, None
+
+
+class ConditionsViewMixin:
+    """The conditions card on the edit form, and the conditions panel on the detail view."""
+
+    main_card_excluded_fields = ["conditions"]
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action in ("create", "update"):
+            context["main_card_excluded_fields"] = self.main_card_excluded_fields
+        return context
+
+    @staticmethod
+    def conditions_panel(weight=200, section=SectionChoices.RIGHT_HALF):
+        """The Conditions panel, for a detail view's `panels`."""
+        return object_detail.ObjectTextPanel(
+            label="Conditions",
+            section=section,
+            weight=weight,
+            object_field="conditions",
+            render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
+        )
+
+
+#
 # Job hooks
 #
 
 
-class JobHookUIViewSet(NautobotUIViewSet):
+class JobHookUIViewSet(ConditionsViewMixin, NautobotUIViewSet):
     bulk_update_form_class = forms.JobHookBulkEditForm
     filterset_class = filters.JobHookFilterSet
     filterset_form_class = forms.JobHookFilterForm
@@ -3525,7 +3653,9 @@ class JobHookUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                exclude_fields=("conditions",),
             ),
+            ConditionsViewMixin.conditions_panel(weight=100),
         )
     )
 
@@ -5161,7 +5291,7 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 
 
-class WebhookUIViewSet(NautobotUIViewSet):
+class WebhookUIViewSet(ConditionsViewMixin, NautobotUIViewSet):
     bulk_update_form_class = forms.WebhookBulkEditForm
     filterset_class = filters.WebhookFilterSet
     filterset_form_class = forms.WebhookFilterForm
@@ -5198,5 +5328,6 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 object_field="body_template",
                 render_as=object_detail.BaseTextPanel.RenderOptions.CODE,
             ),
+            ConditionsViewMixin.conditions_panel(),
         ]
     )
