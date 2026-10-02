@@ -1,0 +1,2 @@
+Updated dependency `GitPython` to `~3.2.0` to mitigate multiple vulnerabilities.
+Updated dependency `urllib3` to `^2.8.0` to mitigate multiple vulnerabilities.
