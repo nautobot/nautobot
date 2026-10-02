@@ -32,6 +32,18 @@ const RELOAD_EVENT = 'nb-conditions:reload';
 const DRAWING_ATTRIBUTE = 'data-nb-drawing';
 
 /*
+ * One past the highest in use, so a row removed from the middle never lends its index to a new one.
+ * The add button asks for this through `hx-vals`, reaching it as `window.nb.conditions.nextIndex`.
+ */
+export const nextIndex = () => {
+  const list = document.getElementById('conditions-rows');
+  const used = [...(list?.children ?? [])]
+    .map((line) => Number(line.getAttribute(INDEX_ATTRIBUTE)))
+    .filter(Number.isInteger);
+  return used.length ? Math.max(...used) + 1 : 0;
+};
+
+/*
  * The conditions of an event rule, edited as rows rather than as raw JSON. The server renders the
  * rows, deciding from the chosen preset, field and operator which controls each one holds. What is
  * here keeps the JSON field synchronized with them, adds and removes rows, and raises the native
@@ -102,15 +114,6 @@ export const initializeConditionsEditor = () => {
   };
 
   /*
-   * One past the highest in use, so a row removed from the middle never lends its index to a new one.
-   * The add button asks for this through `hx-vals`, which is why it is published on `window.nb`.
-   */
-  const nextIndex = () => {
-    const used = [...list.children].map((line) => Number(line.getAttribute(INDEX_ATTRIBUTE))).filter(Number.isInteger);
-    return used.length ? Math.max(...used) + 1 : 0;
-  };
-
-  /*
    * What the live region says. A screen reader is told nothing when a row is swapped in or deleted,
    * so it is given the count.
    */
@@ -169,9 +172,6 @@ export const initializeConditionsEditor = () => {
       announceCount();
     }
   });
-
-  window.nb ??= {};
-  window.nb.conditions = { nextIndex };
 
   htmx.onLoad((content) => {
     if (content !== list && !list.contains(content)) {

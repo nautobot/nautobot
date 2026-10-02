@@ -4,8 +4,8 @@ from django.test import tag
 
 from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import TestCase as NautobotTestCase
-from nautobot.dcim.models import Device, Location, LocationType
-from nautobot.extras.conditions.model_fields import addressable_fields
+from nautobot.dcim.models import CablePath, Device, Location, LocationType
+from nautobot.extras.conditions.model_fields import _where_values_are_listed, addressable_fields
 from nautobot.extras.models import Status
 
 
@@ -73,6 +73,10 @@ class AddressableFieldsTest(NautobotTestCase):
         ):
             with self.subTest(label):
                 self.assertEqual(self.entry("status", *models)["values_url"], url)
+
+    def test_a_relation_with_no_list_endpoint_says_its_objects_cannot_be_read(self):
+        """A picker needs somewhere to call. `CablePath` has no API list route, so there is nowhere."""
+        self.assertIsNone(_where_values_are_listed(Location, "status", CablePath, ["dcim.location"]))
 
     def test_a_colour_field_asks_for_a_swatch_picker(self):
         """It is text to compare, but a form has a swatch picker for it rather than a box for hex."""

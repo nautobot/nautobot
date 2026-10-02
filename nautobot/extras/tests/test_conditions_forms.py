@@ -284,6 +284,19 @@ class StaleValuesTest(RowFormTestCase):
     def test_nothing_is_cleared_when_nothing_triggered_the_rebuild(self):
         self.assertIs(self.kept(None), self.data)
 
+    def test_a_first_render_carries_no_data_to_clear(self):
+        self.assertIsNone(_without_stale_values(None, "condition-0", "condition-0-field"))
+
+    def test_nothing_is_cleared_for_a_preset_the_registry_does_not_hold(self):
+        """The JSON tab accepts any preset key, and the row naming one still has to be drawn."""
+        typed = QueryDict("condition-0-type=no_such_preset&condition-0-value=Active")
+        self.assertIs(_without_stale_values(typed, "condition-0", "condition-0-field"), typed)
+
+    def test_nothing_is_cleared_for_a_preset_that_names_no_field(self):
+        """`user_is` compares a username, so no choice of field can make its value meaningless."""
+        typed = QueryDict("condition-0-type=user_is&condition-0-username=automation")
+        self.assertIs(_without_stale_values(typed, "condition-0", "condition-0-username"), typed)
+
     def test_choosing_an_operator_keeps_the_value(self):
         """The operator changes how the value is compared, not what it means."""
         self.assertEqual(self.kept("condition-0-operator")["condition-0-value"], "Active")

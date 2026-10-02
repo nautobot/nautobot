@@ -193,6 +193,19 @@ class ConditionsViewTest(NautobotTestCase):
                 self.assertInHTML("<option value=''>Select object type(s) first</option>", body)
                 self.assertIn("disabled", body)
 
+    def test_an_object_type_the_rest_api_does_not_serialize_offers_no_fields(self):
+        """A condition names what a change record holds, and nothing records a session."""
+        session = ContentType.objects.get(app_label="sessions", model="session").pk
+        response = self.client.post(
+            self.rows_url,
+            {"conditions": json.dumps([self.compare(field="mtu")]), "content_types": session},
+            headers=self.HTMX,
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertInHTML(
+            "<option value=''>Select object type(s) first</option>", response.content.decode(response.charset)
+        )
+
     def test_only_the_fields_every_chosen_type_carries_are_offered(self):
         """One condition is checked against every watched type, so a field only one of them has is no use.
 
