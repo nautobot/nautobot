@@ -30,11 +30,11 @@ class JobConsoleLogSubprocessError(subprocess.SubprocessError):
 
 def resolve_nautobot_server_executable() -> str:
     """
-    Return an executable path for the ``nautobot-server`` CLI.
+    Return an executable path for the `nautobot-server` CLI.
 
-    Celery workers launched by systemd run with a minimal ``PATH`` that often
-    lacks the virtualenv ``bin/`` directory, so a bare ``PATH`` lookup fails
-    with ``FileNotFoundError``. The worker always runs from the same
+    Celery workers launched by systemd run with a minimal `PATH` that often
+    lacks the virtualenv `bin/` directory, so a bare `PATH` lookup fails
+    with `FileNotFoundError`. The worker always runs from the same
     environment Nautobot is installed into, so fall back to the entry point
     sitting next to the current Python executable before giving up and
     returning the bare command name.
