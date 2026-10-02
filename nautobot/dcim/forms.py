@@ -108,6 +108,7 @@ from .choices import (
     RackWidthChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from .constants import (
     BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
@@ -981,6 +982,10 @@ class DeviceTypeForm(NautobotModelForm):
             "part_number",
             "u_height",
             "is_full_depth",
+            "depth",
+            "depth_unit",
+            "weight",
+            "weight_unit",
             "subdevice_role",
             "software_image_files",
             "front_image",
@@ -989,6 +994,8 @@ class DeviceTypeForm(NautobotModelForm):
             "tags",
         ]
         widgets = {
+            "depth_unit": StaticSelect2(),
+            "weight_unit": StaticSelect2(),
             "subdevice_role": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
             "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
@@ -1017,6 +1024,10 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
             "part_number",
             "u_height",
             "is_full_depth",
+            "depth",
+            "depth_unit",
+            "weight",
+            "weight_unit",
             "subdevice_role",
             "comments",
         ]
@@ -1029,10 +1040,22 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
     u_height = forms.IntegerField(required=False, min_value=0)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
+    depth = forms.IntegerField(required=False, min_value=1)
+    depth_unit = forms.ChoiceField(
+        choices=add_blank_choice(RackDimensionUnitChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    weight = forms.DecimalField(required=False, min_value=0, max_digits=8, decimal_places=2)
+    weight_unit = forms.ChoiceField(
+        choices=add_blank_choice(WeightUnitChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = ["device_family", "software_image_files"]
+        nullable_fields = ["device_family", "software_image_files", "depth", "depth_unit", "weight", "weight_unit"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -1104,12 +1127,15 @@ class ModuleTypeForm(NautobotModelForm):
             "model",
             "module_family",
             "part_number",
+            "weight",
+            "weight_unit",
             "front_image",
             "rear_image",
             "comments",
             "tags",
         ]
         widgets = {
+            "weight_unit": StaticSelect2(),
             # Exclude SVG images (unsupported by PIL)
             "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
             "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
@@ -1133,6 +1159,8 @@ class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
             "manufacturer",
             "model",
             "part_number",
+            "weight",
+            "weight_unit",
             "comments",
         ]
 
@@ -1142,10 +1170,16 @@ class ModuleTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     module_family = DynamicModelChoiceField(queryset=ModuleFamily.objects.all(), required=False, label="Family")
     part_number = forms.CharField(required=False)
+    weight = forms.DecimalField(required=False, min_value=0, max_digits=8, decimal_places=2)
+    weight_unit = forms.ChoiceField(
+        choices=add_blank_choice(WeightUnitChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = ["module_family"]
+        nullable_fields = ["module_family", "weight", "weight_unit"]
 
 
 class ModuleTypeFilterForm(NautobotFilterForm):

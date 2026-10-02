@@ -2013,20 +2013,20 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
         oms = (
             self.queryset.filter(assigned_object_type=ct_1_pk)
             .distinct()
-            .order_by("metadata_type", "assigned_object_id")
+            .order_by("metadata_type", "assigned_object_id", "pk")
         )
         params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id", "pk"), oms
         )
         oms = (
             self.queryset.filter(assigned_object_type=ct_2_pk)
             .distinct()
-            .order_by("metadata_type", "assigned_object_id")
+            .order_by("metadata_type", "assigned_object_id", "pk")
         )
         params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
+            self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id", "pk"), oms
         )
 
 

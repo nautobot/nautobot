@@ -531,6 +531,7 @@ SPECTACULAR_SETTINGS = {
         #   encountered multiple names for the same choice set
         "ApprovalWorkflowStateChoices": "nautobot.extras.choices.ApprovalWorkflowStateChoices",
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
+        "RackDimensionUnitChoices": "nautobot.dcim.choices.RackDimensionUnitChoices",
         # These choice enums need to be overridden because they get assigned to the `protocol` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
