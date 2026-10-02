@@ -483,51 +483,32 @@ start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [[tool.towncrier.type]]
-directory = "breaking"
 name = "Breaking Changes"
-showcontent = true
+directory = "breaking"
 
 [[tool.towncrier.type]]
-directory = "security"
 name = "Security"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "added"
 name = "Added"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "changed"
 name = "Changed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "deprecated"
 name = "Deprecated"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "removed"
 name = "Removed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "fixed"
 name = "Fixed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "dependencies"
 name = "Dependencies"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "documentation"
 name = "Documentation"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "housekeeping"
 name = "Housekeeping"
-showcontent = true
