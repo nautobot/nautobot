@@ -30,11 +30,11 @@
                     </tr>
                     <tr>
                         <td>{{ verbose_name }}</td>
-                        <td>{{ approval_workflow.object_under_review | hyperlinked_object  }}</td>
+                        <td>{{ approval_workflow.object_under_review | hyperlinked_object }}</td>
                     </tr>
                     <tr>
                         <td>Current State</td>
-                        <td>{{ approval_workflow.current_state | render_approval_workflow_state  }}</td>
+                        <td>{{ approval_workflow.current_state | render_approval_workflow_state }}</td>
                     </tr>
                 </table>
             </div>
