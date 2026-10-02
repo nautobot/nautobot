@@ -934,10 +934,12 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
+        # Disable md044 (proper-names) only while fixing: its fixer over-applies
+        # proper-name capitalization to URLs, link/image targets, icons, etc.
+        command = "pymarkdown --disable-rules md044 fix --recurse changes examples nautobot/docs *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
-    command = "pymarkdown scan --recurse nautobot/docs examples *.md"
+    command = "pymarkdown scan --recurse changes examples nautobot/docs *.md"
     run_command(context, command)
 
 
