@@ -153,6 +153,11 @@ class WidgetForValueTest(RowFormTestCase):
                 widget = self.widget_for("value", compare(field=field, operator=operator))
                 self.assertEqual(widget.__name__, expected)
 
+    def test_a_number_takes_a_decimal(self):
+        """Without `step` the browser defaults to whole numbers and blocks the save on, say, a latitude."""
+        rendered = str(self.form(compare(field="mtu", operator="gt"))["value"])
+        self.assertIn('step="any"', rendered)
+
     def test_a_number_is_offered_ordering_but_not_fragment_matching(self):
         offered = [value for value, _ in self.form(compare(field="mtu")).fields["operator"].widget.choices]
         for fragment_operator in ("contains", "startswith", "endswith"):
@@ -231,6 +236,18 @@ class StoredRowTest(RowFormTestCase):
         initial = _stored_row_as_initial({"type": "preset", "preset": "field_changed", "values": "nope"})
         self.assertEqual(initial["type"], "field_changed")
         self.assertIsNone(initial["field"])
+
+    def test_a_preset_no_lookup_can_accept_renders_bare(self):
+        """A dict lookup raises on a list or a dict, which would answer the editor with a 500."""
+        for preset in (["field_compare"], {"key": "field_compare"}, 7):
+            with self.subTest(preset):
+                form = self.form({"type": "preset", "preset": preset, "values": {}})
+                self.assertEqual(form.parameter_controls, [])
+
+    def test_an_operator_no_lookup_can_accept_leaves_the_other_controls(self):
+        self.assertEqual(
+            self.control_names(compare(field="mtu", operator=["gt"], value=9000)), ["field", "operator", "value"]
+        )
 
     def test_a_row_survives_the_trip_to_controls_and_back(self):
         form = self.form(compare(field="status.name", operator="in", value=["Active", "Planned"]))

@@ -3613,13 +3613,7 @@ class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
 class ConditionsViewMixin:
     """The conditions card on the edit form, and the conditions panel on the detail view."""
 
-    conditions_template = "extras/conditions_update.html"
     main_card_excluded_fields = ["conditions"]
-
-    def get_template_name(self):
-        if self.action in ("create", "update"):
-            return self.conditions_template
-        return super().get_template_name()
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)

@@ -222,8 +222,11 @@ def register_condition_preset(preset):
 
 
 def get_condition_preset(key):
-    """Return the registered `ConditionPreset` for `key`, or None if there is no such preset."""
-    return registry["condition_presets"].get(key)
+    """Return the registered `ConditionPreset` for `key`, or None if there is no such preset.
+
+    A key of a type the registry cannot hold is no such preset, so it answers None.
+    """
+    return registry["condition_presets"].get(key) if isinstance(key, str) else None
 
 
 def get_condition_presets():

@@ -83,8 +83,9 @@ class ComparedField:
     """The field a row compares, and how the operator compares it.
 
     `kind` is one of the value kinds `operators` declares, such as `text` or `date`. `picker` names a
-    form control the field asks for whatever its kind, which today is only a colour swatch. The two
-    URL fields address a relation's sub-field, and the two flags come from `compared_with`.
+    form control the field asks for whatever its kind. `values_url` is where the related objects can
+    be listed and `key` is the sub-field compared against them, both set only for a relation's
+    sub-field. `whole` and `many` are settled by `compared_with`.
     """
 
     kind: str | None = None
@@ -239,17 +240,13 @@ def _build_control(label, widget, *, placeholder=None):
     )
 
 
-def _build_parameter_control(parameter, widget):
-    return _build_control(parameter.label, widget)
-
-
 def _build_operator_control(parameter, kind):
     """The operator select, narrowed to what the named field's kind can be compared with."""
     allowed = {operator.key for operator in operators_for_kind(kind)}
     offered = [
         (value, label) for value, label in parameter.choices if value not in OPERATOR_REGISTRY or value in allowed
     ]
-    return _build_parameter_control(parameter, StaticSelect2(choices=add_blank_choice(offered)))
+    return _build_control(parameter.label, StaticSelect2(choices=add_blank_choice(offered)))
 
 
 def _build_boolean_select():
@@ -264,7 +261,7 @@ def _build_boolean_select():
 # about that field applies. Mirrors `model_fields.KIND_BY_SERIALIZER_FIELD`, which settles the kind in the first place.
 WIDGET_BY_FIELD_KIND = {
     KIND_BOOLEAN: _build_boolean_select,
-    KIND_NUMBER: forms.NumberInput,
+    KIND_NUMBER: lambda: forms.NumberInput(attrs={"step": "any"}),
     KIND_DATE: DatePicker,
 }
 
@@ -280,13 +277,17 @@ def _build_api_select(compared_field, value):
 
 def _build_value_control(parameter, compared_field, value):
     """The control for a value compared against `compared_field`, most specific thing known about it first."""
+    return _build_control(parameter.label, _widget_for_value(compared_field, value))
+
+
+def _widget_for_value(compared_field, value):
     if compared_field.picker == "color" and compared_field.whole:
-        return _build_parameter_control(parameter, ColorSelectMultiple() if compared_field.many else ColorSelect())
+        return ColorSelectMultiple() if compared_field.many else ColorSelect()
     if compared_field.values_worth_listing:
-        return _build_parameter_control(parameter, _build_api_select(compared_field, value))
+        return _build_api_select(compared_field, value)
     if compared_field.many:
-        return _build_parameter_control(parameter, MultiValueCharInput(choices=_options_for_chosen_values(value)))
-    return _build_parameter_control(parameter, WIDGET_BY_FIELD_KIND.get(compared_field.kind, forms.TextInput)())
+        return MultiValueCharInput(choices=_options_for_chosen_values(value))
+    return WIDGET_BY_FIELD_KIND.get(compared_field.kind, forms.TextInput)()
 
 
 def _without_stale_values(data, prefix, triggered_by):
@@ -467,7 +468,7 @@ class ConditionRowForm(forms.Form):
             )
             return
 
-        control = _build_parameter_control(parameter, StaticSelect2(choices=_name_choices(self.addressable)))
+        control = _build_control(parameter.label, StaticSelect2(choices=_name_choices(self.addressable)))
         _mark_for_editor_script(control.widget, ROLE_PATH, key=parameter.name, rebuild_index=self.index)
         self.fields[parameter.name] = control
 
@@ -510,5 +511,6 @@ class ConditionRowForm(forms.Form):
             )
         )
         compares_with = _parameter_of_kind(preset, PARAM_KIND_CHOICE)
-        operator = OPERATOR_REGISTRY.get(self._current_value(compares_with.name)) if compares_with else None
+        operator_key = self._current_value(compares_with.name) if compares_with else None
+        operator = OPERATOR_REGISTRY.get(operator_key) if isinstance(operator_key, str) else None
         return compared_field.compared_with(operator)
