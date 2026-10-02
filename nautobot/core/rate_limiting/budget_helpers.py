@@ -1,7 +1,6 @@
 import hashlib
 
 from django_redis import get_redis_connection
-import redis
 
 CREDENTIAL_DIGEST_LENGTH = 16
 NO_EXPIRY_SET = -1
@@ -24,18 +23,15 @@ def get_rate_limit_bucket_id(user_token):
 
 
 def charge_bucket(bucket_id, cost, timeout):
-    try:
-        connection = get_redis_connection("default")
+    connection = get_redis_connection("default")
 
-        pipeline = connection.pipeline()
-        pipeline.incrby(bucket_id, cost)
-        pipeline.ttl(bucket_id)
-        consumed_budget, remaining_timeout = pipeline.execute()
+    pipeline = connection.pipeline()
+    pipeline.incrby(bucket_id, cost)
+    pipeline.ttl(bucket_id)
+    consumed_budget, remaining_timeout = pipeline.execute()
 
-        if remaining_timeout == NO_EXPIRY_SET:
-            connection.expire(bucket_id, timeout)
-            remaining_timeout = timeout
+    if remaining_timeout == NO_EXPIRY_SET:
+        connection.expire(bucket_id, timeout)
+        remaining_timeout = timeout
 
-        return consumed_budget, remaining_timeout
-    except redis.exceptions.RedisError as redis_exception:
-        raise redis_exception
+    return consumed_budget, remaining_timeout

@@ -30,10 +30,16 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
-from nautobot.core.rate_limiting.budget_helpers import charge_bucket, get_rate_limit_bucket_id
+from nautobot.core.rate_limiting.budget_helpers import (
+    charge_bucket,
+    get_rate_limit_bucket_id,
+    hash_user_identifier,
+)
 from nautobot.core.rate_limiting.metrics import (
-    record_rest_rate_limiting_backend_exception,
     record_rest_request_complexity_cost,
+    record_rest_request_db_duration,
+    record_rest_request_rate_limiting_backend_exception,
+    record_rest_request_total_duration,
 )
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
@@ -552,10 +558,12 @@ class RequestMetricMiddleware:
 
     def __call__(self, request):
         # TODO: Ask team if we want these metrics generated for HTML requests as well?
-
         enabled_metrics = self.get_enabled_metrics()
         if not enabled_metrics:
             return self.get_response(request)
+
+        user_token = request.META.get("HTTP_AUTHORIZATION", None)
+        hashed_user_token = hash_user_identifier(user_token) if user_token else "Anonymous"
 
         # ----------------------------------------------------------------------
         # Wrap Request Logic With Metrics
@@ -573,9 +581,18 @@ class RequestMetricMiddleware:
 
         header_metrics = []
         for enabled_metric in enabled_metrics:
-            rounded_duration = round(enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision)
-            enabled_metric_string = f'{enabled_metric.name};dur={rounded_duration};desc="{enabled_metric.description}"'
+            rounded_duration_in_milliseconds = round(
+                enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision
+            )
+            enabled_metric_string = (
+                f'{enabled_metric.name};dur={rounded_duration_in_milliseconds};desc="{enabled_metric.description}"'
+            )
             header_metrics.append(enabled_metric_string)
+            # Add Metric Data To Prometheus
+            if isinstance(enabled_metric, DatabaseDurationRequestMetric):
+                record_rest_request_db_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
+            elif isinstance(enabled_metric, TotalDurationRequestMetric):
+                record_rest_request_total_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
 
         # ----------------------------------------------------------------------
         # Add Metrics To Response Header
@@ -642,6 +659,7 @@ class ComplexityCostRateLimitingMiddleware:
         #  Extract Token
         # ----------------------------------------------------------------------
         user_token = request.META.get("HTTP_AUTHORIZATION", None)
+        hashed_user_token = hash_user_identifier(user_token) if user_token else "Anonymous"
 
         # ----------------------------------------------------------------------
         #  Calculate Cost
@@ -674,9 +692,8 @@ class ComplexityCostRateLimitingMiddleware:
                     rate_limiting_window_in_seconds,
                 )
             except Exception as budget_charge_exception:
-                record_rest_rate_limiting_backend_exception(
-                    request,
-                    settings.NAUTOBOT_REST_RATE_LIMITING_MODE,
+                record_rest_request_rate_limiting_backend_exception(
+                    hashed_user_token,
                     budget_charge_exception,
                 )
 
@@ -719,20 +736,16 @@ class ComplexityCostRateLimitingMiddleware:
         has_budget_been_fully_exhausted = consumed_budget_before_this_request >= rate_limit_budget
 
         if should_complexity_cost_calculation_enforced is True and has_budget_been_fully_exhausted is True:
-            request_outcome = "throttled"
             response = JsonResponse(
                 {"detail": "Request was throttled. The estimated complexity cost exceeds the budget."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
             response.headers["Retry-After"] = str(advertised_remaining_window_time_in_seconds)
         else:
-            request_outcome = "allowed"
             response = self.get_response(request)
 
         record_rest_request_complexity_cost(
-            request,
-            settings.NAUTOBOT_REST_RATE_LIMITING_MODE,
-            request_outcome,
+            hashed_user_token,
             request_complexity_cost_estimate,
         )
 
