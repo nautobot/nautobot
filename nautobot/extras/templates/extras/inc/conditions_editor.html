@@ -1,0 +1,70 @@
+{% load form_helpers %}
+
+{% comment %}
+    The conditions editor. The Form tab shows rows the server renders, the JSON tab holds the field that
+    is actually submitted, and the two are synchronized by `ui/src/js/conditions-editor.js`.
+{% endcomment %}
+
+<span class="form-text mb-12">
+    Every condition must pass for this to run. With no conditions it runs for every change to the
+    selected object types.
+</span>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active"
+           id="conditions_form-tab"
+           href="#conditions_form"
+           role="tab"
+           data-bs-toggle="tab"
+           aria-controls="conditions_form"
+           aria-selected="true">
+            Form
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link"
+           id="conditions_json-tab"
+           href="#conditions_json"
+           role="tab"
+           data-bs-toggle="tab"
+           aria-controls="conditions_json"
+           aria-selected="false">
+            JSON
+        </a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane active" id="conditions_form" role="tabpanel" aria-labelledby="conditions_form-tab">
+        {% comment %}
+            `hx-include` names the two fields by the ids Django gives them. Rename either field and
+            nothing is sent, with no error: the rows come back empty and every field picker closed.
+        {% endcomment %}
+        <div class="nb-conditions"
+             id="conditions-rows"
+             hx-post="{% url 'extras:condition_rows' %}{% if form.conditions.errors %}?validate=1{% endif %}"
+             hx-trigger="load, nb-conditions:reload"
+             hx-target="this"
+             hx-swap="innerHTML"
+             hx-include="#id_conditions, #id_content_types"></div>
+        {% comment %}
+            A screen reader is told nothing when a condition is swapped in or deleted, so
+            `ui/src/js/conditions-editor.js` writes the count here after every change, the way
+            `inc/paginator.html` announces a new page range.
+        {% endcomment %}
+        <span class="visually-hidden" id="conditions-count" role="status"></span>
+        <button type="button"
+                class="btn btn-primary nb-add-row"
+                id="conditions-add"
+                hx-get="{% url 'extras:condition_row' %}"
+                hx-target="#conditions-rows"
+                hx-swap="beforeend"
+                hx-include="#id_content_types"
+                hx-vals="js:{index: window.nb.conditions.nextIndex()}">
+            <span class="mdi mdi-plus-thick me-4" aria-hidden="true"></span>Add another Condition
+        </button>
+    </div>
+    <div class="tab-pane" id="conditions_json" role="tabpanel" aria-labelledby="conditions_json-tab">
+        {% render_field form.conditions %}
+    </div>
+</div>

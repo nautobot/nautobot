@@ -368,6 +368,22 @@ class OperatorRegistryTest(TestCase):
                 self.assertTrue(operator.applies_to <= ALL_KINDS)
                 self.assertTrue(operator.applies_to, "an operator applying to nothing is unpickable")
 
+    def test_every_operator_says_whether_it_compares_a_whole_value(self):
+        """Required rather than defaulted, so a new operator cannot be added without answering.
+
+        Evaluation never consults this. A form does, to decide whether offering the values a field
+        already holds would help, so flipping one changes what the editor puts in front of someone.
+        """
+        for operator in OPERATORS:
+            with self.subTest(operator=operator.key):
+                self.assertIsInstance(operator.compares_whole_value, bool)
+
+    def test_only_the_textual_operators_match_a_piece_of_a_value(self):
+        fragment = {operator.key for operator in OPERATORS if not operator.compares_whole_value}
+        self.assertEqual(fragment, {"contains", "startswith", "endswith"})
+        whole = {operator.key for operator in OPERATORS if operator.compares_whole_value}
+        self.assertEqual(whole, {"=", "gt", "gte", "lt", "lte", "in"})
+
     def test_operators_are_immutable(self):
         with self.assertRaises(AttributeError):
             OPERATORS[0].key = "hacked"

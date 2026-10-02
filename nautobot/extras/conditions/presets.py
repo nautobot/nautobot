@@ -175,9 +175,7 @@ class ConditionPreset:
             except ConditionPresetError as error:
                 # `messages`, not `message`: it renders `message % params`, so the text comes back
                 # with any `%` single and this error's constructor doubles it exactly once.
-                raise ConditionPresetError(
-                    f"Preset `{self.key}`: {' '.join(error.messages)}", **error.params, preset=self.key
-                ) from error
+                raise ConditionPresetError(" ".join(error.messages), **error.params, preset=self.key) from error
 
     def context_variables(self, values):
         """
@@ -224,8 +222,11 @@ def register_condition_preset(preset):
 
 
 def get_condition_preset(key):
-    """Return the registered `ConditionPreset` for `key`, or None if there is no such preset."""
-    return registry["condition_presets"].get(key)
+    """Return the registered `ConditionPreset` for `key`, or None if there is no such preset.
+
+    A key of a type the registry cannot hold is no such preset, so it answers None.
+    """
+    return registry["condition_presets"].get(key) if isinstance(key, str) else None
 
 
 def get_condition_presets():
@@ -250,7 +251,9 @@ FIELD_TRANSITION = ConditionPreset(
     ),
     parameters=(
         PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to watch."),
-        PresetParameter(name="from", label="From", help_text="Value the field must have had before the change."),
+        PresetParameter(
+            name="from", label="Changes from", help_text="Value the field must have had before the change."
+        ),
         PresetParameter(name="to", label="To", help_text="Value the field must have after the change."),
     ),
     example_values={"field": "status.name", "from": "Staged", "to": "Active"},
@@ -294,7 +297,7 @@ FIELD_COMPARE = ConditionPreset(
             name="value",
             label="Value",
             multiple=True,
-            help_text="Value to compare against. A set of values for `in`, and for `=` on a many-valued field.",
+            help_text="Value to compare against. Several for `in`, or for `=` on a list field such as tags.",
         ),
     ),
     example_values={"field": "mtu", "operator": "gt", "value": 9000},

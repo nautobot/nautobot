@@ -31,7 +31,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         $(document).ready(function() {
             $.ajax({
                 url: "{% url 'dcim-api:device-napalm' pk=object.pk %}?method=get_config",

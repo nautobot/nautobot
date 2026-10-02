@@ -13,7 +13,7 @@ const getElement = (element) => (element instanceof Document || element instance
  * @param {HTMLSelectElement} select - `select` element in question.
  * @returns {string|string[]} `string` value for single combobox, an array of `string` values for multiple combobox.
  */
-const getValue = (select) =>
+export const getValue = (select) =>
   select?.getAttribute('multiple') === null ? select?.value : [...select.selectedOptions].map((option) => option.value);
 
 /**
@@ -79,10 +79,11 @@ const parseURL = (url) => {
  * Initialize given Select2 components in passed `context` by `selector`, optionally with `options`.
  * @param {Document|Element|jQuery} context - Context root element.
  * @param {string} selector - CSS query selector of `select` elements to be initialized as Select2 components.
- * @param {object} [options] - Optional Select2 components initialization options.
+ * @param {object|function} [options] - Optional Select2 components initialization options, either for all of the
+ *   matched components at once, or as a function of one component returning the options for it.
  * @returns {void} Do not return any value, just initialize given Select2 components.
  */
-const initializeSelect2 = (context, selector, options) =>
+export const initializeSelect2 = (context, selector, options) =>
   [...getElement(context).querySelectorAll(selector)].forEach((element) => {
     const {
       $selection: [selection],
@@ -93,7 +94,7 @@ const initializeSelect2 = (context, selector, options) =>
         selectionCssClass: 'select2--small',
         theme: 'bootstrap-5',
         width: 'off',
-        ...options,
+        ...(typeof options === 'function' ? options(element) : options),
       })
       .data('select2');
 

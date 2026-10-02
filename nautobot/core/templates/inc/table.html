@@ -24,29 +24,31 @@
                                         {% comment %}
                                             Tri-state sorting toggle: unsorted → ascending → descending → unsorted
                                         {% endcomment %}
-                                        {% if column.order_by_alias.is_ascending or not column.is_ordered %}
-                                            <a href="{% querystring_replace table.prefixed_order_by_field=column.order_by_alias.next %}">
-                                        {% else %}
-                                            <a href="{% querystring_replace without table.prefixed_order_by_field %}">
-                                        {% endif %}
-                                        {{ column.header }}
-                                        {% comment %}
-                                            The sort direction arrow is decorative -- it duplicates information that
-                                            `aria-sort` above already exposes -- so hide it from assistive technology
-                                            and describe the action of the link in text instead.
-                                        {% endcomment %}
-                                        {% if column.is_ordered %}
-                                            {% if column.order_by_alias.is_ascending %}
-                                                <span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span>
-                                                <span class="visually-hidden">activate to sort descending</span>
+                                        <a
+                                            {% if column.order_by_alias.is_ascending or not column.is_ordered %}
+                                                href="{% querystring_replace table.prefixed_order_by_field=column.order_by_alias.next %}"
                                             {% else %}
-                                                <span aria-hidden="true" class="mdi mdi-arrow-down-thin"></span>
-                                                <span class="visually-hidden">activate to remove sorting</span>
+                                                href="{% querystring_replace without table.prefixed_order_by_field %}"
                                             {% endif %}
-                                        {% else %}
-                                            <span class="visually-hidden">activate to sort ascending</span>
-                                        {% endif %}
-                                    </a>
+                                        >
+                                            {{ column.header }}
+                                            {% comment %}
+                                                The sort direction arrow is decorative -- it duplicates information that
+                                                `aria-sort` above already exposes -- so hide it from assistive technology
+                                                and describe the action of the link in text instead.
+                                            {% endcomment %}
+                                            {% if column.is_ordered %}
+                                                {% if column.order_by_alias.is_ascending %}
+                                                    <span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span>
+                                                    <span class="visually-hidden">activate to sort descending</span>
+                                                {% else %}
+                                                    <span aria-hidden="true" class="mdi mdi-arrow-down-thin"></span>
+                                                    <span class="visually-hidden">activate to remove sorting</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="visually-hidden">activate to sort ascending</span>
+                                            {% endif %}
+                                        </a>
                                     </th>
                                 {% endspaceless %}
                             {% else %}

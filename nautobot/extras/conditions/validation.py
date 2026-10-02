@@ -1,10 +1,8 @@
-"""Validating a whole stored list of condition rows.
+"""Validating a stored list of condition rows.
 
-`rows` and `presets` decide what makes a single row valid; this module runs that over a list and
-reports every bad row at once, each message numbered.
-
-The only caller is `ConditionsField.validate()`. A form, a serializer and a `validated_save()` all
-reach it through `Model.full_clean()`.
+`row_errors` reports each row's own complaints, for the editor, which shows one inside the row it
+belongs to. `validate_conditions` raises, for `ConditionsField.validate()`, where the reader has no
+row in front of them, so each message names the row and the preset.
 """
 
 from django.core.exceptions import ValidationError
@@ -13,17 +11,14 @@ from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.rows import ConditionRow
 
 
-def _numbered(index, error):
-    """
-    Restate one row's errors with its number.
-
-    `code` and `params` are carried over so a caller can still point at the field at fault rather than
-    only print a sentence.
-    """
+def _restated_out_of_context(index, error):
+    """Restate one row's errors with the row number, and the preset where a parameter is at fault."""
     params = dict(getattr(error, "params", None) or {})
+    # A preset's own complaints already name it, so only a parameter's needs placing.
+    named = f"Preset `{params['preset']}`. " if params.get("parameter") and params.get("preset") else ""
     return [
         ConditionValidationError(
-            f"Condition {index + 1}: {message}",
+            f"Condition {index + 1}: {named}{message}",
             code=getattr(error, "code", None),
             **params,
             index=index,
@@ -32,27 +27,31 @@ def _numbered(index, error):
     ]
 
 
+def row_errors(value):
+    """Each bad row's own error, keyed by its position. Nothing to report for a value that is not a list."""
+    if not isinstance(value, list):
+        return {}
+    errors = {}
+    for index, row in enumerate(value):
+        try:
+            ConditionRow.from_dict(row).clean()
+        except ValidationError as error:
+            errors[index] = error
+    return errors
+
+
 def validate_conditions(value):
-    """
-    Check that every row in `value` could be stored and run.
+    """Check that every row in `value` could be stored and run.
 
-    Args:
-        value: The submitted conditions.
-
-    Raises:
-        ValidationError: If `value` is not a list, or any row is incorrectly formed. Messages count rows
-            from one, the way a person reads them; `params["index"]` is the row's position in the list,
-            for a caller that has to find it again.
+    Raises `ValidationError`, whose `params` carry `index` and `parameter`. A REST client sees only
+    the message, so that has to name the row itself.
     """
     if not isinstance(value, list):
         raise ConditionValidationError(f"Conditions must be a list of condition rows, not {type(value).__name__}.")
 
     issues = []
-    for index, row in enumerate(value):
-        try:
-            ConditionRow.from_dict(row).clean()
-        except ValidationError as error:
-            issues.extend(_numbered(index, error))
+    for index, error in row_errors(value).items():
+        issues.extend(_restated_out_of_context(index, error))
 
     if issues:
         raise ValidationError(issues)
