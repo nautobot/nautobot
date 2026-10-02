@@ -1295,7 +1295,7 @@ class APIOrderingTestCase(testing.APITestCase):
                     response = self.client.get(f"{url}?sort={field_name}&limit=10&depth=1", **self.header)
                     self._validate_sorted_response(
                         response=response,
-                        queryset=model_class.objects.extra(order_by=[field_name]),
+                        queryset=model_class.objects.order_by(field_name),
                         field_name=field_name,
                         is_fk_field=field_name in fk_fields,
                     )
@@ -1304,7 +1304,7 @@ class APIOrderingTestCase(testing.APITestCase):
                     response = self.client.get(f"{url}?sort=-{field_name}&limit=10&depth=1", **self.header)
                     self._validate_sorted_response(
                         response=response,
-                        queryset=model_class.objects.extra(order_by=[f"-{field_name}"]),
+                        queryset=model_class.objects.order_by(f"-{field_name}"),
                         field_name=field_name,
                         is_fk_field=field_name in fk_fields,
                     )

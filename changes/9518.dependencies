@@ -1,0 +1,9 @@
+Updated dependency `django-silk` to `>=5.6.0,<5.7`.
+Updated dependency `django-tree-queries` to `>=0.26.1,<0.27`.
+Updated dependency `djangorestframework` to `>=3.18.1,<3.19`.
+Updated dependency `emoji` to `>=2.16.0,<2.17`.
+Updated dependency `Markdown` to `>=3.11,<3.12`.
+Updated dependency `mysqlclient` to `>=2.3.0,<2.4`.
+Updated OpenTelemetry dependencies to `>=1.45.0,<1.46` and `>=0.66b0,<0.67` as a group.
+Updated dependency `social-auth-app-django` to `>=6.1.0,<6.2`.
+Updated dependency `social-auth-core` to `>=5.2.0,<5.3`.

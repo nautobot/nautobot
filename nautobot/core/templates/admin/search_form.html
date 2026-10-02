@@ -15,5 +15,5 @@
             {% if pair.0 != search_var %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}"/>{% endif %}
         {% endfor %}
     </form>
-    <script type="text/javascript">document.getElementById("searchbar").focus();</script>
+    <script>document.getElementById("searchbar").focus();</script>
 {% endif %}
