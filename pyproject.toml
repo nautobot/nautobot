@@ -183,7 +183,7 @@ exclude = [
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~7.1.1"
+django-debug-toolbar = "~8.0.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -197,7 +197,7 @@ invoke = "~3.0.3"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~15.0.0"
 # Change log management and generation
-towncrier = "~25.8.0"
+towncrier = "~26.9.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~6.0.0"
 
@@ -483,51 +483,32 @@ start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"
 
 [[tool.towncrier.type]]
-directory = "breaking"
 name = "Breaking Changes"
-showcontent = true
+directory = "breaking"
 
 [[tool.towncrier.type]]
-directory = "security"
 name = "Security"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "added"
 name = "Added"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "changed"
 name = "Changed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "deprecated"
 name = "Deprecated"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "removed"
 name = "Removed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "fixed"
 name = "Fixed"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "dependencies"
 name = "Dependencies"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "documentation"
 name = "Documentation"
-showcontent = true
 
 [[tool.towncrier.type]]
-directory = "housekeeping"
 name = "Housekeeping"
-showcontent = true
