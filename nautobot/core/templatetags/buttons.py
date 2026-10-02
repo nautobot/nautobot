@@ -548,7 +548,7 @@ def job_import_button(context, content_type, list_element=False):
     This allows an Import Button to either be displayed on a page or within a Button Group.
     Args:
         context (dict): current Django Template context
-        content_type (str): Django.contrib.ContentType for the model.
+        content_type (ContentType | None): ContentType of the model; renders nothing if None.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
     # The registered ImportObjectsModalButton lets the job-result modal resolve this trigger, and sets

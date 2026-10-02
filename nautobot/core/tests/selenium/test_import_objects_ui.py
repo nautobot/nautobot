@@ -15,7 +15,9 @@ class ImportObjectsUITestCase(SeleniumTestCase):
         self.click_navbar_entry("Organization", "Locations")
         self.browser.find_by_id("actions-dropdown").click()
         self.browser.find_by_id("import-button").click()
-        self.browser.find_by_id("import-full-form-link", wait_time=10).click()
+        full_form_link = self.browser.find_by_id("import-full-form-link", wait_time=10)
+        self.assertTrue(full_form_link.is_visible(wait_time=10))  # wait for the modal to finish fading in
+        full_form_link.click()
 
         # Make sure the table of fields for a Location import is populated via a few spot checks
         self.assertTrue(self.browser.is_text_present("shipping_address", wait_time=10))

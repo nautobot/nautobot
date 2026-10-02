@@ -2994,9 +2994,9 @@ class _JobModalButton(Button):
     def build_trigger_context(self, user=None, obj=None, extra_hx_vals=None, render_form=True):
         """Compute the HTMX wiring for a trigger that opens this Job's modal.
 
-        Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button`
-        template tag (a hand-placed dropdown trigger), so the run-view URL, base hx-vals keys, and
-        disabled logic live in one place rather than being duplicated per trigger.
+        Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button` and
+        `job_import_button` template tags (hand-placed dropdown triggers), so the run-view URL, base hx-vals
+        keys, and disabled logic live in one place rather than being duplicated per trigger.
 
         Args:
             user: The requesting user, used to gate the disabled state. `None` is treated as

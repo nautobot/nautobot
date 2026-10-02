@@ -2551,6 +2551,18 @@ class ImportModalTests(ImportExportJobTestCase):
         self.assertIn('id="csv-file"', content)
         self.assertIn('id="csv-text"', content)
 
+    def test_jobresult_modal_accepts_import_button(self):
+        """The job-result modal resolves the import button, offering no file download for a completed import."""
+        job_result = self.run_import(STATUS_CSV_DATA)
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.post(
+            reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk}),
+            data={"job_modal_button": "core.import_objects"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("redirect_button", response.context)
+
 
 # ===========================================================================
 # Layer 1b — core import resolution (per field type)
