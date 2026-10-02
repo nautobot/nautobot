@@ -1,0 +1,3 @@
+Improved performance of Dynamic Group cached member updates on save by reusing member caches already refreshed within the same operation instead of re-evaluating their group filters.
+Improved performance of Dynamic Group cached member updates on save by refreshing each unique ancestor group exactly once instead of once per path in nested group hierarchies.
+Removed a redundant cached member refresh when saving a Dynamic Group membership whose parent group required legacy `group_type` conversion.
