@@ -1,7 +1,6 @@
 from prometheus_client import Counter, Histogram
 
 MILLISECONDS_PER_SECOND = 1_000
-COMPLEXITY_COST_BUCKETS = (1, 2, 5, 10, 25, 50, 100, 250, 500, 1_000)
 
 # ------------------------------------------------------------------------------
 # Server-Timing - Total Duration
@@ -11,7 +10,6 @@ rest_request_total_duration_in_seconds_histogram = Histogram(
     name="nautobot_rest_request_total_duration_in_seconds",
     documentation="Total wall clock duration of requests",
     labelnames=("hashed_token",),
-    buckets=COMPLEXITY_COST_BUCKETS,
 )
 
 
@@ -28,7 +26,6 @@ rest_request_db_duration_in_seconds_histogram = Histogram(
     name="nautobot_rest_request_db_duration_in_seconds",
     documentation="Total time executing database queries during requests",
     labelnames=("hashed_token",),
-    buckets=COMPLEXITY_COST_BUCKETS,
 )
 
 
