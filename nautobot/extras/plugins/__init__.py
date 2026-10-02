@@ -163,14 +163,17 @@ class NautobotAppConfig(NautobotConfig):
         if jobs := import_string_optional(f"{self.__module__}.{self.jobs}"):
             self.features["jobs"] = jobs
 
-        # Import metrics (if present)
-        metrics = import_string_optional(f"{self.__module__}.{self.metrics}")
-        if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
-            register_metrics(metrics)
-            self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
-            # Inject the metrics to discover into the signal handler.
-            signal_callback = partial(discover_metrics, metrics=metrics)
-            nautobot_database_ready.connect(signal_callback, sender=self)
+        # Import metrics (if present and enabled).
+        # The module is only imported when metrics are enabled for this App, so that disabling metrics also avoids
+        # loading the module and evaluating its metric functions on `nautobot_database_ready`.
+        if settings.METRICS_ENABLED and self.name not in settings.METRICS_DISABLED_APPS:
+            metrics = import_string_optional(f"{self.__module__}.{self.metrics}")
+            if metrics is not None:
+                register_metrics(metrics)
+                self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
+                # Inject the metrics to discover into the signal handler.
+                signal_callback = partial(discover_metrics, metrics=metrics)
+                nautobot_database_ready.connect(signal_callback, sender=self)
 
         # Register plugin navigation menu items (if defined)
         if menu_items := import_string_optional(f"{self.__module__}.{self.menu_items}"):
