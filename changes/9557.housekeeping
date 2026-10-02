@@ -1,0 +1,1 @@
+Replaced the Selenium computed-field tests with a Playwright `ComputedFieldsTestCase`.
