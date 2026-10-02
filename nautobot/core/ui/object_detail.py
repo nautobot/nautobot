@@ -2994,9 +2994,9 @@ class _JobModalButton(Button):
     def build_trigger_context(self, user=None, obj=None, extra_hx_vals=None, render_form=True):
         """Compute the HTMX wiring for a trigger that opens this Job's modal.
 
-        Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button`
-        template tag (a hand-placed dropdown trigger), so the run-view URL, base hx-vals keys, and
-        disabled logic live in one place rather than being duplicated per trigger.
+        Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button` and
+        `job_import_button` template tags (hand-placed dropdown triggers), so the run-view URL, base hx-vals
+        keys, and disabled logic live in one place rather than being duplicated per trigger.
 
         Args:
             user: The requesting user, used to gate the disabled state. `None` is treated as
@@ -3130,3 +3130,24 @@ class ExportObjectListModalButton(_JobModalButton):
             # new tab rather than navigating the page the modal is sitting on away to the file.
             "attributes": {"download": file_proxy.name, "target": "_blank", "rel": "noopener"},
         }
+
+
+class ImportObjectsModalButton(_JobModalButton):
+    """Registry entry for the list-view Import job modal (ImportObjects).
+
+    Not rendered directly (the Actions dropdown hand-wires the HTMX trigger via the `job_import_button`
+    template tag); it exists in the registry so the job-result modal can resolve it. The import produces
+    no file, so no download button is offered — the result modal shows the created/updated/unchanged
+    summary (and the list refreshes on close via the trigger's `refresh_on_close_if_done`).
+    """
+
+    class_path = "nautobot.core.jobs.ImportObjects"
+    button_id = "core.import_objects"
+    enable_scheduling = False
+    # Refresh the list on modal close so newly created/updated objects appear.
+    refresh_on_close_if_done = True
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("label", "Import from file")
+        kwargs.setdefault("weight", 100)
+        super().__init__(**kwargs)

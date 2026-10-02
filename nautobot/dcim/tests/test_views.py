@@ -19,7 +19,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.core.templatetags.buttons import job_export_url, job_import_url
+from nautobot.core.templatetags.buttons import job_export_url
 from nautobot.core.testing import (
     extract_page_body,
     ModelViewTestCase,
@@ -990,29 +990,28 @@ class DeviceTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the DeviceType list view has both import links (single-record YAML/JSON, multi-record CSV)
-        and the export trigger."""
+        """Assert that the DeviceType list view has both import options (single-record YAML/JSON link, multi-record
+        import job modal) and the export trigger."""
         self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.run_job")
-        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
-        # enable the system Job for the button to render enabled (as it is in production).
-        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
-        job_model.enabled = True
-        job_model.save()
+        # The import and export triggers reuse the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:devicetype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
         yaml_import_url = reverse("dcim:devicetype_import")
-        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
-        # Dropdown provides both YAML/JSON and CSV import as options
+        # Dropdown provides both single-record YAML/JSON import and the multi-record import job as options
         self.assertInHTML(
             f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
-            content,
-        )
+        import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn('id="import-button"', content)
+        self.assertIn(f'hx-post="{import_url}"', content)
 
         export_url = job_export_url()
         # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
@@ -1407,29 +1406,28 @@ class ModuleTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the ModuleType list view has both import links (single-record YAML/JSON, multi-record CSV)
-        and the export trigger."""
+        """Assert that the ModuleType list view has both import options (single-record YAML/JSON link, multi-record
+        import job modal) and the export trigger."""
         self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.run_job")
-        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
-        # enable the system Job for the button to render enabled (as it is in production).
-        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
-        job_model.enabled = True
-        job_model.save()
+        # The import and export triggers reuse the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:moduletype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
         yaml_import_url = reverse("dcim:moduletype_import")
-        csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
-        # Dropdown provides both YAML/JSON and CSV import as options
+        # Dropdown provides both single-record YAML/JSON import and the multi-record import job as options
         self.assertInHTML(
             f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
-            content,
-        )
+        import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn('id="import-button"', content)
+        self.assertIn(f'hx-post="{import_url}"', content)
 
         export_url = job_export_url()
         # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
