@@ -1,0 +1,1 @@
+Changed the display name of permissions in the UI from "permission" to "object permission" to match other models.
