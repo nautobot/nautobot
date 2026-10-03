@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Case, F, IntegerField, Prefetch, ProtectedError, When, Window
 from django.db.models.functions import RowNumber
 from django.forms import (
@@ -4219,13 +4219,15 @@ class BulkComponentCreateUIViewSetMixin:
                                             else:
                                                 form.add_error(field, f"{obj} {name}: {err_str}")
 
+                                    raise AbortTransaction()
+
                         # Enforce object-level permissions
                         if component_queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
                             new_components
                         ):
                             raise ObjectDoesNotExist
 
-                except IntegrityError:
+                except AbortTransaction:
                     pass
 
                 except ObjectDoesNotExist:
