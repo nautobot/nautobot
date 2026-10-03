@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
@@ -40,6 +40,7 @@ from rest_framework.viewsets import ModelViewSet as ModelViewSet_, ReadOnlyModel
 import yaml
 
 from nautobot.core.api import BulkOperationSerializer
+from nautobot.core.api.constraints import get_constraint_error
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
@@ -391,6 +392,14 @@ class ModelViewSet(
                 self._validate_objects(instance)
         except ObjectDoesNotExist:
             raise PermissionDenied()
+        except ValidationError as error:
+            # Model signals can validate again during save, including after
+            # earlier records in a bulk request have been inserted.
+            raise drf_serializers.ValidationError(drf_serializers.as_serializer_error(error)) from error
+        except IntegrityError as error:
+            if validation_error := get_constraint_error(error, serializer):
+                raise validation_error from error
+            raise
 
     def perform_update(self, serializer):
         model = self.queryset.model
@@ -403,6 +412,14 @@ class ModelViewSet(
                 self._validate_objects(instance)
         except ObjectDoesNotExist:
             raise PermissionDenied()
+        except ValidationError as error:
+            # Model signals can validate again during save, including after
+            # earlier records in a bulk request have been inserted.
+            raise drf_serializers.ValidationError(drf_serializers.as_serializer_error(error)) from error
+        except IntegrityError as error:
+            if validation_error := get_constraint_error(error, serializer):
+                raise validation_error from error
+            raise
 
     def perform_destroy(self, instance):
         model = self.queryset.model

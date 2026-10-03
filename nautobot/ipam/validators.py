@@ -1,5 +1,17 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import BaseValidator, RegexValidator
+import netaddr
+
+
+def ip_address_list_validator(values):
+    """Validate a list of IPv4 or IPv6 addresses with optional masks."""
+    for value in values:
+        try:
+            netaddr.IPNetwork(value)
+        except (netaddr.AddrFormatError, ValueError) as error:
+            raise ValidationError(
+                "Enter a valid IPv4 or IPv6 address, optionally including a mask.", code="invalid"
+            ) from error
 
 
 def prefix_validator(prefix):
