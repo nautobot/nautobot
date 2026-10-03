@@ -1,0 +1,1 @@
+Fixed issue where re-applying a null option filter appended duplicate query params and resulted in invalid choice errors.
