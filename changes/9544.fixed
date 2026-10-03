@@ -1,0 +1,1 @@
+Fixed missing banners on the Approval Dashboard and prevented dashboard info messages from leaking to subsequent pages.
