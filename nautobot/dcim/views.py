@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import F, Prefetch
 from django.forms import (
     modelformset_factory,
@@ -3360,9 +3360,10 @@ class BulkComponentCreateUIViewSetMixin:
                                         for e in errors:
                                             err_str = ", ".join(e)
                                             form.add_error(
-                                                field,
+                                                field if field in form.fields else None,
                                                 f"{obj} {name}: {err_str}",
                                             )
+                                    raise AbortTransaction()
 
                         # Enforce object-level permissions
                         if component_queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
@@ -3370,7 +3371,7 @@ class BulkComponentCreateUIViewSetMixin:
                         ):
                             raise ObjectDoesNotExist
 
-                except IntegrityError:
+                except AbortTransaction:
                     pass
 
                 except ObjectDoesNotExist:
