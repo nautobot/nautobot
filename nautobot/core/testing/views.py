@@ -1211,7 +1211,6 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
-            self.assertIn("None", content, msg=content)
 
             # HTMX request should contain the table contents
             with self.assertLogs("nautobot.core.filters") as cm:
@@ -1750,7 +1749,7 @@ class ViewTestCases:
             for pk in pk_list:
                 self.assertNotIn(str(pk), response_body)
             self.assertInHTML(
-                '<input type="hidden" name="_all" value="True" class="form-control" placeholder="None" id="id__all">',
+                '<input type="hidden" name="_all" value="True" class="form-control" id="id__all">',
                 response_body,
             )
 
@@ -1786,7 +1785,7 @@ class ViewTestCases:
             self.assertNotIn(str(third_pk), response_body)
             self.assertIn("Editing 2 ", response_body)
             self.assertInHTML(
-                '<input type="hidden" name="_all" value="True" class="form-control" placeholder="None" id="id__all">',
+                '<input type="hidden" name="_all" value="True" class="form-control" id="id__all">',
                 response_body,
             )
 

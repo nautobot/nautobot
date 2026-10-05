@@ -796,14 +796,13 @@ class DynamicFilterFormTest(testing.TestCase):
             )
             self.assertEqual(
                 form.fields["lookup_field"].widget.attrs,
-                {"class": "nautobot-select2-static lookup_field-select", "placeholder": "Field"},
+                {"class": "nautobot-select2-static lookup_field-select"},
             )
 
             self.assertEqual(
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
-                    "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "extras.status",
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
@@ -812,7 +811,7 @@ class DynamicFilterFormTest(testing.TestCase):
 
             self.assertEqual(
                 form.fields["lookup_value"].widget.attrs,
-                {"class": "form-control lookup_value-input form-control", "placeholder": "Value"},
+                {"class": "form-control lookup_value-input form-control"},
             )
 
     def test_dynamic_filter_form_with_data_and_prefix(self):
@@ -846,7 +845,6 @@ class DynamicFilterFormTest(testing.TestCase):
                 form.fields["lookup_type"].widget.attrs,
                 {
                     "class": "nautobot-select2-api lookup_type-select",
-                    "placeholder": None,
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-contenttype": "dcim.location",
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
@@ -878,7 +876,6 @@ class DynamicFilterFormTest(testing.TestCase):
                     "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
-                    "placeholder": None,
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.ChoiceField)
@@ -898,7 +895,6 @@ class DynamicFilterFormTest(testing.TestCase):
                     "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
-                    "placeholder": None,
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"].widget, forms.DateTimePicker)
@@ -912,7 +908,6 @@ class DynamicFilterFormTest(testing.TestCase):
                     "data-contenttype": "dcim.location",
                     "data-query-param-field_name": '["$lookup_field"]',
                     "data-url": reverse("core-api:filtersetfield-list-lookupchoices"),
-                    "placeholder": None,
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
