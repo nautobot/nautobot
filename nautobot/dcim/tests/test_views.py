@@ -6243,10 +6243,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertHttpStatus(response, 200)
         # Connections list view has no import action.
         page_content = extract_page_body(response.content.decode(response.charset))
-        self.assertNotIn(
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
-            page_content,
-        )
+        self.assertNotIn('id="import-button"', page_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_breakout_cable_lanes_are_grouped(self):
