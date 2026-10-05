@@ -22,10 +22,7 @@ content type is only on the full-page form, which this links to.
             </div>
         </div>
     </div>
-    {% render_field job_form.roll_back_if_error %}
-    {% render_field job_form.import_format %}
     {% render_field job_form.content_type %}
-    {% render_field job_form.match_fields %}
     <div class="row justify-content-center">
         <div class="col-md-9 offset-md-3">
             <ul class="nav nav-tabs" role="tablist">
@@ -42,4 +39,7 @@ content type is only on the full-page form, which this links to.
             {% render_field job_form.csv_data %}
         </div>
     </div>
+    {% render_field job_form.roll_back_if_error %}
+    {% render_field job_form.match_fields %}
+    {% render_field job_form.import_format %}
 {% endblock job_form %}

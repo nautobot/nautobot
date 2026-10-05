@@ -3146,6 +3146,9 @@ class ImportObjectsModalButton(_JobModalButton):
     enable_scheduling = False
     # Refresh the list on modal close so newly created/updated objects appear.
     refresh_on_close_if_done = True
+    # Which objects are being imported is what the list view was showing; picking a different type here
+    # would import something the user never asked about. The Job's own form still offers the choice.
+    fixed_fields = ("content_type",)
 
     def __init__(self, **kwargs):
         kwargs.setdefault("label", "Import from file")
