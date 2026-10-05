@@ -369,16 +369,29 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        def assertBodyContains(html):
-            return self.assertBodyContains(response, html, html=True)
-
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response,
+            """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""",
+            html=True,
+        )
 
 
 class AppDocsViewTestCase(TestCase):
