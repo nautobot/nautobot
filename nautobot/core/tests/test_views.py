@@ -1444,8 +1444,10 @@ class AuthenticationEnforcedTestCase(TestCase):
                     if any(
                         url.startswith(path)
                         for path in [
+                            "/app-launch/",  # social auth
                             "/complete/",  # social auth
                             "/health/string/",  # health-check
+                            "/idp-launch/",  # social auth
                             "/login/",  # social auth
                             "/media/",  # MEDIA_ROOT
                             "/plugins/example-app/docs/",  # STATIC_ROOT
