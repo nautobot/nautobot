@@ -53,7 +53,7 @@ EXPRESSION_LABEL = "Raw expression"
 
 # Both words carry a value, because Select2 takes a blank-valued option for its placeholder, which
 # greys it out and drops it from the list, leaving nothing to choose to go back to.
-NEGATION_CHOICES = (("when", "When"), ("not", "not When"))
+NEGATION_CHOICES = (("when", "When"), ("not", "Not When"))
 
 # Said by the field select while the rule watches nothing, there being no fields to offer yet.
 PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
@@ -451,11 +451,16 @@ class ConditionRowForm(forms.Form):
         preset = get_condition_preset(chosen)
         if preset is None:
             return
+        # The field's controls come first, because building them settles the sub-field, and the field
+        # a row compares is the field and its sub-field together.
+        named = _parameter_of_kind(preset, PARAM_KIND_FIELD)
+        if named is not None:
+            self._add_field_controls(named)
         compared_field = self._field_this_row_compares(preset)
         for parameter in preset.parameters:
             if parameter.kind == PARAM_KIND_FIELD:
-                self._add_field_controls(parameter)
-            elif parameter.kind == PARAM_KIND_CHOICE:
+                continue
+            if parameter.kind == PARAM_KIND_CHOICE:
                 # The operator decides whether the value is typed or picked, so it fetches the row again.
                 control = _build_operator_control(parameter, compared_field.kind)
                 _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name, rebuild_index=self.index)
