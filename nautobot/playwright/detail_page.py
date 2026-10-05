@@ -17,7 +17,7 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Navigation, heading, Edit button, panel and deferred-component helpers for detail views."""
+    """Navigation, heading, Edit button and deferred-component helpers for detail views."""
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
     VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device". The Edit button reads "Edit <this>".
@@ -25,10 +25,6 @@ class DetailPage(BasePage):
     # The span inside the h1. Reading the h1 appends the copy button's label to the name.
     _HEADING = "#page-title #copy_title"
     _EDIT_BUTTON = "#edit-button"
-    # One per panel header. A panel's own label renders uppercased ("MANAGEMENT"), a table's title does not.
-    _PANEL_TITLE = ".card > .card-header strong"
-    # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
-    _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
     # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0,
     # which Playwright still counts as visible, so assert the count.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
@@ -58,35 +54,6 @@ class DetailPage(BasePage):
     def expect_edit_button(self):
         """Assert (auto-retrying) that this model's Edit button is rendered."""
         expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
-
-    # -------------------------------------------------------------------------
-    # Panels
-    # -------------------------------------------------------------------------
-
-    def panel(self, title):
-        """Locator for the panel card titled *title*, matched without regard to case."""
-        heading = self.page.locator(self._PANEL_TITLE).filter(
-            has_text=re.compile(rf"^\s*{re.escape(title)}\s*$", re.IGNORECASE)
-        )
-        return heading.locator(self._ENCLOSING_CARD)
-
-    def expect_panel(self, title):
-        """Assert (auto-retrying) that exactly one panel on the page is titled *title*."""
-        expect(self.panel(title)).to_have_count(1)
-
-    def expect_no_panel(self, title):
-        """Assert (auto-retrying) that no panel on the page is titled *title*."""
-        expect(self.panel(title)).to_have_count(0)
-
-    def expect_panel_to_contain(self, title, text):
-        """Assert (auto-retrying) that the panel titled *title* shows *text*, scoped to that one card."""
-        expect(self.panel(title)).to_contain_text(text)
-
-    def expect_panel_field(self, title, key, value):
-        """Assert (auto-retrying) that in panel *title*, the row whose first cell is *key* shows *value* in its second cell."""
-        key_cell = self.page.locator("td:first-child").filter(has_text=re.compile(rf"^\s*{re.escape(key)}\s*$"))
-        row = self.panel(title).locator("tr").filter(has=key_cell)
-        expect(row.locator("td").nth(1)).to_contain_text(value)
 
     # -------------------------------------------------------------------------
     # Deferred components
