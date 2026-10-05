@@ -3,16 +3,8 @@
 from django.utils.html import format_html
 import django_tables2 as tables
 
-from nautobot.apps.tables import (
-    BaseTable,
-    BooleanColumn,
-    ButtonsColumn,
-    LinkedCountColumn,
-    RoleTableMixin,
-    StatusTableMixin,
-    TagColumn,
-    ToggleColumn,
-)
+from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, LinkedCountColumn, TagColumn, ToggleColumn
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
 from . import models

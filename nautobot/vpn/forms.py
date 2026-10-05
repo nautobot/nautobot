@@ -4,27 +4,29 @@ import logging
 
 from django import forms
 
-from nautobot.apps.forms import (
-    add_blank_choice,
-    APISelect,
+from nautobot.core.forms import add_blank_choice
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONArrayFormField,
-    NautobotBulkEditForm,
-    NautobotFilterForm,
-    NautobotModelForm,
-    RoleModelBulkEditFormMixin,
-    RoleModelFilterFormMixin,
-    StaticSelect2,
-    StaticSelect2Multiple,
-    StatusModelBulkEditFormMixin,
-    StatusModelFilterFormMixin,
     TagFilterField,
-    TagsBulkEditFormMixin,
 )
-from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.widgets import APISelect, StaticSelect2, StaticSelect2Multiple
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
+from nautobot.extras.forms import (
+    NautobotBulkEditForm,
+    NautobotModelForm,
+    StatusModelBulkEditFormMixin,
+    TagsBulkEditFormMixin,
+)
+from nautobot.extras.forms.base import NautobotFilterForm
+from nautobot.extras.forms.mixins import (
+    RoleModelBulkEditFormMixin,
+    RoleModelFilterFormMixin,
+    StatusModelFilterFormMixin,
+)
 from nautobot.extras.models import DynamicGroup, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm

@@ -2,8 +2,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
-from nautobot.core.api import ContentTypeField
+from nautobot.core.api import ContentTypeField, NautobotModelSerializer
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -11,6 +10,7 @@ from nautobot.data_validation.models import (
     RequiredValidationRule,
     UniqueValidationRule,
 )
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.extras.utils import FeatureQuery
 
 

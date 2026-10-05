@@ -2,7 +2,8 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
-from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin, ValidatedModelSerializer
+from nautobot.core.api import NautobotModelSerializer, ValidatedModelSerializer
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 
 from .. import choices, models
 
