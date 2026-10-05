@@ -83,9 +83,7 @@ TERMINATION_TYPE_CONFIGS = {
 }
 
 # Choices for the type selector dropdown
-TERMINATION_TYPE_CHOICES = [("", "—")] + [
-    (key, config["display"]) for key, config in TERMINATION_TYPE_CONFIGS.items()
-]
+TERMINATION_TYPE_CHOICES = [("", "—")] + [(key, config["display"]) for key, config in TERMINATION_TYPE_CONFIGS.items()]
 
 
 def detect_termination_type(term):
