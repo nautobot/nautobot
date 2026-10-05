@@ -30,8 +30,10 @@ from nautobot.core.forms.widgets import (
 )
 from nautobot.extras.choices import ConditionTypeChoices
 from nautobot.extras.conditions.operators import (
+    DISPLAY_KEY,
     KIND_BOOLEAN,
     KIND_DATE,
+    KIND_LIST,
     KIND_NUMBER,
     KIND_TEXT,
     OPERATOR_REGISTRY,
@@ -100,11 +102,12 @@ class ComparedField:
 
         `whole` is a comparison against a complete value rather than part of one, `many` one against a
         set. `operator` is an `operators.Operator`, or None where the row has not named one yet, which
-        counts as one whole value.
+        counts as one whole value. A list overrides `compares_whole_value`, because every operator it
+        offers compares a whole value.
         """
         return replace(
             self,
-            whole=operator is None or operator.compares_whole_value,
+            whole=operator is None or operator.compares_whole_value or self.kind == KIND_LIST,
             many=bool(operator and self.kind and takes_a_set(operator.key, self.kind)),
         )
 
@@ -122,7 +125,13 @@ class ComparedField:
         if top is None:
             return ComparedField()
         if not subname:
-            return ComparedField(kind=top.get("kind"), picker=top.get("picker"))
+            values_can_be_listed = top.get("kind") == KIND_LIST and top.get("values_url")
+            return ComparedField(
+                kind=top.get("kind"),
+                picker=top.get("picker"),
+                values_url=top["values_url"] if values_can_be_listed else None,
+                key=DISPLAY_KEY if values_can_be_listed else None,
+            )
         sub = next((entry for entry in top.get("subfields", ()) if entry["name"] == subname), None)
         if sub is None:
             return ComparedField()
@@ -134,12 +143,11 @@ class ComparedField:
     def values_worth_listing(self):
         """Whether to offer the values themselves instead of a box to type one into.
 
-        Only ever a sub-field of a relation, such as `status.name`, where the select lists the real
-        Status objects and stores the sub-field's value. `for_path` carries no `values_url` for the
-        relation on its own, a sub-field that is a date or a number gets the widget its kind asks for,
-        and a partial comparison such as `contains` wants typing rather than picking.
+        Either a sub-field of a single relation, `status.name`, or a many-valued relation named on
+        its own, `tags`. A sub-field that is a date or a number gets the widget its kind asks for,
+        and a partial comparison such as `contains` on text wants typing rather than picking.
         """
-        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT))
+        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT, KIND_LIST))
 
 
 def _subfield_name(name):

@@ -8,11 +8,12 @@ for `=` on a many-valued field.
 Each operator is a frozen object holding a key, a form label, the predicate that performs the
 comparison, and `applies_to`, the value kinds the form offers it for:
 
-- `text` - strings, and related objects reduced to their display value
+- `text` - strings
 - `number` - ints, floats, Decimals, and numeric strings
 - `boolean` - true/false fields
 - `date` - dates and datetimes, serialized as ISO 8601 strings and compared as text
-- `list` - many-valued fields such as tags
+- `list` - a field holding several values: a many-valued relation such as tags, whose members
+  compare as their display value, or a plain list
 
 Evaluation never reads `applies_to`. What a comparison returns depends on the value's type:
 
@@ -21,7 +22,7 @@ Evaluation never reads `applies_to`. What a comparison returns depends on the va
 | str, date  | exact match   | lexicographic         | any of        | substring  | affix match             |
 | number     | numeric       | numeric               | any of        | False      | False                   |
 | bool       | bool target   | False                 | False         | False      | False                   |
-| list       | set equality  | False                 | False         | False      | False                   |
+| list       | set equality  | False                 | False         | holds one  | False                   |
 
 Numbers compare numerically when both sides read as numbers, otherwise as text. A target of a type
 no operator stores - None, a mapping, a string where a list is expected - raises TypeError. A target
@@ -43,7 +44,11 @@ KIND_LIST = "list"
 
 ALL_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_BOOLEAN, KIND_DATE, KIND_LIST})
 
-TEXTUAL_KINDS = frozenset({KIND_TEXT, KIND_DATE})  # contains, startswith, endswith
+# How a member of a many-valued relation compares. `serialize_object_v2` writes it on every one.
+DISPLAY_KEY = "display"
+
+TEXTUAL_KINDS = frozenset({KIND_TEXT, KIND_DATE})  # startswith, endswith
+CONTAINING_KINDS = TEXTUAL_KINDS | {KIND_LIST}  # contains
 ORDERABLE_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_DATE})  # gt, gte, lt, lte
 SET_MEMBER_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_DATE})  # in
 
@@ -73,10 +78,14 @@ def _as_number(value):
 def _as_text(value):
     """Return `value` as a string for text comparison, with None becoming the empty string.
 
-    Folding None into "" means `= ""` matches both an empty and an unset field.
+    Folding None into "" means `= ""` matches both an empty and an unset field. A many-valued
+    relation is recorded as a list of mappings, and `serialize_object_v2` writes `display` on every
+    one of them, so that is what a member compares as.
     """
     if value is None:
         return ""
+    if isinstance(value, dict) and DISPLAY_KEY in value:
+        return _as_text(value[DISPLAY_KEY])
     return str(value)
 
 
@@ -177,6 +186,18 @@ def _text_operation(string_method):
     return predicate
 
 
+def _containing(string_method):
+    """Build a predicate that holds for a whole member of a list, or a part of a string."""
+    substring = _text_operation(string_method)
+
+    def predicate(value, target):
+        if isinstance(value, (list, tuple, set)):
+            return any(_equals(_as_text(item), target) for item in value)
+        return substring(value, target)
+
+    return predicate
+
+
 @dataclass(frozen=True)
 class Operator:
     """One comparison strategy: how to compare, what to call it, and where it makes sense.
@@ -257,8 +278,8 @@ OPERATORS = (
     Operator(
         key=OPERATOR_CONTAINS,
         label="contains",
-        predicate=_text_operation(str.__contains__),
-        applies_to=TEXTUAL_KINDS,
+        predicate=_containing(str.__contains__),
+        applies_to=CONTAINING_KINDS,
         compares_whole_value=False,
     ),
     Operator(
