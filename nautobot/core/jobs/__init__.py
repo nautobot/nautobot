@@ -676,8 +676,8 @@ class ImportObjects(Job):
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
     # but accept CSV, JSON, or YAML data (see import_format).
-    csv_data = TextVar(label="Import Data (CSV/JSON/YAML)", required=False)
-    csv_file = FileVar(label="Import File (CSV/JSON/YAML)", required=False)
+    csv_data = TextVar(label="Import Data", required=False)
+    csv_file = FileVar(label="Import File", required=False)
     import_format = ChoiceVar(
         choices=(("auto", "Auto-detect"), ("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
         label="Format",
