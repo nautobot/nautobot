@@ -2523,6 +2523,48 @@ class ExportResultModalTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
+# Import job modal
+# ===========================================================================
+class ImportModalTests(ImportExportJobTestCase):
+    def test_import__modal_links_to_full_form(self):
+        """The ImportObjects job modal links to the full-page form for the selected content type."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        content_type_pk = ContentType.objects.get_for_model(Status).pk
+        response = self.client.post(
+            url,
+            data={
+                "render_job_form": True,
+                "job_modal_button": "core.import_objects",
+                "content_type": content_type_pk,
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        # An unloadable htmx_template_name silently falls back to the generic job modal, so check it explicitly.
+        self.assertTemplateUsed(response, "system_jobs/import_job_form_modal.html")
+        content = response.content.decode(response.charset)
+        self.assertIn(f'href="{url}?content_type={content_type_pk}"', content)
+        self.assertNotIn('id="csv-fields-table"', content)
+        # File and text inputs are alternatives, presented as tabs as on the full-page form.
+        self.assertIn('id="csv-file"', content)
+        self.assertIn('id="csv-text"', content)
+
+    def test_jobresult_modal_accepts_import_button(self):
+        """The job-result modal resolves the import button, offering no file download for a completed import."""
+        job_result = self.run_import(STATUS_CSV_DATA)
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.post(
+            reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk}),
+            data={"job_modal_button": "core.import_objects"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("redirect_button", response.context)
+
+
+# ===========================================================================
 # Layer 1b — core import resolution (per field type)
 # ===========================================================================
 class CoreImportResolveTests(ImportExportJobTestCase):

@@ -664,6 +664,10 @@ class _RowFailed(Exception):
 class ImportObjects(Job):
     """System Job to import CSV/JSON/YAML data to create and/or update a set of objects."""
 
+    # Custom HTMX job-modal template: the import fields laid out as on the full-page form, plus a link to that
+    # form's field reference.
+    htmx_template_name = "system_jobs/import_job_form_modal.html"
+
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import; defaults to the model the data declares for itself, if any.",
@@ -672,8 +676,8 @@ class ImportObjects(Job):
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
     # but accept CSV, JSON, or YAML data (see import_format).
-    csv_data = TextVar(label="Import Data (CSV/JSON/YAML)", required=False)
-    csv_file = FileVar(label="Import File (CSV/JSON/YAML)", required=False)
+    csv_data = TextVar(label="Import Data", required=False)
+    csv_file = FileVar(label="Import File", required=False)
     import_format = ChoiceVar(
         choices=(("auto", "Auto-detect"), ("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
         label="Format",
