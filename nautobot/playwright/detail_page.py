@@ -1,8 +1,7 @@
 """Shared page object for detail views built with the UI component framework.
 
-These views share one heading, the Edit button, and the same card markup for
-every panel. Subclasses set DETAIL_PATH and VERBOSE_NAME and add locators
-specific to their model.
+These views share one heading and the Edit button. Subclasses set DETAIL_PATH and
+VERBOSE_NAME and add locators specific to their model.
 
     class DeviceDetailPage(DetailPage):
         DETAIL_PATH = "/dcim/devices/{pk}/"
