@@ -782,7 +782,7 @@ class DynamicFilterFormTest(testing.TestCase):
             self.assertEqual(
                 form.fields["lookup_field"]._choices,
                 [
-                    (None, "---------"),
+                    (None, "—"),
                     ("color", "Color"),
                     ("contacts", "Contacts (name or ID)"),
                     ("content_types", "Content type(s)"),

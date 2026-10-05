@@ -1023,7 +1023,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
 
     def test_blank_termination_type_falls_back_to_default(self):
         """A form submission with an empty `<side>_conn_N_type` value should not raise from
-        `CableTerminationFieldSet.get_fields`. The "---------" choice in the type dropdown
+        `CableTerminationFieldSet.get_fields`. The "—" choice in the type dropdown
         (value="") is valid form input and should be treated as "no type selected" (default to
         the existing-term-derived default), not as an unknown type."""
         data = {
