@@ -6,10 +6,11 @@ from django.core.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel, SectionChoices
-from nautobot.apps.views import NautobotUIViewSet
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel, ObjectsTablePanel
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.tables import DynamicGroupTable
 from nautobot.ipam.tables import PrefixTable
 

@@ -3,7 +3,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 
-from nautobot.apps.testing import APIViewTestCases
+from nautobot.core.testing.api import APIViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN, VLANGroup
