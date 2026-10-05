@@ -125,8 +125,11 @@ class CleanValuesTest(TestCase):
     """The preset checks what only it can know; errors carry preset and parameter as structured data."""
 
     def test_none_means_no_params_and_fails_on_required(self):
-        with self.assertRaisesRegex(ConditionPresetError, re.escape("Preset `field_changed`")):
+        """The preset names itself in `params`, not in the sentence: an editor shows this inside the row."""
+        with self.assertRaises(ConditionPresetError) as caught:
             FIELD_CHANGED.clean_values(None)
+        self.assertEqual(caught.exception.messages, ["Parameter `field` is required."])
+        self.assertEqual(caught.exception.params["preset"], "field_changed")
 
     def test_non_mapping_rejected(self):
         with self.assertRaisesRegex(ConditionPresetError, re.escape("must be a mapping")):
@@ -150,7 +153,6 @@ class CleanValuesTest(TestCase):
         self.assertEqual(error.code, ConditionPresetError.code)
         self.assertEqual(error.params["preset"], "field_compare")
         self.assertEqual(error.params["parameter"], "value")
-        self.assertIn("field_compare", error.message)
         self.assertIn("`value` is required", error.message)
 
     def test_preset_level_errors_carry_the_preset_key(self):
@@ -300,6 +302,9 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
         self.assertEqual(set(as_dict), {"preset", "label", "description", "parameters", "example"})
         operator_schema, value_schema = as_dict["parameters"][1], as_dict["parameters"][2]
         self.assertEqual(operator_schema["kind"], "choice")
-        self.assertEqual(operator_schema["choices"][0], {"value": "=", "label": "= (equals)"})
+        self.assertEqual(
+            operator_schema["choices"][0],
+            {"value": "=", "label": "= (equals)"},
+        )
         self.assertTrue(value_schema["multiple"])
         self.assertFalse(operator_schema["multiple"])

@@ -44,7 +44,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         (() => {
             const controllerDevice = $(window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'controller_device'));
             const controllerDeviceRedundancyGroup = $(window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'controller_device_redundancy_group'));
