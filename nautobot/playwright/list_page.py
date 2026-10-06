@@ -12,7 +12,7 @@ model:
 import re
 from urllib.parse import urlencode
 
-from playwright.sync_api import expect
+from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
 
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
@@ -22,8 +22,6 @@ class ListPage(BasePage):
 
     LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
-    # A data row is a body row with a pk checkbox, which excludes the empty-state row
-    # rendered when a list has no results. Reference this constant, never inline it.
     # The row selection checkbox; its value is the object's id.
     _PK_CHECKBOX = "input[name='pk']"
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
@@ -45,8 +43,6 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
-    # The row selection checkbox; its value is the object's id.
-    _PK_CHECKBOX = "input[name='pk']"
     # The bulk edit form carries the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
