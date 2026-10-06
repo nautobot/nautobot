@@ -38,7 +38,13 @@ from nautobot.dcim.models import (
     RearPort,
     RearPortTemplate,
 )
-from nautobot.extras.filters.mixins import CustomFieldModelFilterSetMixin, RelationshipModelFilterSetMixin
+
+# The three mixins below are declared before the `nautobot.extras.filters.mixins` import on purpose.
+# That import enters the extras.filters -> tenancy.filters -> ipam.filters -> dcim.filters cycle, and
+# while it is in progress this module is only partially initialized: anything declared after it is not
+# yet bound for the modules that re-enter here. These three depend only on `django_filters` and
+# `nautobot.core.filters`, so declaring them first lets IPAM, Circuits and Virtualization import them
+# during startup without tripping the cycle.
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
@@ -50,6 +56,36 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
         queryset=Cable.objects.all(),
         label="Cable",
     )
+
+
+class LocatableModelFilterSetMixin(django_filters.FilterSet):
+    """Mixin to add `location` filter fields to a FilterSet.
+
+    The expectation is that the linked model has `location` FK fields.
+    """
+
+    location = TreeNodeMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Location.objects.all(),
+        to_field_name="name",
+        label="Location (name or ID)",
+    )
+
+
+class PathEndpointModelFilterSetMixin(django_filters.FilterSet):
+    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
+
+    def filter_connected(self, queryset, name, value):
+        if value:
+            return queryset.filter(_path__is_active=True)
+        else:
+            return queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))
+
+
+from nautobot.extras.filters.mixins import (  # noqa: E402  # intentionally deferred, see comment above
+    CustomFieldModelFilterSetMixin,
+    RelationshipModelFilterSetMixin,
+)
 
 
 class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFieldModelFilterSetMixin):
@@ -137,30 +173,6 @@ class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMix
             return queryset
         params = self.generate_query_filter_device(value)
         return queryset.filter(params)
-
-
-class LocatableModelFilterSetMixin(django_filters.FilterSet):
-    """Mixin to add `location` filter fields to a FilterSet.
-
-    The expectation is that the linked model has `location` FK fields.
-    """
-
-    location = TreeNodeMultipleChoiceFilter(
-        prefers_id=True,
-        queryset=Location.objects.all(),
-        to_field_name="name",
-        label="Location (name or ID)",
-    )
-
-
-class PathEndpointModelFilterSetMixin(django_filters.FilterSet):
-    connected = django_filters.BooleanFilter(method="filter_connected", label="Connected status (bool)")
-
-    def filter_connected(self, queryset, name, value):
-        if value:
-            return queryset.filter(_path__is_active=True)
-        else:
-            return queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False))
 
 
 class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):

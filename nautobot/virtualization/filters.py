@@ -12,7 +12,7 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.filters.mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Location, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.filters import (
     CustomFieldModelFilterSetMixin,
@@ -22,7 +22,7 @@ from nautobot.extras.filters import (
     StatusModelFilterSetMixin,
 )
 from nautobot.ipam.models import IPAddress, Service, VLAN
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
 
