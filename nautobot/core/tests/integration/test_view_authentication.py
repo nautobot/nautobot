@@ -17,7 +17,7 @@ PROTECTED_UI_VIEWS = (
 API_ROOT = "/api/"
 
 
-# storage_state=None drops the session login, so page arrives logged out.
+# storage_state=None drops the session login, so `page` arrives logged out.
 @pytest.mark.browser_context_args(storage_state=None)
 class AuthenticationEnforcedTestCase:
     """A chosen sample of protected views (home, a list, a detail, the API root) is refused to an anonymous browser."""
