@@ -6,32 +6,32 @@ MILLISECONDS_PER_SECOND = 1_000
 # Server-Timing - Total Duration
 # ------------------------------------------------------------------------------
 # TODO: Revisit this when tokens store username and add to labels
-rest_request_total_duration_in_seconds_histogram = Histogram(
-    name="nautobot_rest_request_total_duration_in_seconds",
+request_total_duration_in_seconds_histogram = Histogram(
+    name="nautobot_request_total_duration_in_seconds",
     documentation="Total wall clock duration of requests",
     labelnames=("hashed_token",),
 )
 
 
-def record_rest_request_total_duration(hashed_token, request_total_duration_in_milliseconds):
+def record_request_total_duration(hashed_token, request_total_duration_in_milliseconds):
     duration_in_seconds = request_total_duration_in_milliseconds / MILLISECONDS_PER_SECOND
-    rest_request_total_duration_in_seconds_histogram.labels(hashed_token).observe(duration_in_seconds)
+    request_total_duration_in_seconds_histogram.labels(hashed_token).observe(duration_in_seconds)
 
 
 # ------------------------------------------------------------------------------
 # Server-Timing - DB Duration
 # ------------------------------------------------------------------------------
 # TODO: Revisit this when tokens store username and add to labels
-rest_request_db_duration_in_seconds_histogram = Histogram(
-    name="nautobot_rest_request_db_duration_in_seconds",
+request_db_duration_in_seconds_histogram = Histogram(
+    name="nautobot_request_db_duration_in_seconds",
     documentation="Total time executing database queries during requests",
     labelnames=("hashed_token",),
 )
 
 
-def record_rest_request_db_duration(hashed_token, request_db_duration_in_milliseconds):
+def record_request_db_duration(hashed_token, request_db_duration_in_milliseconds):
     duration_in_seconds = request_db_duration_in_milliseconds / MILLISECONDS_PER_SECOND
-    rest_request_db_duration_in_seconds_histogram.labels(hashed_token).observe(duration_in_seconds)
+    request_db_duration_in_seconds_histogram.labels(hashed_token).observe(duration_in_seconds)
 
 
 # ------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def record_rest_request_complexity_cost(hashed_token, current_charge):
 rest_rate_limiting_backend_errors_counter = Counter(
     name="nautobot_rest_rate_limiting_backend_errors",
     documentation="Budget charge attempts that could not be completed against the Redis backend",
-    labelnames=("hashed_token", "exception_type", "exception"),
+    labelnames=("hashed_token", "exception_type"),
 )
 
 
@@ -62,5 +62,4 @@ def record_rest_request_rate_limiting_backend_exception(hashed_token, exception)
     rest_rate_limiting_backend_errors_counter.labels(
         hashed_token,
         exception_type,
-        str(exception),
     ).inc()

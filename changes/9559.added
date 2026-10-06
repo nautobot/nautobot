@@ -1,1 +1,2 @@
+Added request duration and db duration metrics to Prometheus.
 Added rest complexity cost rate limiting metrics to Prometheus.

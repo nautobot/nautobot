@@ -36,10 +36,10 @@ from nautobot.core.rate_limiting.budget_helpers import (
     hash_user_identifier,
 )
 from nautobot.core.rate_limiting.metrics import (
+    record_request_db_duration,
+    record_request_total_duration,
     record_rest_request_complexity_cost,
-    record_rest_request_db_duration,
     record_rest_request_rate_limiting_backend_exception,
-    record_rest_request_total_duration,
 )
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
@@ -557,7 +557,6 @@ class RequestMetricMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # TODO: Ask team if we want these metrics generated for HTML requests as well?
         enabled_metrics = self.get_enabled_metrics()
         if not enabled_metrics:
             return self.get_response(request)
@@ -590,9 +589,9 @@ class RequestMetricMiddleware:
             header_metrics.append(enabled_metric_string)
             # Add Metric Data To Prometheus
             if isinstance(enabled_metric, DatabaseDurationRequestMetric):
-                record_rest_request_db_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
+                record_request_db_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
             elif isinstance(enabled_metric, TotalDurationRequestMetric):
-                record_rest_request_total_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
+                record_request_total_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
 
         # ----------------------------------------------------------------------
         # Add Metrics To Response Header
