@@ -37,6 +37,7 @@ from nautobot.extras.conditions.forms import (
     ROLE_VALUE,
 )
 from nautobot.extras.conditions.model_fields import addressable_fields
+from nautobot.extras.conditions.operators import OPERATOR_REGISTRY
 from nautobot.extras.conditions.presets import register_builtin_condition_presets
 
 
@@ -105,6 +106,11 @@ class ControlsARowHoldsTest(RowFormTestCase):
                 ["field", "field_subfield", "operator", "value"],
             ),
             (
+                "a many-valued relation is compared whole, so it names no sub-field",
+                compare(field="tags", operator="="),
+                ["field", "operator", "value"],
+            ),
+            (
                 "a preset naming no field holds only what it declares",
                 {"type": "preset", "preset": "user_is", "values": {"username": "bot"}},
                 ["username"],
@@ -140,7 +146,8 @@ class WidgetForValueTest(RowFormTestCase):
             ("a colour is picked from the palette", "status.color", "=", ColorSelect.__name__),
             ("several colours at once", "status.color", "in", ColorSelectMultiple.__name__),
             ("a set on a field with nothing to list is typed", "mtu", "in", MultiValueCharInput.__name__),
-            ("`=` on a list compares set against set, so it takes several", "tags", "=", MultiValueCharInput.__name__),
+            ("`=` on a list compares set against set, so it takes several", "tags", "=", APISelectMultiple.__name__),
+            ("`contains` on a list takes one member of it", "tags", "contains", APISelect.__name__),
             (
                 "a date sub-field wants a calendar, however many objects carry it",
                 "role.last_updated",
@@ -195,6 +202,24 @@ class ComparedFieldTest(RowFormTestCase):
         self.assertEqual(compared_field.kind, "text")
         self.assertEqual(compared_field.key, "name")
         self.assertIn("content_types=dcim.interface", compared_field.values_url)
+
+    def test_a_many_valued_relation_is_picked_from_its_objects(self):
+        """`tags` is compared whole, so the row names no sub-field and the select takes several tags."""
+        compared_field = ComparedField.for_path(self.addressable, "tags", "").compared_with(OPERATOR_REGISTRY["="])
+        self.assertEqual(compared_field.kind, "list")
+        self.assertEqual(compared_field.key, "display")
+        self.assertIn("content_types=dcim.interface", compared_field.values_url)
+        self.assertTrue(compared_field.many)
+        self.assertTrue(compared_field.values_worth_listing)
+
+    def test_contains_takes_one_whole_member_of_a_list(self):
+        """It matches a fragment of a string, but a whole member of a list, so the tags are offered."""
+        compared_field = ComparedField.for_path(self.addressable, "tags", "").compared_with(
+            OPERATOR_REGISTRY["contains"]
+        )
+        self.assertTrue(compared_field.whole)
+        self.assertFalse(compared_field.many)
+        self.assertTrue(compared_field.values_worth_listing)
 
     def test_a_field_with_no_operator_of_its_own_compares_one_whole_value(self):
         """`field_transition` declares no operator, and both its ends are single whole values."""

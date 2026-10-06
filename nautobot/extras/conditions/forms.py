@@ -203,9 +203,9 @@ def _apply_bootstrap_styling(widget, placeholder=""):
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
-    if placeholder:
-        # A select takes `data-placeholder`: `initializeSelect2Fields` overwrites the real one.
-        widget.attrs.setdefault("data-placeholder" if isinstance(widget, forms.Select) else "placeholder", placeholder)
+    # A select keeps the placeholder every other Nautobot select shows, which `initializeSelect2` sets.
+    if placeholder and not isinstance(widget, forms.Select):
+        widget.attrs.setdefault("placeholder", placeholder)
     return widget
 
 
