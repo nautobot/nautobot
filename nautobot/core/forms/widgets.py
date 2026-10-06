@@ -130,11 +130,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
     A row with rows nested under it is a tri-state control over them rather than a field of its own, and
     submits nothing: it is checked when everything under it is, indeterminate when some of it is, and
     clicking it steps through its natural key (for a related object; see `natural_keys`), then everything,
-    then nothing -- or straight to everything from any other partial selection. The exception is
-    `custom_fields`, which does submit itself when everything under it is checked, since naming it asks for
-    every custom field including any added later, which no list of `cf_<key>` entries can; see
-    `ExportFieldsChoiceField.clean()`. A related object at the deepest offered level has nothing under it,
-    and is an ordinary field whose value is its natural key.
+    then nothing -- or straight to everything from any other partial selection. A related object at the
+    deepest offered level has nothing under it, and is an ordinary field whose value is its natural key.
 
     `parent_paths` maps each value to the value it nests under; `ExportFieldsChoiceField` sets it from
     `enumerate_field_paths()`. Without it, nesting falls back to the dunder structure of the path itself.
@@ -214,15 +211,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return self.expand_parents(value)
 
     def expand_parents(self, value):
-        """A selection as flat paths, with each related object that has rows under it spelled as those rows.
+        """A selection as flat paths, with each path that has rows under it spelled as those rows.
 
         Such a row submits nothing of its own, being a control over what is under it -- yet a selection may
         well name it, as the REST API, a scheduled Job, or a "match the list view" of a column showing a
-        related object all can. That asks for its natural key, so that is what it is shown as: the rows that
-        make it up, in its place. A related object with no natural key under it to show is shown as every
-        row under it instead, rather than dropped from the selection.
-
-        `custom_fields` is left as it is, being the one parent that names something itself.
+        related object all can. A related object is shown as the rows of its natural key, which is what it
+        asks for; anything else, such as `custom_fields`, as every row under it.
         """
         children = {}
         for path, parent in self.parent_paths.items():
@@ -235,7 +229,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         expanded = []
         for path in self.flatten_paths(value):
-            if path in children and path != "custom_fields":
+            if path in children:
                 replacement = self.natural_keys.get(path) or list(leaves_under(path))
             else:
                 replacement = [path]
@@ -263,7 +257,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             (parent["children"] if parent is not None else roots).append(node)
 
         widget_id = widget["attrs"].get("id") or ""
-        rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True, False),) for node in roots))
+        rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
         # No wrapper of its own: the whole picker is replaced at once when it has to be rebuilt
         # server-side, and the element that persists across those swaps is the one `render_field` puts
         # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents.
@@ -279,8 +273,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             # The parent rows' states are worked out in the browser -- "indeterminate" has no markup of its
             # own -- so every rendering, a swapped-in rebuild included, asks for that once it is in place.
             format_html(
-                '<script type="text/javascript">window.nbExportFieldSelect.refresh(document.getElementById("{}"));'
-                "</script>",
+                '<script>window.nbExportFieldSelect.refresh(document.getElementById("{}"));</script>',
                 widget_id,
             ),
         )
@@ -334,31 +327,27 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html("{}{}{}", buttons, self._summary(selected_count), legend)
 
     def _summary(self, selected_count):
-        """What the export will contain as things stand: the default columns, or the fields selected.
+        """What the export will contain: the default columns if nothing is selected, else the selected count.
 
-        Said here, above the tree, rather than in the field's help text below it, where it would be read
-        after the choosing rather than before; `ExportFieldsStringVar.as_field()` drops that help text from
-        the form accordingly. Both versions are rendered, `refresh()` in the behavior script showing whichever
-        applies -- and keeping the count current -- as the selection changes.
-
-        The default columns are spelled out because "everything" is not what they are: a related object
-        comes only as what identifies it, and the opt-in data a REST request must ask for by name is left
-        out. Kept generic, the opt-in fields varying by content type.
+        Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
+        Both versions are rendered; `refresh()` in the behavior script shows whichever applies.
         """
         model = self.content_type.model_class() if self.content_type is not None else None
         verbose_name = model._meta.verbose_name if model is not None else "object"
         return format_html(
-            '<div id="{id}" class="form-text mb-6" aria-live="polite">'
-            '<span class="export-fields-summary-default{default_hidden}">'
-            "<strong>No fields selected</strong>, so the export has the default columns: each field of the "
-            "{verbose_name} itself, each related object as the fields that identify it, and any custom fields. "
-            "Computed fields, relationships, and similar opt-in data are not exported."
-            "</span>"
-            '<span class="export-fields-summary-selected{selected_hidden}">'
-            '<strong><span class="export-fields-summary-count">{count}</span> selected</strong>, exported in the '
-            "order shown. Clear the selection to export the default columns instead."
-            "</span>"
-            "</div>",
+            """
+            <div id="{id}" class="form-text mb-6" aria-live="polite">
+                <span class="export-fields-summary-default{default_hidden}">
+                    <strong>No fields selected</strong>, so the export has the default columns: each field of the
+                    {verbose_name} itself, each related object as the fields that identify it, and any custom
+                    fields. Computed fields, relationships, and similar opt-in data are not exported.
+                </span>
+                <span class="export-fields-summary-selected{selected_hidden}">
+                    <strong><span class="export-fields-summary-count">{count}</span> selected</strong>, exported
+                    in the order shown. Clear the selection to export the default columns instead.
+                </span>
+            </div>
+            """,
             id=self.SUMMARY_ID,
             default_hidden=" d-none" if selected_count else "",
             selected_hidden="" if selected_count else " d-none",
@@ -427,7 +416,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         bring the parent rows' states into line with the fields checked under them.
         """
         return format_html(
-            """<script type="text/javascript">
+            """<script>
 (function () {{
     if (window.nbExportFieldSelectBound) return;
     window.nbExportFieldSelectBound = true;
@@ -572,16 +561,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
             summary=self.SUMMARY_ID,
         )
 
-    def _render_node(self, node, widget_id, name, is_root, parent_selected):
-        """One row, and the rows nested under it.
-
-        `parent_selected` is set under a selected `custom_fields`, which stands for every field under it --
-        so those render checked whether or not the selection names them one by one.
-        """
+    def _render_node(self, node, widget_id, name, is_root):
+        """One row, and the rows nested under it."""
         option = node["option"]
         value = str(option["value"])
         has_children = bool(node["children"])
-        selected = bool(option["attrs"].get("selected")) or parent_selected
+        selected = bool(option["attrs"].get("selected"))
         handle = (
             format_html(
                 '<span class="nb-draggable-handle pt-4 px-10"><span class="mdi mdi-drag-vertical text-secondary"></span></span>'
@@ -603,17 +588,6 @@ class ExportFieldSelect(SelectMultipleOrderable):
                 format_html(' title="Exports the fields that identify this related object"')
                 if value in self.relation_paths
                 else "",
-            )
-        elif value == "custom_fields":
-            # The one parent that names something itself: every custom field, those added later included.
-            # Checked by the browser only when everything under it is, which is when it should be submitted.
-            control = format_html(
-                '<input class="form-check-input my-6 export-field-parent" id="{}_option_{}" name="{}" '
-                'type="checkbox" value="{}">',
-                widget_id,
-                value,
-                name,
-                value,
             )
         else:
             # A control over what is nested under it, with no value of its own to submit.
@@ -658,12 +632,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         nested = ""
         if has_children:
-            # Everything under a selected `custom_fields` is selected, it being every custom field.
-            children_selected = parent_selected or (selected and value == "custom_fields")
             children = format_html_join(
-                "",
-                "{}",
-                ((self._render_node(child, widget_id, name, False, children_selected),) for child in node["children"]),
+                "", "{}", ((self._render_node(child, widget_id, name, False),) for child in node["children"])
             )
             # First nested level clears the drag handle and parent checkbox; deeper levels compound.
             nested = format_html(

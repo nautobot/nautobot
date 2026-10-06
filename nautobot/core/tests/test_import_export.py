@@ -1891,16 +1891,16 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         for model in (Device, Interface, Rack, RackReservation, IPAddress, Cable, SoftwareImageFile):
             with self.subTest(model=model._meta.label_lower):
                 entries = enumerate_field_paths(get_serializer_for_model(model))
-                offered = {entry["path"] for entry in entries}
-                parents = {entry["parent"] for entry in entries}
+                offered = {entry.path for entry in entries}
+                parents = {entry.parent for entry in entries}
                 for entry in entries:
-                    if entry["natural_key"] is None:
+                    if entry.natural_key is None:
                         continue
-                    self.assertTrue(entry["natural_key"], f"{entry['path']} has no natural key to select")
-                    for path in entry["natural_key"]:
+                    self.assertTrue(entry.natural_key, f"{entry.path} has no natural key to select")
+                    for path in entry.natural_key:
                         self.assertIn(path, offered)
                         self.assertNotIn(path, parents, f"{path} is a control, not a field")
-                        self.assertTrue(path.startswith(f"{entry['path']}__"))
+                        self.assertTrue(path.startswith(f"{entry.path}__"))
 
     def test_select__natural_key_is_cut_off_at_the_deepest_offered_relation(self):
         """A natural key deeper than the picker goes is selected as far down as it goes.
@@ -1976,7 +1976,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         """
         job_form, rendered = self.render_picker(Device)
         self.assertRegex(rendered, r'<span class="export-fields-summary-default">[^<]*<strong>No fields selected')
-        self.assertIn("each field of the device itself", rendered)
+        self.assertIn("each field of the device itself", " ".join(rendered.split()))  # as a browser collapses it
         self.assertIn('class="export-fields-summary-selected d-none"', rendered)
         self.assertIn(f'aria-describedby="{ExportFieldSelect.SUMMARY_ID}"', rendered)
         self.assertEqual(job_form.fields["export_fields"].help_text, "")
@@ -1986,32 +1986,22 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn('class="export-fields-summary-default d-none"', rendered)
         self.assertIn('<span class="export-fields-summary-count">2 fields</span>', rendered)
 
-    def test_select__custom_fields_stands_for_every_custom_field(self):
-        """`custom_fields` submits itself when everything under it is checked, and then only itself.
+    def test_select__custom_fields_is_a_parent_like_any_other(self):
+        """`custom_fields` controls the custom fields under it, and a selection naming it shows them all checked.
 
-        Naming it asks for every custom field, those added later included, which no list of `cf_<key>`
-        entries can say -- so the entries the browser also submits under it are dropped as repetition.
+        The selection itself is passed on as given, so the REST API can still ask for every custom field,
+        those added later included.
         """
         self.create_status_with_custom_fields()
         job_form, rendered = self.render_picker(Status, export_fields="name,custom_fields")
         custom_fields = self.checkbox_for(rendered, "custom_fields")
         self.assertIn("export-field-parent", custom_fields)
-        self.assertIn('name="export_fields"', custom_fields)
+        self.assertNotIn("name=", custom_fields)
         for path in ("cf_export_cf_a", "cf_export_cf_b"):
             with self.subTest(path=path):
                 self.assertIn(" checked", self.checkbox_for(rendered, path))
         self.assertTrue(job_form.is_valid(), job_form.errors)
         self.assertEqual(job_form.cleaned_data["export_fields"], "name,custom_fields")
-
-        content_type = str(ContentType.objects.get_for_model(Status).pk)
-        posted = ExportObjectList.as_form(
-            data={
-                "content_type": content_type,
-                "export_fields": ["name", "custom_fields", "cf_export_cf_a", "cf_export_cf_b"],
-            }
-        )
-        self.assertTrue(posted.is_valid(), posted.errors)
-        self.assertEqual(posted.cleaned_data["export_fields"], "name,custom_fields")
 
     def test_select__only_the_object_s_own_fields_are_marked_required(self):
         """The `*` marker is about creating a record, which is only ever the object the export is of.

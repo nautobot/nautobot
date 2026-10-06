@@ -10,6 +10,8 @@ format is not (yet) negotiable over HTTP, so it is plain functions rather than a
 `?format=...` support for it be added later, the renderer would be a thin wrapper over these.
 """
 
+from dataclasses import dataclass
+
 from django.core.exceptions import FieldDoesNotExist
 from rest_framework import serializers
 
@@ -286,13 +288,35 @@ def _traversable_relation_target(serializer, field):
     return model_field.related_model
 
 
-def natural_key_lookups_for(model):
-    """The lookups an export expands a bare relation to `model` into, or None if it represents it otherwise.
+@dataclass
+class ExportFieldPath:
+    """One field path an export may select, as `enumerate_field_paths()` offers it."""
 
-    None for a model with no natural key of Nautobot's defining -- `ContentType` and `Group` among them --
-    which a serializer renders in a representation of its own (`ContentTypeField`'s `app_label.model`)
-    rather than as lookups. Mirrors `_get_related_fields_natural_key_field_lookups()`.
+    # The `__`-separated path that selects the field, e.g. `device_type__manufacturer__name`.
+    path: str
+    # The path this one nests under: all but the last segment, except that a `cf_<key>` nests under
+    # `custom_fields`. None at the top level.
+    parent: str | None
+    # The field's own human-readable name, e.g. "Manufacturer".
+    label: str
+    # Whether an import needs this field to create a record. Only ever true at the top level, as an import
+    # looks related objects up rather than creating them.
+    required: bool
+    # Whether the path names a related object, which exports as the fields that identify it.
+    relation: bool
+    # For a related object with paths nested under it, those of them that make up its natural key; see
+    # `_natural_key_descendants()`. None otherwise.
+    natural_key: list[str] | None = None
+
+
+def natural_key_lookups_for(model):
+    """`model.csv_natural_key_field_lookups()`, or None if `model` is None or has no such natural key.
+
+    `ContentType` and `Group`, for example, are not Nautobot models, and are exported in a representation of
+    their own rather than as lookups.
     """
+    if model is None:
+        return None
     try:
         return model.csv_natural_key_field_lookups()
     except AttributeError:
@@ -300,17 +324,16 @@ def natural_key_lookups_for(model):
 
 
 def expand_relation_paths(model, paths):
-    """`paths` with each one that ends at a relation *through* another spelled as its natural-key lookups.
+    """Expand each nested path that ends at a related object into that object's natural-key lookups.
 
-    A bare relation (`location`) is already exported as its natural key, by the serializer; one reached
-    through another (`software_version__platform`) is a database lookup like any other nested path, which
-    for a relation reads its primary key. Spelled out here, it exports what identifies it instead, which
-    is what the picker offers it as -- at its deepest level, selecting a related object is the only way to
-    ask for that.
+    Without this, such a path would export the related object's primary key. A bare relation such as
+    `location` needs no expansion, as the serializer already exports it by natural key.
 
-    Order is kept, each expanded path taking the place of the one it came from. A path that does not
-    resolve against the model, or that ends at a relation with no natural key of lookups (see
-    `natural_key_lookups_for()`), is left as it is. Meant for paths `validate_field_paths()` has accepted.
+    Example:
+        >>> expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"])
+        ["image_file_name", "software_version__platform__name"]
+
+    Paths are kept in order; any other path is returned unchanged.
     """
     expanded = []
     for path in paths:
@@ -326,7 +349,7 @@ def expand_relation_paths(model, paths):
                 related_model = field.related_model if not (field.many_to_many or field.one_to_many) else None
                 if related_model is None:
                     break
-            lookups = natural_key_lookups_for(related_model) if related_model is not None else None
+            lookups = natural_key_lookups_for(related_model)
             if lookups:
                 replacement = [f"{path}__{lookup}" for lookup in lookups]
         expanded.extend(entry for entry in replacement if entry not in expanded)
@@ -480,20 +503,7 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
     a field of its own with nothing under it, since what is under it would not be what selecting it gives.
 
     Returns:
-        list: `{"path": str, "parent": str | None, "label": str, "required": bool, "relation": bool,
-            "natural_key": list | None}` dicts. `parent` is the path this one nests under, which is all but
-            the last segment except for a `cf_<key>`, whose parent is `custom_fields` -- the field that asks
-            for every custom field at once. `label` is the field's own human-readable name, without those of
-            the paths it nests under. `relation` is whether the path names a related object, selecting which
-            exports the columns that identify it rather than any one value. `required` is whether an
-            import would demand the field to create a record, which is what makes a selection
-            round-trippable, and which only a field of the object itself can be: an import resolves a
-            related object from what the path names (`RelatedField.to_internal_value`, which fails with
-            `does_not_exist`) rather than creating one, so what that object's own serializer requires has
-            no bearing on the file. `natural_key` is set only on a relation with paths nested under it, and
-            is those of its descendant paths that make up the related object's natural key; a lookup deeper
-            than the enumeration goes is represented by the deepest relation on its way that is offered,
-            which exports the rest of it. Empty if no lookup of it is offered.
+        list[ExportFieldPath]: The offered paths, in reading order.
     """
     # `custom_fields` is offered at the root even though a flat export emits no column of that name: naming
     # it asks for every custom field of the object at once -- including any added after the selection was
@@ -548,14 +558,14 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
             # other way to tell that from an ordinary field.
             related_model = _traversable_relation_target(serializer, field)
             paths.append(
-                {
-                    "path": path,
-                    "parent": prefix or None,
-                    "label": str(field.label),
+                ExportFieldPath(
+                    path=path,
+                    parent=prefix or None,
+                    label=str(field.label),
                     # Required only where it means anything: at the root, where an import creates the record.
-                    "required": field.required and not prefix,
-                    "relation": related_model is not None,
-                }
+                    required=field.required and not prefix,
+                    relation=related_model is not None,
+                )
             )
             if related_model is None:
                 continue
@@ -583,35 +593,40 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         custom_field_keys = getattr(custom_fields_field, "custom_field_keys", ())
         custom_field_labels = getattr(custom_fields_field, "custom_field_labels", {}) if custom_field_keys else {}
         paths.extend(
-            {
-                "path": f"cf_{key}",
-                "parent": "custom_fields",
-                "label": custom_field_labels.get(key) or key,
-                "required": False,
-                "relation": False,
-            }
+            ExportFieldPath(
+                path=f"cf_{key}",
+                parent="custom_fields",
+                label=custom_field_labels.get(key) or key,
+                required=False,
+                relation=False,
+            )
             for key in sorted(custom_field_keys)
         )
 
-    offered = {entry["path"] for entry in paths}
-    parents = {entry["parent"] for entry in paths}
+    offered = {entry.path for entry in paths}
+    parents = {entry.parent for entry in paths}
     for entry in paths:
-        path = entry["path"]
-        entry["natural_key"] = (
-            _natural_key_descendants(path, _natural_key_lookups(relation_models[path]), offered)
-            if path in parents and path in relation_models
-            else None
-        )
+        if entry.path in parents and entry.path in relation_models:
+            entry.natural_key = _natural_key_descendants(
+                entry.path, _natural_key_lookups(relation_models[entry.path]), offered
+            )
 
     return paths
 
 
 def _natural_key_descendants(path, lookups, offered):
-    """The offered paths under the relation `path` that its natural key `lookups` amount to.
+    """The paths in `offered` that select the natural key of the relation `path`, given its `lookups`.
 
-    Each lookup is taken as deep as the offered paths go: a lookup that is offered in full is itself, and
-    one deeper than the enumeration reaches is the deepest relation along it that is offered, since
-    selecting that exports the rest of the lookup as that relation's own natural key.
+    A lookup too deep to be offered is cut off at the deepest offered relation along it, which exports the
+    rest of the lookup as its own natural key.
+
+    Example:
+        >>> _natural_key_descendants(
+        ...     "location",
+        ...     ["name", "parent__name", "parent__parent__name"],
+        ...     {"location__name", "location__parent__name", "location__parent__parent", ...},
+        ... )
+        ["location__name", "location__parent__name", "location__parent__parent"]
     """
     descendants = []
     for lookup in lookups or ():

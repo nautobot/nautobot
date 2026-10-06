@@ -164,7 +164,7 @@ Many-to-many fields, such as `tags`, can be selected like any other field, but c
 
 #### Selecting custom fields
 
-Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **Custom fields**, which is the last row of the list. Its checkbox selects all of them at once, as `custom_fields` - which keeps asking for every custom field as more are added later, unlike a list of the individual entries.
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **Custom fields**, the last row of the list.
 
 In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
 

@@ -26,6 +26,7 @@ from nautobot.core.api.import_export import (
     build_import_metadata,
     expand_relation_paths,
     IMPORT_DOCUMENT_MODEL_KEY,
+    natural_key_lookups_for,
     validate_field_paths,
 )
 from nautobot.core.api.parsers import (
@@ -420,8 +421,10 @@ class ExportObjectList(Job):
                     continue
                 try:
                     related_model = model._meta.get_field(match_field).related_model
-                    related_lookups = related_model.csv_natural_key_field_lookups()
-                except (AttributeError, FieldDoesNotExist):
+                except FieldDoesNotExist:
+                    return None
+                related_lookups = natural_key_lookups_for(related_model)
+                if related_lookups is None:
                     # Not a relation, or one to a model without an identifiable natural key
                     return None
                 if any(f"{match_field}__{lookup}" not in export_field_paths for lookup in related_lookups):

@@ -23,7 +23,7 @@ from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
 from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
-from nautobot.core.api.import_export import nest_flat_dict
+from nautobot.core.api.import_export import natural_key_lookups_for, nest_flat_dict
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     get_brief_representation,
@@ -363,12 +363,10 @@ class NaturalKeyRepresentationMixin:
                 if selected_paths:
                     field_lookups.extend(selected_paths)
                     continue
-            # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr.
-            # fallback to using default behavior for these fields
-            with contextlib.suppress(AttributeError):
-                field_lookups.extend(
-                    f"{field.name}__{lookup}" for lookup in field.related_model.csv_natural_key_field_lookups()
-                )
+            # A relation with no natural-key lookups (ContentType, Group) keeps its default representation.
+            field_lookups.extend(
+                f"{field.name}__{lookup}" for lookup in natural_key_lookups_for(field.related_model) or ()
+            )
         return field_lookups
 
     def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
