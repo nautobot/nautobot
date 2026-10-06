@@ -56,8 +56,8 @@ def created_manufacturer(create_object):
 
 
 @pytest.fixture
-def created_device(create_object, status_for):
-    """A device owned by this test, with its own location type, location, manufacturer, device type and role.
+def created_device(create_object, status_for, created_manufacturer):
+    """A device owned by this test, with its own location type, location, device type and role.
 
     Also returns the related records. The device's API response gives only their id and
     URL, and the tests need their names.
@@ -71,11 +71,10 @@ def created_device(create_object, status_for):
         location_type=location_type["id"],
         status=status_for("dcim.location")["id"],
     )
-    manufacturer = create_object("dcim/manufacturers/", name=f"{unique}-manufacturer")
     device_type = create_object(
         "dcim/device-types/",
         model=f"{unique}-model",
-        manufacturer=manufacturer["id"],
+        manufacturer=created_manufacturer["id"],
     )
     role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
     status = status_for("dcim.device")
