@@ -15,7 +15,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         // Build the value-widget request path from the currently selected metadata_type.
         // The widget is a *detail* action on MetadataTypeUIViewSet, so the pk lives in the URL
         // path. We assemble it from the pk-less list URL (`data-value-widget-base`) plus the live

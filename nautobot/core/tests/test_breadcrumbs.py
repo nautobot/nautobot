@@ -258,6 +258,11 @@ class BreadcrumbItemsTestCase(TestCase):
         self.assertEqual(url, f"/dcim/location-types/{parent_location_type.pk}/")
         self.assertEqual(label, "Country")
 
+        item = InstanceBreadcrumbItem(instance=context_object_attr("location_type.parent.parent.name"))
+        url, label = next(item.as_pair(context))
+        self.assertEqual(url, "")
+        self.assertEqual(label, "")
+
     def test_instance_parent_not_add_title_casing(self):
         parent_location_type = LocationType.objects.create(name="cUsToM CoUnTrY", nestable=True)
         context = Context({"object": LocationType.objects.create(name="custom name", parent=parent_location_type)})

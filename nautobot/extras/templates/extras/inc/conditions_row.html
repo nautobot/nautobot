@@ -1,0 +1,35 @@
+{% load form_helpers %}
+
+{% comment %}
+    One condition, read as a sentence: negation and the condition type open it on the left, its
+    parameters run down the right, one to a line. `ConditionRowForm` chooses the controls, this file
+    only places them.
+
+    The two selects that open the sentence are written out rather than passed to `render_field`,
+    which would put a visible label in front of each and break the reading.
+{% endcomment %}
+
+<div class="nb-condition" data-nb-condition-index="{{ form.index }}" hx-history="false">
+    <div class="nb-condition-negate">
+        <label class="visually-hidden" for="{{ form.negate.id_for_label }}">{{ form.negate.label }}</label>
+        {{ form.negate }}
+    </div>
+    <div class="nb-condition-type">
+        <label class="visually-hidden" for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
+        {{ form.type }}
+    </div>
+    <div class="nb-condition-parameters">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% for control in form.parameter_controls %}
+            {% render_field control %}
+        {% endfor %}
+    </div>
+    <div class="nb-condition-remove">
+        <button type="button" class="btn btn-danger nb-delete-row" title="Remove this condition">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+            <span class="visually-hidden">Remove this condition</span>
+        </button>
+    </div>
+</div>

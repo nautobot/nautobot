@@ -226,7 +226,7 @@ class ModularComponentModel(ComponentModel):
 
     def save(self, *args, **kwargs):
         if self.device is None and self.module is not None:
-            self.device = getattr(self.module.parent_module_bay, "parent_device", None)
+            self.device = getattr(self.module.parent_module_bay, "parent_device", None)  # pylint: disable=no-member
 
         super().save(*args, **kwargs)
 

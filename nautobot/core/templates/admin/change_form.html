@@ -5,11 +5,11 @@
 
 {% block extrahead %}{{ block.super }}
     {% url 'admin:jsi18n' as jsi18nurl %}
-    <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+    <script src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
     {{ media }}
 {% endblock %}
 
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static "admin/css/forms.css" %}" />{% endblock %}
 
 {% if not is_popup %}
     {% block breadcrumbs %}
@@ -100,7 +100,7 @@
 
                 {% block admin_change_form_document_ready %}
 
-                    <script type="text/javascript">
+                    <script>
                         (function($) {
                             $(document).ready(function() {
                                 $('.add-another').click(function(e) {
@@ -128,6 +128,6 @@
             {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
         </div>
     </form>
-    <script id="django-admin-form-add-constants" src="/static/admin/js/change_form.js" data-model-name="admingroup" async=""></script>
-    <script id="django-admin-prepopulated-fields-constants" src="/static/admin/js/prepopulate_init.js" data-prepopulated-fields="[]"></script>
+    <script id="django-admin-form-add-constants" src="{% static "admin/js/change_form.js" %}" data-model-name="admingroup" async=""></script>
+    <script id="django-admin-prepopulated-fields-constants" src="{% static "admin/js/prepopulate_init.js" %}" data-prepopulated-fields="[]"></script>
 {% endblock %}

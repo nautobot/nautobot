@@ -77,7 +77,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         (() => {
             const controllerUrl = '{% url 'dcim-api:controller-list' %}';
             const controllerGroupUrl = '{% url 'dcim-api:controllermanageddevicegroup-list' %}';
@@ -148,7 +148,7 @@
             onParentInput();
         })();
     </script>
-    <script type="text/javascript">
+    <script>
         $('.formset_row-{{ wireless_networks.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Wireless Network',
             addCssClass: 'btn btn-primary add-row',

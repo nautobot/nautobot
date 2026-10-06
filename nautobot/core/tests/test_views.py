@@ -1,3 +1,4 @@
+import html
 import json
 import os
 from pathlib import Path
@@ -25,7 +26,7 @@ from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.templatetags.buttons import job_export_url
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
@@ -118,7 +119,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         view tests that key for truthiness, where the string "False" would be as true as any other and
         would open the form instead of running the export.
         """
-        self.add_permissions("extras.view_exporttemplate", "extras.view_job")
+        self.add_permissions("extras.view_exporttemplate", "extras.run_job")
         ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Provider),
             name="Provider inventory",
@@ -141,6 +142,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_export_templates_the_user_cannot_view_are_not_offered(self):
         """The templates offered are the ones the user may view, the menu being built for them."""
+        self.add_permissions("extras.run_job")
         ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Provider),
             name="Provider inventory",
@@ -151,6 +153,36 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn("Export to file", body)  # the dialog is still offered
         self.assertNotIn("Export Templates", body)
         self.assertNotIn("Provider inventory", body)
+
+    def _import_button_tag(self):
+        match = re.search(r'<button[^>]*id="import-button"[^>]*>', self._provider_list_body())
+        self.assertIsNotNone(match, "import button not rendered")
+        return match.group(0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_opens_job_modal(self):
+        """The Import action opens the ImportObjects job form in the modal, prefilled with the list's content type."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        button = self._import_button_tag()
+
+        run_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn(f'hx-post="{run_url}"', button)
+        hx_vals = json.loads(html.unescape(re.search(r"hx-vals='([^']+)'", button).group(1)))
+        self.assertEqual(hx_vals["job_modal_button"], "core.import_objects")
+        self.assertEqual(hx_vals["content_type"], str(ContentType.objects.get_for_model(Provider).pk))
+        self.assertTrue(hx_vals["render_job_form"])
+        self.assertTrue(hx_vals["refresh_on_close_if_done"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_disabled_without_run_job_permission(self):
+        """A user who may add objects but not run the ImportObjects job sees the Import action, disabled."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        button = self._import_button_tag()
+
+        self.assertIn("disabled", button)
+        self.assertIn('title="You do not have permission to run this Job."', button)
+        self.assertNotIn("hx-post", button)
 
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
@@ -337,16 +369,29 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        def assertBodyContains(html):
-            return self.assertBodyContains(response, html, html=True)
-
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response,
+            """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""",
+            html=True,
+        )
 
 
 class AppDocsViewTestCase(TestCase):
@@ -691,11 +736,13 @@ class ViewportMetaTestCase(TestCase):
 
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
-        """Unauthenticated access redirects to the login page."""
+        """Unauthenticated access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("messages")])
 
     def build_request(self):
         request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
@@ -855,11 +902,13 @@ class SearchViewTestCase(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
     def test_get_unauthenticated_redirects_htmx(self):
-        """Unauthenticated HTMX access redirects to the login page."""
+        """Unauthenticated HTMX access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("search") + "?q=test"])
 
     def test_get_no_query_renders_search_form(self):
         """GET without ?q renders the search page, not the results page."""

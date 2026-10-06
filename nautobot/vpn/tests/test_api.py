@@ -210,6 +210,132 @@ class VPNPhase2PolicyAPITest(APIViewTestCases.APIViewTestCase):
         }
 
 
+class VPNProfilePhase1PolicyAssignmentAPITest(APIViewTestCases.APIViewTestCase):
+    """VPNProfilePhase1PolicyAssignment API tests."""
+
+    # Removes 'crypt' because of encryption_algorithm field on referenced policy.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
+    model = models.VPNProfilePhase1PolicyAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        profiles = [models.VPNProfile.objects.create(name=f"Assignment P1 Profile {i}") for i in range(1, 7)]
+        policies = [models.VPNPhase1Policy.objects.create(name=f"Assignment P1 Policy {i}") for i in range(1, 7)]
+
+        models.VPNProfilePhase1PolicyAssignment.objects.create(
+            vpn_profile=profiles[0],
+            vpn_phase1_policy=policies[0],
+            weight=100,
+        )
+        models.VPNProfilePhase1PolicyAssignment.objects.create(
+            vpn_profile=profiles[1],
+            vpn_phase1_policy=policies[1],
+            weight=200,
+        )
+        models.VPNProfilePhase1PolicyAssignment.objects.create(
+            vpn_profile=profiles[2],
+            vpn_phase1_policy=policies[2],
+            weight=300,
+        )
+
+        cls.create_data = [
+            {
+                "vpn_profile": profiles[3].pk,
+                "vpn_phase1_policy": policies[3].pk,
+                "weight": 150,
+            },
+            {
+                "vpn_profile": profiles[4].pk,
+                "vpn_phase1_policy": policies[4].pk,
+                "weight": 250,
+            },
+            {
+                "vpn_profile": profiles[5].pk,
+                "vpn_phase1_policy": policies[5].pk,
+                "weight": 350,
+            },
+        ]
+
+        cls.update_data = {
+            "weight": 500,
+        }
+
+
+class VPNProfilePhase2PolicyAssignmentAPITest(APIViewTestCases.APIViewTestCase):
+    """VPNProfilePhase2PolicyAssignment API tests."""
+
+    # Removes 'crypt' because of encryption_algorithm field on referenced policy.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
+    model = models.VPNProfilePhase2PolicyAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        profiles = [models.VPNProfile.objects.create(name=f"Assignment P2 Profile {i}") for i in range(1, 7)]
+        policies = [models.VPNPhase2Policy.objects.create(name=f"Assignment P2 Policy {i}") for i in range(1, 7)]
+
+        models.VPNProfilePhase2PolicyAssignment.objects.create(
+            vpn_profile=profiles[0],
+            vpn_phase2_policy=policies[0],
+            weight=100,
+        )
+        models.VPNProfilePhase2PolicyAssignment.objects.create(
+            vpn_profile=profiles[1],
+            vpn_phase2_policy=policies[1],
+            weight=200,
+        )
+        models.VPNProfilePhase2PolicyAssignment.objects.create(
+            vpn_profile=profiles[2],
+            vpn_phase2_policy=policies[2],
+            weight=300,
+        )
+
+        cls.create_data = [
+            {
+                "vpn_profile": profiles[3].pk,
+                "vpn_phase2_policy": policies[3].pk,
+                "weight": 150,
+            },
+            {
+                "vpn_profile": profiles[4].pk,
+                "vpn_phase2_policy": policies[4].pk,
+                "weight": 250,
+            },
+            {
+                "vpn_profile": profiles[5].pk,
+                "vpn_phase2_policy": policies[5].pk,
+                "weight": 350,
+            },
+        ]
+
+        cls.update_data = {
+            "weight": 500,
+        }
+
+
 class VPNAPITest(APIViewTestCases.APIViewTestCase):
     """VPN API tests."""
 

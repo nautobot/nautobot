@@ -131,7 +131,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         document.addEventListener('nb-form:load:{{ obj_type }}', () => {
             const software_version_image_container = document.querySelector('div#software_version_image_container');
             const software_version_image_description = document.querySelector('span#software_version_image_description');

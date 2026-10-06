@@ -17,6 +17,7 @@ __all__ = (
     "BulkEditNullBooleanSelect",
     "ClearableFileInput",
     "ColorSelect",
+    "ColorSelectMultiple",
     "ContentTypeSelect",
     "DatePicker",
     "DateTimePicker",
@@ -77,6 +78,12 @@ class ColorSelect(forms.Select):
         self.attrs["class"] = "nautobot-select2-color-picker"
 
 
+class ColorSelectMultiple(ColorSelect, forms.SelectMultiple):
+    """
+    `ColorSelect` for a field that holds several colors at once.
+    """
+
+
 class BulkEditNullBooleanSelect(forms.NullBooleanSelect):
     """
     A Select widget for NullBooleanFields
@@ -87,7 +94,7 @@ class BulkEditNullBooleanSelect(forms.NullBooleanSelect):
 
         # Override the built-in choice labels
         self.choices = (
-            ("1", "---------"),
+            ("1", "—"),
             ("2", "Yes"),
             ("3", "No"),
         )
