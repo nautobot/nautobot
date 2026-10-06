@@ -1362,11 +1362,8 @@ class ViewTestCases:
             )
             self.assertBodyContains(response, expected_title, html=True)
 
-            with self.subTest("Assert import-objects URL is absent due to user permissions"):
-                self.assertNotIn(
-                    reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
-                    response_body,
-                )
+            with self.subTest("Assert import button is absent due to user permissions"):
+                self.assertNotIn('id="import-button"', response_body)
 
             if "example_app" in settings.PLUGINS:
                 with self.subTest("Assert example-app banner is present"):
@@ -1397,6 +1394,7 @@ class ViewTestCases:
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions("extras.run_job")
 
             # Try GET with object-level permission
             # HTMX request for the table content should succeed and contain relevant contents
@@ -1417,21 +1415,10 @@ class ViewTestCases:
             view = self.get_list_view()
             if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
                 # Check if import button is present due to user permissions
-                self.assertIn(
-                    (
-                        reverse(
-                            "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}
-                        )
-                        + f"?content_type={ContentType.objects.get_for_model(self.model).pk}"
-                    ),
-                    content,
-                )
+                self.assertIn('id="import-button"', content)
             else:
                 # Import not supported, no button should be present
-                self.assertNotIn(
-                    reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
-                    content,
-                )
+                self.assertNotIn('id="import-button"', content)
 
         @skipIf(
             "example_app" not in settings.PLUGINS,

@@ -170,7 +170,7 @@
     {{ custom_field_regex_types|json_script:"nb-custom-field-regex-types" }}
     <script src="{% versioned_static 'js/filter_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script src="{% versioned_static 'js/customfield_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
-    <script type="text/javascript">
+    <script>
         $('.formset_row-{{ choices.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
             addCssClass: 'btn btn-primary add-row',

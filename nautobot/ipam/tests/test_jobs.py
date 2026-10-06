@@ -316,7 +316,7 @@ class FixIPAMParentsTestCase(TransactionTestCase):
                 **{
                     ip: parent
                     for ip, parent in self.repaired_ip_parents.items()
-                    if ip.address >= self.branch2.prefix and ip.address <= netaddr.IPAddress(self.branch2.broadcast)
+                    if self.branch2.prefix <= ip.address <= netaddr.IPAddress(self.branch2.broadcast)
                 },
                 **{
                     ip: parent
@@ -443,7 +443,7 @@ class FixIPAMParentsTestCase(TransactionTestCase):
                 **{
                     ip: parent
                     for ip, parent in self.repaired_ip_parents.items()
-                    if ip.address >= self.branch1.prefix and ip.address <= netaddr.IPAddress(self.branch1.broadcast)
+                    if self.branch1.prefix <= ip.address <= netaddr.IPAddress(self.branch1.broadcast)
                 },
                 **{
                     ip: parent

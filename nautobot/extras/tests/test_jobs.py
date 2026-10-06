@@ -45,6 +45,8 @@ from nautobot.extras.choices import (
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import (
     BaseJob,
+    BooleanVar,
+    DryRunVar,
     enqueue_job_hooks,
     get_job,
     get_jobs,
@@ -61,6 +63,52 @@ from nautobot.extras.jobs_cancel import (
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 from nautobot.users.models import ObjectPermission
+
+
+class ValidateDataBooleanDefaultTest(TestCase):
+    """`validate_data()` restores a BooleanVar's declared default when the caller omits the key.
+
+    A bound Django BooleanField cleans an absent key to False rather than to its `initial`, because an
+    unchecked HTML checkbox submits nothing. A JSON API body carries no such convention, so without this
+    an API caller silently gets the opposite of the job's declared default.
+    """
+
+    class BooleanDefaultsJob(BaseJob):
+        on_by_default = BooleanVar(default=True)
+        off_by_default = BooleanVar(default=False)
+        undeclared = BooleanVar()
+        dryrun = DryRunVar()
+
+        def run(self):  # pylint: disable=arguments-differ
+            pass
+
+    def test_omitted_boolean_takes_its_declared_default(self):
+        cleaned_data = self.BooleanDefaultsJob.validate_data({})
+        self.assertTrue(cleaned_data["on_by_default"])
+        self.assertFalse(cleaned_data["off_by_default"])
+        self.assertFalse(cleaned_data["undeclared"])
+
+    def test_explicit_false_is_not_overridden(self):
+        """An explicit False must survive -- otherwise a deliberately-cleared checkbox is re-asserted."""
+        cleaned_data = self.BooleanDefaultsJob.validate_data({"on_by_default": False})
+        self.assertFalse(cleaned_data["on_by_default"])
+
+    def test_explicit_true_is_preserved(self):
+        cleaned_data = self.BooleanDefaultsJob.validate_data({"undeclared": True})
+        self.assertTrue(cleaned_data["undeclared"])
+
+    def test_dryrun_is_excluded_from_the_fill(self):
+        """DryRunVar is excluded, dryrun being able to waive a Job's approval requirement.
+
+        Asserted against the fill rather than against `validate_data`'s output: `DryRunVar.__init__`
+        forces `default=False`, so including it would contribute `{"dryrun": False}` and clean to the
+        same False either way. The exclusion is only observable here.
+        """
+        job = self.BooleanDefaultsJob
+        defaults = job._omitted_boolean_var_defaults({}, job._get_vars())
+        self.assertNotIn("dryrun", defaults)
+        # ... and the fill is otherwise working, so that absence means something
+        self.assertIn("on_by_default", defaults)
 
 
 class JobTest(TestCase):
@@ -2201,6 +2249,58 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()
 
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_only_unfinished_job_results_are_run(self, mock_report_job_status, mock_executor_console_log):
+        """Command should run PENDING or STARTED job results and refuse job results that already finished."""
+        cases = [
+            {"status": JobResultStatusChoices.STATUS_PENDING, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_STARTED, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_SUCCESS, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_FAILURE, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_REVOKED, "runs": False},
+        ]
+        for case in cases:
+            with self.subTest(**case):
+                mock_executor_console_log.reset_mock()
+                self.job_result.status = case["status"]
+                self.job_result.save()
+
+                if case["runs"]:
+                    call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    mock_executor_console_log.return_value.execute.assert_called_once()
+                else:
+                    with self.assertRaises(CommandError) as err:
+                        call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    self.assertIn(f"invalid status {case['status']}", str(err.exception))
+                    mock_executor_console_log.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_retry_warning_is_logged_only_for_started_job_result(
+        self, mock_report_job_status, mock_executor_console_log
+    ):
+        """Command should log a retry warning when resuming a STARTED job result, and not for a PENDING one."""
+        for status, expected_warnings in (
+            (JobResultStatusChoices.STATUS_PENDING, 0),
+            (JobResultStatusChoices.STATUS_STARTED, 1),
+        ):
+            with self.subTest(status=status):
+                JobLogEntry.objects.filter(job_result=self.job_result).delete()
+                self.job_result.status = status
+                self.job_result.save()
+
+                call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+
+                self.assertEqual(
+                    JobLogEntry.objects.filter(
+                        job_result=self.job_result,
+                        log_level=LogLevelChoices.LOG_WARNING,
+                        grouping="initialization",
+                    ).count(),
+                    expected_warnings,
+                )
+
 
 class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
     def setUp(self):
@@ -2295,6 +2395,31 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
 
         self.job_result.refresh_from_db()
         self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_job_result_is_started_while_job_runs(self, mock_validate, mock_sync, mock_run_job):
+        """JobResult should be in STARTED status while the job runs, whether it was PENDING or already STARTED."""
+        eager_result = mock.MagicMock()
+        eager_result.failed.return_value = False
+        status_during_run = []
+
+        def record_status(*args, **kwargs):
+            status_during_run.append(JobResult.objects.get(pk=self.job_result.pk).status)
+            return eager_result
+
+        mock_run_job.apply.side_effect = record_status
+
+        for initial_status in (JobResultStatusChoices.STATUS_PENDING, JobResultStatusChoices.STATUS_STARTED):
+            with self.subTest(initial_status=initial_status):
+                status_during_run.clear()
+                self.job_result.status = initial_status
+                self.job_result.save()
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                self.assertEqual(status_during_run, [JobResultStatusChoices.STATUS_STARTED])
 
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")

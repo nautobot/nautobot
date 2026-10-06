@@ -1,0 +1,2 @@
+Added a Conditions section to the webhook and job hook edit forms, and a Conditions panel to their detail views.
+Added `ColorSelectMultiple` to `nautobot.apps.forms`, a `ColorSelect` for a field that holds several colors at once.

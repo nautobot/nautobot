@@ -19,7 +19,7 @@ import yaml
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
-from nautobot.core.templatetags.buttons import job_export_url, job_import_url
+from nautobot.core.templatetags.buttons import job_export_url
 from nautobot.core.testing import (
     extract_page_body,
     ModelViewTestCase,
@@ -870,9 +870,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
+            <span>32%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
-                32%
+                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 32%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 32)">32%</span>
             </div>
         </div></td>
         """
@@ -880,9 +881,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
+            <span>65%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
-                65%
+                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 65%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 65)">65%</span>
             </div>
         </div></td>
         """
@@ -890,9 +892,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <div title="Used: 3789&#13;Count: 7680" class="progress text-center">
+            <span>49%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
-                49%
+                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 49%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 49)">49%</span>
             </div>
         </div>
         """
@@ -987,29 +990,28 @@ class DeviceTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the DeviceType list view has both import links (single-record YAML/JSON, multi-record CSV)
-        and the export trigger."""
-        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.view_job")
-        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
-        # enable the system Job for the button to render enabled (as it is in production).
-        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
-        job_model.enabled = True
-        job_model.save()
+        """Assert that the DeviceType list view has both import options (single-record YAML/JSON link, multi-record
+        import job modal) and the export trigger."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.run_job")
+        # The import and export triggers reuse the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:devicetype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
         yaml_import_url = reverse("dcim:devicetype_import")
-        csv_import_url = job_import_url(ContentType.objects.get_for_model(DeviceType))
-        # Dropdown provides both YAML/JSON and CSV import as options
+        # Dropdown provides both single-record YAML/JSON import and the multi-record import job as options
         self.assertInHTML(
             f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
-            content,
-        )
+        import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn('id="import-button"', content)
+        self.assertIn(f'hx-post="{import_url}"', content)
 
         export_url = job_export_url()
         # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
@@ -1404,29 +1406,28 @@ class ModuleTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the ModuleType list view has both import links (single-record YAML/JSON, multi-record CSV)
-        and the export trigger."""
-        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.view_job")
-        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
-        # enable the system Job for the button to render enabled (as it is in production).
-        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
-        job_model.enabled = True
-        job_model.save()
+        """Assert that the ModuleType list view has both import options (single-record YAML/JSON link, multi-record
+        import job modal) and the export trigger."""
+        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.run_job")
+        # The import and export triggers reuse the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:moduletype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
         yaml_import_url = reverse("dcim:moduletype_import")
-        csv_import_url = job_import_url(ContentType.objects.get_for_model(ModuleType))
-        # Dropdown provides both YAML/JSON and CSV import as options
+        # Dropdown provides both single-record YAML/JSON import and the multi-record import job as options
         self.assertInHTML(
             f'<a class="dropdown-item" href="{yaml_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from JSON/YAML (single record)</a>',
             content,
         )
-        self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
-            content,
-        )
+        import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn('id="import-button"', content)
+        self.assertIn(f'hx-post="{import_url}"', content)
 
         export_url = job_export_url()
         # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
@@ -6242,10 +6243,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         self.assertHttpStatus(response, 200)
         # Connections list view has no import action.
         page_content = extract_page_body(response.content.decode(response.charset))
-        self.assertNotIn(
-            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
-            page_content,
-        )
+        self.assertNotIn('id="import-button"', page_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_breakout_cable_lanes_are_grouped(self):

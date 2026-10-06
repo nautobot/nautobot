@@ -35,7 +35,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript">
+    <script>
         $("a.set_speed").click(function(e) {
             e.preventDefault();
             $(window.nb.form.getFieldAutoId('{{ form.auto_id }}', $(this).attr("target"))).val($(this).attr("data"));

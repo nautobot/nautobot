@@ -15,6 +15,8 @@ from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Cable,
+    CableToCableTermination,
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -428,6 +430,65 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
+    def test_interface_tag_changes(self):
+        """Tag updates must persist matching snapshots and diffs, including an empty tag list."""
+        tags = [Tag.objects.create(name=name) for name in ("Interface tag A", "Interface tag B")]
+        for tag_obj in tags:
+            tag_obj.content_types.add(ContentType.objects.get_for_model(Interface))
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "extras.view_tag"
+        )
+        payload = {
+            "device": str(Device.objects.first().pk),
+            "name": "vlan150",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": str(Status.objects.get_for_model(Interface).first().pk),
+            "tags": [str(tag_obj.pk) for tag_obj in tags],
+        }
+        response = self.client.post(reverse("dcim-api:interface-list"), payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        interface = Interface.objects.get(pk=response.data["id"])
+        url = reverse("dcim-api:interface-detail", kwargs={"pk": interface.pk})
+
+        for label, data, expected_tags, expect_change in (
+            ("omit tags", {"description": "Updated description"}, tags, True),
+            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:], True),
+            ("clear final tag", {"tags": []}, [], True),
+            ("add two tags", {"tags": payload["tags"]}, tags, True),
+            ("clear multiple tags", {"tags": []}, [], True),
+            # Clearing an already-untagged interface changes nothing a reader would see, and this PATCH
+            # touches no other field either, so it must add no change.
+            ("clear untagged interface", {"tags": []}, [], False),
+        ):
+            with self.subTest(operation=label):
+                previous_tags = get_changes_for_model(interface).first().object_data_v2["tags"]
+                change_count = get_changes_for_model(interface).count()
+                response = self.client.patch(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                interface.refresh_from_db()
+                self.assertCountEqual(interface.tags.all(), expected_tags)
+                self.assertCountEqual(
+                    [str(tag_data["id"]) for tag_data in response.data["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                changes = get_changes_for_model(interface)
+                self.assertEqual(changes.count(), change_count + (1 if expect_change else 0))
+                if not expect_change:
+                    continue
+                change = changes.first()
+                self.assertCountEqual(change.object_data["tags"], [tag_obj.name for tag_obj in expected_tags])
+                self.assertCountEqual(
+                    [tag_data["id"] for tag_data in change.object_data_v2["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                differences = change.get_snapshots()["differences"]
+                if previous_tags != change.object_data_v2["tags"]:
+                    self.assertEqual(differences["removed"]["tags"], previous_tags)
+                    self.assertEqual(differences["added"]["tags"], change.object_data_v2["tags"])
+                else:
+                    self.assertNotIn("tags", differences["removed"])
+                    self.assertNotIn("tags", differences["added"])
+
     def test_delete_object(self):
         location_type = LocationType.objects.get(name="Campus")
         location = Location(
@@ -597,6 +658,53 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
         self.assertEqual(
             len(snapshots["differences"]["added"]["content_types"]),
             ContentType.objects.filter(app_label="dcim").count(),
+        )
+
+    def test_clear_tags(self):
+        """Clearing tags directly must record the resulting empty relationship."""
+        location = Location.objects.filter(location_type__name="Campus").first()
+        tags = list(Tag.objects.get_for_model(Location)[:2])
+        with context_managers.web_request_context(self.user):
+            location.tags.set(tags)
+            location.save()
+        previous_change = get_changes_for_model(location).first()
+        change_count = get_changes_for_model(location).count()
+
+        with context_managers.web_request_context(self.user):
+            location.tags.clear()
+
+        self.assertFalse(location.tags.exists())
+        changes = get_changes_for_model(location)
+        self.assertEqual(changes.count(), change_count + 1)
+        change = changes.first()
+        self.assertEqual(change.object_data["tags"], [])
+        self.assertEqual(change.object_data_v2["tags"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {"removed": {"tags": previous_change.object_data_v2["tags"]}, "added": {"tags": []}},
+        )
+        self.assertEqual(Tag.objects.filter(pk__in=[tag_obj.pk for tag_obj in tags]).count(), len(tags))
+
+    def test_clear_m2m_fields(self):
+        """Clearing a standard M2M field must refresh its changelog snapshot too."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test clear locationtype")
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+        previous_change = get_changes_for_model(location_type).first()
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.clear()
+
+        changes = get_changes_for_model(location_type)
+        self.assertEqual(changes.count(), 2)
+        change = changes.first()
+        self.assertEqual(change.object_data_v2["content_types"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {
+                "removed": {"content_types": previous_change.object_data_v2["content_types"]},
+                "added": {"content_types": []},
+            },
         )
 
     def test_opt_out(self):
@@ -833,6 +941,40 @@ class ChangeLogM2MThroughTest(APITestCase):
             self.assert_single_update_change(self.prefix, change_id)
             self.assert_single_update_change(locations[1], change_id)
 
+    def test_clear_interface_ip_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate interface/IP changes."""
+        ip_addresses = self.ip_addresses[:2]
+        self.interface.ip_addresses.set(ip_addresses)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.interface.ip_addresses.clear()
+
+        self.assertFalse(self.interface.ip_addresses.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.interface, change_id)
+        self.assertEqual(change.object_data_v2["ip_addresses"], [])
+        for ip_address in ip_addresses:
+            self.assertFalse(ip_address.interfaces.filter(pk=self.interface.pk).exists())
+            self.assert_single_update_change(ip_address, change_id)
+
+    def test_clear_prefix_location_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate prefix/location changes."""
+        locations = list(self.locations[:2])
+        self.prefix.locations.set(locations)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.prefix.locations.clear()
+
+        self.assertFalse(self.prefix.locations.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.prefix, change_id)
+        self.assertEqual(change.object_data_v2["locations"], [])
+        for location in locations:
+            self.assertFalse(location.prefixes.filter(pk=self.prefix.pk).exists())
+            self.assert_single_update_change(location, change_id)
+
     def test_orm_auto_created_m2m_remains_one_sided(self):
         route_target = RouteTarget.objects.create(name="65000:99999")
         vrf = VRF.objects.create(name="Change Log M2M Test VRF", namespace=self.prefix.namespace)
@@ -1063,6 +1205,127 @@ class ChangeLogUnchangedSaveTest(TestCase):
         with context_managers.web_request_context(self.user):
             self.location.tags.add(location_tag)
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def _create_vm_interface(self, mode):
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            return VMInterface.objects.create(
+                name="eth0",
+                virtual_machine=vm,
+                status=Status.objects.get_for_model(VMInterface).first(),
+                mode=mode,
+            )
+
+    def test_m2m_clear_of_empty_relation_records_nothing(self):
+        """
+        `VMInterface.save()` always calls `tagged_vlans.clear()` when not in tagged mode.
+
+        Clearing a relation that already has nothing in it is a no-op and must not manufacture a change.
+        """
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_ACCESS)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)
+
+    def test_m2m_clear_of_populated_relation_is_recorded(self):
+        """Clearing a relation that actually has members is a real change and must be recorded."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4001,
+            name="Unchanged save m2m clear test",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create; add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 2)
+
+    def test_m2m_clear_of_populated_relation_is_recorded_from_reverse_side(self):
+        """The no-op check must also resolve the relation correctly from its reverse accessor."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4002,
+            name="Unchanged save m2m clear test reverse",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vlan).count(), 0)  # add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vlan.vminterfaces_as_tagged.clear()
+        self.assertEqual(get_changes_for_model(vlan).count(), 1)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model(self):
+        """
+        `VRF.devices`, `.virtual_machines`, and `.virtual_device_contexts` all share one through model
+        (`VRFDeviceAssignment`), distinguished only by `through_fields`. Django's `.clear()` deletes by
+        filtering that through model on the `vrf` column alone (see `_m2m_clear_would_touch_anything`),
+        so clearing one of these fields while it is itself empty still deletes a populated sibling's row
+        for the same VRF — and that must be recorded as the real change it is, not skipped as a no-op.
+        """
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear shared-through test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear shared-through test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear shared-through test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            vrf = VRF.objects.create(
+                name="Unchanged save m2m clear shared-through test",
+                status=Status.objects.get_for_model(VRF).first(),
+            )
+        vrf.virtual_machines.add(vm)  # outside any context: `devices` itself stays empty
+        self.assertEqual(get_changes_for_model(vrf).count(), 1)  # the create
+
+        # `devices` has nothing of its own, but clearing it also clears the shared through model's
+        # `virtual_machines` row for this VRF, which is a real change.
+        with context_managers.web_request_context(self.user):
+            vrf.devices.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+        # With nothing left in the through model for this VRF at all, clearing another field is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            vrf.virtual_device_contexts.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model_with_many_fields(self):
+        """
+        `Cable`'s termination accessors (`interfaces`, `front_ports`, etc.) all share one through model
+        (`CableToCableTermination`). Same hazard as `VRF`: clearing an accessor that is itself empty still
+        deletes a populated sibling accessor's row for the same cable, which must be recorded.
+        """
+        interface = Interface.objects.first()
+        with context_managers.web_request_context(self.user):
+            cable = Cable.objects.create(status=Status.objects.get_for_model(Cable).first())
+        # Created directly on the through model, bypassing `cable.interfaces.add()`, so only the `clear()`
+        # calls below are exercised through `m2m_changed`.
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=interface)
+        self.assertEqual(get_changes_for_model(cable).count(), 1)  # the create
+
+        # `front_ports` has nothing of its own, but clearing it also clears the shared through model's
+        # `interfaces` row for this cable, which is a real change.
+        with context_managers.web_request_context(self.user):
+            cable.front_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
+
+        # With nothing left in the through model for this cable at all, clearing another accessor is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            cable.console_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
 
     def test_model_can_opt_out(self):
         """A model whose stored value is not a pure function of its own fields opts out of the comparison."""

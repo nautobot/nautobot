@@ -53,6 +53,9 @@ urlpatterns = [
     path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
     # Approvee Dashboard
     path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
+    # Conditions
+    path("conditions/row/", views.ConditionRowView.as_view(), name="condition_row"),
+    path("conditions/rows/", views.ConditionRowsView.as_view(), name="condition_rows"),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),

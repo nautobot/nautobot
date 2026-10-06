@@ -26,10 +26,7 @@ def get_saml_idp():
     # robust login system.
     value = ""
     if idp_map is not None:
-        try:
-            value = next(iter(idp_map.keys()))
-        except IndexError:
-            pass
+        value = next(iter(idp_map.keys()), "")
 
     return value
 
@@ -116,6 +113,7 @@ def nav_menu(request):
                             nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
                                 "is_active": False,
                                 "name": item_details["name"],
+                                "searchable": item_details.get("searchable", True),
                                 "weight": item_details["weight"],
                             }
                     if len(nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"]) == 0:

@@ -40,6 +40,7 @@ menu_items = (
                             "ipam.add_ipaddresstointerface",
                         ],
                         buttons=(),
+                        searchable=False,
                     ),
                     NavMenuItem(
                         link="ipam:ipaddressrange_list",

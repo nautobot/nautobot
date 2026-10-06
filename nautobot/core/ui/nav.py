@@ -146,6 +146,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             "args": [],
             "kwargs": {},
             "query_params": self.query_params,
+            "searchable": self.searchable,
         }
 
     @property
@@ -162,7 +163,16 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
     kwargs = {}
 
     def __init__(
-        self, link, name, args=None, kwargs=None, query_params=None, permissions=None, buttons=(), weight=1000
+        self,
+        link,
+        name,
+        args=None,
+        kwargs=None,
+        query_params=None,
+        permissions=None,
+        buttons=(),
+        weight=1000,
+        searchable=True,
     ):
         """
         Ensure item properties.
@@ -176,6 +186,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
             permissions (list): The permissions required to view this item.
             buttons (list): List of buttons to be rendered in this item.
             weight (int): The weight of this item.
+            searchable (bool): Whether this item should appear as a model filter in the global search bar.
         """
         super().__init__(permissions)
         self.link = link
@@ -184,6 +195,7 @@ class NavMenuItem(NavMenuBase, PermissionsMixin):
         self.args = args
         self.kwargs = kwargs
         self.query_params = query_params
+        self.searchable = searchable
 
         if not isinstance(buttons, (list, tuple)):
             raise TypeError("Buttons must be passed as a tuple or list.")

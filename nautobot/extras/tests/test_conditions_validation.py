@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, tag
 from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.presets import ConditionPresetError, register_builtin_condition_presets
 from nautobot.extras.conditions.rows import ConditionRowError
-from nautobot.extras.conditions.validation import validate_conditions
+from nautobot.extras.conditions.validation import row_errors, validate_conditions
 
 EXPRESSION = {"type": "expression", "source": "data.mtu > 9000"}
 PRESET = {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}}
@@ -18,7 +18,7 @@ MIXED_ROWS = [BAD_EXPRESSION, EXPRESSION, BAD_PRESET]
 
 
 @tag("unit")
-class ValidateConditionsTest(SimpleTestCase):
+class ConditionValidationTest(SimpleTestCase):
     """`SimpleTestCase`: validating a row compiles its expression, which needs Django's Jinja engine."""
 
     def setUp(self):
@@ -54,16 +54,16 @@ class ValidateConditionsTest(SimpleTestCase):
         self.assertEqual(len(messages), 2)
         self.assertTrue(messages[0].startswith("Condition 1: "), messages[0])
         self.assertTrue(messages[1].startswith("Condition 3: "), messages[1])
-        self.assertEqual([problem.params["index"] for problem in error.error_list], [0, 2])
+        self.assertEqual([message.params["index"] for message in error.error_list], [0, 2])
 
-    def test_each_problem_keeps_its_own_code_and_params(self):
+    def test_each_error_keeps_its_own_code_and_params(self):
         """`index` is added to what the row said about itself, rather than replacing it."""
-        expression_problem, preset_problem = self.assertRefused([BAD_EXPRESSION, BAD_PRESET]).error_list
-        self.assertEqual(expression_problem.code, ConditionRowError.code)
-        self.assertEqual(expression_problem.params["key"], "source")
-        self.assertEqual(preset_problem.code, ConditionPresetError.code)
-        self.assertEqual(preset_problem.params["preset"], "field_compare")
-        self.assertEqual(preset_problem.params["parameter"], "operator")
+        expression_error, preset_error = self.assertRefused([BAD_EXPRESSION, BAD_PRESET]).error_list
+        self.assertEqual(expression_error.code, ConditionRowError.code)
+        self.assertEqual(expression_error.params["key"], "source")
+        self.assertEqual(preset_error.code, ConditionPresetError.code)
+        self.assertEqual(preset_error.params["preset"], "field_compare")
+        self.assertEqual(preset_error.params["parameter"], "operator")
 
     def test_a_jinja_error_naming_a_percent_renders(self):
         """Reading `.messages` is the point: Django renders these as `message % params`, so an unescaped
@@ -74,3 +74,27 @@ class ValidateConditionsTest(SimpleTestCase):
     def test_a_template_delimiter_renders(self):
         error = self.assertRefused([{"type": "expression", "source": "{% if data.mtu %}x{% endif %}"}])
         self.assertIn("{%", error.messages[0])
+
+    def test_only_the_bad_rows_are_in_the_answer_keyed_by_position(self):
+        self.assertEqual(list(row_errors(MIXED_ROWS)), [0, 2])
+
+    def test_rows_that_pass_leave_nothing_behind(self):
+        self.assertEqual(row_errors([EXPRESSION, PRESET]), {})
+
+    def test_a_message_names_neither_its_row_nor_its_preset(self):
+        """Both are plain to anyone reading the row itself, and `_restated_out_of_context` adds them back."""
+        message = row_errors([BAD_PRESET])[0].messages[0]
+        self.assertEqual(message, "Parameter `operator` is required.")
+        self.assertNotIn("Condition", message)
+
+    def test_what_a_message_leaves_out_it_still_carries(self):
+        """A form places a complaint by `params`, not by reading the sentence."""
+        params = row_errors([BAD_PRESET])[0].error_list[0].params
+        self.assertEqual(params["preset"], "field_compare")
+        self.assertEqual(params["parameter"], "operator")
+
+    def test_a_value_that_is_not_a_list_has_no_rows_to_complain_about(self):
+        """`validate_conditions` refuses it outright. Here there is simply nothing to draw."""
+        for value in (None, "", {}, EXPRESSION):
+            with self.subTest(value=value):
+                self.assertEqual(row_errors(value), {})

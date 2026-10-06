@@ -1,0 +1,1 @@
+Fixed spurious change-log entries being recorded when clearing a many-to-many field (such as an interface's tagged VLANs or a VRF's assigned devices) that was already empty.

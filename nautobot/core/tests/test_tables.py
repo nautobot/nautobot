@@ -50,17 +50,13 @@ class TableTestCase(TestCase):
         with self.subTest(f"Assert sorting {table_class.__name__} on '{field_name}'"):
             table = table_class(queryset.with_tree_fields(), order_by=field_name)
             table_queryset_data = table.data.data.values_list(field_name, flat=True)
-            sorted_queryset = (
-                queryset.with_tree_fields().extra(order_by=[field_name]).values_list(field_name, flat=True)
-            )
+            sorted_queryset = queryset.with_tree_fields().order_by(field_name).values_list(field_name, flat=True)
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
         with self.subTest(f"Assert sorting {table_class.__name__} on '-{field_name}'"):
             table = table_class(queryset.with_tree_fields(), order_by=f"-{field_name}")
             table_queryset_data = table.data.data.values_list(field_name, flat=True)
-            sorted_queryset = (
-                queryset.with_tree_fields().extra(order_by=[f"-{field_name}"]).values_list(field_name, flat=True)
-            )
+            sorted_queryset = queryset.with_tree_fields().order_by(f"-{field_name}").values_list(field_name, flat=True)
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
     @tag("example_app")
@@ -124,7 +120,7 @@ class TableTestCase(TestCase):
         sorted_queryset = (
             Location.objects.with_tree_fields()
             .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
-            .extra(order_by=["_custom_field_data__example_app_auto_custom_field"])
+            .order_by("_custom_field_data__example_app_auto_custom_field")
             .values_list("pk", flat=True)
         )
         self.assertEqual(list(table_queryset_data), list(sorted_queryset))
@@ -134,7 +130,7 @@ class TableTestCase(TestCase):
         sorted_queryset = (
             Location.objects.with_tree_fields()
             .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
-            .extra(order_by=["-_custom_field_data__example_app_auto_custom_field"])
+            .order_by("-_custom_field_data__example_app_auto_custom_field")
             .values_list("pk", flat=True)
         )
         self.assertEqual(list(table_queryset_data), list(sorted_queryset))
@@ -639,7 +635,7 @@ class SerializerPathsForVisibleColumnsTestCase(TestCase):
         column = table.columns["device_type_count"].column
         self.assertIsInstance(column, LinkedCountColumn)
         self.assertEqual(column.counted_relation(Manufacturer), "device_types")
-        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True).fields
+        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, for_import_export=True).fields
         self.assertIn("device_type_count", serializer_fields)
         self.assertNotIn("device_types", serializer_fields)
         self.assertIsNone(table.serializer_paths_by_visible_column(ManufacturerSerializer)["device_type_count"])

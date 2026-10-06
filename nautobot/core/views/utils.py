@@ -10,7 +10,6 @@ from django.core.exceptions import FieldError, ImproperlyConfigured, ValidationE
 from django.db.models import ForeignKey
 from django.http import QueryDict
 from django.template import Template
-from django.test.client import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -29,7 +28,7 @@ from nautobot.core.utils.lookup import (
     get_form_for_model,
     get_view_for_model,
 )
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import mock_wsgi_request, normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
@@ -526,19 +525,47 @@ def common_detail_view_context(request, instance):
     return context
 
 
-def get_saved_views_for_user(user, list_url):
+def get_all_saved_views_for_user(user):
+    """
+    Get the SavedViews across all list views that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews; other users can see
+    only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk`, `name` and `view`.
+    """
     # We are not using .restrict(request.user, "view") here
     # User should be able to see any saved view that he has the list view access to.
-    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+    saved_views = SavedView.objects.order_by("name").only("pk", "name", "view")
     if user.has_perms(["extras.view_savedview"]):
         return saved_views
 
     shared_saved_views = saved_views.filter(is_shared=True)
     if user.is_authenticated:
-        user_owned_saved_views = SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-        return shared_saved_views | user_owned_saved_views
+        return shared_saved_views | saved_views.filter(owner=user)
 
     return shared_saved_views
+
+
+def get_saved_views_for_user(user, list_url):
+    """
+    Get the SavedViews for the given list view that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews for the list view.
+    Other users can see only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+        list_url (str): The list view name, for example `"dcim:device_list"`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk` and `name`.
+    """
+    return get_all_saved_views_for_user(user).filter(view=list_url).only("pk", "name")
 
 
 def is_metrics_experimental_caching_enabled():
@@ -715,9 +742,8 @@ def get_bulk_queryset_from_view(
     for key, values in (filter_query_params or {}).items():
         values = values if isinstance(values, (list, tuple)) else [values]
         get_params.setlist(key, [str(value) for value in values])
-    synthetic_request = RequestFactory().get("/")
+    synthetic_request = mock_wsgi_request(user=user)
     synthetic_request.GET = get_params
-    synthetic_request.user = user
 
     def scoped_queryset(scoping_view_class):
         """Instantiate the given view and return its alter_queryset() result using the synthetic request."""
