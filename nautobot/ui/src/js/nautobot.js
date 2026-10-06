@@ -46,6 +46,7 @@ import 'select2';
 import { initializeCheckboxes } from './checkbox.js';
 import { initializeClipboard } from './clipboard.js';
 import { initializeCollapseToggleAll } from './collapse.js';
+import { initializeConditionsEditor, nextIndex } from './conditions-editor.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
@@ -87,6 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Collapse
   initializeCollapseToggleAll();
+
+  // Conditions editor
+  initializeConditionsEditor();
+  window.nb.conditions = { nextIndex };
 
   // Draggable
   initializeDraggable();

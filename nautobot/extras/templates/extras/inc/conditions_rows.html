@@ -1,0 +1,16 @@
+{% comment %}
+    What the conditions list holds, rebuilt whenever the JSON behind it changes. The list itself is in
+    `extras/inc/conditions_editor.html`, which is what HTMX swaps this into.
+{% endcomment %}
+
+{% if condition_rows_unreadable %}
+    {# `ui/src/js/conditions-editor.js` looks for this class and stops writing the field while it is here. #}
+    <p class="nb-conditions-unreadable text-danger" hx-history="false">
+        {{ condition_rows_unreadable }} Fix it on the JSON tab, or replace it with an empty list.
+    </p>
+{% else %}
+    {% for row in condition_rows %}
+        {# `only`, because the row template needs nothing but the form. #}
+        {% include 'extras/inc/conditions_row.html' with form=row only %}
+    {% endfor %}
+{% endif %}

@@ -50,17 +50,13 @@ class TableTestCase(TestCase):
         with self.subTest(f"Assert sorting {table_class.__name__} on '{field_name}'"):
             table = table_class(queryset.with_tree_fields(), order_by=field_name)
             table_queryset_data = table.data.data.values_list(field_name, flat=True)
-            sorted_queryset = (
-                queryset.with_tree_fields().extra(order_by=[field_name]).values_list(field_name, flat=True)
-            )
+            sorted_queryset = queryset.with_tree_fields().order_by(field_name).values_list(field_name, flat=True)
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
         with self.subTest(f"Assert sorting {table_class.__name__} on '-{field_name}'"):
             table = table_class(queryset.with_tree_fields(), order_by=f"-{field_name}")
             table_queryset_data = table.data.data.values_list(field_name, flat=True)
-            sorted_queryset = (
-                queryset.with_tree_fields().extra(order_by=[f"-{field_name}"]).values_list(field_name, flat=True)
-            )
+            sorted_queryset = queryset.with_tree_fields().order_by(f"-{field_name}").values_list(field_name, flat=True)
             self.assertEqual(list(table_queryset_data), list(sorted_queryset))
 
     @tag("example_app")
@@ -124,7 +120,7 @@ class TableTestCase(TestCase):
         sorted_queryset = (
             Location.objects.with_tree_fields()
             .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
-            .extra(order_by=["_custom_field_data__example_app_auto_custom_field"])
+            .order_by("_custom_field_data__example_app_auto_custom_field")
             .values_list("pk", flat=True)
         )
         self.assertEqual(list(table_queryset_data), list(sorted_queryset))
@@ -134,7 +130,7 @@ class TableTestCase(TestCase):
         sorted_queryset = (
             Location.objects.with_tree_fields()
             .exclude(_custom_field_data__example_app_auto_custom_field="Default value")
-            .extra(order_by=["-_custom_field_data__example_app_auto_custom_field"])
+            .order_by("-_custom_field_data__example_app_auto_custom_field")
             .values_list("pk", flat=True)
         )
         self.assertEqual(list(table_queryset_data), list(sorted_queryset))

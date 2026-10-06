@@ -54,7 +54,14 @@ def context_object_attr(attr_path: str, context_key: str = "object"):
         lambda context: context['device'].location.name
 
     """
-    return lambda context: attrgetter(attr_path)(context[context_key]) if context.get(context_key) else None
+
+    def get_context_object_attr(context):
+        try:
+            return attrgetter(attr_path)(context[context_key]) if context.get(context_key) else None
+        except AttributeError:
+            return None
+
+    return get_context_object_attr
 
 
 @dataclass

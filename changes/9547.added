@@ -1,0 +1,3 @@
+Added in-place updates to the `Import Objects` system Job: records that match an existing object, by default on its natural key, update that object instead of creating a new one.
+Added a `Meta.import_match_fields` attribute for REST API serializers, declaring the match fields of a model whose natural key isn't spelled in the serializer's own fields, and declared it for IP addresses (`address`, `parent`), IP address ranges (`start_address`, `parent`) and prefixes (`prefix`, `namespace`).
+Added support for `IPAddressRange.objects.filter(start_address=..., end_address=...)` and the equivalent `exclude()`, as with `IPAddress.objects.filter(address=...)`.

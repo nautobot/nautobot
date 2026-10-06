@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from http import HTTPStatus
+import json
 import re
 from unittest import mock
 import urllib.parse
@@ -764,7 +765,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
         with self.subTest("with existing comments"):
@@ -797,7 +798,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is not empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments">new comment</textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" aria-describedby="id_comments_helptext" id="id_comments">new comment</textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
     def test_cancel_workflow_post(self):
@@ -1332,7 +1333,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
         self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
 
         request = {
@@ -3632,7 +3633,7 @@ class NoteTestCase(
             "assigned_object_type": content_type.pk,
             "assigned_object_id": cls.location.pk,
         }
-        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" aria-describedby="id_object_note_helptext" id="id_object_note"></textarea>'
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" aria-describedby="id_object_note_helptext" id="id_object_note"></textarea>'
 
     def test_note_on_bulk_update_perms(self):
         self.add_permissions("dcim.add_location", "extras.add_note")
@@ -6467,7 +6468,7 @@ class JobTestCase(
         content = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML(f'<option value="{job_queue.pk}" selected>{job_queue}</option>', content)
         self.assertInHTML(
-            '<input type="text" name="var" value="456" class="form-control" required placeholder="None" id="id_var">',
+            '<input type="text" name="var" value="456" class="form-control" required id="id_var">',
             content,
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
@@ -7971,6 +7972,66 @@ class WebhookTestCase(
             "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
             "remove_content_types": [device_ct.pk],
         }
+        cls.condition = {
+            "type": "preset",
+            "preset": "field_compare",
+            "values": {"field": "name", "operator": "contains", "value": "console"},
+            "negate": False,
+        }
+
+    def form_data_with(self, conditions, **overrides):
+        """`conditions` is a JSON textarea, so it is posted as text rather than through `post_data`."""
+        return {**post_data(self.form_data), "conditions": json.dumps(conditions), **overrides}
+
+    def test_a_webhook_is_created_with_the_conditions_that_were_typed(self):
+        self.add_permissions("extras.add_webhook")
+        response = self.client.post(self._get_url("add"), data=self.form_data_with([self.condition]))
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(self._get_queryset().get(name="webhook-4").conditions, [self.condition])
+
+    def test_a_webhook_is_created_with_no_conditions_when_none_were_typed(self):
+        """An empty list means the webhook fires for every change of its object types."""
+        self.add_permissions("extras.add_webhook")
+        self.client.post(self._get_url("add"), data=self.form_data_with([]))
+        self.assertEqual(self._get_queryset().get(name="webhook-4").conditions, [])
+
+    def test_the_conditions_of_a_webhook_can_be_changed(self):
+        self.add_permissions("extras.change_webhook")
+        instance = self._get_queryset().first()
+        instance.conditions = [self.condition]
+        instance.validated_save()
+        changed = {**self.condition, "negate": True}
+        response = self.client.post(
+            self._get_url("edit", instance), data=self.form_data_with([changed], name=instance.name)
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.conditions, [changed])
+
+    def test_a_webhook_naming_an_unknown_preset_is_refused(self):
+        """`validate_conditions` names the row, because the reader has no row in front of them."""
+        self.add_permissions("extras.add_webhook")
+        refused = {"type": "preset", "preset": "no_such_preset", "values": {}}
+        response = self.client.post(self._get_url("add"), data=self.form_data_with([refused]))
+        self.assertHttpStatus(response, 200)
+        self.assertIn(
+            "Condition 1: Unknown condition preset `no_such_preset`.",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+        self.assertFalse(self._get_queryset().filter(name="webhook-4").exists())
+
+    def test_the_detail_view_shows_the_stored_conditions(self):
+        """The panel renders the field as JSON, so what is read back is what was stored."""
+        self.add_permissions("extras.view_webhook")
+        instance = self._get_queryset().first()
+        instance.conditions = [self.condition]
+        instance.validated_save()
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        for shown in ("field_compare", "contains", "console"):
+            with self.subTest(shown):
+                self.assertIn(shown, body)
 
 
 class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):

@@ -13,6 +13,6 @@ BOOLEAN_CHOICES = (
 )
 
 BOOLEAN_WITH_BLANK_CHOICES = (
-    ("", "---------"),
+    ("", "—"),
     *BOOLEAN_CHOICES,
 )

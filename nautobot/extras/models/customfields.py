@@ -856,7 +856,7 @@ class CustomField(
         # Boolean
         elif self.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             choices = (
-                (None, "---------"),
+                (None, "—"),
                 (True, "True"),
                 (False, "False"),
             )

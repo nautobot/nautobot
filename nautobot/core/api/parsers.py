@@ -306,38 +306,31 @@ class NautobotCSVParser(BaseParser):
         except MALFORMED_DATA_EXCEPTIONS as exc:
             raise ParseError(str(exc)) from exc
 
-    def _field_lookups_not_empty(self, field_lookups):
-        """Check if all values of the field lookups dict are not all NoObject"""
-        return any(value != CSV_NO_OBJECT for value in field_lookups.values())
+    def _collapse_null_relations(self, data):
+        """Replace each relation whose every lookup is `CSV_NO_OBJECT` with a single `None`.
 
-    def _remove_object_not_found_values(self, data):
-        """Remove all `CSV_NO_OBJECT` field lookups from the given data, and swap out `CSV_NULL_TYPE` and
-        'CSV_NO_OBJECT' values for `None`.
-
-        If all the lookups for a field are 'CSV_NO_OBJECT', it indicates that the field does not exist,
-        and it needs to be removed to prevent unnecessary database queries.
+        The export writes `CSV_NO_OBJECT` into every natural-key column of a null relation, so a Device
+        with no tenant reads `tenant__name: NoObject`. Handing the serializer `tenant: None` says what the
+        file says -- no tenant -- where a set of `NoObject` lookups would be looked up and fail to resolve.
 
         Args:
             data (dict): A dictionary containing field natural key lookups and their corresponding values.
 
         Returns:
-            dict: A modified dictionary with field lookups of 'CSV_NO_OBJECT' values removed, and 'CSV_NULL_TYPE' and 'CSV_NO_OBJECT' swapped for `None`.
+            dict: `data` with each such relation's lookups replaced by `{<relation>: None}`.
         """
         lookup_grouped_by_field_name = {}
         for lookup, lookup_value in data.items():
             field_name = lookup.split("__", 1)[0]
-            lookup_grouped_by_field_name.setdefault(field_name, {}).update({lookup: lookup_value})
+            lookup_grouped_by_field_name.setdefault(field_name, {})[lookup] = lookup_value
 
-        # Ignore lookup groups which has all its values set to NoObject
-        # These lookups fields do not exists
-        data_without_missing_field_lookups_values = {
-            lookup: lookup_value
-            for lookup_group in lookup_grouped_by_field_name.values()
-            for lookup, lookup_value in lookup_group.items()
-            if self._field_lookups_not_empty(lookup_group)
-        }
-
-        return data_without_missing_field_lookups_values
+        collapsed = {}
+        for field_name, lookup_group in lookup_grouped_by_field_name.items():
+            if all(value == CSV_NO_OBJECT for value in lookup_group.values()):
+                collapsed[field_name] = None
+            else:
+                collapsed.update(lookup_group)
+        return collapsed
 
     def _parse_m2m_cell(self, value):
         """Parse a single-column M2M cell into the list of member references the serializer resolves.
@@ -419,7 +412,7 @@ class NautobotCSVParser(BaseParser):
         could we then literally have the parser just return list(reader) and not need this function at all?
         """
         data = {}
-        custom_fields, flat_fields = split_custom_fields(self._remove_object_not_found_values(row))
+        custom_fields, flat_fields = split_custom_fields(self._collapse_null_relations(row))
         fields_value_mapping = nest_flat_dict(flat_fields, CSV_NULL_SENTINELS)
         for key, value in custom_fields.items():
             # The same nulls `nest_flat_dict` mapped when these keys still went through it, so that lifting

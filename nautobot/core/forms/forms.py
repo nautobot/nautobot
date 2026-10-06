@@ -109,8 +109,6 @@ class BootstrapMixin(forms.BaseForm):
                     field.widget.attrs["class"] = " ".join([css_classes, "form-check-input"]).strip()
             if field.required and not isinstance(field.widget, forms.FileInput):
                 field.widget.attrs["required"] = "required"
-            if "placeholder" not in field.widget.attrs:
-                field.widget.attrs["placeholder"] = field.label
 
 
 class EmbeddedActionsFormMixin(forms.Form):

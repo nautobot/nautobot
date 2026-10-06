@@ -64,7 +64,7 @@ class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
         This is probably a bug, we should really return -1 in the case of an empty queryset, but this is
         "working as implemented" and changing it would possibly be a breaking change at this point.
         """
-        deepest = self.with_tree_fields().extra(order_by=["-__tree.tree_depth"]).first()
+        deepest = self.with_tree_fields().order_by("-tree_depth").first()
         if deepest is not None:
             return deepest.tree_depth
         return 0
