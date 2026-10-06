@@ -9,7 +9,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.dcim.filters import (
+from nautobot.dcim.filters.mixins import (
     CableTerminationModelFilterSetMixin,
     LocatableModelFilterSetMixin,
     PathEndpointModelFilterSetMixin,
