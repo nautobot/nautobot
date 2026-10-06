@@ -14,4 +14,4 @@ from nautobot.playwright.helpers import unique_name
 @pytest.fixture
 def created_radio_profile(create_object):
     """A new radio profile with a unique name, deleted after the test."""
-    return create_object("wireless/radio-profiles", name=unique_name(), regulatory_domain="PL")
+    return create_object("wireless/radio-profiles/", name=unique_name(), regulatory_domain="PL")
