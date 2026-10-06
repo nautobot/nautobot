@@ -987,20 +987,26 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
                 pass
 
         parent_paths = {entry["path"]: entry["parent"] for entry in entries}
-        choices = [(entry["path"], entry["path"] + (" *" if entry["required"] else "")) for entry in entries]
+        choices = [(entry["path"], entry["label"] + (" *" if entry["required"] else "")) for entry in entries]
+        self.widget.parent_paths = parent_paths
+        # Which rows name a related object, so the widget can say what selecting one of them does.
+        self.widget.relation_paths = {entry["path"] for entry in entries if entry["relation"]}
+        # What the first click on a related object's row selects, and what a selection naming one shows as.
+        self.widget.natural_keys = {
+            entry["path"]: entry["natural_key"] for entry in entries if entry["natural_key"] is not None
+        }
+        # As the widget will show it, which is what it is ordered by.
+        selection = self.widget.expand_parents(selection)
         # A selected path the enumeration does not reach is offered anyway -- one naming a relation deeper
         # than the tree goes, say -- so that the selection stays visible and can be unselected.
         offered = set(parent_paths)
-        for path in selection or []:
+        for path in selection:
             if path not in offered:
                 choices.append((path, path))
                 parent_paths[path] = None
                 offered.add(path)
 
         self.choices = self._ordered_by_selection(choices, selection, parent_paths)
-        self.widget.parent_paths = parent_paths
-        # Which rows name a related object, so the widget can say what selecting one of them does.
-        self.widget.relation_paths = {entry["path"] for entry in entries if entry["relation"]}
 
     @staticmethod
     def _ordered_by_selection(choices, selection, parent_paths):
@@ -1054,5 +1060,12 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         return bool(value)
 
     def clean(self, value):
-        """The selection as the comma-separated string the Job's `export_fields` variable takes."""
-        return ",".join(super().clean(value))
+        """The selection as the comma-separated string the Job's `export_fields` variable takes.
+
+        Where `custom_fields` is selected, any `cf_<key>` is dropped: the picker checks every custom field
+        under a checked `custom_fields`, and naming them too would only repeat what it already asks for.
+        """
+        paths = super().clean(value)
+        if "custom_fields" in paths:
+            paths = [path for path in paths if not path.startswith("cf_")]
+        return ",".join(paths)

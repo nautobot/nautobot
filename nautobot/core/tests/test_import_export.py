@@ -37,6 +37,7 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    enumerate_field_paths,
     EXCLUDED_CSV_FIELDS,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
@@ -1437,6 +1438,23 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(lines[1], "model,manufacturer__name")  # the claimed column is present
         self.assertEqual(lines[2], "Head Key DT,Head Key Mfr")
 
+    def test_select__nested_relation_exports_its_natural_key(self):
+        """A path ending at a relation *through* another is its natural key, just as one at the root is.
+
+        The picker relies on this at its deepest level, where a related object has no rows under it and
+        selecting it is the only way to ask for what identifies it.
+        """
+        image_file = self.create_device_type_with_software_image_files()[0]
+        rows = self.export_rows(
+            self.run_export(
+                model=SoftwareImageFile,
+                query_string=f"id={image_file.pk}",
+                export_fields="image_file_name,software_version__platform",
+            )
+        )
+        self.assertEqual(list(rows[0]), ["image_file_name", "software_version__platform__name"])
+        self.assertEqual(rows[0]["software_version__platform__name"], "M2M Composite Platform")
+
     def test_select__nested_selection_that_misses_the_key(self):
         """A nested selection replaces the relation's natural-key columns, so the key is not covered."""
         mfr = Manufacturer.objects.create(name="Miss Key Mfr", description="a description")
@@ -1747,7 +1765,8 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         rendered = str(field.widget.render("export_fields", ["name"], attrs={"id": "id_export_fields"}))
         self.assertIn("export-field-caret", rendered)
         self.assertIn("export-nested", rendered)
-        self.assertIn('value="device_type__manufacturer"', rendered)
+        self.assertIn('id="id_export_fields_option_device_type__manufacturer"', rendered)
+        self.assertIn('value="device_type__manufacturer__name"', rendered)
 
     def test_select__form_offers_what_an_export_emits(self):
         """The picker enumerates the *export's* field set: the read-only fields a default export emits are
@@ -1815,28 +1834,184 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         if required_positions and optional:
             self.assertLess(max(required_positions), middle.index(optional[0]))
 
-    def test_select__relation_rows_are_marked_as_exporting_a_natural_key(self):
-        """A row naming a related object says so, its checkbox being the one that does something else.
+    @staticmethod
+    def checkbox_for(rendered, path):
+        """The `<input>` tag the rendered picker has for `path`."""
+        match = re.search(rf'<input [^>]*id="id_export_fields_option_{re.escape(path)}"[^>]*>', rendered)
+        return match.group(0) if match else None
 
-        Everywhere else a tree of checkboxes means "everything beneath this"; here it means "the columns
-        that identify this object", which is mutually exclusive with the fields listed under it. Marked
-        at every depth, the deepest offered level included -- there a relation has nothing listed under it
-        at all, so nothing else would tell it apart from an ordinary field.
+    def render_picker(self, model, export_fields=""):
+        """The picker as the Job's form renders it for `model`, with `export_fields` as the selection."""
+        job_form = ExportObjectList.as_form(
+            data={"content_type": str(ContentType.objects.get_for_model(model).pk), "export_fields": export_fields}
+        )
+        return job_form, str(job_form["export_fields"].as_widget())
+
+    def test_select__relation_rows_control_what_is_under_them(self):
+        """A related object with rows under it is a control over them, submitting nothing of its own.
+
+        Its first click selects its natural key, which it carries for the browser to read. One at the
+        deepest offered level has nothing under it, and is an ordinary field that exports its natural key.
         """
         field, _paths = self.picker_paths(Device)
-        self.assertIn("device_type", field.widget.relation_paths)
-        self.assertIn("device_type__manufacturer", field.widget.relation_paths)
-        self.assertNotIn("name", field.widget.relation_paths)
-        self.assertNotIn("device_type__id", field.widget.relation_paths)
-        self.assertTrue(
-            [path for path in field.widget.relation_paths if path.count("__") == 2],
-            "a relation at the deepest offered level should still be marked",
+        self.assertEqual(
+            field.widget.natural_keys["device_type"], ["device_type__manufacturer__name", "device_type__model"]
+        )
+        rendered = str(field.widget.render("export_fields", [], attrs={"id": "id_export_fields"}))
+
+        device_type = self.checkbox_for(rendered, "device_type")
+        self.assertIn("export-field-parent", device_type)
+        self.assertNotIn("name=", device_type)
+        self.assertIn(
+            'data-natural-key="[&quot;device_type__manufacturer__name&quot;, &quot;device_type__model&quot;]"',
+            device_type,
         )
 
-        rendered = str(field.widget.render("export_fields", [], attrs={"id": "id_export_fields"}))
-        # `device_type` carries both marks: required to create a Device, and exported as a natural key.
-        self.assertRegex(rendered, r'option_device_type">device_type[^<]*<span class="text-warning[^>]*>')
-        self.assertRegex(rendered, r'option_name">name[^<]*</label>')  # unmarked, being a value of its own
+        name = self.checkbox_for(rendered, "name")
+        self.assertIn("export-field-leaf", name)
+        self.assertIn('name="export_fields"', name)
+
+        deepest_relations = [
+            path
+            for path in field.widget.relation_paths
+            if path.count("__") == 2 and path not in field.widget.natural_keys
+        ]
+        self.assertTrue(deepest_relations, "a relation at the deepest offered level should be offered")
+        deepest = self.checkbox_for(rendered, deepest_relations[0])
+        self.assertIn("export-field-leaf", deepest)
+        self.assertIn('name="export_fields"', deepest)
+        self.assertIn("identify this related object", deepest)
+
+    def test_select__every_natural_key_is_offered_as_rows(self):
+        """Each related object's natural key is made of rows the picker offers, and that submit themselves.
+
+        Otherwise the first click on a related object would select less than its natural key -- or, were
+        a lookup to land on a row that is itself a control, nothing at all for that part of it.
+        """
+        for model in (Device, Interface, Rack, RackReservation, IPAddress, Cable, SoftwareImageFile):
+            with self.subTest(model=model._meta.label_lower):
+                entries = enumerate_field_paths(get_serializer_for_model(model))
+                offered = {entry["path"] for entry in entries}
+                parents = {entry["parent"] for entry in entries}
+                for entry in entries:
+                    if entry["natural_key"] is None:
+                        continue
+                    self.assertTrue(entry["natural_key"], f"{entry['path']} has no natural key to select")
+                    for path in entry["natural_key"]:
+                        self.assertIn(path, offered)
+                        self.assertNotIn(path, parents, f"{path} is a control, not a field")
+                        self.assertTrue(path.startswith(f"{entry['path']}__"))
+
+    def test_select__natural_key_is_cut_off_at_the_deepest_offered_relation(self):
+        """A natural key deeper than the picker goes is selected as far down as it goes.
+
+        The relation it stops at exports the rest of the lookup as its own natural key, so nothing of the
+        key is lost by the picker's being one relation shallower than a selection may go.
+        """
+        location_type = LocationType.objects.create(name="Deep Key Type", nestable=True)
+        status = Status.objects.get_for_model(Location).first()
+        parent = None
+        for depth in range(4):
+            parent = Location.objects.create(
+                name=f"Deep Key {depth}", location_type=location_type, status=status, parent=parent
+            )
+        field, _paths = self.picker_paths(Device)
+        self.assertEqual(
+            field.widget.natural_keys["location"][:3],
+            ["location__name", "location__parent__name", "location__parent__parent"],
+        )
+
+    def test_select__relation_without_a_natural_key_of_lookups_is_a_field(self):
+        """A relation an export does not spell as its natural key's lookups is offered with nothing under it.
+
+        A `ContentType` exports as `app_label.model`; its `app_label` and `model` rows would not be what
+        selecting it gives, and it has no natural key of Nautobot's for a first click to select.
+        """
+        _field, paths = self.picker_paths(ExportTemplate)
+        self.assertIn("content_type", paths)
+        self.assertFalse([path for path in paths if path.startswith("content_type__")])
+
+    def test_select__rows_are_labeled_for_reading(self):
+        """Each row reads as the field's own name, with its path alongside for anyone writing one by hand."""
+        self.create_status_with_custom_fields()
+        field, _paths = self.picker_paths(Status)
+        labels = dict(field.choices)
+        self.assertEqual(labels["name"], "Name *")
+        self.assertEqual(labels["cf_export_cf_a"], CustomField.objects.get(key="export_cf_a").label)
+        _form, rendered = self.render_picker(Device)
+        self.assertRegex(rendered, r'for="id_export_fields_option_device_type">Device type \*<span[^>]*>device_type<')
+        self.assertRegex(
+            rendered,
+            r'for="id_export_fields_option_device_type__manufacturer">Manufacturer'
+            r"<span[^>]*>device_type__manufacturer<",
+        )
+
+    def test_select__selection_naming_a_relation_shows_as_its_natural_key(self):
+        """A selection naming a related object -- as the REST API or a scheduled Job may -- shows as its key.
+
+        The row for the related object submits nothing, so what it asked for is shown as the rows that
+        make it up, which is also what submitting the form again asks for. The selection itself is passed
+        on as given, being what the export accepts.
+        """
+        job_form, rendered = self.render_picker(Device, export_fields="name,device_type")
+        for path in ("name", "device_type__manufacturer__name", "device_type__model"):
+            with self.subTest(path=path):
+                self.assertIn(" checked", self.checkbox_for(rendered, path))
+        self.assertNotIn(" checked", self.checkbox_for(rendered, "device_type__u_height"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "name,device_type")
+
+    def test_select__rows_start_collapsed_even_holding_a_selection(self):
+        """Every row starts collapsed, a count saying what it holds, so a broad selection does not bury the tree."""
+        _form, rendered = self.render_picker(Device, export_fields="name,device_type,location,status")
+        self.assertNotRegex(rendered, r'<ul class="export-nested list-unstyled mb-0" ')
+        self.assertNotIn('aria-expanded="true"', rendered)
+        self.assertIn("export-field-count", rendered)
+
+    def test_select__summary_says_what_the_export_will_contain(self):
+        """Above the tree, the picker says what an empty selection exports, or how much is selected.
+
+        It is said there rather than in the field's help text below the tree, which the form drops so as
+        not to say it twice; the variable's description stays, for those spelling the value out by hand.
+        """
+        job_form, rendered = self.render_picker(Device)
+        self.assertRegex(rendered, r'<span class="export-fields-summary-default">[^<]*<strong>No fields selected')
+        self.assertIn("each field of the device itself", rendered)
+        self.assertIn('class="export-fields-summary-selected d-none"', rendered)
+        self.assertIn(f'aria-describedby="{ExportFieldSelect.SUMMARY_ID}"', rendered)
+        self.assertEqual(job_form.fields["export_fields"].help_text, "")
+        self.assertIn("default columns", ExportObjectList.export_fields.field_attrs["help_text"])
+
+        _form, rendered = self.render_picker(Device, export_fields="name,status__name")
+        self.assertIn('class="export-fields-summary-default d-none"', rendered)
+        self.assertIn('<span class="export-fields-summary-count">2 fields</span>', rendered)
+
+    def test_select__custom_fields_stands_for_every_custom_field(self):
+        """`custom_fields` submits itself when everything under it is checked, and then only itself.
+
+        Naming it asks for every custom field, those added later included, which no list of `cf_<key>`
+        entries can say -- so the entries the browser also submits under it are dropped as repetition.
+        """
+        self.create_status_with_custom_fields()
+        job_form, rendered = self.render_picker(Status, export_fields="name,custom_fields")
+        custom_fields = self.checkbox_for(rendered, "custom_fields")
+        self.assertIn("export-field-parent", custom_fields)
+        self.assertIn('name="export_fields"', custom_fields)
+        for path in ("cf_export_cf_a", "cf_export_cf_b"):
+            with self.subTest(path=path):
+                self.assertIn(" checked", self.checkbox_for(rendered, path))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "name,custom_fields")
+
+        content_type = str(ContentType.objects.get_for_model(Status).pk)
+        posted = ExportObjectList.as_form(
+            data={
+                "content_type": content_type,
+                "export_fields": ["name", "custom_fields", "cf_export_cf_a", "cf_export_cf_b"],
+            }
+        )
+        self.assertTrue(posted.is_valid(), posted.errors)
+        self.assertEqual(posted.cleaned_data["export_fields"], "name,custom_fields")
 
     def test_select__only_the_object_s_own_fields_are_marked_required(self):
         """The `*` marker is about creating a record, which is only ever the object the export is of.
@@ -1954,7 +2129,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn('id="id_export_fields-container"', content)
         self.assertNotIn(f'id="{ExportFieldSelect.WRAPPER_ID}"', content)
         self.assertIn('name="export_fields" type="checkbox" value="name"', content)
-        self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
+        self.assertNotRegex(content, r"<input [^>]* checked")  # nothing selected for a type just chosen
 
     # What "match the list view" resolves, and the order it comes back in, is `ExportViewColumnsTests`.
 
@@ -1990,7 +2165,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         content = response.content.decode(response.charset)
         self.assertIn("nb-select-multiple-orderable-list", content)
         self.assertInHTML(
-            '<input class="form-check-input my-6" id="id_export_fields_option_name" '
+            '<input class="form-check-input my-6 export-field-leaf" id="id_export_fields_option_name" '
             'name="export_fields" type="checkbox" value="name" checked>',
             content,
         )
@@ -2465,7 +2640,7 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         self.assertEqual(selected, ["name", "cf_export_cf_a"])
 
     def test_columns__nothing_exportable_selects_nothing(self):
-        """A view showing only non-exportable columns fills nothing in, which exports every field.
+        """A view showing only non-exportable columns fills nothing in, which exports the default columns.
 
         An empty selection is what "export everything" means, so there is nothing further to say: the
         picker simply comes back with its columns named as unexportable and no box checked.

@@ -24,6 +24,7 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    expand_relation_paths,
     IMPORT_DOCUMENT_MODEL_KEY,
     validate_field_paths,
 )
@@ -173,6 +174,10 @@ class ExportFieldsStringVar(StringVar):
         # `ScriptVariable.as_field()` adds Bootstrap's `form-control` to every non-checkbox widget, which
         # styles an input box; the widget renders a list of rows and brings its own classes.
         field.widget.attrs["class"] = field.widget.attrs.get("class", "").replace(" form-control", "")
+        # The picker says what an empty selection exports, and how to use it, above the tree where it is read
+        # before choosing; the variable's description is for those spelling the value out by hand -- the REST
+        # API, a scheduled Job -- and would only repeat it below. See `ExportFieldSelect._summary()`.
+        field.help_text = ""
         # A persistent HTMX swap target from `render_field`, rebuilt whenever the content type changes.
         # Select2 raises only jQuery events, so the widget's script re-dispatches a native `change` for
         # this trigger to hear. Set here rather than on the field class: the rebuild renders the field
@@ -233,8 +238,11 @@ class ExportObjectList(Job):
         description="The fields to export, in the order the columns should appear, as a comma-separated "
         "list that may reach into related objects "
         "(e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
-        "Leave it empty to export every field. Not applicable to Export Templates or devicetype-library "
-        "YAML exports, which render their own output.",
+        "A field naming a related object exports the fields that identify it. "
+        "Leave it empty to export the default columns: each field of the object itself, each related object "
+        "as the fields that identify it, and any custom fields, but no computed fields, relationships, or "
+        "similar opt-in data. Not applicable to Export Templates or devicetype-library YAML exports, which "
+        "render their own output.",
     )
 
     class Meta:
@@ -379,7 +387,11 @@ class ExportObjectList(Job):
     # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
 
     def _resolve_export_field_paths(self, model, export_fields):
-        """Parse and validate the explicit field-selection string (None if no selection was given)."""
+        """Parse and validate the explicit field-selection string (None if no selection was given).
+
+        A path ending at a related object through another is then spelled as that object's natural key, which
+        is what it exports; see `expand_relation_paths()`.
+        """
         export_field_paths = import_utils.parse_field_name_list(export_fields)
         if export_field_paths:
             try:
@@ -387,6 +399,7 @@ class ExportObjectList(Job):
             except ValueError as exc:
                 self.logger.error("%s", exc)
                 raise RunJobTaskFailed(str(exc)) from exc
+            export_field_paths = expand_relation_paths(model, export_field_paths)
         return export_field_paths
 
     @staticmethod
@@ -643,7 +656,7 @@ class ExportObjectList(Job):
             self._render_devicetype_library_yaml(queryset, filename)
             return
 
-        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else every field of the model.
+        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else the serializer's default columns.
         # Asking for "the columns of the list view" is a UI gesture rather than an input here: the export
         # field picker fills those in as a selection, so what arrives is always an explicit list.
         export_field_paths = self._resolve_export_field_paths(model, export_fields)

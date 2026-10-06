@@ -124,11 +124,18 @@ while in JSON or YAML it's a list of nested objects:
 
 ### Selecting fields to export
 
-By default an export includes every field of the object type. **Fields to Export** (`export_fields`) lets you instead pick the specific fields you want and put them in the order you want them to appear.
+By default an export contains the object type's default columns:
 
-In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. Leaving everything unchecked exports every field, as usual, and **Clear** empties the selection to get back to that. A field marked `*` is one an import requires to create new records, so a selection that omits it cannot be imported back as new objects (see [Effect on re-importing the file](#effect-on-re-importing-the-file)). Only the object's own fields are ever marked: an import looks a related object up by what you exported of it rather than creating one, so what _that_ object would require to be created has no bearing on your file.
+- each field of the object itself
+- each related object, as the fields that identify it (its natural key) rather than all of its fields
+- each many-to-many field, as its members' natural keys
+- each custom field
 
-Selecting a related object and selecting a field inside it are mutually exclusive, since they ask for different columns: checking one clears the other. A related object whose own fields are selected, but which is not itself selected, is shown with a dash rather than a check.
+Opt-in data that the REST API only returns when asked for by name - computed fields, relationships, and config contexts - is not exported, nor are the `url` and `notes_url` links. **Fields to Export** (`export_fields`) lets you instead pick the specific fields you want and put them in the order you want them to appear.
+
+In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Above the list, a summary says what the export will contain: the default columns while nothing is selected, otherwise how many fields are selected. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. Each row shows the field's name with its path - what you would type to select it by hand - alongside. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. **Clear** empties the selection, to go back to the default columns. A field marked `*` is one an import requires to create new records, so a selection that omits it cannot be imported back as new objects (see [Effect on re-importing the file](#effect-on-re-importing-the-file)). Only the object's own fields are ever marked: an import looks a related object up by what you exported of it rather than creating one, so what _that_ object would require to be created has no bearing on your file.
+
+A related object's checkbox selects the fields nested under it rather than anything of its own. Clicking it once selects the fields that identify the object; clicking it again selects all of its fields, including those of the objects it relates to in turn; and clicking it a third time clears them. If only some of its fields are selected, whether by that first click or by checking them yourself, the checkbox shows a dash and a count of how many are selected, and the next click selects all of them. Related objects at the deepest level the list goes have no fields nested under them, and checking one selects the fields that identify it.
 
 Everywhere else - the REST API, a scheduled Job, or `nautobot-server export_objects` - the same parameter takes a comma-separated list:
 
@@ -146,7 +153,7 @@ ISR4331,Cisco,1
 
 Each entry is either a plain field (`model`), or a path that traverses one or more foreign keys to reach a field of a related object, joined by `__` (`manufacturer__name`, `device_type__manufacturer__name`). A single path may traverse at most three relations.
 
-Naming a related object _without_ expanding it selects that object's whole natural key - the same columns an unrestricted export would have produced for it. So `model,manufacturer` gives you the same file as the example above minus `u_height`, because `manufacturer` expands to `manufacturer__name`:
+Naming a related object _without_ expanding it selects that object's whole natural key - the same columns an unrestricted export would have produced for it. This is so whether the related object is reached directly (`manufacturer`) or through another one (`device_type__manufacturer`). So `model,manufacturer` gives you the same file as the example above minus `u_height`, because `manufacturer` expands to `manufacturer__name`:
 
 ```csv
 model,manufacturer__name
@@ -157,7 +164,7 @@ Many-to-many fields, such as `tags`, can be selected like any other field, but c
 
 #### Selecting custom fields
 
-Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **custom_fields**, which is the last row of the list, since selecting it asks for everything the individual entries ask for one at a time - and keeps asking for it as custom fields are added later.
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **Custom fields**, which is the last row of the list. Its checkbox selects all of them at once, as `custom_fields` - which keeps asking for every custom field as more are added later, unlike a list of the individual entries.
 
 In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
 
@@ -216,7 +223,7 @@ Not every column has a field behind it that can be exported. Row selection and a
 
 A count column is _about_ a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
 
-Every column left out is named beneath the button, so the selection never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, nothing is filled in - which is the selection that exports every field.
+Every column left out is named beneath the button, so the selection never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, nothing is filled in - which is the selection that exports the default columns. A displayed column showing a related object is filled in as the fields that identify that object.
 
 ## The self-describing file
 
