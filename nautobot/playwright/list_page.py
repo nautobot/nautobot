@@ -24,7 +24,11 @@ class ListPage(BasePage):
 
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
     # rendered when a list has no results. Reference this constant, never inline it.
-    _DATA_ROWS = "table tbody tr:has(input[name='pk'])"
+    # The row selection checkbox; its value is the object's id.
+    _PK_CHECKBOX = "input[name='pk']"
+    # A data row is a body row with a pk checkbox, which excludes the empty-state row
+    # rendered when a list has no results. Reference this constant, never inline it.
+    _DATA_ROWS = f"table tbody tr:has({_PK_CHECKBOX})"
 
     # The filter drawer and its dynamic-filter UI render identically on every list view.
     _FILTER_TOGGLE = "button#id__filterbtn"
