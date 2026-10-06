@@ -219,7 +219,7 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.37"
+pymarkdownlnt = "~0.9.40"
 # Combination linter and code formatter
 ruff = "~0.14.8"
 # YAML linting
@@ -379,10 +379,13 @@ signature-mutators = ["unittest.mock.patch"]
 
 [tool.pymarkdown]
 extensions.front-matter.enabled = true  # needed for mkdocs-macros compatibility
+# extensions.markdown-tables.enabled = true  # blocked by https://github.com/jackdewinter/pymarkdown/issues/1679 and https://github.com/jackdewinter/pymarkdown/issues/1698
+mode.strict-config = true
 plugins.additional_paths = "scripts/file_relative_links.py"
 plugins.code-block-style.enabled = false  # inconsistency between "code" blocks and "admonition" blocks is expected
 plugins.line-length.enabled = false  # we don't wrap markdown to 80 characters.
 plugins.list-anchored-indent.enabled = true  # in place of ul-indent, see below
+plugins.per-file-ignores."changes/*.md" = ["first-line-h1", "link-fragments"]
 plugins.proper-names.names = "Celery,Django,Nautobot,Pylint,PyMarkdown,Python,REST API"
 plugins.proper-names.code_blocks = false  # don't check proper nouns inside ```code blocks```
 plugins.proper-names.code_spans = false  # don't check proper nouns inside `code spans`
