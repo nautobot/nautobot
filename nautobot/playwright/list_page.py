@@ -138,7 +138,10 @@ class ListPage(BasePage):
     def apply_bulk_edit(self) -> str:
         """Submit the form and return the job result ID once the redirect commits."""
         self.page.locator(self._BULK_EDIT_APPLY).click()
-        self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
+        try:
+            self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
+        except PlaywrightTimeoutError:
+            raise AssertionError(f"Apply did not redirect to a job result. Page is at {self.page.url}") from None
         return self._JOB_RESULT_URL.search(self.page.url).group("pk")
 
     # -------------------------------------------------------------------------
