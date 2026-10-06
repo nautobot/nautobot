@@ -30,8 +30,10 @@ from nautobot.core.forms.widgets import (
 )
 from nautobot.extras.choices import ConditionTypeChoices
 from nautobot.extras.conditions.operators import (
+    DISPLAY_KEY,
     KIND_BOOLEAN,
     KIND_DATE,
+    KIND_LIST,
     KIND_NUMBER,
     KIND_TEXT,
     OPERATOR_REGISTRY,
@@ -51,7 +53,7 @@ EXPRESSION_LABEL = "Raw expression"
 
 # Both words carry a value, because Select2 takes a blank-valued option for its placeholder, which
 # greys it out and drops it from the list, leaving nothing to choose to go back to.
-NEGATION_CHOICES = (("when", "When"), ("not", "not When"))
+NEGATION_CHOICES = (("when", "When"), ("not", "Not When"))
 
 # Said by the field select while the rule watches nothing, there being no fields to offer yet.
 PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
@@ -100,11 +102,12 @@ class ComparedField:
 
         `whole` is a comparison against a complete value rather than part of one, `many` one against a
         set. `operator` is an `operators.Operator`, or None where the row has not named one yet, which
-        counts as one whole value.
+        counts as one whole value. A list overrides `compares_whole_value`, because every operator it
+        offers compares a whole value.
         """
         return replace(
             self,
-            whole=operator is None or operator.compares_whole_value,
+            whole=operator is None or operator.compares_whole_value or self.kind == KIND_LIST,
             many=bool(operator and self.kind and takes_a_set(operator.key, self.kind)),
         )
 
@@ -122,7 +125,13 @@ class ComparedField:
         if top is None:
             return ComparedField()
         if not subname:
-            return ComparedField(kind=top.get("kind"), picker=top.get("picker"))
+            values_can_be_listed = top.get("kind") == KIND_LIST and top.get("values_url")
+            return ComparedField(
+                kind=top.get("kind"),
+                picker=top.get("picker"),
+                values_url=top["values_url"] if values_can_be_listed else None,
+                key=DISPLAY_KEY if values_can_be_listed else None,
+            )
         sub = next((entry for entry in top.get("subfields", ()) if entry["name"] == subname), None)
         if sub is None:
             return ComparedField()
@@ -134,12 +143,11 @@ class ComparedField:
     def values_worth_listing(self):
         """Whether to offer the values themselves instead of a box to type one into.
 
-        Only ever a sub-field of a relation, such as `status.name`, where the select lists the real
-        Status objects and stores the sub-field's value. `for_path` carries no `values_url` for the
-        relation on its own, a sub-field that is a date or a number gets the widget its kind asks for,
-        and a partial comparison such as `contains` wants typing rather than picking.
+        Either a sub-field of a single relation, `status.name`, or a many-valued relation named on
+        its own, `tags`. A sub-field that is a date or a number gets the widget its kind asks for,
+        and a partial comparison such as `contains` on text wants typing rather than picking.
         """
-        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT))
+        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT, KIND_LIST))
 
 
 def _subfield_name(name):
@@ -195,9 +203,9 @@ def _apply_bootstrap_styling(widget, placeholder=""):
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
-    if placeholder:
-        # A select takes `data-placeholder`: `initializeSelect2Fields` overwrites the real one.
-        widget.attrs.setdefault("data-placeholder" if isinstance(widget, forms.Select) else "placeholder", placeholder)
+    # A select keeps the placeholder every other Nautobot select shows, which `initializeSelect2` sets.
+    if placeholder and not isinstance(widget, forms.Select):
+        widget.attrs.setdefault("placeholder", placeholder)
     return widget
 
 
@@ -443,11 +451,16 @@ class ConditionRowForm(forms.Form):
         preset = get_condition_preset(chosen)
         if preset is None:
             return
+        # The field's controls come first, because building them settles the sub-field, and the field
+        # a row compares is the field and its sub-field together.
+        named = _parameter_of_kind(preset, PARAM_KIND_FIELD)
+        if named is not None:
+            self._add_field_controls(named)
         compared_field = self._field_this_row_compares(preset)
         for parameter in preset.parameters:
             if parameter.kind == PARAM_KIND_FIELD:
-                self._add_field_controls(parameter)
-            elif parameter.kind == PARAM_KIND_CHOICE:
+                continue
+            if parameter.kind == PARAM_KIND_CHOICE:
                 # The operator decides whether the value is typed or picked, so it fetches the row again.
                 control = _build_operator_control(parameter, compared_field.kind)
                 _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name, rebuild_index=self.index)
