@@ -22,7 +22,7 @@ class ComputedFieldsTestCase:
         Both the field's label and its rendered value are checked.
         """
         device = DeviceDetailPage(auth_page, base_url)
-        device.navigate(created_device["id"])
+        device.navigate(created_device["device"]["id"])
 
         for text in (created_computed_field["label"], created_computed_field["expected_value"]):
             device.expect_tab_to_show("main", text)
@@ -37,7 +37,7 @@ class ComputedFieldsTestCase:
         Both the field's label and its rendered value are checked.
         """
         device = DeviceDetailPage(auth_page, base_url)
-        device.navigate(created_device["id"])
+        device.navigate(created_device["device"]["id"])
         device.open_tab("advanced")
 
         for text in (created_advanced_ui_computed_field["label"], created_advanced_ui_computed_field["expected_value"]):
@@ -55,11 +55,13 @@ class ComputedFieldsTestCase:
         which also leaves the shared user's Device table at its defaults.
         """
         label = created_computed_field["label"]
-        api_value = api_computed_field_value("dcim/devices", created_device["id"], created_computed_field["key"])
+        api_value = api_computed_field_value(
+            "dcim/devices", created_device["device"]["id"], created_computed_field["key"]
+        )
         assert api_value == created_computed_field["expected_value"]
 
         devices = DevicesPage(auth_page, base_url)
-        devices.navigate(name=created_device["name"])
+        devices.navigate(name=created_device["device"]["name"])
         devices.expect_row_count(1)
         devices.expect_column_shown(label, shown=False)
 
