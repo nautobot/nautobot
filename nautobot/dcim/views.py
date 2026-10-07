@@ -5694,7 +5694,7 @@ class CableUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
     )
     def lane_side_fields(self, request):
-        """HTMX endpoint: return parent+termination fields for a specific lane side when the type changes.
+        """HTMX endpoint: return location+parent+termination fields for a specific lane side when the type changes.
 
         The only piece of existing cable state the response depends on is the cable pk (forwarded by
         the type select's `hx-vals`), used to re-apply the `available_for_cable` termination filter so
@@ -5721,6 +5721,7 @@ class CableUIViewSet(NautobotUIViewSet):
             "dcim/inc/cable_lane_side_fields.html",
             {
                 "form": temp_form,
+                "location_field": result["meta"]["location_field"],
                 "parent_field": result["meta"]["parent_field"],
                 "term_field": result["meta"]["term_field"],
             },
