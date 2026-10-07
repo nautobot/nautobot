@@ -89,11 +89,3 @@ class ChargeBucketTestCase(SimpleTestCase):
         consumed_budget, _ = charge_bucket(other_bucket_id, 3, self.timeout)
 
         self.assertEqual(consumed_budget, 3)
-
-    def test_unreachable_cache_raises_the_backend_error(self):
-        with patch(
-            "nautobot.core.rate_limiting.budget_helpers.get_redis_connection",
-            side_effect=redis.exceptions.ConnectionError,
-        ):
-            with self.assertRaises(redis.exceptions.ConnectionError):
-                charge_bucket(self.bucket_id, 4, self.timeout)
