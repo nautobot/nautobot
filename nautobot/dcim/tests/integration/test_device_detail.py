@@ -1,0 +1,84 @@
+"""Device detail view rendering."""
+
+import pytest
+
+from nautobot.dcim.tests.integration.pages.device_detail_page import DeviceDetailPage
+
+PANEL_TITLES = (
+    "Device",
+    "Management",
+    "Comments",
+    "Tags",
+    "Assigned VRFs",
+    "Clusters",
+    "Services",
+    "Images",
+    "Virtual Device Contexts",
+)
+
+EMPTY_PANEL_TEXT = {
+    "Tags": "No tags assigned",
+    "Assigned VRFs": "No VRF-device assignments found",
+    "Clusters": "No clusters found",
+    "Services": "No services found",
+    "Images": "No image attachments found",
+    "Virtual Device Contexts": "No virtual device contexts found",
+}
+
+
+class DeviceDetailTestCase:
+    """Device detail view: heading, action buttons, panels, panel values and deferred rendering."""
+
+    def test_heading_and_action_buttons(self, auth_page, base_url, created_device):
+        """The heading shows the device's name, and the Add Components and Edit Device buttons are rendered."""
+        detail = DeviceDetailPage(auth_page, base_url)
+        detail.navigate(created_device["device"]["id"])
+
+        detail.expect_heading(created_device["device"]["name"])
+        detail.expect_add_components_button()
+        detail.expect_edit_button()
+
+    def test_main_tab_panel_titles(self, auth_page, base_url, created_device):
+        """Each panel in PANEL_TITLES appears exactly once on a new device's main tab."""
+        detail = DeviceDetailPage(auth_page, base_url)
+        detail.navigate(created_device["device"]["id"])
+
+        for title in PANEL_TITLES:
+            detail.expect_panel(title)
+
+    def test_empty_panels_show_their_empty_state(self, auth_page, base_url, created_device):
+        """Each empty panel shows its empty-state message inside its own card."""
+        detail = DeviceDetailPage(auth_page, base_url)
+        detail.navigate(created_device["device"]["id"])
+
+        for title, empty_text in EMPTY_PANEL_TEXT.items():
+            detail.expect_panel_to_contain(title, empty_text)
+
+    @pytest.mark.behavioral
+    def test_device_and_management_panel_values(self, auth_page, base_url, created_device):
+        """The Device and Management panels show the values the device was created with."""
+        detail = DeviceDetailPage(auth_page, base_url)
+        detail.navigate(created_device["device"]["id"])
+
+        detail.expect_panel_field("Device", "Location", created_device["location"]["name"])
+        detail.expect_panel_field("Device", "Device Type", created_device["device_type"]["model"])
+        detail.expect_panel_field("Management", "Role", created_device["role"]["name"])
+        detail.expect_panel_field("Management", "Status", created_device["status"]["name"])
+
+    @pytest.mark.behavioral
+    def test_deferred_power_utilization_panel(self, auth_page, base_url, created_pdu):
+        """The Power Utilization panel renders as a placeholder first, then loads its content in a separate request."""
+        detail = DeviceDetailPage(auth_page, base_url)
+        device_id = created_pdu["device"]["id"]
+
+        detail.fail_deferred_components()
+        detail.navigate(device_id)
+        # The Power Utilization panel is the only deferred component on this page.
+        detail.expect_deferred_placeholder_count(1)
+        detail.expect_no_panel("Power Utilization")
+
+        detail.allow_deferred_components()
+        detail.navigate(device_id)
+        detail.expect_deferred_placeholder_count(0)
+        detail.expect_panel("Power Utilization")
+        detail.expect_panel_to_contain("Power Utilization", created_pdu["power_port"]["name"])

@@ -94,7 +94,7 @@ class BulkEditNullBooleanSelect(forms.NullBooleanSelect):
 
         # Override the built-in choice labels
         self.choices = (
-            ("1", "---------"),
+            ("1", "—"),
             ("2", "Yes"),
             ("3", "No"),
         )

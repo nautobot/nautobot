@@ -24,7 +24,9 @@ Every condition is checked against the same payload a webhook body template rece
 
 A field is addressed by name: `mtu`, `name`. A related object is serialized as a mapping, so it is addressed by the key inside it, separated by a dot: `status.name`, `primary_ip4.address`, `location.name`. Naming the relation alone, `status`, yields the whole mapping, which no comparison matches.
 
-A dot only reaches inside a mapping. A many-valued field such as `tags` is a list, so `tags.name` yields nothing. Use the list as a whole, or a raw expression.
+A many-valued field such as `tags` is named on its own, and each related object in it compares as the name it is displayed under. A dot does not reach inside it: `tags.color` resolves to nothing. Asking about tags is below, under [Operators](#operators).
+
+A field holding a plain list is named the same way. Its values are typed rather than picked, because there is nowhere to read them from.
 
 ## Presets
 
@@ -74,9 +76,22 @@ Used by **Field comparison**. What a comparison does depends on the type of the 
 | text, date | exact match | alphabetical | any of the set | substring | prefix / suffix |
 | number | numeric | numeric | any of the set | – | – |
 | boolean | true / false | – | – | – | – |
-| list | same set of values | – | – | – | – |
+| list | same set of values | – | – | holds the value | – |
 
 There is no `!=` operator: negate the row instead.
+
+### Asking about tags
+
+`tags` is named on its own, with no sub-field beside it. The picker offers the tags the selected object types can hold, and a tag is matched by the name it is displayed under.
+
+`contains` takes one tag. Every condition must pass, so two of them ask for both tags.
+
+| Conditions | Matches |
+|------------|---------|
+| `tags contains core` | anything tagged `core`, whatever else it carries |
+| `tags contains core` and `tags contains edge` | anything tagged both, whatever else it carries |
+| `tags = core, edge` | only an object tagged exactly those two |
+| `not tags contains core` | anything not tagged `core` |
 
 ## Raw expressions
 
@@ -114,15 +129,15 @@ A row reads as a sentence from left to right:
 
 | Part | What it is |
 | --- | --- |
-| **When** or **not When** | Whether the row passes when what follows is true, or when it is false |
+| **When** or **Not When** | Whether the row passes when what follows is true, or when it is false |
 | **Condition type** | A preset from the catalog above, or **Raw expression** |
 | The rest | The parameters that preset declares, one to a line |
 
 The parameters change with the type, so choosing a different one rebuilds the row. Naming a different field does the same, and clears the value that was being compared, because a value that meant something under the old field means nothing under the new one.
 
-Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first.
+Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first. A many-valued field such as `tags` has no sub-field picker, because it is always compared by the name its objects are displayed under.
 
-What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. An operator that matches part of a value, such as `contains`, gives a plain box instead, because the values that exist are no help in typing a fragment.
+What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. `tags` is picked from the tags the selected object types can hold, several for `=` and one for `contains`. An operator that matches part of a value, such as `contains` on text, gives a plain box instead.
 
 **Add another Condition** adds a row at the end, and the bin beside a row removes it. Every row must pass, so rows narrow the action down rather than widening it.
 
