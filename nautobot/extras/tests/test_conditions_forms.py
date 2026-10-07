@@ -16,6 +16,7 @@ from nautobot.core.forms.widgets import (
     MultiValueCharInput,
     StaticSelect2,
 )
+from nautobot.core.testing import TestCase as NautobotTestCase
 from nautobot.dcim.models import Interface
 from nautobot.extras.conditions.forms import (
     _stored_row_as_initial,
@@ -46,12 +47,14 @@ def compare(**values):
     return {"type": "preset", "preset": "field_compare", "values": values}
 
 
-class RowFormTestCase(SimpleTestCase):
-    """Rows are built against `Interface`, which carries a field of every kind the picker offers."""
+class RowFormTestCase(NautobotTestCase):
+    """Rows are built against `Interface`, which carries a field of every kind the picker offers.
+
+    The catalog reads the custom fields of the watched model, so building it needs a database.
+    """
 
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         register_builtin_condition_presets()
         cls.addressable = addressable_fields(Interface)
 
@@ -246,7 +249,9 @@ class StoredRowTest(RowFormTestCase):
                 self.assertInHTML(option, rendered)
 
     def test_a_dotted_path_becomes_the_two_selects_that_edit_it(self):
-        initial = _stored_row_as_initial(compare(field="status.name", operator="in", value=["Active"]))
+        initial = _stored_row_as_initial(
+            compare(field="status.name", operator="in", value=["Active"]), self.addressable
+        )
         self.assertEqual(initial["field"], "status")
         self.assertEqual(initial[_subfield_name("field")], "name")
 
@@ -254,11 +259,12 @@ class StoredRowTest(RowFormTestCase):
         for stored, word in ((True, "not"), (False, "when")):
             with self.subTest(stored):
                 row = {"type": "expression", "source": "x", "negate": stored}
-                self.assertEqual(_stored_row_as_initial(row)["negate"], word)
+                self.assertEqual(_stored_row_as_initial(row, self.addressable)["negate"], word)
 
     def test_values_that_are_not_a_mapping_are_ignored_rather_than_fatal(self):
         """Anything can be typed on the JSON tab. The row renders with its controls empty and is refused on save."""
-        initial = _stored_row_as_initial({"type": "preset", "preset": "field_changed", "values": "nope"})
+        row = {"type": "preset", "preset": "field_changed", "values": "nope"}
+        initial = _stored_row_as_initial(row, self.addressable)
         self.assertEqual(initial["type"], "field_changed")
         self.assertIsNone(initial["field"])
 
@@ -469,7 +475,7 @@ class SubfieldIsAlwaysAnsweredTest(RowFormTestCase):
         self.assertNotIn("", [value for value, _ in self.choices(compare(field="status"))])
 
     def test_name_leads_where_the_relation_has_one(self):
-        self.assertEqual(self.choices(compare(field="status"))[0], ("name", "name"))
+        self.assertEqual(self.choices(compare(field="status"))[0], ("name", "Name"))
 
     def test_a_relation_named_with_no_sub_field_is_given_one(self):
         self.assertEqual(self.form(compare(field="status"))["field_subfield"].value(), "name")

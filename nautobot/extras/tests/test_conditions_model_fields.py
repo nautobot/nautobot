@@ -1,12 +1,14 @@
 """Tests for `nautobot.extras.conditions.model_fields`."""
 
+from django.contrib.contenttypes.models import ContentType
 from django.test import tag
 
 from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import TestCase as NautobotTestCase
 from nautobot.dcim.models import CablePath, Device, Location, LocationType
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.conditions.model_fields import _where_values_are_listed, addressable_fields
-from nautobot.extras.models import Status
+from nautobot.extras.models import CustomField, Status
 
 
 @tag("unit")
@@ -15,6 +17,8 @@ class AddressableFieldsTest(NautobotTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        status_note = CustomField.objects.create(label="Status Note", type=CustomFieldTypeChoices.TYPE_TEXT)
+        status_note.content_types.add(ContentType.objects.get_for_model(Status))
         cls.location = Location.objects.create(
             name="Addressable Fields Test",
             location_type=LocationType.objects.create(name="Addressable Fields Test Type"),
@@ -27,11 +31,16 @@ class AddressableFieldsTest(NautobotTestCase):
         return next(entry for entry in addressable_fields(*models or (Location,)) if entry["name"] == name)
 
     def test_every_field_is_one_the_record_carries(self):
-        """A serializer also declares fields only an annotated queryset fills in, and those never appear."""
-        self.assertEqual({field["name"] for field in addressable_fields(Location)}, set(self.record))
+        """A serializer also declares fields only an annotated queryset fills in, and those never appear.
 
-    def test_a_relation_offers_what_the_record_nests_under_it(self):
-        self.assertEqual({sub["name"] for sub in self.entry("status")["subfields"]}, set(self.record["status"]))
+        A custom field is offered under its own path, so each name folds back to the key the record holds.
+        """
+        for label, entries, record in (
+            ("the record itself", addressable_fields(Location), self.record),
+            ("what it nests under a relation", self.entry("status")["subfields"], self.record["status"]),
+        ):
+            with self.subTest(label):
+                self.assertEqual({entry["name"].partition(".")[0] for entry in entries}, set(record))
 
     def test_a_relation_inside_a_relation_is_not_offered(self):
         """A path that stops at a mapping matches nothing, so going deeper would only mislead."""
