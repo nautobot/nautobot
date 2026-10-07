@@ -1266,6 +1266,10 @@ textarea {
     border-color: var(--#{$prefix}primary-text-emphasis);
   }
 
+  &::placeholder {
+    font-style: italic;
+  }
+
   &::file-selector-button {
     /*
      * Border transition on `::file-selector-button` in `input[type="file"]` seems to be adding up to the default
