@@ -240,8 +240,8 @@ class ExportObjectList(Job):
         "list that may reach into related objects "
         "(e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
         "A field naming a related object exports the fields that identify it. "
-        "Leave it empty to export the default columns: each field of the object itself, each related object "
-        "as the fields that identify it, and any custom fields, but no computed fields, relationships, or "
+        "Leave it empty to export the default columns: each field of the object itself, with related objects "
+        "given as the fields that identify them, and any custom fields, but no computed fields, relationships, or "
         "similar opt-in data. Not applicable to Export Templates or devicetype-library YAML exports, which "
         "render their own output.",
     )

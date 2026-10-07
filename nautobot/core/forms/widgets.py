@@ -149,7 +149,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
     # The report of what a "match the list view" could not bring over. One per picker, hence an id.
     OMITTED_ID = "nb-export-fields-omitted"
 
-    # What the selection amounts to, above the tree; one per picker, and what the tree is described by.
+    # What the selection amounts to, above the tree. One per picker, hence an id.
     SUMMARY_ID = "nb-export-fields-summary"
 
     # The sibling field naming the content type whose fields are offered; changing it rebuilds the picker.
@@ -262,12 +262,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # server-side, and the element that persists across those swaps is the one `render_field` puts
         # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents.
         return format_html(
-            '{}{}<ol id="{}" class="{}" aria-describedby="{}">{}</ol>{}{}',
+            '{}{}<ol id="{}" class="{}">{}</ol>{}{}',
             self._toolbar(selected_count=len(widget["value"])),
             self._omitted_hint() or self._no_list_view_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
-            self.SUMMARY_ID,
             rows,
             self._behavior_script(),
             # The parent rows' states are worked out in the browser -- "indeterminate" has no markup of its
@@ -330,35 +329,34 @@ class ExportFieldSelect(SelectMultipleOrderable):
         """What the export will contain: the default columns if nothing is selected, else the selected count.
 
         Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
-        Both versions are rendered; `refresh()` in the behavior script shows whichever applies.
+        Both versions are rendered; `refresh()` in the behavior script shows whichever applies. A screen reader is
+        told only the short status as the selection changes, rather than the whole summary on every click.
         """
         model = self.content_type.model_class() if self.content_type is not None else None
         verbose_name = model._meta.verbose_name if model is not None else "object"
         return format_html(
             """
-            <div id="{id}" class="form-text mb-6" aria-live="polite">
+            <div id="{id}" class="form-text mb-6">
+                <span class="export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
                 <span class="export-fields-summary-default{default_hidden}">
                     <strong>No fields selected</strong>, so the export has the default columns: each field of the
-                    {verbose_name} itself, each related object as the fields that identify it, and any custom
-                    fields. Computed fields, relationships, and similar opt-in data are not exported.
+                    {verbose_name} itself, with related objects given as the fields that identify them, and any
+                    custom fields. Computed fields, relationships, and similar opt-in data are not exported.
                 </span>
                 <span class="export-fields-summary-selected{selected_hidden}">
                     <strong><span class="export-fields-summary-count">{count}</span> selected</strong>, exported
                     in the order shown. Clear the selection to export the default columns instead.
                 </span>
+                Export Templates and devicetype-library YAML exports ignore the selection.
             </div>
             """,
             id=self.SUMMARY_ID,
             default_hidden=" d-none" if selected_count else "",
             selected_hidden="" if selected_count else " d-none",
             verbose_name=verbose_name,
-            count=self._count_text(selected_count),
+            count=selected_count,
+            status=f"{selected_count} selected" if selected_count else "No fields selected",
         )
-
-    @staticmethod
-    def _count_text(count):
-        """The selected count as words ("1 field", "2 fields"), spelled as `refresh()` spells it."""
-        return f"{count} field{'' if count == 1 else 's'}"
 
     def _empty_message(self):
         """Why there is nothing to pick from: no content type chosen, or one an export cannot serialize."""
@@ -395,7 +393,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             '<div id="{}" class="form-text text-info mb-6">'
             "This content type has no list view, so there are no displayed columns to match. "
-            "Choose the fields to export below, or leave the selection empty to export all of them."
+            "Choose the fields to export below, or leave the selection empty to export the default columns."
             "</div>",
             self.OMITTED_ID,
         )
@@ -474,8 +472,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
         if (summary) {{
             summary.querySelector(".export-fields-summary-default").classList.toggle("d-none", selected > 0);
             summary.querySelector(".export-fields-summary-selected").classList.toggle("d-none", selected === 0);
-            summary.querySelector(".export-fields-summary-count").textContent =
-                `${{selected}} field${{selected === 1 ? "" : "s"}}`;
+            summary.querySelector(".export-fields-summary-count").textContent = String(selected);
+            // Rewritten only on a change, as any write to a live region may be announced.
+            const status = summary.querySelector(".export-fields-summary-status");
+            const statusText = selected > 0 ? `${{selected}} selected` : "No fields selected";
+            if (status.textContent !== statusText) status.textContent = statusText;
         }}
     }}
     window.nbExportFieldSelect = {{refresh: refresh}};

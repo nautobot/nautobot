@@ -39,6 +39,7 @@ from nautobot.core.api.import_export import (
     build_import_metadata,
     enumerate_field_paths,
     EXCLUDED_CSV_FIELDS,
+    expand_relation_paths,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
@@ -56,7 +57,12 @@ from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.import_utils import detect_import_format, natural_key_match_fields
-from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
+from nautobot.core.testing import (
+    create_job_result_and_run_job,
+    get_job_class_and_model,
+    TestCase as NautobotTestCase,
+    TransactionTestCase,
+)
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
@@ -90,6 +96,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     FileProxy,
     JobLogEntry,
+    RelationshipAssociation,
     Role,
     SavedView,
     SecretsGroup,
@@ -669,11 +676,10 @@ class ImportExportJobTestCase(TransactionTestCase):
                 self.assertEqual(job_result.result[key], expected, key)
 
     def assertNoIssues(self, job_result):
-        self.assertFalse(
-            JobLogEntry.objects.filter(
-                job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
-            ).exists()
-        )
+        issues = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
+        ).values_list("log_level", "message")
+        self.assertFalse(issues.exists(), [f"{level}: {message}" for level, message in issues])
 
     def assertJobLogEntry(self, job_result, contains, *, level=None):
         qs = JobLogEntry.objects.filter(job_result=job_result, message__icontains=contains)
@@ -937,7 +943,7 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 self.assertEqual(record["import_targets"], [])
 
 
-class ValidateFieldPathsTests(TestCase):
+class ValidateFieldPathsTests(NautobotTestCase):
     """`validate_field_paths` vets an export field selection against the serializer field graph.
 
     DB-backed rather than `SimpleTestCase` because instantiating a serializer resolves ContentTypes (the
@@ -1307,6 +1313,19 @@ class ValidateFieldPathsTests(TestCase):
     def test_validate__id_of_an_unviewable_relation_is_allowed(self):
         self.assertPathsValid(DeviceSerializer, ["name", "device_type__id"], user=self.limited_user())
 
+    def test_validate__unviewable_relation_cannot_end_a_nested_path(self):
+        """A nested path ending at a related object exports its natural key, so needs permission to view it."""
+        self.add_permissions("dcim.view_device", "dcim.view_devicetype")
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["device_type__manufacturer"],
+            '"device_type__manufacturer": requires permission to view dcim.manufacturer',
+            user=self.user,
+        )
+        self.add_permissions("dcim.view_manufacturer")
+        user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+        self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer"], user=user)
+
     def test_validate__viewable_relation_can_be_traversed(self):
         """A superuser holds every permission, so the gate never fires for one."""
         self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer__name"], user=self.superuser)
@@ -1321,6 +1340,66 @@ class ValidateFieldPathsTests(TestCase):
         bogus = self.assertPathsInvalid(DeviceSerializer, ["device_type__no_such_field"], user=user)
         self.assertNotIn("unknown field", bogus)
         self.assertEqual(real.replace("device_type__model", "X"), bogus.replace("device_type__no_such_field", "X"))
+
+
+class ExpandRelationPathsTests(NautobotTestCase):
+    """`expand_relation_paths` spells a nested path ending at a related object as that object's natural key."""
+
+    def test_expand__nested_relation(self):
+        self.assertEqual(
+            expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"]),
+            ["image_file_name", "software_version__platform__name"],
+        )
+
+    def test_expand__other_paths_are_unchanged(self):
+        for model, path in (
+            (Device, "location"),  # A bare relation, which the serializer expands itself
+            (Device, "device_type__model"),  # Not a relation
+            (Device, "device_type__software_image_files"),  # A to-many relation
+            (RelationshipAssociation, "relationship__source_type"),  # A relation with no natural-key lookups
+            (Device, "device_type__no_such_field"),  # Not a field at all
+            (Device, "cf_some_field"),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(expand_relation_paths(model, [path]), [path])
+
+    def test_expand__order_is_kept_and_duplicates_dropped(self):
+        self.assertEqual(
+            expand_relation_paths(
+                SoftwareImageFile,
+                ["software_version__platform", "image_file_name", "software_version__platform__name"],
+            ),
+            ["software_version__platform__name", "image_file_name"],
+        )
+
+    # A Location tree three levels below its roots, whatever the test data holds, giving a Location the natural
+    # key `name`, `parent__name`, `parent__parent__name`, `parent__parent__parent__name`.
+    @mock.patch.object(type(Location.objects), "max_depth", new_callable=mock.PropertyMock, return_value=3)
+    def test_expand__completes_a_natural_key_the_picker_cut_short(self, _max_depth):
+        """A natural key the picker cut short is completed, rather than restarted from the related object's own.
+
+        The picker stops one relation short of the export, so a Location's natural key is selected only as far
+        as `location__parent__parent`. Expanded with a Location's own natural key, that would add columns that
+        are always empty; completed instead, the selection exports the same columns as `location` does.
+        """
+        self.assertEqual(
+            expand_relation_paths(Device, ["location__parent__parent"]),
+            ["location__parent__parent__name", "location__parent__parent__parent__name"],
+        )
+        # A relation that no shallower natural key reaches through is expanded with its own.
+        self.assertEqual(
+            expand_relation_paths(Device, ["location__parent__location_type"]),
+            ["location__parent__location_type__name"],
+        )
+        self.assertEqual(
+            expand_relation_paths(Device, ["location__name", "location__parent__name", "location__parent__parent"]),
+            [
+                "location__name",
+                "location__parent__name",
+                "location__parent__parent__name",
+                "location__parent__parent__parent__name",
+            ],
+        )
 
 
 class ExportRelatedObjectPermissionTests(ImportExportJobTestCase):
@@ -1978,13 +2057,15 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertRegex(rendered, r'<span class="export-fields-summary-default">[^<]*<strong>No fields selected')
         self.assertIn("each field of the device itself", " ".join(rendered.split()))  # as a browser collapses it
         self.assertIn('class="export-fields-summary-selected d-none"', rendered)
-        self.assertIn(f'aria-describedby="{ExportFieldSelect.SUMMARY_ID}"', rendered)
+        self.assertIn('aria-live="polite">No fields selected</span>', rendered)
         self.assertEqual(job_form.fields["export_fields"].help_text, "")
         self.assertIn("default columns", ExportObjectList.export_fields.field_attrs["help_text"])
 
         _form, rendered = self.render_picker(Device, export_fields="name,status__name")
         self.assertIn('class="export-fields-summary-default d-none"', rendered)
-        self.assertIn('<span class="export-fields-summary-count">2 fields</span>', rendered)
+        self.assertIn('<span class="export-fields-summary-count">2</span>', rendered)
+        self.assertIn('aria-live="polite">2 selected</span>', rendered)
+        self.assertIn("Export Templates and devicetype-library YAML exports ignore the selection", rendered)
 
     def test_select__custom_fields_is_a_parent_like_any_other(self):
         """`custom_fields` controls the custom fields under it, and a selection naming it shows them all checked.

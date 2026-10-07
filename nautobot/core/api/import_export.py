@@ -315,11 +315,13 @@ def natural_key_lookups_for(model):
     `ContentType` and `Group`, for example, are not Nautobot models, and are exported in a representation of
     their own rather than as lookups.
     """
-    if model is None:
+    lookups_method = getattr(model, "csv_natural_key_field_lookups", None)
+    if lookups_method is None:
         return None
     try:
-        return model.csv_natural_key_field_lookups()
+        return lookups_method()
     except AttributeError:
+        # How `BaseModel.natural_key_field_lookups` reports a model with no identifiable natural key.
         return None
 
 
@@ -329,31 +331,59 @@ def expand_relation_paths(model, paths):
     Without this, such a path would export the related object's primary key. A bare relation such as
     `location` needs no expansion, as the serializer already exports it by natural key.
 
-    Example:
+    Where a shallower relation on the path has natural-key lookups that continue through the rest of it, those
+    are used instead, so that a natural key the export field picker cut short is completed rather than
+    restarted. Otherwise the related object's own natural key is used.
+
+    Example (a Location tree three levels deep):
         >>> expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"])
         ["image_file_name", "software_version__platform__name"]
+        >>> expand_relation_paths(Device, ["location__parent__parent"])  # not the 3 lookups of a Location
+        ["location__parent__parent__name"]
 
     Paths are kept in order; any other path is returned unchanged.
     """
     expanded = []
     for path in paths:
         replacement = [path]
-        if "__" in path:
-            related_model = model
-            for segment in path.split("__"):
-                try:
-                    field = related_model._meta.get_field(segment)
-                except (AttributeError, FieldDoesNotExist):
-                    related_model = None
+        segments = path.split("__")
+        # The model reached by each segment of the path, while the path keeps reaching related objects.
+        reached = []
+        related_model = model
+        for segment in segments:
+            try:
+                field = related_model._meta.get_field(segment)
+            except FieldDoesNotExist:
+                break
+            related_model = field.related_model if not (field.many_to_many or field.one_to_many) else None
+            if related_model is None:
+                break
+            reached.append(related_model)
+        if len(segments) > 1 and len(reached) == len(segments) and natural_key_lookups_for(reached[-1]):
+            for depth in range(1, len(segments)):
+                remainder = "__".join(segments[depth:])
+                lookups = [
+                    lookup
+                    for lookup in natural_key_lookups_for(reached[depth - 1]) or ()
+                    if lookup.startswith(f"{remainder}__")
+                ]
+                if lookups:
+                    replacement = [f"{'__'.join(segments[:depth])}__{lookup}" for lookup in lookups]
                     break
-                related_model = field.related_model if not (field.many_to_many or field.one_to_many) else None
-                if related_model is None:
-                    break
-            lookups = natural_key_lookups_for(related_model)
-            if lookups:
-                replacement = [f"{path}__{lookup}" for lookup in lookups]
+            else:
+                replacement = [f"{path}__{lookup}" for lookup in natural_key_lookups_for(reached[-1])]
         expanded.extend(entry for entry in replacement if entry not in expanded)
     return expanded
+
+
+def _view_permission_error(path, model, user):
+    """The validation error for `path` if `user` may not view `model`, else None (also for a `model` of None)."""
+    if model is None:
+        return None
+    permission = f"{model._meta.app_label}.view_{model._meta.model_name}"
+    if permission_is_exempt(permission) or user.has_perm(permission):
+        return None
+    return f'"{path}": requires permission to view {model._meta.label_lower}; without it, only "id" may be selected'
 
 
 def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIELD_MAX_DEPTH):
@@ -372,8 +402,9 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
     `max_depth` bounds the relations a path may name; the natural-key expansion of a path that ends at a
     relation is not counted against it. See `EXPORT_FIELD_MAX_DEPTH`.
 
-    `user` must hold `view` permission on every model a path reaches into, `id` excepted. Required, with no
-    value that disables the check; pass an `AnonymousUser` to permit nothing.
+    `user` must hold `view` permission on every model a path reaches into, `id` excepted -- including the
+    model a nested path ends at, when that path is expanded to its natural key. Required, with no value that
+    disables the check; pass an `AnonymousUser` to permit nothing.
 
     Raises:
         ValueError: describing every invalid path.
@@ -427,6 +458,14 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                     # Rejected for the same reason as a write-only field: DRF skips it rather than
                     # raising, so the file would come out missing a column that was asked for by name.
                     errors.append(f'"{path}": "{part}" is computed for display only and cannot be exported')
+                elif index > 0:
+                    # A nested path ending at a related object is expanded to its natural key
+                    # (`expand_relation_paths()`), which reads that object as surely as naming its fields would.
+                    related_model = _traversable_relation_target(serializer, field)
+                    if natural_key_lookups_for(related_model) and (
+                        error := _view_permission_error(path, related_model, user)
+                    ):
+                        errors.append(error)
                 break
             if isinstance(field, serializers.ManyRelatedField):
                 errors.append(f'"{path}": cannot traverse into many-to-many field "{part}"')
@@ -438,14 +477,9 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
             # `id` is exempt, being what an unviewable relation is reduced to; `display` is intended to join
             # it once selectable through a relation at all (see below). Checked before the remaining
             # segments are resolved, so this does not report whether a field a user cannot see exists.
-            if parts[index + 1 :] != ["id"]:
-                permission = f"{related_model._meta.app_label}.view_{related_model._meta.model_name}"
-                if not permission_is_exempt(permission) and not user.has_perm(permission):
-                    errors.append(
-                        f'"{path}": requires permission to view {related_model._meta.label_lower}; '
-                        'without it, only "id" may be selected'
-                    )
-                    break
+            if parts[index + 1 :] != ["id"] and (error := _view_permission_error(path, related_model, user)):
+                errors.append(error)
+                break
             try:
                 serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
             except SerializerNotFound:
