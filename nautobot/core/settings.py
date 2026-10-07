@@ -126,6 +126,8 @@ if (
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
+if "NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA" in os.environ and os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"] != "":
+    CHANGELOG_LEGACY_OBJECT_DATA = is_truthy(os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"])
 
 # Whether a save that modifies none of an object's field values should be left out of the change log.
 # Set to False to record such saves anyway, as Nautobot did before 3.3.0.
@@ -933,6 +935,13 @@ CONSTANCE_CONFIG = {
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
+    "CHANGELOG_LEGACY_OBJECT_DATA": ConstanceConfigItem(
+        default=True,
+        help_text="When `False` do not store `object_data` which was kept for records written before Nautobot 1.3. The `object_data_v2` "
+        "has superseded this, and the default will be changed to `False` in Nautobot 4.0. This saves space within your change "
+        "log infrastructure but removes this data from the API and UI. In most implementations False is preferred.",
+        field_type=bool,
+    ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
@@ -1101,7 +1110,7 @@ CONSTANCE_CONFIG = {
 
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
-    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
+    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],

@@ -24,6 +24,7 @@ from nautobot.dcim.models import (
     Interface,
     Location,
     LocationType,
+    Manufacturer,
     SoftwareImageFile,
 )
 from nautobot.extras import context_managers
@@ -1685,3 +1686,77 @@ class ChangeLogPrechangeCaptureTest(TestCase):
         snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
         self.assertEqual(snapshots["prechange"]["description"], "written outside change logging")
         self.assertEqual(snapshots["postchange"]["description"], "changed")
+
+
+class LegacyObjectDataSettingTest(TestCase):
+    """
+    `object_data` is the pre-1.3 snapshot, superseded by `object_data_v2`.
+
+    Storing it is optional so a deployment can stop paying to serialize every record twice. It defaults to
+    on, so upgrading changes nothing: the field stays populated, the REST API keeps returning it, and
+    records written before the switch keep rendering exactly as they did.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.manufacturer = Manufacturer.objects.create(name="Snapshot Manufacturer")
+        get_changes_for_model(self.manufacturer).delete()
+
+    def make_change(self, description):
+        with context_managers.web_request_context(self.user, context_detail="snapshot"):
+            self.manufacturer.description = description
+            self.manufacturer.save()
+        return get_changes_for_model(self.manufacturer).first()
+
+    def test_the_legacy_snapshot_is_stored_by_default(self):
+        change = self.make_change("first")
+
+        self.assertIsNotNone(change.object_data)
+        self.assertIsNotNone(change.object_data_v2)
+
+    @override_config(CHANGELOG_LEGACY_OBJECT_DATA=False)
+    def test_turning_it_off_stores_only_the_current_snapshot(self):
+        change = self.make_change("first")
+
+        self.assertIsNone(change.object_data)
+        self.assertIsNotNone(change.object_data_v2)
+
+    @override_config(CHANGELOG_LEGACY_OBJECT_DATA=False)
+    def test_the_diff_still_works_with_the_legacy_snapshot_off(self):
+        self.make_change("first")
+        change = self.make_change("second")
+
+        snapshots = change.get_snapshots()
+        self.assertEqual(snapshots["differences"]["added"], {"description": "second"})
+        self.assertEqual(snapshots["differences"]["removed"], {"description": "first"})
+
+    @override_config(CHANGELOG_LEGACY_OBJECT_DATA=False)
+    def test_records_written_before_the_switch_still_render(self):
+        """The fallbacks exist for historical records and must survive the setting being turned off."""
+        # Shaped like a record written before 1.3: legacy snapshot only, no v2.
+        legacy = self.make_change("legacy")
+        legacy.object_data = {"name": self.manufacturer.name, "description": "legacy"}
+        legacy.object_data_v2 = None
+        legacy.save()
+
+        current = self.make_change("current")
+
+        snapshots = current.get_snapshots()
+        self.assertIsNotNone(snapshots["prechange"])
+        self.assertIsNotNone(snapshots["postchange"])
+
+    def test_a_diff_against_no_prior_record_does_not_crash(self):
+        """
+        `prior_change` is None when the prechange came from the pre-save cache rather than a record.
+
+        The both-sides-fall-back-to-legacy branch dereferenced it unguarded, which an update with no prior
+        record and no v2 snapshot would have reached.
+        """
+        change = self.make_change("first")
+        get_changes_for_model(self.manufacturer).exclude(pk=change.pk).delete()
+        change.object_data_v2 = None
+        change.save()
+
+        snapshots = change.get_snapshots()
+
+        self.assertIsNotNone(snapshots["postchange"])

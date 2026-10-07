@@ -4360,6 +4360,12 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     return helpers.placeholder(obj.object_repr)
             return super().render_value(key, value, context)
 
+    class LegacyObjectDataPanel(object_detail.ObjectTextPanel):
+        """Conditionally show the legacy `object_data` when not None."""
+
+        def should_render(self, context):
+            return super().should_render(context) and get_obj_from_context(context).object_data is not None
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             ChangeObjectFieldsPanel(
@@ -4377,7 +4383,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     "change_context_detail",
                 ),
             ),
-            object_detail.ObjectTextPanel(
+            LegacyObjectDataPanel(
                 label="Object Data",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
