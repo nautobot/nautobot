@@ -291,7 +291,7 @@ Using `visually-hidden` to hide a control leaves keyboard users tabbing into som
 
 ### Forms
 
-Every field needs a label associated with `for="{{ field.id_for_label }}"`. When the design calls for no *visible*
+Every field needs a label associated with `for="{{ field.id_for_label }}"`. When the design calls for no _visible_
 label, emit a visually hidden one rather than none.
 
 Django already emits `required`, `aria-invalid="true"` on error, and

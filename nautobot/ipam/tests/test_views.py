@@ -36,6 +36,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.ipam import views
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
@@ -2266,6 +2267,24 @@ class VLANGroupTestCase(
 
     def get_deletable_object_pks(self):
         return [VLANGroup.objects.create(name="TEST DELETE ME").pk]
+
+    def test_vlan_group_detail_vlan_table_pagination(self):
+        """Verify that VLANGroup detail view has include_paginator enabled and renders pagination."""
+        vlan_panel = None
+        for panel in views.VLANGroupUIViewSet.object_detail_content.panels:
+            if getattr(panel, "context_table_key", None) == "vlan_table":
+                vlan_panel = panel
+                break
+        self.assertIsNotNone(vlan_panel)
+        self.assertTrue(vlan_panel.include_paginator)
+        self.assertFalse(vlan_panel.enable_related_link)
+
+        vlan_group = VLANGroup.objects.create(name="Test Pagination Group", range="1-100")
+        self.add_permissions("ipam.view_vlangroup", "ipam.view_vlan")
+        response = self.client.get(vlan_group.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertIn('class="paginator', response.content.decode())
+        self.assertNotIn("more VLANs", response.content.decode())
 
 
 class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):

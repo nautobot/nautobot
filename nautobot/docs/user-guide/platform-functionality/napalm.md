@@ -34,7 +34,7 @@ By default, the [`NAPALM_USERNAME`](../administration/configuration/settings.md#
 
 ### Secrets Groups
 
-If a given device has an associated secrets group, and that secrets group contains [secrets](./secret.md) assigned as *access type* `Generic` and *secrets types* `Username` and `Password` (and optionally an additional `Secret` entry as well, which will be used for a Cisco enable secret as needed), these credentials will be used for NAPALM authentication, overriding any global defaults specified in `nautobot_config.py`.
+If a given device has an associated secrets group, and that secrets group contains [secrets](./secret.md) assigned as _access type_ `Generic` and _secrets types_ `Username` and `Password` (and optionally an additional `Secret` entry as well, which will be used for a Cisco enable secret as needed), these credentials will be used for NAPALM authentication, overriding any global defaults specified in `nautobot_config.py`.
 
 Note that in the case where many devices in your network share common credentials (such as a standardized service account), it's straightforward to define an appropriate secrets group and then use the device "bulk editing" functionality in Nautobot to quickly assign this group to a collection of devices.
 

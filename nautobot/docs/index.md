@@ -18,7 +18,7 @@ Try Nautobot at [demo.nautobot.com](https://demo.nautobot.com), a live instance 
 
 ### Network Source of Truth
 
-Nautobot's data models define the *intended state* of your network: locations and racks, devices and interfaces, IP address space, VLANs, circuits, cables, and more.
+Nautobot's data models define the _intended state_ of your network: locations and racks, devices and interfaces, IP address space, VLANs, circuits, cables, and more.
 
 Beyond the out-of-the-box data models, Nautobot provides flexible ways to extend and validate the source of truth. Custom fields, user-defined relationships, and data validation rules allow teams to represent their own network standards, processes, and requirements directly in Nautobot.
 

@@ -105,7 +105,7 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 ```
 
 !!! warning
-    `factory_boy` is only a *development* dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install factory_boy` into such a deployment.
+    `factory_boy` is only a _development_ dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install factory_boy` into such a deployment.
 
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
@@ -113,7 +113,7 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
     Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
 !!! warning
-    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is *stateful*, that is to say the output of any given factory call will depend on the history of *all previous factory calls* since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
+    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is _stateful_, that is to say the output of any given factory call will depend on the history of _all previous factory calls_ since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
 
     In short, we should only have one place in our tests where factories are called, and that's the `generate_test_data` management command. Individual tests should use standard `create()` or `save()` model methods, never factories.
 

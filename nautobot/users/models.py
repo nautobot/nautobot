@@ -153,10 +153,15 @@ class User(BaseModel, AbstractUser):
         both cases, the existing key must first be cleared. This safeguard is in place to help avoid inadvertently
         overwriting the wrong key.
 
+        Does nothing while `MAINTENANCE_MODE` is enabled, as the database is then expected to be read-only.
+
         :param path: Dotted path to the configuration key. For example, 'foo.bar' sets self.config_data['foo']['bar'].
         :param value: The value to be written. This can be any type supported by JSON.
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
+        if settings.MAINTENANCE_MODE:
+            return
+
         d = self.config_data
         keys = path.split(".")
 
@@ -192,9 +197,14 @@ class User(BaseModel, AbstractUser):
 
         Invalid keys will be ignored silently.
 
+        Does nothing while `MAINTENANCE_MODE` is enabled, as the database is then expected to be read-only.
+
         :param path: Dotted path to the configuration key. For example, 'foo.bar' deletes self.config_data['foo']['bar'].
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
+        if settings.MAINTENANCE_MODE:
+            return
+
         d = self.config_data
         keys = path.split(".")
 

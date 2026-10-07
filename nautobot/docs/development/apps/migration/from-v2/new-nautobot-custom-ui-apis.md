@@ -2,7 +2,7 @@
 
 ## Nautobot custom HTML data attributes and CSS classes
 
-Up until v3.x, Nautobot has been *"smuggling"* its own CSS classes along with other 3rd party libraries. In v3.x we decided that it is only fair to be transparent about which of these are exclusive to Nautobot.
+Up until v3.x, Nautobot has been "smuggling" its own CSS classes along with other 3rd party libraries. In v3.x we decided that it is only fair to be transparent about which of these are exclusive to Nautobot.
 
 From now on, all HTML data attributes and CSS classes which refer to Nautobot custom functionalities are prefixed with `nb-*`.
 
@@ -11,11 +11,11 @@ Here's a list of what's changed:
 | v2.x                                  | v3.0                                                                                              |
 |---------------------------------------|---------------------------------------------------------------------------------------------------|
 | `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
-| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups](#toggle-all-groups-collapse-all-groups--expand-all-groups) |
+| `accordion-toggle-all`                | _removed_, refer to [Toggle All Groups](#toggle-all-groups-collapse-all-groups--expand-all-groups) |
 | `banner-bottom`                       | `nb-banner-bottom`                                                                                |
 | `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
-| `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
-| `hover_copy_button`                   | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `hover_copy`                          | _removed_, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
+| `hover_copy_button`                   | _removed_, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
 | `cable-trace`                         | `nb-cable-trace`                                                                                  |
 | `active` (scoped to cable trace)      | `nb-active`                                                                                       |
 | `cable` (scoped to cable trace)       | `nb-cable`                                                                                        |
@@ -23,19 +23,19 @@ Here's a list of what's changed:
 | `termination` (scoped to cable trace) | `nb-termination`                                                                                  |
 | `trace-end` (scoped to cable trace)   | `nb-trace-end`                                                                                    |
 | `color-block`                         | `nb-color-block`                                                                                  |
-| `inline-color-block`                  | *removed*                                                                                         |
+| `inline-color-block`                  | _removed_                                                                                         |
 | `editor-container`                    | `nb-editor-container`                                                                             |
-| `filter-container`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `display-inline` (scoped to filters)  | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `filter-selection`                    | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `filter-selection-choice`             | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `filter-selection-choice-remove`      | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `filter-selection-rendered`           | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
-| `remove-filter-param`                 | *removed*, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-container`                    | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `display-inline` (scoped to filters)  | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection`                    | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice`             | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-choice-remove`      | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `filter-selection-rendered`           | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
+| `remove-filter-param`                 | _removed_, refer to [Multi-badge](#multi-badge)                                                   |
 | `loading` (scoped to AJAX loaders)    | `nb-loading`                                                                                      |
 | `required` (scoped to form labels)    | `nb-required`                                                                                     |
-| `noprint`                             | *removed*, use `d-print-none` instead                                                             |
-| `powered-by-nautobot`                 | *removed*                                                                                         |
+| `noprint`                             | _removed_, use `d-print-none` instead                                                             |
+| `powered-by-nautobot`                 | _removed_                                                                                         |
 | `report-stats`                        | `nb-report-stats`                                                                                 |
 | `right-side-panel`                    | `nb-right-side-panel`                                                                             |
 | `software-image-hierarchy`            | `nb-software-image-hierarchy`                                                                     |
@@ -152,7 +152,7 @@ Nautobot v2.1 introduced reorderable panels on the homepage. In v3.0 we internal
 1. First and foremost, Nautobot draggable API is tailored specifically for reordering elements. In case your feature requires other kinds of drag and drop behavior, you still have to implement it on your own.
 2. Drag and drop interactive area must be surrounded by a wrapper element of `nb-draggable-container` class.
 3. Draggable elements must have the `nb-draggable` class and a unique `id`. Note that you should not attribute these elements with `draggable=true` in HTML because this is already handled by Nautobot core draggable script.
-4. Drag handle requires `nb-draggable-handle` class. Handle is the element you can interact with to grab `nb-draggable`. If an entire `nb-draggable` is intended to be *"grabbable"*, it should be given both `nb-draggable` and `nb-draggable-handle` classes.
+4. Drag handle requires `nb-draggable-handle` class. Handle is the element you can interact with to grab `nb-draggable`. If an entire `nb-draggable` is intended to be _"grabbable"_, it should be given both `nb-draggable` and `nb-draggable-handle` classes.
 5. To subscribe to the DOM node order changes, for example to be able to save it in a persistent storage, create a custom JavaScript script to observe `nb-draggable-container` using native `MutationObserver` with `{ childList: true }` config.
 
 ```html

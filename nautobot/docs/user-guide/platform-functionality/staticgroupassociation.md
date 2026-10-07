@@ -5,7 +5,7 @@
 Each Static Group Association database record represents the association of a single Nautobot object to a single [static-assignment-based Dynamic Group](dynamicgroup.md), such as the association of [Prefix](../core-data-model/ipam/prefix.md) "10.0.0.0/8" to Dynamic Group "Private Address Space". A Dynamic Group may contain any number of objects as members, and an object may belong to any number of Dynamic Groups of the appropriate content-type; this many-to-many relationship is recorded by Static Group Association records.
 
 !!! info
-    As an implementation detail, to improve performance, other types of Dynamic Groups (filter-based and set-based) also use Static Group Association records as a cache of their member objects. By default, the Nautobot UI, REST API, and Python ORM do *not* expose such records; see below.
+    As an implementation detail, to improve performance, other types of Dynamic Groups (filter-based and set-based) also use Static Group Association records as a cache of their member objects. By default, the Nautobot UI, REST API, and Python ORM do _not_ expose such records; see below.
 
 ## UI
 

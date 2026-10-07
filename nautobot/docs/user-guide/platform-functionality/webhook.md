@@ -50,7 +50,7 @@ Example: Trigger a Slack message when a new IP address is created.
 | `timestamp` | The event timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. |
 | `username` | The user who triggered the event. |
 | `request_id` | A unique request ID for correlation of multiple changes associated with a single request. |
-| `data` | A serialized representation of the object *after* the change. |
+| `data` | A serialized representation of the object _after_ the change. |
 | `snapshots` | Contains `prechange`, `postchange`, and `differences` snapshots. |
 
 ## Default Request Body

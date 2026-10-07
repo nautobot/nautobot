@@ -1,6 +1,7 @@
 """API views for the vpn models."""
 
-from nautobot.apps.api import ModelViewSet, NautobotModelViewSet
+from nautobot.core.api.views import ModelViewSet
+from nautobot.extras.api.views import NautobotModelViewSet
 
 from .. import filters, models
 from ..api import serializers
