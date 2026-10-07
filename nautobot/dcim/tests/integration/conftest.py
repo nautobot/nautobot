@@ -50,52 +50,6 @@ def created_location_tree(create_object, status_for):
 
 
 @pytest.fixture
-def created_manufacturer(create_object):
-    """A manufacturer owned by this test."""
-    return create_object("dcim/manufacturers/", name=unique_name())
-
-
-@pytest.fixture
-def created_device(create_object, status_for, created_manufacturer):
-    """A device owned by this test, with its own location type, location, device type and role.
-
-    Also returns the related records. The device's API response gives only their id and
-    URL, and the tests need their names.
-    """
-    unique = unique_name()
-    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
-    location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
-    location = create_object(
-        "dcim/locations/",
-        name=f"{unique}-location",
-        location_type=location_type["id"],
-        status=status_for("dcim.location")["id"],
-    )
-    device_type = create_object(
-        "dcim/device-types/",
-        model=f"{unique}-model",
-        manufacturer=created_manufacturer["id"],
-    )
-    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
-    status = status_for("dcim.device")
-    device = create_object(
-        "dcim/devices/",
-        name=unique,
-        location=location["id"],
-        device_type=device_type["id"],
-        role=role["id"],
-        status=status["id"],
-    )
-    return {
-        "device": device,
-        "location": location,
-        "device_type": device_type,
-        "role": role,
-        "status": status,
-    }
-
-
-@pytest.fixture
 def created_pdu(create_object, created_device):
     """created_device plus a power port and a power outlet. The Power Utilization panel renders only for a device with both."""
     device_id = created_device["device"]["id"]
