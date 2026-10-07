@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
 from django.test import SimpleTestCase, tag
 
@@ -18,6 +19,7 @@ from nautobot.core.forms.widgets import (
 )
 from nautobot.core.testing import TestCase as NautobotTestCase
 from nautobot.dcim.models import Interface
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.conditions.forms import (
     _stored_row_as_initial,
     _subfield_name,
@@ -40,6 +42,7 @@ from nautobot.extras.conditions.forms import (
 from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.conditions.operators import OPERATOR_REGISTRY
 from nautobot.extras.conditions.presets import register_builtin_condition_presets
+from nautobot.extras.models import CustomField, CustomFieldChoice
 
 
 def compare(**values):
@@ -482,3 +485,74 @@ class SubfieldIsAlwaysAnsweredTest(RowFormTestCase):
 
     def test_a_stored_sub_field_is_left_alone(self):
         self.assertEqual(self.form(compare(field="status.id"))["field_subfield"].value(), "id")
+
+
+@tag("unit")
+class CustomFieldRowTest(RowFormTestCase):
+    """A custom field is one field of the row, with the control its type and the operator ask for."""
+
+    @classmethod
+    def setUpTestData(cls):
+        interface_content_type = ContentType.objects.get_for_model(Interface)
+        cls.custom_fields = {}
+        for custom_field_type in (
+            CustomFieldTypeChoices.TYPE_SELECT,
+            CustomFieldTypeChoices.TYPE_MULTISELECT,
+            CustomFieldTypeChoices.TYPE_INTEGER,
+        ):
+            custom_field = CustomField.objects.create(label=f"Row {custom_field_type}", type=custom_field_type)
+            custom_field.content_types.add(interface_content_type)
+            cls.custom_fields[custom_field_type] = custom_field
+        for custom_field_type in CustomFieldTypeChoices.SELECTION_TYPES:
+            CustomFieldChoice.objects.create(custom_field=cls.custom_fields[custom_field_type], value="Chosen")
+        # Last, because the base class reads the catalog, which has to see the fields created above.
+        super().setUpTestData()
+
+    def path(self, custom_field_type):
+        """The field path a row stores for the custom field of that type."""
+        return f"custom_fields.{self.custom_fields[custom_field_type].key}"
+
+    def test_the_type_and_the_operator_together_decide_the_value_control(self):
+        for label, custom_field_type, operator, expected in (
+            ("the choices can be listed", CustomFieldTypeChoices.TYPE_SELECT, "=", APISelect.__name__),
+            ("a set operator offers several", CustomFieldTypeChoices.TYPE_SELECT, "in", APISelectMultiple.__name__),
+            ("a fragment is typed", CustomFieldTypeChoices.TYPE_SELECT, "contains", "TextInput"),
+            (
+                "`=` on a list compares set against set",
+                CustomFieldTypeChoices.TYPE_MULTISELECT,
+                "=",
+                APISelectMultiple.__name__,
+            ),
+            (
+                "`contains` on a list takes one member",
+                CustomFieldTypeChoices.TYPE_MULTISELECT,
+                "contains",
+                APISelect.__name__,
+            ),
+        ):
+            with self.subTest(label):
+                row = compare(field=self.path(custom_field_type), operator=operator)
+                self.assertEqual(self.widget_for("value", row).__name__, expected)
+
+    def test_the_field_select_shows_labels_in_label_order(self):
+        """The path is what a row stores, but a reader of the form knows the field by its label."""
+        custom_field = self.custom_fields[CustomFieldTypeChoices.TYPE_SELECT]
+        choices = [choice for choice in self.form(compare()).fields["field"].widget.choices if choice[0]]
+        self.assertIn((f"custom_fields.{custom_field.key}", custom_field.label), choices)
+        self.assertEqual([label for _, label in choices], sorted(label for _, label in choices))
+
+    def test_the_value_select_reads_the_choices_the_field_itself_declares(self):
+        """A `CustomFieldChoice` displays as its value, which is what the record holds and the row compares."""
+        custom_field = self.custom_fields[CustomFieldTypeChoices.TYPE_SELECT]
+        row = compare(field=self.path(CustomFieldTypeChoices.TYPE_SELECT), operator="=")
+        widget = self.form(row).fields["value"].widget
+        self.assertEqual(widget.attrs["data-url"], f"/api/extras/custom-field-choices/?custom_field={custom_field.key}")
+        self.assertEqual(widget.attrs["value-field"], "display")
+
+    def test_a_custom_field_is_edited_through_one_select_and_a_relation_through_two(self):
+        """Its path is dotted, but the whole of it names a field, so there is no sub-field to choose."""
+        path = self.path(CustomFieldTypeChoices.TYPE_INTEGER)
+        form = self.form(compare(field=path))
+        self.assertEqual(form.initial["field"], path)
+        self.assertNotIn(_subfield_name("field"), form.fields)
+        self.assertIn(_subfield_name("field"), self.form(compare(field="status.name")).fields)
