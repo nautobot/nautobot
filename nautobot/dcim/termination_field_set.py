@@ -16,6 +16,7 @@ from nautobot.dcim.models import (
     Device,
     FrontPort,
     Interface,
+    Location,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -40,6 +41,7 @@ def _device_term_config(term_model, term_label, display, has_filter, extra_query
         "parent_label": "Device",
         "parent_field_name": "device",
         "parent_query_params": {has_filter: "true"},
+        "location_content_type": "dcim.device",
         "term_model": term_model,
         "term_label": term_label,
         "term_query_params": query_params,
@@ -65,6 +67,7 @@ TERMINATION_TYPE_CONFIGS = {
         "parent_label": "Circuit",
         "parent_field_name": "circuit",
         "parent_query_params": {"has_terminations": "true"},
+        "location_content_type": "circuits.circuittermination",
         "term_model": CircuitTermination,
         "term_label": "Termination",
         "term_query_params": {"circuit": None},
@@ -75,6 +78,7 @@ TERMINATION_TYPE_CONFIGS = {
         "parent_label": "Power Panel",
         "parent_field_name": "power_panel",
         "parent_query_params": {"has_power_feeds": "true"},
+        "location_content_type": "dcim.powerpanel",
         "term_model": PowerFeed,
         "term_label": "Power Feed",
         "term_query_params": {"power_panel": None},
@@ -119,7 +123,7 @@ class CableTerminationFieldSet:
         form.fields.update(result["fields"])
         form.initial.update(result["initial"])
         # result["meta"] carries the resolved term_type plus the generated field-name mapping
-        # ({"type_field", "parent_field", "term_field"}) for template rendering.
+        # ({"type_field", "location_field", "parent_field", "term_field"}) for template rendering.
     """
 
     def get_fields(self, prefix, term_type=None, existing_term=None, cable_pk=None):
@@ -171,16 +175,32 @@ class CableTerminationFieldSet:
         )
         initial[type_field_name] = term_type
 
+        # Location field. Not saved anywhere — it only narrows the parent dropdown below, and is
+        # itself limited to locations whose type can hold the parent (or, for circuits, the
+        # circuit termination).
+        location_field_name = f"{prefix}_location"
+        location = getattr(parent, "location", None)
+        fields[location_field_name] = DynamicModelChoiceField(
+            queryset=Location.objects.all(),
+            label="Location",
+            required=False,
+            initial=location,
+            query_params={"content_type": config["location_content_type"]},
+            embedded_create=False,
+        )
+        if location:
+            initial[location_field_name] = location.pk
+
         # Parent field (Device, Circuit, or PowerPanel). `parent_query_params` constrains the
         # dropdown to parents that can host this termination type (e.g. devices with at least
-        # one front port, circuits with at least one termination).
+        # one front port, circuits with at least one termination), within the selected location.
         parent_field_name = f"{prefix}_parent"
         fields[parent_field_name] = DynamicModelChoiceField(
             queryset=config["parent_model"].objects.all(),
             label=config["parent_label"],
             required=False,
             initial=parent if parent else None,
-            query_params=config["parent_query_params"],
+            query_params={**config["parent_query_params"], "location": f"${location_field_name}"},
             embedded_create=False,
             embedded_search=True,
         )
@@ -220,6 +240,7 @@ class CableTerminationFieldSet:
 
         meta = {
             "type_field": type_field_name,
+            "location_field": location_field_name,
             "parent_field": parent_field_name,
             "term_field": term_field_name,
             "term_type": term_type,
