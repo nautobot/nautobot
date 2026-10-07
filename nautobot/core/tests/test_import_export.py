@@ -204,6 +204,11 @@ class MatchFieldsTests(TestCase):
         self.assertIsNone(self.match_fields(Interface, ["name", "device"]))
         self.assertEqual(self.match_fields(Interface, ["name", "device", "module"]), ["device", "module", "name"])
 
+    def test_match__id_covers_a_pk_lookup(self):
+        """`module__id` -- as the picker selects a Module's natural key -- covers the key's `module__pk` lookup."""
+        self.assertEqual(self.match_fields(Interface, ["name", "device", "module__id"]), ["device", "module", "name"])
+        self.assertEqual(self.match_fields(Interface, ["name", "device", "module__pk"]), ["device", "module", "name"])
+
     def test_match__partial_lookup_of_a_relation_is_not_enough(self):
         """`device__name` is one of three `device__` lookups the key needs; naming it alone is not coverage."""
         self.assertIsNone(self.match_fields(Interface, ["name", "device__name"]))
@@ -1304,8 +1309,8 @@ class ValidateFieldPathsTests(NautobotTestCase):
     def test_validate__unviewable_relation_cannot_be_traversed(self):
         self.assertPathsInvalid(
             DeviceSerializer,
-            ["device_type__model"],
-            '"device_type__model": requires permission to view dcim.devicetype',
+            ["device_type__u_height"],
+            '"device_type__u_height": requires permission to view dcim.devicetype',
             'only "id" may be selected',
             user=self.limited_user(),
         )
@@ -1313,18 +1318,39 @@ class ValidateFieldPathsTests(NautobotTestCase):
     def test_validate__id_of_an_unviewable_relation_is_allowed(self):
         self.assertPathsValid(DeviceSerializer, ["name", "device_type__id"], user=self.limited_user())
 
-    def test_validate__unviewable_relation_cannot_end_a_nested_path(self):
-        """A nested path ending at a related object exports its natural key, so needs permission to view it."""
-        self.add_permissions("dcim.view_device", "dcim.view_devicetype")
+    # A Location tree three levels below its roots, so that a Location's natural key reaches `parent__parent__name`.
+    @mock.patch.object(type(Location.objects), "max_depth", new_callable=mock.PropertyMock, return_value=3)
+    def test_validate__natural_key_of_an_unviewable_relation_is_allowed(self, _max_depth):
+        """Selecting (part of) a top-level relation's natural key needs no more permission than the bare relation.
+
+        `location` exports these same columns without permission to view Locations, so naming them -- as the
+        picker's first click on a related object does -- must not fail where the bare relation succeeds.
+        """
+        user = self.limited_user()
+        self.assertPathsValid(
+            DeviceSerializer,
+            ["location__name", "location__parent__name", "location__parent__parent", "device_type__model"],
+            user=user,
+        )
         self.assertPathsInvalid(
             DeviceSerializer,
-            ["device_type__manufacturer"],
-            '"device_type__manufacturer": requires permission to view dcim.manufacturer',
+            ["location__description"],
+            '"location__description": requires permission to view dcim.location',
+            user=user,
+        )
+
+    def test_validate__unviewable_relation_cannot_end_a_nested_path(self):
+        """A nested path ending at a related object exports its natural key, so needs permission to view it."""
+        self.add_permissions("dcim.view_device")
+        self.assertPathsInvalid(
+            InterfaceSerializer,
+            ["device__primary_ip4"],
+            '"device__primary_ip4": requires permission to view ipam.ipaddress',
             user=self.user,
         )
-        self.add_permissions("dcim.view_manufacturer")
+        self.add_permissions("ipam.view_ipaddress")
         user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
-        self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer"], user=user)
+        self.assertPathsValid(InterfaceSerializer, ["device__primary_ip4"], user=user)
 
     def test_validate__viewable_relation_can_be_traversed(self):
         """A superuser holds every permission, so the gate never fires for one."""
@@ -1336,10 +1362,10 @@ class ValidateFieldPathsTests(NautobotTestCase):
         A user who cannot view DeviceTypes learns nothing about which fields one has.
         """
         user = self.limited_user()
-        real = self.assertPathsInvalid(DeviceSerializer, ["device_type__model"], user=user)
+        real = self.assertPathsInvalid(DeviceSerializer, ["device_type__u_height"], user=user)
         bogus = self.assertPathsInvalid(DeviceSerializer, ["device_type__no_such_field"], user=user)
         self.assertNotIn("unknown field", bogus)
-        self.assertEqual(real.replace("device_type__model", "X"), bogus.replace("device_type__no_such_field", "X"))
+        self.assertEqual(real.replace("device_type__u_height", "X"), bogus.replace("device_type__no_such_field", "X"))
 
 
 class ExpandRelationPathsTests(NautobotTestCase):
@@ -1390,6 +1416,16 @@ class ExpandRelationPathsTests(NautobotTestCase):
         self.assertEqual(
             expand_relation_paths(Device, ["location__parent__location_type"]),
             ["location__parent__location_type__name"],
+        )
+        # As is one a shallower natural key only passes through: an IPAddress's names its parent Prefix's
+        # namespace, but not the network and prefix length that, with the namespace, identify the Prefix.
+        self.assertEqual(
+            expand_relation_paths(Interface, ["device__primary_ip4__parent"]),
+            [
+                "device__primary_ip4__parent__namespace__name",
+                "device__primary_ip4__parent__network",
+                "device__primary_ip4__parent__prefix_length",
+            ],
         )
         self.assertEqual(
             expand_relation_paths(Device, ["location__name", "location__parent__name", "location__parent__parent"]),

@@ -331,15 +331,20 @@ def expand_relation_paths(model, paths):
     Without this, such a path would export the related object's primary key. A bare relation such as
     `location` needs no expansion, as the serializer already exports it by natural key.
 
-    Where a shallower relation on the path has natural-key lookups that continue through the rest of it, those
-    are used instead, so that a natural key the export field picker cut short is completed rather than
-    restarted. Otherwise the related object's own natural key is used.
+    Where a shallower relation's natural key continues through the rest of the path and names every field of
+    the related object's own natural key, its lookups are used instead, so that a natural key the export field
+    picker cut short is completed rather than restarted. They may follow a relation less deeply than the
+    related object's own would -- a Location's ancestry, say, beyond which there is nothing to export -- but
+    they must name each of its fields, or they would only pass through the object rather than identify it.
 
     Example (a Location tree three levels deep):
         >>> expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"])
         ["image_file_name", "software_version__platform__name"]
         >>> expand_relation_paths(Device, ["location__parent__parent"])  # not the 3 lookups of a Location
         ["location__parent__parent__name"]
+        >>> # An IPAddress's natural key passes through its parent Prefix's namespace, which alone is not enough
+        >>> expand_relation_paths(Interface, ["device__primary_ip4__parent"])
+        ["device__primary_ip4__parent__namespace__name", "device__primary_ip4__parent__network", ...]
 
     Paths are kept in order; any other path is returned unchanged.
     """
@@ -359,19 +364,20 @@ def expand_relation_paths(model, paths):
             if related_model is None:
                 break
             reached.append(related_model)
-        if len(segments) > 1 and len(reached) == len(segments) and natural_key_lookups_for(reached[-1]):
+        own_lookups = natural_key_lookups_for(reached[-1]) if 1 < len(segments) == len(reached) else None
+        if own_lookups:
+            own_fields = {lookup.split("__", 1)[0] for lookup in own_lookups}
+            replacement = [f"{path}__{lookup}" for lookup in own_lookups]
             for depth in range(1, len(segments)):
                 remainder = "__".join(segments[depth:])
-                lookups = [
-                    lookup
+                tails = [
+                    lookup.removeprefix(f"{remainder}__")
                     for lookup in natural_key_lookups_for(reached[depth - 1]) or ()
                     if lookup.startswith(f"{remainder}__")
                 ]
-                if lookups:
-                    replacement = [f"{'__'.join(segments[:depth])}__{lookup}" for lookup in lookups]
+                if own_fields <= {tail.split("__", 1)[0] for tail in tails}:
+                    replacement = [f"{path}__{tail}" for tail in tails]
                     break
-            else:
-                replacement = [f"{path}__{lookup}" for lookup in natural_key_lookups_for(reached[-1])]
         expanded.extend(entry for entry in replacement if entry not in expanded)
     return expanded
 
@@ -384,6 +390,37 @@ def _view_permission_error(path, model, user):
     if permission_is_exempt(permission) or user.has_perm(permission):
         return None
     return f'"{path}": requires permission to view {model._meta.label_lower}; without it, only "id" may be selected'
+
+
+def _selects_only_a_natural_key(model, path):
+    """Whether `path` selects nothing but (part of) the natural key of the relation of `model` it starts with.
+
+    Such a path exports no more than the bare relation does -- `location__name` is one of the columns `location`
+    exports -- and the bare relation needs no permission to view the related model, so neither does this.
+
+    Example:
+        >>> _selects_only_a_natural_key(Device, "location__parent__name")
+        True
+        >>> _selects_only_a_natural_key(Device, "location__description")
+        False
+    """
+    head = path.split("__", 1)[0]
+    try:
+        field = model._meta.get_field(head)
+    except FieldDoesNotExist:
+        return False
+    if field.many_to_many or field.one_to_many:
+        return False
+    lookups = natural_key_lookups_for(field.related_model)
+    if not lookups:
+        return False
+    natural_key = {f"{head}__{lookup}" for lookup in lookups}
+    # A natural key's `pk` lookup is selected as `id`, the serializer's name for it.
+    selected = [
+        expanded.removesuffix("__id") + "__pk" if expanded.endswith("__id") else expanded
+        for expanded in expand_relation_paths(model, [path])
+    ]
+    return set(selected) <= natural_key
 
 
 def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIELD_MAX_DEPTH):
@@ -403,8 +440,9 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
     relation is not counted against it. See `EXPORT_FIELD_MAX_DEPTH`.
 
     `user` must hold `view` permission on every model a path reaches into, `id` excepted -- including the
-    model a nested path ends at, when that path is expanded to its natural key. Required, with no value that
-    disables the check; pass an `AnonymousUser` to permit nothing.
+    model a nested path ends at, when that path is expanded to its natural key. A path selecting only part of a
+    top-level relation's natural key is excepted too, as it exports no more than the bare relation, which is
+    not checked. Required, with no value that disables the check; pass an `AnonymousUser` to permit nothing.
 
     Raises:
         ValueError: describing every invalid path.
@@ -433,6 +471,7 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
             if key not in getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ()):
                 errors.append(f'"{path}": unknown custom field "{key}"')
             continue
+        check_permissions = len(parts) == 1 or not _selects_only_a_natural_key(serializer_class.Meta.model, path)
         serializer = root_serializer
         for index, part in enumerate(parts):
             field = serializer.fields.get(part)
@@ -458,7 +497,7 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                     # Rejected for the same reason as a write-only field: DRF skips it rather than
                     # raising, so the file would come out missing a column that was asked for by name.
                     errors.append(f'"{path}": "{part}" is computed for display only and cannot be exported')
-                elif index > 0:
+                elif index > 0 and check_permissions:
                     # A nested path ending at a related object is expanded to its natural key
                     # (`expand_relation_paths()`), which reads that object as surely as naming its fields would.
                     related_model = _traversable_relation_target(serializer, field)
@@ -477,7 +516,11 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
             # `id` is exempt, being what an unviewable relation is reduced to; `display` is intended to join
             # it once selectable through a relation at all (see below). Checked before the remaining
             # segments are resolved, so this does not report whether a field a user cannot see exists.
-            if parts[index + 1 :] != ["id"] and (error := _view_permission_error(path, related_model, user)):
+            if (
+                check_permissions
+                and parts[index + 1 :] != ["id"]
+                and (error := _view_permission_error(path, related_model, user))
+            ):
                 errors.append(error)
                 break
             try:
