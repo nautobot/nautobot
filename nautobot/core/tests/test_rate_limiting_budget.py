@@ -1,11 +1,9 @@
 """Tests for complexity cost budget accounting."""
 
-from unittest.mock import patch
 import uuid
 
 from django.test import SimpleTestCase
 from django_redis import get_redis_connection
-import redis.exceptions
 
 from nautobot.core.rate_limiting.budget_helpers import (
     charge_bucket,
