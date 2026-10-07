@@ -108,8 +108,10 @@ def _in_both(described, other):
 
 
 def _payload_fields(serializer, model):
-    """The serializer's fields, minus those a change record never carries."""
+    """The serializer's fields, minus those a change record never carries and those nothing compares."""
     for name, field in serializer.fields.items():
+        if isinstance(field, serializers.JSONField):
+            continue
         # A source of `*` is computed and a source the model has is read off the instance. Anything else
         # is a queryset annotation, which a change record never carries.
         if field.source == "*" or hasattr(model, field.source):

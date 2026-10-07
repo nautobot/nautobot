@@ -28,6 +28,10 @@ A many-valued field such as `tags` is named on its own, and each related object 
 
 A field holding a plain list is named the same way. Its values are typed rather than picked, because there is nowhere to read them from.
 
+A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own is a mapping, like a relation.
+
+A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value is a mapping on one object and a plain value on the next, so no operator fits the field. A raw expression can still read it.
+
 ## Presets
 
 A preset is a ready-made condition with a fixed meaning. You choose it and fill in its parameters.
@@ -135,9 +139,11 @@ A row reads as a sentence from left to right:
 
 The parameters change with the type, so choosing a different one rebuilds the row. Naming a different field does the same, and clears the value that was being compared, because a value that meant something under the old field means nothing under the new one.
 
-Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first. A many-valued field such as `tags` has no sub-field picker, because it is always compared by the name its objects are displayed under.
+The picker shows each field by its label, in alphabetical order, and stores the path behind it.
 
-What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. `tags` is picked from the tags the selected object types can hold, several for `=` and one for `contains`. An operator that matches part of a value, such as `contains` on text, gives a plain box instead.
+Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first. A many-valued field such as `tags` has no sub-field picker, because it is always compared by the name its objects are displayed under. A custom field has a dotted path too, but the whole of it names one field, so it is chosen in the first picker and has no sub-field beside it. A related object's custom fields are offered in the **Sub-field** picker.
+
+What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. `tags` is picked from the tags the selected object types can hold, several for `=` and one for `contains`. A selection custom field is picked from the choices that custom field declares. An operator that matches part of a value, such as `contains` on text, gives a plain box instead.
 
 **Add another Condition** adds a row at the end, and the bin beside a row removes it. Every row must pass, so rows narrow the action down rather than widening it.
 

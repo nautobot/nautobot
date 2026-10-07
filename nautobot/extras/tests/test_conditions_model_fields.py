@@ -42,6 +42,11 @@ class AddressableFieldsTest(NautobotTestCase):
             with self.subTest(label):
                 self.assertEqual({entry["name"].partition(".")[0] for entry in entries}, set(record))
 
+    def test_a_field_holding_json_is_not_offered(self):
+        self.assertNotIn("local_config_context_data", {entry["name"] for entry in addressable_fields(Device)})
+        platform = self.entry("platform", Device)
+        self.assertNotIn("napalm_args", {sub["name"] for sub in platform["subfields"]})
+
     def test_a_relation_inside_a_relation_is_not_offered(self):
         """A path that stops at a mapping matches nothing, so going deeper would only mislead."""
         self.assertNotIn("parent", {sub["name"] for sub in self.entry("location_type")["subfields"]})
@@ -149,8 +154,7 @@ class CustomFieldsOfferedTest(NautobotTestCase):
 
     def test_each_type_carries_the_kind_and_the_label(self):
         """The table covers every type, because one nobody classified would be offered with every operator
-        and a box to type into. A JSON value is a mapping on one object and a scalar on the next, so no
-        kind fits it and the field goes.
+        and a box to type into.
         """
         self.assertEqual(set(self.KIND_BY_TYPE), {value for value, _ in CustomFieldTypeChoices.CHOICES})
         for custom_field_type, kind in self.KIND_BY_TYPE.items():
