@@ -11,7 +11,7 @@ from django.urls import NoReverseMatch, reverse
 from rest_framework import relations, serializers
 
 from nautobot.core.api.utils import get_serializer_for_model
-from nautobot.core.models.fields import ColorField, ForeignKeyLimitedByContentTypes
+from nautobot.core.models.fields import ColorField, ForeignKeyLimitedByContentTypes, TagsField
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.conditions.operators import KIND_BOOLEAN, KIND_DATE, KIND_LIST, KIND_NUMBER, KIND_TEXT
 
@@ -49,9 +49,8 @@ def _where_values_are_listed(model, name, related_model, labels):
         url = reverse(get_route_for_model(related_model, "list", api=True))
     except NoReverseMatch:
         return None
-    # A status or a role is asked for only the ones the watched types can hold. Offering one no
-    # circuit can have would invite a rule that never runs.
-    if labels and isinstance(_model_field(model, name), ForeignKeyLimitedByContentTypes):
+    # A status, a role or a tag is asked for only the ones the watched content types can hold.
+    if labels and isinstance(_model_field(model, name), (ForeignKeyLimitedByContentTypes, TagsField)):
         url += "?" + "&".join(f"content_types={label}" for label in labels)
     return url
 
@@ -108,17 +107,18 @@ def _entry_for(name, field, labels, model):
     if isinstance(_model_field(model, name), ColorField):
         # Still text to compare, but a form has a swatch picker for it rather than a box to type hex in.
         described["picker"] = "color"
-    nested = getattr(field, "fields", None)
-    related_model = getattr(getattr(field, "Meta", None), "model", None)
+    one_object_or_field = field.child if isinstance(field, serializers.ListSerializer) else field
+    nested = getattr(one_object_or_field, "fields", None)
+    related_model = getattr(getattr(one_object_or_field, "Meta", None), "model", None)
     if nested is not None and related_model is not None:
         values_url = _where_values_are_listed(model, name, related_model, labels)
         if values_url is not None:
             described["values_url"] = values_url
-        # One level only. A path that stops at a mapping matches nothing, so a relation inside a
-        # relation is not worth offering.
-        described["subfields"] = [
-            _entry_for(sub_name, sub_field, (), related_model)
-            for sub_name, sub_field in _payload_fields(field, related_model)
-            if not _stands_for_another_object(sub_field)
-        ]
+        # A many-valued relation is compared whole, so it has no sub-field.
+        if kind != KIND_LIST:
+            described["subfields"] = [
+                _entry_for(sub_name, sub_field, (), related_model)
+                for sub_name, sub_field in _payload_fields(one_object_or_field, related_model)
+                if not _stands_for_another_object(sub_field)
+            ]
     return described

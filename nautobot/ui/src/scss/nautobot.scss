@@ -1455,9 +1455,8 @@ textarea {
   column-gap: map.get($spacers, 10);
   display: grid;
   /*
-   * Shares, not content. Every condition is a subgrid of this grid, so a content sized track would
-   * take its width from the widest row, and picking `not When` in one would shift the rest. Negation
-   * still needs a floor, 9rem (144px) being what its longest option, `not When`, costs to render.
+   * Shares, not content. A content sized track takes its width from the widest row, so picking
+   * `Not When` in one condition would shift the rest. Negation gets a floor so `Not When` fits.
    */
   grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr) minmax(0, 4fr) max-content;
 }

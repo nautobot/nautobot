@@ -74,6 +74,15 @@ class AddressableFieldsTest(NautobotTestCase):
             with self.subTest(label):
                 self.assertEqual(self.entry("status", *models)["values_url"], url)
 
+    def test_a_many_valued_relation_says_where_its_objects_can_be_read(self):
+        """Only the tags a location can hold, the same narrowing the filter form asks for."""
+        self.assertEqual(self.entry("tags")["values_url"], "/api/extras/tags/?content_types=dcim.location")
+
+    def test_a_many_valued_relation_offers_no_sub_field(self):
+        """A many-valued relation is compared whole, so `status` keeps its sub-fields and `tags` has none."""
+        self.assertNotIn("subfields", self.entry("tags"))
+        self.assertIn("subfields", self.entry("status"))
+
     def test_a_relation_with_no_list_endpoint_says_its_objects_cannot_be_read(self):
         """A picker needs somewhere to call. `CablePath` has no API list route, so there is nowhere."""
         self.assertIsNone(_where_values_are_listed(Location, "status", CablePath, ["dcim.location"]))

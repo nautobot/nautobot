@@ -90,6 +90,10 @@ class AsTextTest(TestCase):
         self.assertEqual(_as_text(1500), "1500")
         self.assertEqual(_as_text(True), "True")
 
+    def test_a_related_object_reads_as_what_it_displays_as(self):
+        """A record holds a related object as a mapping, which `tags = ["core"]` has to match."""
+        self.assertEqual(_as_text({"id": "1", "display": "core", "name": "core"}), "core")
+
     def test_whitespace_is_preserved(self):
         """The value side is recorded data and is never trimmed: a field that really holds a padded
         string must not match its unpadded spelling. Targets are stripped where they are parsed
@@ -183,6 +187,7 @@ class FieldMatchesTest(TestCase):
         (["a", "b"], "=", ["a"], False, "missing member"),
         (["a"], "=", ["a", "b"], False, "extra member in target"),
         (["critical"], "=", ["critical"], True, "one-element list equals a one-element target"),
+        ([{"display": "core"}], "=", ["core"], True, "a tag compares as what it displays as"),
         ([], "=", [], True, "empty list equals empty target: no tags"),
         ([], "=", ["a"], False, "empty list does not equal a non-empty target"),
         # --- ordering: numeric when both sides look numeric ---
@@ -220,7 +225,11 @@ class FieldMatchesTest(TestCase):
         ("2026-08-26", "contains", "-08-", True, "a date is a string, so substring works"),
         (1500, "contains", "50", False, "no substring matching on a number"),
         (True, "contains", "ru", False, "no substring matching on a boolean"),
-        (["a", "b"], "contains", "b", False, "no substring matching on a list; lists use in"),
+        (["a", "b"], "contains", "b", True, "a list holds the value"),
+        (["a", "b"], "contains", "c", False, "a list that does not hold it"),
+        (["ab"], "contains", "a", False, "a member is held whole, never as a fragment of one"),
+        ([{"display": "core"}], "contains", "core", True, "a tag is held under the name it displays as"),
+        ([], "contains", "a", False, "an empty list holds nothing"),
         (None, "contains", "", False, "a missing value is not a string"),
         # --- startswith / endswith: strings only ---
         ("2026-08-26T10:00", "startswith", "2026-08", True, "date prefix works as a month filter"),
@@ -300,8 +309,9 @@ class OperatorsForKindTest(TestCase):
         """A date is an ISO 8601 string in the payload, so every text operator makes sense for it."""
         self.assertEqual(operators_for_kind(KIND_DATE), operators_for_kind(KIND_TEXT))
 
-    def test_list_gets_set_equality_only(self):
-        self.assertEqual([op.key for op in operators_for_kind(KIND_LIST)], ["="])
+    def test_list_gets_set_equality_and_membership(self):
+        """Nothing orders a set, so no ordering operator is offered."""
+        self.assertEqual([op.key for op in operators_for_kind(KIND_LIST)], ["=", "contains"])
 
     def test_unknown_kind_gets_every_operator(self):
         """An unclassified field type must get the full list, not an empty dropdown."""

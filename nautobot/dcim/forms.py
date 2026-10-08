@@ -2325,7 +2325,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         if self.instance.present_in_database:
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for ip_version in [4, 6]:
-                ip_choices = [(None, "---------")]
+                ip_choices = [(None, "—")]
 
                 # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
                 interface_ids = self.instance.all_interfaces.values_list("pk", flat=True)

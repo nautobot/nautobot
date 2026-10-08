@@ -233,7 +233,7 @@
                         <div class="mb-10 d-flex justify-content-center">
                             <label class="col-md-3 col-form-label" for="id_name">Name</label>
                             <div class="col-md-9">
-                                <input type="text" name="name" class="form-control" placeholder="Name" id="id_name">
+                                <input type="text" name="name" class="form-control" id="id_name">
                             </div>
                         </div>
                         <div class="mb-10 d-flex justify-content-center">
@@ -241,7 +241,7 @@
                                 Status
                             </label>
                             <div class="col-md-9">
-                                <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" placeholder="Status" data-url="/api/extras/statuses/" id="id_status">
+                                <select name="status" class="nautobot-select2-api form-control select2-hidden-accessible" data-query-param-content_types="[&quot;dcim.device&quot;]" display-field="display" value-field="id" data-depth="0" required="" data-url="/api/extras/statuses/" id="id_status">
                                 </select>
                                 <span class="form-text">Help text for this form field</span>
                             </div>
@@ -267,15 +267,15 @@
                 <legend>Textboxes</legend>
                 <div class="nb-form-group">
                     <label class="form-label" for="example-form-control-name">Name</label>
-                    <input class="form-control" id="example-form-control-name" name="name" placeholder="Type..." type="text">
+                    <input class="form-control" id="example-form-control-name" name="name" type="text">
                 </div>
                 <div class="nb-form-group">
                     <label class="form-label" for="example-form-control-description-prepopulated">Description [Prepopulated]</label>
-                    <input class="form-control" id="example-form-control-description-prepopulated" name="description" placeholder="Type..." type="text" value="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
+                    <input class="form-control" id="example-form-control-description-prepopulated" name="description" type="text" value="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
                 </div>
                 <div class="nb-form-group">
                     <label for="example-form-control-note" class="form-label">Note</label>
-                    <textarea class="form-control" cols="40" id="example-form-control-note" placeholder="Type..." rows="10"></textarea>
+                    <textarea class="form-control" cols="40" id="example-form-control-note" rows="10"></textarea>
                 </div>
             </fieldset>
         </div>
@@ -293,7 +293,6 @@
                         display-field="display"
                         id="example-form-control-status"
                         name="status"
-                        placeholder="Select..."
                         value-field="id"
                     ></select>
                 </div>
@@ -308,7 +307,6 @@
                         display-field="display"
                         id="example-form-control-role-prepopulated"
                         name="role"
-                        placeholder="Select..."
                         value-field="id"
                     >
                         <option value="ca47734b-4e50-4730-a2d7-6e7c768f9aaa" selected>My Role</option>
@@ -325,7 +323,6 @@
                         id="example-form-control-tags"
                         multiple="multiple"
                         name="tags"
-                        placeholder="Select..."
                         value-field="id"
                     ></select>
                 </div>
@@ -343,7 +340,6 @@
                         id="example-form-control-dynamic-groups-prepopulated"
                         multiple="multiple"
                         name="dynamic_groups"
-                        placeholder="Select..."
                         value-field="name"
                     >
                         <option value="2f31a150-4b09-44dc-a2ad-90004367c943" selected>My Dynamic Group 1</option>
