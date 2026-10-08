@@ -22,10 +22,9 @@ class NautobotKombuJSONEncoder(JSONEncoder):
     and the actual object must be passed, this pattern allows for encoding and decoding
     of such objects.
 
-    It requires a conforming class to implement the instance method `nautobot_serialize()` which
-    returns a json serializable dictionary of the object representation. The class must also implement
-    the `nautobot_deserialize()` class method which takes the dictionary representation and returns
-    an actual instance of the class.
+    Any `django.db.models.Model` instance is encoded as a dictionary containing its `id`, its fully
+    qualified class path as `__nautobot_type__`, and its `display` string. On decoding, the object is
+    lazily re-fetched from the database by `id`.
     """
 
     def default(self, obj):
