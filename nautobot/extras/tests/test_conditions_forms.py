@@ -539,7 +539,8 @@ class CustomFieldRowTest(RowFormTestCase):
         custom_field = self.custom_fields[CustomFieldTypeChoices.TYPE_SELECT]
         choices = [choice for choice in self.form(compare()).fields["field"].widget.choices if choice[0]]
         self.assertIn((f"custom_fields.{custom_field.key}", custom_field.label), choices)
-        self.assertEqual([label for _, label in choices], sorted(label for _, label in choices))
+        labels = [label for _, label in choices]
+        self.assertEqual(labels, sorted(labels, key=str.casefold))
 
     def test_the_value_select_reads_the_choices_the_field_itself_declares(self):
         """A `CustomFieldChoice` displays as its value, which is what the record holds and the row compares."""

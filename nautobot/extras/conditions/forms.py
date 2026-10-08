@@ -188,7 +188,7 @@ def _subfield_choices(subfields):
     label order.
     """
     label_by_name = {entry["name"]: entry["label"] for entry in subfields}
-    ordered = sorted(label_by_name, key=lambda name: (name != "name", label_by_name[name]))
+    ordered = sorted(label_by_name, key=lambda name: (name != "name", label_by_name[name].casefold()))
     return [(name, label_by_name[name]) for name in ordered]
 
 
