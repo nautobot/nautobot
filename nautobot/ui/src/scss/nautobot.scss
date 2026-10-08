@@ -2569,6 +2569,18 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 }
 
 /*
+ * Export field picker: rows nested under another, indented under its checkbox. Under a top-level row they also clear
+ * its drag handle.
+ */
+.nb-export-nested {
+  margin-left: 2rem;
+
+  &.nb-export-nested-root {
+    margin-left: 4.5rem;
+  }
+}
+
+/*
  * Children stacked in a single grid cell, so the box keeps the height of the tallest of them whichever is visible -
  * e.g. alternative texts swapped with `.invisible` rather than `.d-none`, so nothing below moves as they change.
  */

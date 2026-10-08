@@ -1879,8 +1879,8 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("status__name", paths)
         self.assertFalse([path for path in paths if path.startswith("tags__")])
         rendered = str(field.widget.render("export_fields", ["name"], attrs={"id": "id_export_fields"}))
-        self.assertIn("export-field-caret", rendered)
-        self.assertIn("export-nested", rendered)
+        self.assertIn("nb-export-field-caret", rendered)
+        self.assertIn("nb-export-nested", rendered)
         self.assertIn('id="id_export_fields_option_device_type__manufacturer"', rendered)
         self.assertIn('value="device_type__manufacturer__name"', rendered)
 
@@ -1977,7 +1977,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         _form, rendered = self.render_picker(Device)
 
         device_type = self.checkbox_for(rendered, "device_type")
-        self.assertIn("export-field-parent", device_type)
+        self.assertIn("nb-export-field-parent", device_type)
         self.assertNotIn("name=", device_type)
         self.assertIn(
             'data-natural-key="[&quot;device_type__manufacturer__name&quot;, &quot;device_type__model&quot;]"',
@@ -1987,12 +1987,12 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
 
         # A related object nested under another is a control in the same way, its natural key being a row too.
         manufacturer = self.checkbox_for(rendered, "device_type__manufacturer")
-        self.assertIn("export-field-parent", manufacturer)
+        self.assertIn("nb-export-field-parent", manufacturer)
         self.assertIn('data-natural-key="[&quot;device_type__manufacturer__name&quot;]"', manufacturer)
         self.assertIsNone(self.whole_option_for(rendered, "device_type__manufacturer"))
 
         name = self.checkbox_for(rendered, "name")
-        self.assertIn("export-field-leaf", name)
+        self.assertIn("nb-export-field-leaf", name)
         self.assertIn('name="export_fields"', name)
 
     def test_select__natural_key_not_offered_as_rows_has_an_option_of_its_own(self):
@@ -2005,7 +2005,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         # Its first click checks the option, there being no part of the natural key offered as a row.
         self.assertIn('data-natural-key="[&quot;module&quot;]"', self.checkbox_for(rendered, "module"))
         natural_key = self.whole_option_for(rendered, "module")
-        self.assertIn("export-field-leaf", natural_key)
+        self.assertIn("nb-export-field-leaf", natural_key)
         self.assertIn('name="export_fields"', natural_key)
         self.assertIn('value="module"', natural_key)
         self.assertIn('data-label="Natural key"', natural_key)
@@ -2133,9 +2133,9 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__rows_start_collapsed_even_holding_a_selection(self):
         """Every row starts collapsed, a count saying what it holds, so a broad selection does not bury the tree."""
         _form, rendered = self.render_picker(Device, export_fields="name,device_type,location,status")
-        self.assertNotRegex(rendered, r'<ul class="export-nested list-unstyled mb-0" ')
+        self.assertNotRegex(rendered, r'<ul class="nb-export-nested(?![^"]*\bd-none\b)[^"]*"')
         self.assertNotIn('aria-expanded="true"', rendered)
-        self.assertIn("export-field-count", rendered)
+        self.assertIn("nb-export-field-count", rendered)
 
     def test_select__summary_says_what_the_export_will_contain(self):
         """Above the tree, the picker says what an empty selection exports, or how much is selected.
@@ -2144,17 +2144,17 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         not to say it twice; the variable's description stays, for those spelling the value out by hand.
         """
         job_form, rendered = self.render_picker(Device)
-        self.assertRegex(rendered, r'<div class="export-fields-summary-default"[^>]*>\s*<strong>No fields selected')
+        self.assertRegex(rendered, r'<div class="nb-export-fields-summary-default"[^>]*>\s*<strong>No fields selected')
         self.assertIn("each field of the device itself", " ".join(rendered.split()))  # as a browser collapses it
         # Hidden by visibility, not display, so that it still holds the summary at its height.
-        self.assertIn('class="export-fields-summary-selected invisible"', rendered)
+        self.assertIn('class="nb-export-fields-summary-selected invisible"', rendered)
         self.assertIn('aria-live="polite">No fields selected</span>', rendered)
         self.assertEqual(job_form.fields["export_fields"].help_text, "")
         self.assertIn("default columns", ExportObjectList.export_fields.field_attrs["help_text"])
 
         _form, rendered = self.render_picker(Device, export_fields="name,status__name")
-        self.assertIn('class="export-fields-summary-default invisible"', rendered)
-        self.assertIn('<span class="export-fields-summary-count">2</span>', rendered)
+        self.assertIn('class="nb-export-fields-summary-default invisible"', rendered)
+        self.assertIn('<span class="nb-export-fields-summary-count">2</span>', rendered)
         self.assertIn('aria-live="polite">2 selected</span>', rendered)
         self.assertIn("Export Templates and devicetype-library YAML exports ignore the selection", rendered)
 
@@ -2163,7 +2163,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.create_status_with_custom_fields()
         job_form, rendered = self.render_picker(Status, export_fields="name,custom_fields")
         custom_fields = self.checkbox_for(rendered, "custom_fields")
-        self.assertIn("export-field-parent", custom_fields)
+        self.assertIn("nb-export-field-parent", custom_fields)
         self.assertNotIn("name=", custom_fields)
         all_custom_fields = self.whole_option_for(rendered, "custom_fields")
         self.assertIn('data-label="All custom fields"', all_custom_fields)
@@ -2333,7 +2333,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         content = response.content.decode(response.charset)
         self.assertIn("nb-select-multiple-orderable-list", content)
         self.assertInHTML(
-            '<input class="form-check-input my-6 export-field-leaf" id="id_export_fields_option_name" '
+            '<input class="form-check-input my-6 nb-export-field-leaf" id="id_export_fields_option_name" '
             'name="export_fields" type="checkbox" value="name" checked>',
             content,
         )

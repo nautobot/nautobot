@@ -610,6 +610,9 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
                     # narrows what is offered rather than what is possible.
                     pass
 
+            if prefix and related_serializer is None:
+                # A nested relation is offered only with the fields under it, and here there are none.
+                continue
             if related_model not in lookups_by_model:
                 # Once per model, as a Location's are worked out from how deeply locations are nested.
                 lookups_by_model[related_model] = natural_key_lookups_for(related_model)
@@ -617,9 +620,6 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
             if not prefix and (lookups is None or related_serializer is None):
                 # Offered only as itself, exported however the serializer represents it.
                 paths.append(entry)
-                continue
-            if related_serializer is None:
-                # A nested relation is offered only with the fields under it, and here there are none.
                 continue
             paths.append(entry)
             offered = len(paths)

@@ -218,7 +218,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return self.flatten_paths(super().value_from_datadict(data, files, name))
 
     def format_value(self, value):
-        """The selection being rendered as flat paths, with `substitutions` applied, so the right boxes come out checked."""
+        """The selection being rendered, as flat paths with `substitutions` applied, so the right boxes are checked."""
         shown = []
         for path in self.flatten_paths(value):
             shown.extend(entry for entry in self.substitutions.get(path, [path]) if entry not in shown)
@@ -281,7 +281,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
                         hx-vals='{{"use_current_view": "1", "content_type": "{content_type}"}}'
                         title="Replace the selection with the columns this type's list view is configured to display"
                 ><span class="mdi mdi-table-eye me-4" aria-hidden="true"></span>Match the list view</button>
-                <button type="button" class="btn btn-secondary ms-6 export-fields-clear"{disabled}
+                <button type="button" class="btn btn-secondary ms-6 nb-export-fields-clear"{disabled}
                         title="Clear the selection, to export the default columns instead"
                 ><span class="mdi mdi-close me-4" aria-hidden="true"></span>Clear</button>
             </div>
@@ -311,25 +311,25 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
         Both versions are rendered; `export-fields.js` in the UI bundle shows whichever applies. They share one grid
-        cell (`.nb-stacked`) and are hidden by `visibility` rather than `display`, so the summary keeps the height of the longer of
-        them and the tree below does not move as the selection starts or empties. A screen reader is told only the
-        short status as the selection changes, rather than the whole summary on every click.
+        cell (`.nb-stacked`) and are hidden by `visibility` rather than `display`, so the summary keeps the height of
+        the longer of them and the tree below does not move as the selection starts or empties. A screen reader is
+        told only the short status as the selection changes, rather than the whole summary on every click.
         """
         model = self.content_type.model_class() if self.content_type is not None else None
         verbose_name = model._meta.verbose_name if model is not None else "object"
         return format_html(
             """
             <div id="{id}" class="form-text mb-6">
-                <span class="export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
+                <span class="nb-export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
                 <div class="nb-stacked">
-                    <div class="export-fields-summary-default{default_hidden}">
+                    <div class="nb-export-fields-summary-default{default_hidden}">
                         <strong>No fields selected</strong><br>
                         The export has the default columns: each field of the {verbose_name} itself, with related
                         objects given as the fields that identify them, and any custom fields. Computed fields,
                         relationships, and similar opt-in data are not exported.
                     </div>
-                    <div class="export-fields-summary-selected{selected_hidden}">
-                        <strong><span class="export-fields-summary-count">{count}</span> selected</strong><br>
+                    <div class="nb-export-fields-summary-selected{selected_hidden}">
+                        <strong><span class="nb-export-fields-summary-count">{count}</span> selected</strong><br>
                         They are exported in the order shown. Clear the selection to export the default columns
                         instead.
                     </div>
@@ -406,7 +406,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         label, description, icon = self.whole_options[path]
         control_id = f"{widget_id}_whole_{path}"
         control = format_html(
-            '<input class="form-check-input my-6 export-field-leaf export-field-whole" id="{}" name="{}" '
+            '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-whole" id="{}" name="{}" '
             'type="checkbox" value="{}" data-label="{}"{}>',
             control_id,
             name,
@@ -415,7 +415,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             format_html(" checked") if selected else "",
         )
         return format_html(
-            '<li class="my-0 export-field-node"><div class="d-flex align-items-center">{}</div></li>',
+            '<li class="my-0 nb-export-field-node"><div class="d-flex align-items-center">{}</div></li>',
             self._checkbox(
                 control,
                 control_id,
@@ -444,7 +444,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         )
         if not has_children:
             control = format_html(
-                '<input class="form-check-input my-6 export-field-leaf" id="{}_option_{}" name="{}" '
+                '<input class="form-check-input my-6 nb-export-field-leaf" id="{}_option_{}" name="{}" '
                 'type="checkbox" value="{}"{}>',
                 widget_id,
                 value,
@@ -455,7 +455,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         else:
             # A control over what is nested under it, with no value of its own to submit.
             control = format_html(
-                '<input class="form-check-input my-6 export-field-parent" id="{}_option_{}" type="checkbox"{}>',
+                '<input class="form-check-input my-6 nb-export-field-parent" id="{}_option_{}" type="checkbox"{}>',
                 widget_id,
                 value,
                 format_html(' data-natural-key="{}"', json.dumps(self.natural_keys[value]))
@@ -466,10 +466,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Filled in by `export-fields.js` in the UI bundle, being a count of what is checked at the moment. It is
         # what says what a collapsed row holds, every row starting collapsed: expanding each that holds part
         # of a selection -- as a "match the list view" can make many -- would bury the tree.
-        count = format_html('<span class="export-field-count small text-secondary text-nowrap ms-6"></span>')
+        count = format_html('<span class="nb-export-field-count small text-secondary text-nowrap ms-6"></span>')
         caret = (
             format_html(
-                '<button type="button" class="btn btn-link btn-sm p-0 ms-auto pe-10 export-field-caret" '
+                '<button type="button" class="btn btn-link btn-sm p-0 ms-auto pe-10 nb-export-field-caret" '
                 'aria-expanded="false" title="Show/hide related fields">'
                 '<span class="mdi mdi-chevron-down" aria-hidden="true"></span></button>'
             )
@@ -491,23 +491,24 @@ class ExportFieldSelect(SelectMultipleOrderable):
             )
             if value in self.whole_options:
                 children = format_html("{}{}", self._whole_option(value, widget_id, name, selected), children)
-            # First nested level clears the drag handle and parent checkbox; deeper levels compound.
+            # First nested level clears the drag handle and parent checkbox; deeper levels compound. See
+            # `.nb-export-nested` in the stylesheet.
             nested = format_html(
-                '<ul class="export-nested list-unstyled mb-0 d-none" style="margin-left: {}">{}</ul>',
-                "4.5rem" if is_root else "2rem",
+                '<ul class="nb-export-nested{} list-unstyled mb-0 d-none">{}</ul>',
+                " nb-export-nested-root" if is_root else "",
                 children,
             )
 
         if is_root:
             return format_html(
-                '<li class="list-group-item-action nb-draggable my-0 export-field-group" '
+                '<li class="list-group-item-action nb-draggable my-0 nb-export-field-group" '
                 'id="{}_option_{}_container" tabindex="0">{}{}</li>',
                 widget_id,
                 value,
                 header,
                 nested,
             )
-        return format_html('<li class="my-0 export-field-node">{}{}</li>', header, nested)
+        return format_html('<li class="my-0 nb-export-field-node">{}{}</li>', header, nested)
 
 
 class SelectWithDisabled(forms.Select):

@@ -1013,6 +1013,7 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
                 if parent_paths.get(f"{path}__id") == path:
                     self.widget.substitutions[path] = [f"{path}__id"]
                 else:
+                    # Defensive: every serializer the tree walks offers `id`, so this is not expected to be reached.
                     self.widget.whole_options[path] = (
                         "As selected",
                         "Selected by name, as this export was set up",

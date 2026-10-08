@@ -14,14 +14,14 @@ const SUMMARY_ID = 'nb-export-fields-summary';
 const CONTENT_TYPE_SELECTOR = '#id_content_type';
 
 const LIST = '.nb-export-field-select';
-const PARENT = 'input.export-field-parent';
-const LEAF = 'input.export-field-leaf';
+const PARENT = 'input.nb-export-field-parent';
+const LEAF = 'input.nb-export-field-leaf';
 
 // A parent row's own checkbox is in its header; the fields it stands for are everything nested under it.
-const leavesUnder = (row) => [...row.querySelectorAll(`:scope > .export-nested ${LEAF}`)];
+const leavesUnder = (row) => [...row.querySelectorAll(`:scope > .nb-export-nested ${LEAF}`)];
 
 // The option selecting a row as a whole -- "Natural key", say -- is the first row nested directly under it.
-const wholeOptionOf = (row) => row.querySelector(':scope > .export-nested > li > div input.export-field-whole');
+const wholeOptionOf = (row) => row.querySelector(':scope > .nb-export-nested > li > div input.nb-export-field-whole');
 
 // The rows making up a related object's natural key, where it has any.
 const naturalKeyOf = (parent) => new Set(JSON.parse(parent.dataset.naturalKey || '[]'));
@@ -66,7 +66,7 @@ const nextActionTitle = (row, parent, checked) => {
 
 // Above the tree, say what the export will contain: the default columns, or how much is selected.
 const refreshSummary = (picker, selected) => {
-  const clear = picker.querySelector('.export-fields-clear');
+  const clear = picker.querySelector('.nb-export-fields-clear');
   if (clear) {
     clear.disabled = selected === 0;
   }
@@ -74,11 +74,11 @@ const refreshSummary = (picker, selected) => {
   if (!summary) {
     return;
   }
-  summary.querySelector('.export-fields-summary-default').classList.toggle('invisible', selected > 0);
-  summary.querySelector('.export-fields-summary-selected').classList.toggle('invisible', selected === 0);
-  summary.querySelector('.export-fields-summary-count').textContent = String(selected);
+  summary.querySelector('.nb-export-fields-summary-default').classList.toggle('invisible', selected > 0);
+  summary.querySelector('.nb-export-fields-summary-selected').classList.toggle('invisible', selected === 0);
+  summary.querySelector('.nb-export-fields-summary-count').textContent = String(selected);
   // Rewritten only on a change, as any write to a live region may be announced.
-  const status = summary.querySelector('.export-fields-summary-status');
+  const status = summary.querySelector('.nb-export-fields-summary-status');
   const statusText = selected > 0 ? `${selected} selected` : 'No fields selected';
   if (status.textContent !== statusText) {
     status.textContent = statusText;
@@ -96,7 +96,7 @@ const refresh = (list) => {
     const checked = leaves.filter((leaf) => leaf.checked).length;
     parent.checked = checked > 0 && checked === leaves.length;
     parent.indeterminate = checked > 0 && checked < leaves.length;
-    const count = row.querySelector(':scope > div > .export-field-count');
+    const count = row.querySelector(':scope > div > .nb-export-field-count');
     if (count) {
       count.textContent = checked > 0 ? `${checked} of ${leaves.length} selected` : '';
     }
@@ -109,8 +109,8 @@ const refresh = (list) => {
 };
 
 const setExpanded = (row, expanded) => {
-  const nested = row.querySelector(':scope > .export-nested');
-  const caret = row.querySelector(':scope > div > .export-field-caret');
+  const nested = row.querySelector(':scope > .nb-export-nested');
+  const caret = row.querySelector(':scope > div > .nb-export-field-caret');
   if (!nested || !caret) {
     return;
   }
@@ -161,13 +161,13 @@ const onClear = (clear) => {
 };
 
 const onClick = (event) => {
-  const clear = event.target.closest('.export-fields-clear');
+  const clear = event.target.closest('.nb-export-fields-clear');
   if (clear) {
     onClear(clear);
     return;
   }
   // Collapse/expand a parent's nested rows, at any depth.
-  const caret = event.target.closest('.export-field-caret');
+  const caret = event.target.closest('.nb-export-field-caret');
   const row = caret?.closest(LIST) ? caret.closest('li') : null;
   if (row) {
     setExpanded(row, caret.getAttribute('aria-expanded') !== 'true');
