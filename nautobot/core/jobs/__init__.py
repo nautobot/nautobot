@@ -427,11 +427,7 @@ class ExportObjectList(Job):
                 if related_lookups is None:
                     # Not a relation, or one to a model without an identifiable natural key
                     return None
-                # A natural key's `pk` lookup is selected as `id`, the serializer's name for it (and the picker's).
-                selected = {
-                    path.removesuffix("__id") + "__pk" if path.endswith("__id") else path for path in export_field_paths
-                }
-                if any(f"{match_field}__{lookup}" not in selected for lookup in related_lookups):
+                if any(f"{match_field}__{lookup}" not in export_field_paths for lookup in related_lookups):
                     return None
         return match_fields
 

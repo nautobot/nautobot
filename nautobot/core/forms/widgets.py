@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import hashlib
 import json
 from urllib.parse import urljoin
 
@@ -128,10 +129,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
     lays its columns out in.
 
     A row with rows nested under it is a tri-state control over them rather than a field of its own, and
-    submits nothing: it is checked when everything under it is, indeterminate when some of it is, and
-    clicking it steps through its natural key (for a related object; see `natural_keys`), then everything,
-    then nothing -- or straight to everything from any other partial selection. A related object at the
-    deepest offered level has nothing under it, and is an ordinary field whose value is its natural key.
+    submits nothing: it is checked when everything under it is, and indeterminate when some of it is. Clicking
+    a related object's row steps through its natural key, then everything, then nothing, or straight to
+    everything from any other partial selection. Its natural key is the rows that make it up where the tree
+    offers them (see `natural_keys`), and otherwise a "Natural key" option of its own, nested first under it,
+    which submits the bare path (see `whole_options`; `custom_fields` has such an option too, "All custom
+    fields"). Any other row with rows under it selects everything, then nothing.
 
     `parent_paths` maps each value to the value it nests under; `ExportFieldsChoiceField` sets it from
     `enumerate_field_paths()`. Without it, nesting falls back to the dunder structure of the path itself.
@@ -169,11 +172,14 @@ class ExportFieldSelect(SelectMultipleOrderable):
         self.no_list_view = False
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
-        # The paths that name a related object rather than a value of the object being exported.
-        self.relation_paths = set()
-        # For each related object with rows nested under it, the nested paths that make up its natural key:
-        # what the first click on its row selects.
+        # For each row that may also be selected as a whole, the label, description and icon of the option that
+        # does so; see `ExportFieldPath.whole_label`.
+        self.whole_options = {}
+        # For each related object whose natural key is made of rows the tree offers, those rows: what the first
+        # click on its row selects. See `ExportFieldPath.natural_key`.
         self.natural_keys = {}
+        # Paths a selection may name that the tree has no row for, each with the rows it is shown as instead.
+        self.substitutions = {}
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
@@ -207,34 +213,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return self.flatten_paths(super().value_from_datadict(data, files, name))
 
     def format_value(self, value):
-        """The selection being rendered, so that the right boxes come out checked."""
-        return self.expand_parents(value)
-
-    def expand_parents(self, value):
-        """A selection as flat paths, with each path that has rows under it spelled as those rows.
-
-        Such a row submits nothing of its own, being a control over what is under it -- yet a selection may
-        well name it, as the REST API, a scheduled Job, or a "match the list view" of a column showing a
-        related object all can. A related object is shown as the rows of its natural key, which is what it
-        asks for; anything else, such as `custom_fields`, as every row under it.
-        """
-        children = {}
-        for path, parent in self.parent_paths.items():
-            if parent is not None:
-                children.setdefault(parent, []).append(path)
-
-        def leaves_under(path):
-            for child in children.get(path, ()):
-                yield from leaves_under(child) if child in children else (child,)
-
-        expanded = []
+        """The selection being rendered as flat paths, with `substitutions` applied, so the right boxes come out checked."""
+        shown = []
         for path in self.flatten_paths(value):
-            if path in children:
-                replacement = self.natural_keys.get(path) or list(leaves_under(path))
-            else:
-                replacement = [path]
-            expanded.extend(entry for entry in replacement if entry not in expanded)
-        return expanded
+            shown.extend(entry for entry in self.substitutions.get(path, [path]) if entry not in shown)
+        return shown
 
     def render(self, name, value, attrs=None, renderer=None):
         context = super().get_context(name, value, attrs)
@@ -316,8 +299,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
             '<span class="form-text d-block mb-6">'
             "Drag to reorder fields.<br>"
             '"*" marks a field an import requires to create new records.<br>'
-            "Checking a related object selects the fields that identify it; checking it again selects all of "
-            "its fields, and again clears them. "
+            "Checking a related object selects the fields that identify it (its natural key); checking it again "
+            "selects all of its fields, and again clears them. "
             '"<span aria-hidden="true" class="text-info mdi mdi-chevron-down"></span>'
             '<span class="visually-hidden">show/hide related fields</span>" shows its fields, to choose '
             "them individually."
@@ -329,8 +312,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
         """What the export will contain: the default columns if nothing is selected, else the selected count.
 
         Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
-        Both versions are rendered; `refresh()` in the behavior script shows whichever applies. A screen reader is
-        told only the short status as the selection changes, rather than the whole summary on every click.
+        Both versions are rendered; `refresh()` in the behavior script shows whichever applies. They share one grid
+        cell and are hidden by `visibility` rather than `display`, so the summary keeps the height of the longer of
+        them and the tree below does not move as the selection starts or empties. A screen reader is told only the
+        short status as the selection changes, rather than the whole summary on every click.
         """
         model = self.content_type.model_class() if self.content_type is not None else None
         verbose_name = model._meta.verbose_name if model is not None else "object"
@@ -338,21 +323,25 @@ class ExportFieldSelect(SelectMultipleOrderable):
             """
             <div id="{id}" class="form-text mb-6">
                 <span class="export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
-                <span class="export-fields-summary-default{default_hidden}">
-                    <strong>No fields selected</strong>, so the export has the default columns: each field of the
-                    {verbose_name} itself, with related objects given as the fields that identify them, and any
-                    custom fields. Computed fields, relationships, and similar opt-in data are not exported.
-                </span>
-                <span class="export-fields-summary-selected{selected_hidden}">
-                    <strong><span class="export-fields-summary-count">{count}</span> selected</strong>, exported
-                    in the order shown. Clear the selection to export the default columns instead.
-                </span>
-                Export Templates and devicetype-library YAML exports ignore the selection.
+                <div class="d-grid">
+                    <div class="export-fields-summary-default{default_hidden}" style="grid-area: 1 / 1">
+                        <strong>No fields selected</strong><br>
+                        The export has the default columns: each field of the {verbose_name} itself, with related
+                        objects given as the fields that identify them, and any custom fields. Computed fields,
+                        relationships, and similar opt-in data are not exported.
+                    </div>
+                    <div class="export-fields-summary-selected{selected_hidden}" style="grid-area: 1 / 1">
+                        <strong><span class="export-fields-summary-count">{count}</span> selected</strong><br>
+                        They are exported in the order shown. Clear the selection to export the default columns
+                        instead.
+                    </div>
+                </div>
+                <div>Export Templates and devicetype-library YAML exports ignore the selection.</div>
             </div>
             """,
             id=self.SUMMARY_ID,
-            default_hidden=" d-none" if selected_count else "",
-            selected_hidden="" if selected_count else " d-none",
+            default_hidden=" invisible" if selected_count else "",
+            selected_hidden="" if selected_count else " invisible",
             verbose_name=verbose_name,
             count=selected_count,
             status=f"{selected_count} selected" if selected_count else "No fields selected",
@@ -401,10 +390,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
     def _behavior_script(self):
         """The tree's own client-side behavior, shipped with the markup.
 
-        Delegated from `document` and guarded by a flag, so that it binds once however many times a widget
-        renders -- the export form is rendered both as a full page and, repeatedly, into the HTMX modal.
-        Kept here rather than in a template or the JS bundle so that every renderer of the widget gets the
-        behavior without having to include anything.
+        Delegated from `document`, and bound once per version of this script however many times a widget
+        renders -- the export form is rendered both as a full page and, repeatedly, into the HTMX modal. A
+        different version replaces one already bound, rather than leaving the page running the old one against
+        new markup. Kept here rather than in a template or the JS bundle so that every renderer of the widget gets
+        the behavior without having to include anything.
 
         Relationships are read from DOM nesting rather than from the `__` structure of the values, so a
         `cf_<key>` nested under `custom_fields` behaves like any other child despite sharing no prefix
@@ -413,35 +403,37 @@ class ExportFieldSelect(SelectMultipleOrderable):
         Defines `window.nbExportFieldSelect.refresh(list)`, which each rendering calls on its own list to
         bring the parent rows' states into line with the fields checked under them.
         """
-        return format_html(
-            """<script>
+        template = """<script>
 (function () {{
-    if (window.nbExportFieldSelectBound) return;
-    window.nbExportFieldSelectBound = true;
+    const VERSION = "{version}";
+    const previous = window.nbExportFieldSelect;
+    if (previous && previous.version === VERSION) return;
+    if (previous && previous.unbind) previous.unbind();
     const LIST = ".nb-select-multiple-orderable-list";
     const PARENT = "input.export-field-parent";
     const LEAF = "input.export-field-leaf";
     // A parent row's own checkbox is in its header; the fields it stands for are everything nested under it.
     const leavesUnder = (row) => Array.from(row.querySelectorAll(":scope > .export-nested " + LEAF));
+    // The option selecting a row as a whole -- "Natural key", say -- is the first row nested directly under it.
+    const wholeOptionOf = (row) => row.querySelector(":scope > .export-nested > li > div input.export-field-whole");
+
+    // The rows making up a related object's natural key, where they are rows of their own.
+    const naturalKeyOf = (parent) => new Set(JSON.parse(parent.dataset.naturalKey || "[]"));
 
     // What clicking a parent row does next, given how much of what is under it is checked: nothing goes to
-    // its natural key, if it has one; everything goes to nothing; and any partial selection -- the natural
-    // key included -- goes to everything.
-    function nextSelection(parent, leaves) {{
+    // its natural key -- the rows that make it up, or else its option for selecting it as a whole -- if it has
+    // one; everything goes to nothing; and any partial selection, the natural key included, goes to everything.
+    function nextSelection(row, parent, leaves) {{
         const checked = leaves.filter((leaf) => leaf.checked).length;
         if (checked === leaves.length && checked > 0) return () => false;
         if (checked === 0) {{
-            const naturalKey = new Set(JSON.parse(parent.dataset.naturalKey || "[]"));
+            const naturalKey = naturalKeyOf(parent);
             if (naturalKey.size > 0) return (leaf) => naturalKey.has(leaf.value);
+            const whole = wholeOptionOf(row);
+            if (whole) return (leaf) => leaf === whole;
         }}
         return () => true;
     }}
-
-    const NEXT_ACTION = {{
-        naturalKey: "Select the fields that identify this related object",
-        all: "Select all fields",
-        none: "Clear these fields",
-    }};
 
     // Bring each parent row's checkbox into line with what is checked under it: checked when all of it is,
     // indeterminate when some of it is, with a count to say how much while it is collapsed.
@@ -455,12 +447,16 @@ class ExportFieldSelect(SelectMultipleOrderable):
             parent.indeterminate = checked > 0 && checked < leaves.length;
             const count = row.querySelector(":scope > div > .export-field-count");
             if (count) count.textContent = checked > 0 ? `${{checked}} of ${{leaves.length}} selected` : "";
-            const hasNaturalKey = JSON.parse(parent.dataset.naturalKey || "[]").length > 0;
+            const whole = wholeOptionOf(row);
             parent.title = parent.checked
-                ? NEXT_ACTION.none
-                : checked === 0 && hasNaturalKey
-                  ? NEXT_ACTION.naturalKey
-                  : NEXT_ACTION.all;
+                ? "Clear these fields"
+                : checked > 0
+                  ? "Select all fields"
+                  : naturalKeyOf(parent).size > 0
+                    ? "Select the fields that identify this object"
+                    : whole
+                      ? `Select "${{whole.dataset.label}}"`
+                      : "Select all fields";
         }});
         // Above the tree, say what the export will contain: the default columns, or how much is selected.
         const selected = list.querySelectorAll(LEAF + ":checked").length;
@@ -470,8 +466,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         if (clear) clear.disabled = selected === 0;
         const summary = picker.querySelector("#{summary}");
         if (summary) {{
-            summary.querySelector(".export-fields-summary-default").classList.toggle("d-none", selected > 0);
-            summary.querySelector(".export-fields-summary-selected").classList.toggle("d-none", selected === 0);
+            summary.querySelector(".export-fields-summary-default").classList.toggle("invisible", selected > 0);
+            summary.querySelector(".export-fields-summary-selected").classList.toggle("invisible", selected === 0);
             summary.querySelector(".export-fields-summary-count").textContent = String(selected);
             // Rewritten only on a change, as any write to a live region may be announced.
             const status = summary.querySelector(".export-fields-summary-status");
@@ -479,7 +475,6 @@ class ExportFieldSelect(SelectMultipleOrderable):
             if (status.textContent !== statusText) status.textContent = statusText;
         }}
     }}
-    window.nbExportFieldSelect = {{refresh: refresh}};
 
     function setExpanded(row, expanded) {{
         const nested = row.querySelector(":scope > .export-nested");
@@ -494,7 +489,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         }}
     }}
 
-    document.addEventListener("change", function (event) {{
+    function onChange(event) {{
         const changed = event.target;
         if (!changed.matches(LIST + ' input[type="checkbox"]')) return;
         const list = changed.closest(LIST);
@@ -503,7 +498,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             // stepped on from what was checked under it, and its own state then follows from that.
             const row = changed.closest("li");
             const leaves = leavesUnder(row);
-            const select = nextSelection(changed, leaves);
+            const select = nextSelection(row, changed, leaves);
             // Left collapsed: expanding every row clicked through would bury the tree, and the row's count
             // already says how much it now holds.
             leaves.forEach((leaf) => {{
@@ -511,9 +506,9 @@ class ExportFieldSelect(SelectMultipleOrderable):
             }});
         }}
         refresh(list);
-    }});
+    }}
 
-    document.addEventListener("click", function (event) {{
+    function onClear(event) {{
         const clear = event.target.closest(".export-fields-clear");
         if (!clear) return;
         const picker = clear.closest("#{wrapper}");
@@ -529,37 +524,103 @@ class ExportFieldSelect(SelectMultipleOrderable):
         const omitted = picker.querySelector("#{omitted}");
         if (omitted) omitted.remove();
         refresh(list);
-    }});
+    }}
 
     // Collapse/expand a parent's nested columns, at any depth.
-    document.addEventListener("click", function (event) {{
+    function onCaret(event) {{
         const caret = event.target.closest(".export-field-caret");
         if (!caret || !caret.closest(LIST)) return;
         const row = caret.closest("li");
         if (row) setExpanded(row, caret.getAttribute("aria-expanded") !== "true");
-    }});
+    }}
 
     // Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX
     // included -- ever sees (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real
     // `change` so the picker's own `hx-trigger` can hear it; `objectmetadata_create.html` bridges its
-    // own select the same way. Delegated, so it survives the form being swapped into the modal.
+    // own select the same way. Delegated, so it survives the form being swapped into the modal. Namespaced,
+    // so that a later version of this script can unbind it.
+    const SELECT2_EVENTS = "select2:select.nbExportFieldSelect select2:clear.nbExportFieldSelect";
     function bindSelect2ChangeBridge() {{
         if (!window.jQuery) return;
-        window.jQuery(document).on("select2:select select2:clear", "{content_type_selector}", function () {{
+        window.jQuery(document).on(SELECT2_EVENTS, "{content_type_selector}", function () {{
             this.dispatchEvent(new Event("change", {{bubbles: true}}));
         }});
     }}
+
+    document.addEventListener("change", onChange);
+    document.addEventListener("click", onClear);
+    document.addEventListener("click", onCaret);
     // On a full page render this script runs while the document is still parsing, *before* the scripts at
     // the end of the body have defined jQuery -- so binding is deferred to whenever that has happened.
     // A widget swapped in by HTMX renders after page load, where jQuery is there already.
     if (window.jQuery) bindSelect2ChangeBridge();
     else document.addEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
+
+    window.nbExportFieldSelect = {{
+        version: VERSION,
+        refresh: refresh,
+        unbind: function () {{
+            document.removeEventListener("change", onChange);
+            document.removeEventListener("click", onClear);
+            document.removeEventListener("click", onCaret);
+            document.removeEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
+            if (window.jQuery) window.jQuery(document).off(SELECT2_EVENTS);
+        }},
+    }};
 }})();
-</script>""",
+</script>"""
+        return format_html(
+            template,
+            # Of the script itself, so that a changed script is never mistaken for the one already bound.
+            version=hashlib.sha256(template.encode()).hexdigest()[:12],
             content_type_selector=self.content_type_selector,
             wrapper=self.WRAPPER_ID,
             omitted=self.OMITTED_ID,
             summary=self.SUMMARY_ID,
+        )
+
+    @staticmethod
+    def _checkbox(control, control_id, label, path, is_root, title=None):
+        """A row's checkbox `control` with its label, and the path it selects alongside."""
+        return format_html(
+            '<div class="form-check flex-grow-1 my-0">{control}'
+            '<label class="form-check-label py-6{pe}" for="{control_id}"{title}>{label}'
+            '<span class="font-monospace small text-secondary ms-6">{path}</span></label>'
+            "</div>",
+            control=control,
+            control_id=control_id,
+            pe="" if is_root else " pe-20",
+            title=format_html(' title="{}"', title) if title else "",
+            label=label,
+            path=path,
+        )
+
+    def _whole_option(self, path, widget_id, name, selected):
+        """The first row nested under `path`, selecting it as a whole -- "Natural key", say -- by submitting `path`."""
+        label, description, icon = self.whole_options[path]
+        control_id = f"{widget_id}_whole_{path}"
+        control = format_html(
+            '<input class="form-check-input my-6 export-field-leaf export-field-whole" id="{}" name="{}" '
+            'type="checkbox" value="{}" data-label="{}"{}>',
+            control_id,
+            name,
+            path,
+            label,
+            format_html(" checked") if selected else "",
+        )
+        return format_html(
+            '<li class="my-0 export-field-node"><div class="d-flex align-items-center">{}</div></li>',
+            self._checkbox(
+                control,
+                control_id,
+                # The icon only marks what the label already says, so it is hidden from screen readers.
+                format_html('{}<span class="mdi {} text-warning ms-4" aria-hidden="true"></span>', label, icon)
+                if icon
+                else label,
+                path,
+                is_root=False,
+                title=description,
+            ),
         )
 
     def _render_node(self, node, widget_id, name, is_root):
@@ -576,40 +637,26 @@ class ExportFieldSelect(SelectMultipleOrderable):
             else ""
         )
         if not has_children:
-            # A field of its own -- including a related object at the deepest offered level, whose value is
-            # its natural key, as the tooltip says since nothing else on the row does.
             control = format_html(
                 '<input class="form-check-input my-6 export-field-leaf" id="{}_option_{}" name="{}" '
-                'type="checkbox" value="{}"{}{}>',
+                'type="checkbox" value="{}"{}>',
                 widget_id,
                 value,
                 name,
                 value,
                 format_html(" checked") if selected else "",
-                format_html(' title="Exports the fields that identify this related object"')
-                if value in self.relation_paths
-                else "",
             )
         else:
             # A control over what is nested under it, with no value of its own to submit.
             control = format_html(
-                '<input class="form-check-input my-6 export-field-parent" id="{}_option_{}" type="checkbox" '
-                'data-natural-key="{}">',
+                '<input class="form-check-input my-6 export-field-parent" id="{}_option_{}" type="checkbox"{}>',
                 widget_id,
                 value,
-                json.dumps(self.natural_keys.get(value) or []),
+                format_html(' data-natural-key="{}"', json.dumps(self.natural_keys[value]))
+                if value in self.natural_keys
+                else "",
             )
-        checkbox = format_html(
-            '<div class="form-check flex-grow-1 my-0">{control}'
-            '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}'
-            '<span class="font-monospace small text-secondary ms-6">{value}</span></label>'
-            "</div>",
-            control=control,
-            wid=widget_id,
-            value=value,
-            pe="" if is_root else " pe-20",
-            label=option["label"],
-        )
+        checkbox = self._checkbox(control, f"{widget_id}_option_{value}", option["label"], value, is_root)
         # Filled in by the behavior script's `refresh()`, being a count of what is checked at the moment. It is
         # what says what a collapsed row holds, every row starting collapsed: expanding each that holds part
         # of a selection -- as a "match the list view" can make many -- would bury the tree.
@@ -636,6 +683,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
             children = format_html_join(
                 "", "{}", ((self._render_node(child, widget_id, name, False),) for child in node["children"])
             )
+            if value in self.whole_options:
+                children = format_html("{}{}", self._whole_option(value, widget_id, name, selected), children)
             # First nested level clears the drag handle and parent checkbox; deeper levels compound.
             nested = format_html(
                 '<ul class="export-nested list-unstyled mb-0 d-none" style="margin-left: {}">{}</ul>',

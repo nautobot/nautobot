@@ -357,17 +357,17 @@ class NaturalKeyRepresentationMixin:
             if selected_heads is not None:
                 if field.name not in selected_heads:
                     continue
-                # An explicit nested selection (e.g. `device_type__manufacturer__name`) replaces the
-                # relation's natural-key defaults; a bare head selection keeps them.
-                selected_paths = [path for path in export_fields if path.startswith(f"{field.name}__")]
-                if selected_paths:
-                    field_lookups.extend(selected_paths)
+                # An explicit nested selection (e.g. `device_type__manufacturer__name`) is exported as named,
+                # and only adds to the relation's natural key if the bare relation is selected as well.
+                field_lookups.extend(path for path in export_fields if path.startswith(f"{field.name}__"))
+                if field.name not in export_fields:
                     continue
             # A relation with no natural-key lookups (ContentType, Group) keeps its default representation.
             field_lookups.extend(
                 f"{field.name}__{lookup}" for lookup in natural_key_lookups_for(field.related_model) or ()
             )
-        return field_lookups
+        # A nested selection may name a lookup of the natural key it is selected alongside.
+        return list(dict.fromkeys(field_lookups))
 
     def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
         """Extract natural key field lookups for a specific field name.

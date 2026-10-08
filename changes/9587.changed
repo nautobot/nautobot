@@ -1,1 +1,1 @@
-Changed the "Fields to Export" picker so that checking a related object cycles between selecting the fields that identify it, selecting all of its fields, and clearing them.
+Changed the "Fields to Export" picker so that checking a related object selects the fields that identify it, then all of its fields, then none; added a "Natural key" option where those fields are not all listed, and an "All custom fields" option.

@@ -155,23 +155,36 @@ def _prune_missing_references(null_prefixes, prefix, value):
 
 
 def _order_by_selection(mapping, field_order):
-    """`mapping` with its keys in `field_order`, each key taking the earliest entry it equals or nests under.
+    """`mapping` with its keys in `field_order`; see `selection_position()`.
 
     The same rule `NautobotCSVRenderer.get_headers()` orders columns by, so that a selection lays a
-    document out in the order it asked for exactly as it lays out CSV columns. Keys the selection does not
-    name -- which an unrestricted export is entirely made of -- sort last, and an empty selection leaves
+    document out in the order it asked for exactly as it lays out CSV columns. An empty selection leaves
     the mapping alone rather than imposing an order of its own.
     """
     if not field_order:
         return mapping
+    return {key: mapping[key] for key in sorted(mapping, key=lambda key: selection_position(key, field_order))}
 
-    def selection_index(key):
-        for position, selected in enumerate(field_order):
-            if key == selected or key.startswith(f"{selected}__"):
-                return (position, key)
-        return (len(field_order), key)
 
-    return {key: mapping[key] for key in sorted(mapping, key=selection_index)}
+def selection_position(key, field_order):
+    """A sort key placing `key` at the earliest entry of `field_order` it equals or nests under.
+
+    So a related object's columns stay together, as a document nests them. Among them, a key the selection
+    names exactly is placed by that entry; keys the selection does not name at all sort last.
+
+    Example:
+        >>> sorted(["location__description", "name", "location__name"], key=lambda key: selection_position(
+        ...     key, ["location", "name", "location__description"]
+        ... ))
+        ["location__name", "location__description", "name"]
+    """
+    positions = [
+        position for position, selected in enumerate(field_order) if key == selected or key.startswith(f"{selected}__")
+    ]
+    if not positions:
+        return (len(field_order), len(field_order), key)
+    own = field_order.index(key) if key in field_order else positions[0]
+    return (positions[0], own, key)
 
 
 def build_document_records(serializer_data, field_order=None):
@@ -302,11 +315,21 @@ class ExportFieldPath:
     # Whether an import needs this field to create a record. Only ever true at the top level, as an import
     # looks related objects up rather than creating them.
     required: bool
-    # Whether the path names a related object, which exports as the fields that identify it.
-    relation: bool
-    # For a related object with paths nested under it, those of them that make up its natural key; see
-    # `_natural_key_descendants()`. None otherwise.
+    # For a related object with a natural key, the rows selecting it: those making it up -- fields, or the
+    # "Natural key" options of related objects nested under it -- or else its own "Natural key" option together
+    # with the parts of its natural key that are rows. E.g. for an Interface's `device`,
+    # `["device__name", "device__tenant__name", "device__location", "device__location__name"]`. None otherwise.
     natural_key: list[str] | None = None
+    # For a path that has paths nested under it but may also be selected as a whole -- a related object whose
+    # natural key is *not* made of rows offered under it, which then exports its natural key, or
+    # `custom_fields`, which exports every custom field -- the label of the option that does so, e.g.
+    # "Natural key". None otherwise.
+    whole_label: str | None = None
+    # What selecting the path as a whole exports, e.g. "The fields that identify this object by default:
+    # location__name, location__parent__name".
+    whole_description: str | None = None
+    # The Material Design icon marking that option, if any, e.g. "mdi-key-link" for a natural key.
+    whole_icon: str | None = None
 
 
 def natural_key_lookups_for(model):
@@ -331,53 +354,28 @@ def expand_relation_paths(model, paths):
     Without this, such a path would export the related object's primary key. A bare relation such as
     `location` needs no expansion, as the serializer already exports it by natural key.
 
-    Where a shallower relation's natural key continues through the rest of the path and names every field of
-    the related object's own natural key, its lookups are used instead, so that a natural key the export field
-    picker cut short is completed rather than restarted. They may follow a relation less deeply than the
-    related object's own would -- a Location's ancestry, say, beyond which there is nothing to export -- but
-    they must name each of its fields, or they would only pass through the object rather than identify it.
-
-    Example (a Location tree three levels deep):
+    Example:
         >>> expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"])
         ["image_file_name", "software_version__platform__name"]
-        >>> expand_relation_paths(Device, ["location__parent__parent"])  # not the 3 lookups of a Location
-        ["location__parent__parent__name"]
-        >>> # An IPAddress's natural key passes through its parent Prefix's namespace, which alone is not enough
-        >>> expand_relation_paths(Interface, ["device__primary_ip4__parent"])
-        ["device__primary_ip4__parent__namespace__name", "device__primary_ip4__parent__network", ...]
 
     Paths are kept in order; any other path is returned unchanged.
     """
     expanded = []
     for path in paths:
         replacement = [path]
-        segments = path.split("__")
-        # The model reached by each segment of the path, while the path keeps reaching related objects.
-        reached = []
-        related_model = model
-        for segment in segments:
-            try:
-                field = related_model._meta.get_field(segment)
-            except FieldDoesNotExist:
-                break
-            related_model = field.related_model if not (field.many_to_many or field.one_to_many) else None
-            if related_model is None:
-                break
-            reached.append(related_model)
-        own_lookups = natural_key_lookups_for(reached[-1]) if 1 < len(segments) == len(reached) else None
-        if own_lookups:
-            own_fields = {lookup.split("__", 1)[0] for lookup in own_lookups}
-            replacement = [f"{path}__{lookup}" for lookup in own_lookups]
-            for depth in range(1, len(segments)):
-                remainder = "__".join(segments[depth:])
-                tails = [
-                    lookup.removeprefix(f"{remainder}__")
-                    for lookup in natural_key_lookups_for(reached[depth - 1]) or ()
-                    if lookup.startswith(f"{remainder}__")
-                ]
-                if own_fields <= {tail.split("__", 1)[0] for tail in tails}:
-                    replacement = [f"{path}__{tail}" for tail in tails]
+        if "__" in path:
+            related_model = model
+            for segment in path.split("__"):
+                try:
+                    field = related_model._meta.get_field(segment)
+                except FieldDoesNotExist:
+                    related_model = None
                     break
+                related_model = field.related_model if not (field.many_to_many or field.one_to_many) else None
+                if related_model is None:
+                    break
+            if lookups := natural_key_lookups_for(related_model):
+                replacement = [f"{path}__{lookup}" for lookup in lookups]
         expanded.extend(entry for entry in replacement if entry not in expanded)
     return expanded
 
@@ -390,37 +388,6 @@ def _view_permission_error(path, model, user):
     if permission_is_exempt(permission) or user.has_perm(permission):
         return None
     return f'"{path}": requires permission to view {model._meta.label_lower}; without it, only "id" may be selected'
-
-
-def _selects_only_a_natural_key(model, path):
-    """Whether `path` selects nothing but (part of) the natural key of the relation of `model` it starts with.
-
-    Such a path exports no more than the bare relation does -- `location__name` is one of the columns `location`
-    exports -- and the bare relation needs no permission to view the related model, so neither does this.
-
-    Example:
-        >>> _selects_only_a_natural_key(Device, "location__parent__name")
-        True
-        >>> _selects_only_a_natural_key(Device, "location__description")
-        False
-    """
-    head = path.split("__", 1)[0]
-    try:
-        field = model._meta.get_field(head)
-    except FieldDoesNotExist:
-        return False
-    if field.many_to_many or field.one_to_many:
-        return False
-    lookups = natural_key_lookups_for(field.related_model)
-    if not lookups:
-        return False
-    natural_key = {f"{head}__{lookup}" for lookup in lookups}
-    # A natural key's `pk` lookup is selected as `id`, the serializer's name for it.
-    selected = [
-        expanded.removesuffix("__id") + "__pk" if expanded.endswith("__id") else expanded
-        for expanded in expand_relation_paths(model, [path])
-    ]
-    return set(selected) <= natural_key
 
 
 def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIELD_MAX_DEPTH):
@@ -440,9 +407,8 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
     relation is not counted against it. See `EXPORT_FIELD_MAX_DEPTH`.
 
     `user` must hold `view` permission on every model a path reaches into, `id` excepted -- including the
-    model a nested path ends at, when that path is expanded to its natural key. A path selecting only part of a
-    top-level relation's natural key is excepted too, as it exports no more than the bare relation, which is
-    not checked. Required, with no value that disables the check; pass an `AnonymousUser` to permit nothing.
+    model a nested path ends at, when that path is expanded to its natural key. Required, with no value that
+    disables the check; pass an `AnonymousUser` to permit nothing.
 
     Raises:
         ValueError: describing every invalid path.
@@ -471,7 +437,6 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
             if key not in getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ()):
                 errors.append(f'"{path}": unknown custom field "{key}"')
             continue
-        check_permissions = len(parts) == 1 or not _selects_only_a_natural_key(serializer_class.Meta.model, path)
         serializer = root_serializer
         for index, part in enumerate(parts):
             field = serializer.fields.get(part)
@@ -497,7 +462,7 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                     # Rejected for the same reason as a write-only field: DRF skips it rather than
                     # raising, so the file would come out missing a column that was asked for by name.
                     errors.append(f'"{path}": "{part}" is computed for display only and cannot be exported')
-                elif index > 0 and check_permissions:
+                elif index > 0:
                     # A nested path ending at a related object is expanded to its natural key
                     # (`expand_relation_paths()`), which reads that object as surely as naming its fields would.
                     related_model = _traversable_relation_target(serializer, field)
@@ -516,11 +481,7 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
             # `id` is exempt, being what an unviewable relation is reduced to; `display` is intended to join
             # it once selectable through a relation at all (see below). Checked before the remaining
             # segments are resolved, so this does not report whether a field a user cannot see exists.
-            if (
-                check_permissions
-                and parts[index + 1 :] != ["id"]
-                and (error := _view_permission_error(path, related_model, user))
-            ):
+            if parts[index + 1 :] != ["id"] and (error := _view_permission_error(path, related_model, user)):
                 errors.append(error)
                 break
             try:
@@ -575,9 +536,13 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         for_csv (bool): Whether the paths are for a flat (CSV) export, which has fewer emittable fields
             than the document formats.
 
-    A relation is only descended into if an export represents it by its natural key's lookups (see
-    `natural_key_lookups_for()`). One represented any other way -- a `ContentType`, say -- is offered as
-    a field of its own with nothing under it, since what is under it would not be what selecting it gives.
+    A related object has its own fields nested under it. Where its natural key is made of rows offered under
+    it, they are named as such (see `ExportFieldPath.natural_key`); where it is not -- reaching deeper than the
+    enumeration goes, or including the primary key, which is offered as `id` -- the object may instead be
+    selected as a whole, which exports its natural key (see `ExportFieldPath.whole_label`). A top-level one
+    with no natural-key lookups -- a `ContentType`, say, which exports in a representation of its own -- is
+    offered only as a field of its own. No relation is offered at the deepest level, where it could have
+    nothing under it.
 
     Returns:
         list[ExportFieldPath]: The offered paths, in reading order.
@@ -592,15 +557,8 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         name for name in (EXCLUDED_CSV_FIELDS if for_csv else EXCLUDED_DOCUMENT_FIELDS) if name != "custom_fields"
     )
     paths = []
-    # The model each offered relation leads to, for resolving its natural key once everything is offered.
-    relation_models = {}
-    # Per model, since `Location`'s lookups query how deeply locations are nested.
-    natural_key_lookups = {}
-
-    def _natural_key_lookups(model):
-        if model not in natural_key_lookups:
-            natural_key_lookups[model] = natural_key_lookups_for(model)
-        return natural_key_lookups[model]
+    # Each offered related object's natural key, as the columns that selecting it as a whole exports.
+    natural_keys = {}
 
     def _sort_key(field_name, field):
         if field_name in PRIORITY_CSV_FIELDS:
@@ -630,32 +588,44 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
                 # cannot be a to-many.
                 continue
             path = f"{prefix}__{field_name}" if prefix else field_name
-            # Resolved before the depth check, not after: a relation at the deepest offered level has no
-            # fields listed under it, but selecting it still exports its natural key, and a UI has no
-            # other way to tell that from an ordinary field.
-            related_model = _traversable_relation_target(serializer, field)
-            paths.append(
-                ExportFieldPath(
-                    path=path,
-                    parent=prefix or None,
-                    label=str(field.label),
-                    # Required only where it means anything: at the root, where an import creates the record.
-                    required=field.required and not prefix,
-                    relation=related_model is not None,
-                )
+            entry = ExportFieldPath(
+                path=path,
+                parent=prefix or None,
+                label=str(field.label),
+                # Required only where it means anything: at the root, where an import creates the record.
+                required=field.required and not prefix,
             )
+            related_model = _traversable_relation_target(serializer, field)
             if related_model is None:
+                paths.append(entry)
                 continue
-            relation_models[path] = related_model
-            if segments >= max_segments or _natural_key_lookups(related_model) is None:
+
+            related_serializer = None
+            if segments < max_segments:
+                try:
+                    related_serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
+                except SerializerNotFound:
+                    # No serializer to enumerate. A hand-written path into it is still accepted, so this
+                    # narrows what is offered rather than what is possible.
+                    pass
+
+            lookups = natural_key_lookups_for(related_model)
+            if not prefix and (lookups is None or related_serializer is None):
+                # Offered only as itself, exported however the serializer represents it.
+                paths.append(entry)
                 continue
-            try:
-                related_serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
-            except SerializerNotFound:
-                # No serializer to enumerate. A hand-written path into it is still accepted, so this
-                # narrows what is offered rather than what is possible.
+            if related_serializer is None:
+                # A nested relation is offered only with the fields under it, and here there are none.
                 continue
+            if lookups:
+                # Whether these are offered as fields is known only once everything is offered.
+                natural_keys[path] = [f"{path}__{lookup}" for lookup in lookups]
+
+            paths.append(entry)
+            offered = len(paths)
             _walk(path, related_serializer, segments + 1)
+            if prefix and len(paths) == offered:
+                paths.pop()
 
     # Instantiated as `validate_field_paths()` does, and for the same reason: the field set enumerated here
     # has to be the one the export will actually emit.
@@ -675,44 +645,63 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
                 parent="custom_fields",
                 label=custom_field_labels.get(key) or key,
                 required=False,
-                relation=False,
             )
             for key in sorted(custom_field_keys)
         )
+        if custom_field_keys:
+            for entry in paths:
+                if entry.path == "custom_fields":
+                    entry.whole_label = "All custom fields"
+                    entry.whole_description = "Every custom field, including any added after this export is set up"
 
-    offered = {entry.path for entry in paths}
     parents = {entry.parent for entry in paths}
+    fields = {entry.path for entry in paths if entry.path not in parents}
+    represented = {}
+
+    def _represent(group):
+        """The offered rows exporting exactly the natural key of the related object `group`, or None.
+
+        Each field of the natural key is its own row, if it is one; else, for a nested related object, the rows
+        selecting that object's natural key (see `_natural_key_rows()`). A nested object's "Natural key" option
+        stands in only if it exports exactly the columns it replaces: a Location's own natural key reaches one
+        ancestor further than its parent's part in its child's natural key does, the extra column always empty.
+        """
+        if group not in represented:
+            prefix = f"{group}__"
+            heads = dict.fromkeys(column.removeprefix(prefix).split("__", 1)[0] for column in natural_keys[group])
+            items = []
+            for head in heads:
+                row = f"{prefix}{head}"
+                if row in fields:
+                    items.append(row)
+                elif row in natural_keys:
+                    items.extend(_natural_key_rows(row))
+                else:
+                    items = None
+                    break
+            # A part of a natural key may be selected twice over, as a row and through its "Natural key" option.
+            columns = {column for item in items or () for column in natural_keys.get(item, [item])}
+            represented[group] = items if items and columns == set(natural_keys[group]) else None
+        return represented[group]
+
+    def _natural_key_rows(group):
+        """The rows selecting the natural key of the related object `group`: those making it up, if there are any.
+
+        Otherwise its "Natural key" option, together with the parts of that natural key that are rows: they add
+        no column, but show what the option includes.
+        """
+        return _represent(group) or [group, *(column for column in natural_keys[group] if column in fields)]
+
     for entry in paths:
-        if entry.path in parents and entry.path in relation_models:
-            entry.natural_key = _natural_key_descendants(
-                entry.path, _natural_key_lookups(relation_models[entry.path]), offered
+        if entry.path not in natural_keys:
+            continue
+        entry.natural_key = _natural_key_rows(entry.path)
+        if not _represent(entry.path):
+            entry.whole_label = "Natural key"
+            # As the import form marks a related object, identified by its natural key.
+            entry.whole_icon = "mdi-key-link"
+            entry.whole_description = "The fields that identify this object by default: " + ", ".join(
+                natural_keys[entry.path]
             )
 
     return paths
-
-
-def _natural_key_descendants(path, lookups, offered):
-    """The paths in `offered` that select the natural key of the relation `path`, given its `lookups`.
-
-    A lookup too deep to be offered is cut off at the deepest offered relation along it, which exports the
-    rest of the lookup as its own natural key.
-
-    Example:
-        >>> _natural_key_descendants(
-        ...     "location",
-        ...     ["name", "parent__name", "parent__parent__name"],
-        ...     {"location__name", "location__parent__name", "location__parent__parent", ...},
-        ... )
-        ["location__name", "location__parent__name", "location__parent__parent"]
-    """
-    descendants = []
-    for lookup in lookups or ():
-        # A lookup spells the primary key `pk`, where a serializer -- and so a path -- spells it `id`.
-        segments = ["id" if segment == "pk" else segment for segment in lookup.split("__")]
-        for depth in range(len(segments), 0, -1):
-            candidate = "__".join((path, *segments[:depth]))
-            if candidate in offered:
-                if candidate not in descendants:
-                    descendants.append(candidate)
-                break
-    return descendants

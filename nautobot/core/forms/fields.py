@@ -989,12 +989,22 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         parent_paths = {entry.path: entry.parent for entry in entries}
         choices = [(entry.path, entry.label + (" *" if entry.required else "")) for entry in entries]
         self.widget.parent_paths = parent_paths
-        # Which rows name a related object, so the widget can say what selecting one of them does.
-        self.widget.relation_paths = {entry.path for entry in entries if entry.relation}
-        # What the first click on a related object's row selects, and what a selection naming one shows as.
-        self.widget.natural_keys = {entry.path: entry.natural_key for entry in entries if entry.natural_key is not None}
+        # The rows that may also be selected as a whole, by an option of their own; see `ExportFieldPath.whole_label`.
+        self.widget.whole_options = {
+            entry.path: (entry.whole_label, entry.whole_description, entry.whole_icon)
+            for entry in entries
+            if entry.whole_label
+        }
+        # The rows making up each related object's natural key, where the tree offers them: what the first click
+        # on the related object's row selects, and what a selection naming the related object is shown as.
+        self.widget.natural_keys = {entry.path: entry.natural_key for entry in entries if entry.natural_key}
+        self.widget.substitutions = {
+            path: self.widget.natural_keys[path]
+            for path in self.widget.flatten_paths(selection)
+            if path in self.widget.natural_keys
+        }
         # As the widget will show it, which is what it is ordered by.
-        selection = self.widget.expand_parents(selection)
+        selection = self.widget.format_value(selection)
         # A selected path the enumeration does not reach is offered anyway -- one naming a relation deeper
         # than the tree goes, say -- so that the selection stays visible and can be unselected.
         offered = set(parent_paths)
