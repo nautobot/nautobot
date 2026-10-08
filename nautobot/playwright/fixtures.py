@@ -2,8 +2,9 @@
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
 `tests/integration/conftest.py` files build thin named fixtures on top of
-`create_object`; run `pytest --fixtures nautobot/<app>/tests/integration` to list every
-available fixture with its location.
+`create_object`; the `created_*` fixtures more than one app needs (a device and its
+manufacturer) live here. Run `pytest --fixtures nautobot/<app>/tests/integration` to list
+every available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
 runs against any Nautobot it can reach over HTTP. The defaults match the
@@ -24,7 +25,7 @@ import os
 
 import pytest
 
-from nautobot.playwright.helpers import log_in, LoginError
+from nautobot.playwright.helpers import log_in, LoginError, unique_name
 
 PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
 # The defaults below match the documented development-instance bootstrap
@@ -195,3 +196,49 @@ def api_count(api):
         return response.json()["count"]
 
     return _count
+
+
+@pytest.fixture
+def created_manufacturer(create_object):
+    """A manufacturer owned by this test."""
+    return create_object("dcim/manufacturers/", name=unique_name())
+
+
+@pytest.fixture
+def created_device(create_object, status_for, created_manufacturer):
+    """A device owned by this test, with its own location type, location, device type and role.
+
+    Also returns the related records. The device's API response gives only their id and
+    URL, and the tests need their names.
+    """
+    unique = unique_name()
+    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
+    location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
+    location = create_object(
+        "dcim/locations/",
+        name=f"{unique}-location",
+        location_type=location_type["id"],
+        status=status_for("dcim.location")["id"],
+    )
+    device_type = create_object(
+        "dcim/device-types/",
+        model=f"{unique}-model",
+        manufacturer=created_manufacturer["id"],
+    )
+    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
+    status = status_for("dcim.device")
+    device = create_object(
+        "dcim/devices/",
+        name=unique,
+        location=location["id"],
+        device_type=device_type["id"],
+        role=role["id"],
+        status=status["id"],
+    )
+    return {
+        "device": device,
+        "location": location,
+        "device_type": device_type,
+        "role": role,
+        "status": status,
+    }

@@ -16,7 +16,7 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Navigation, heading, Edit button and deferred-component helpers for detail views."""
+    """Navigation, heading, Edit button, tab and deferred-component helpers for detail views."""
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
     VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device". The Edit button reads "Edit <this>".
@@ -29,6 +29,12 @@ class DetailPage(BasePage):
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
     # The placeholder's follow-up request.
     _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
+    # Each tab's content is a pane with the tab's id. Every pane is in the DOM at once;
+    # only the active one is visible.
+    _TAB_PANE = "div.tab-pane#{tab_id}"
+    # When the tab strip overflows, tabs.js clones the list and hides the original, so the
+    # visible copy is the one a user clicks.
+    _TAB_LINK = "ul[data-nb-tests-id='object-details-header-tabs-ul'] a[role='tab'][aria-controls='{tab_id}']:visible"
 
     def __init__(self, page, base_url):
         """Fail fast on a subclass that forgot to set `DETAIL_PATH` or `VERBOSE_NAME`."""
@@ -53,6 +59,29 @@ class DetailPage(BasePage):
     def expect_edit_button(self):
         """Assert (auto-retrying) that this model's Edit button is rendered."""
         expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
+
+    # -------------------------------------------------------------------------
+    # Tabs
+    # -------------------------------------------------------------------------
+
+    def _tab_pane(self, tab_id):
+        """Locator for the content pane of the tab *tab_id*."""
+        return self.page.locator(self._TAB_PANE.format(tab_id=tab_id))
+
+    def open_tab(self, tab_id):
+        """Click the header link of the tab *tab_id* and wait for its pane to show."""
+        self.page.locator(self._TAB_LINK.format(tab_id=tab_id)).click()
+        expect(self._tab_pane(tab_id)).to_be_visible()
+
+    def expect_tab_to_show(self, tab_id, text):
+        """Assert (auto-retrying) that the tab *tab_id* visibly renders *text*."""
+        expect(self._tab_pane(tab_id).get_by_text(text, exact=True)).to_be_visible()
+
+    def expect_tab_not_to_contain(self, tab_id, text):
+        """Assert (auto-retrying) that the tab *tab_id* exists and does not contain *text*, shown or hidden."""
+        pane = self._tab_pane(tab_id)
+        expect(pane).to_have_count(1)
+        expect(pane).not_to_contain_text(text)
 
     # -------------------------------------------------------------------------
     # Deferred components
