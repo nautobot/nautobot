@@ -1,0 +1,1 @@
+Fixed the REST API GraphQL endpoint (`/api/graphql/`) ignoring middleware configured in the `GRAPHENE["MIDDLEWARE"]` setting.
