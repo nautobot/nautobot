@@ -32,8 +32,8 @@ class DetailPage(BasePage):
     # Each tab's content is a pane with the tab's id. Every pane is in the DOM at once;
     # only the active one is visible.
     _TAB_PANE = "div.tab-pane#{tab_id}"
-    # The header renders each tab link twice, one of them hidden (a responsive duplicate),
-    # so only the visible one is clickable.
+    # When the tab strip overflows, tabs.js clones the list and hides the original, so the
+    # visible copy is the one a user clicks.
     _TAB_LINK = "ul[data-nb-tests-id='object-details-header-tabs-ul'] a[role='tab'][aria-controls='{tab_id}']:visible"
 
     def __init__(self, page, base_url):
@@ -78,8 +78,10 @@ class DetailPage(BasePage):
         expect(self._tab_pane(tab_id).get_by_text(text, exact=True)).to_be_visible()
 
     def expect_tab_not_to_contain(self, tab_id, text):
-        """Assert (auto-retrying) that the tab *tab_id* does not contain *text*, shown or hidden."""
-        expect(self._tab_pane(tab_id)).not_to_contain_text(text)
+        """Assert (auto-retrying) that the tab *tab_id* exists and does not contain *text*, shown or hidden."""
+        pane = self._tab_pane(tab_id)
+        expect(pane).to_have_count(1)
+        expect(pane).not_to_contain_text(text)
 
     # -------------------------------------------------------------------------
     # Deferred components

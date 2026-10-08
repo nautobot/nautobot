@@ -1,1 +1,1 @@
-Replaced the Selenium computed-field tests with a Playwright `ComputedFieldsTestCase`.
+Replaced the Selenium computed-field tests with a Playwright `ComputedFieldsTestCase`, added tab helpers to the shared `DetailPage`, table-configuration helpers to the shared `ListPage`, and a shared `created_device` fixture.

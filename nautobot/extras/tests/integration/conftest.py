@@ -60,9 +60,9 @@ def api_computed_field_value(api):
     """
 
     def _value(endpoint, pk, key):
-        response = api.get(f"/api/{endpoint}/{pk}/", params={"include": "computed_fields"})
+        response = api.get(f"/api/{endpoint}{pk}/", params={"include": "computed_fields"})
         if not response.ok:
-            pytest.fail(f"GET /api/{endpoint}/{pk}/ returned {response.status}: {response.text()}")
+            pytest.fail(f"GET /api/{endpoint}{pk}/ returned {response.status}: {response.text()}")
         return response.json()["computed_fields"][key]
 
     return _value

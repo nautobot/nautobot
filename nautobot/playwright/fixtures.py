@@ -2,8 +2,9 @@
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
 `tests/integration/conftest.py` files build thin named fixtures on top of
-`create_object`; run `pytest --fixtures nautobot/<app>/tests/integration` to list every
-available fixture with its location.
+`create_object`; the `created_*` fixtures more than one app needs (a device and its
+manufacturer) live here. Run `pytest --fixtures nautobot/<app>/tests/integration` to list
+every available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
 runs against any Nautobot it can reach over HTTP. The defaults match the

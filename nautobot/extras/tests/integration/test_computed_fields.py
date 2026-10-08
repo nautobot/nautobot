@@ -51,12 +51,11 @@ class ComputedFieldsTestCase:
         """A computed field can be shown as a Device list column, where it renders the API's value.
 
         The column is off by default. Turning it on in the table configuration shows the
-        device's rendered value, and resetting the configuration removes the column again,
-        which also leaves the shared user's Device table at its defaults.
+        device's rendered value, and resetting the configuration removes the column again.
         """
         label = created_computed_field["label"]
         api_value = api_computed_field_value(
-            "dcim/devices", created_device["device"]["id"], created_computed_field["key"]
+            "dcim/devices/", created_device["device"]["id"], created_computed_field["key"]
         )
         assert api_value == created_computed_field["expected_value"]
 
@@ -70,4 +69,5 @@ class ComputedFieldsTestCase:
         assert devices.get_column_values_by_header(label) == [api_value]
 
         devices.reset_table_columns()
+        devices.expect_row_count(1)
         devices.expect_column_shown(label, shown=False)

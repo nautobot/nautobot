@@ -107,7 +107,9 @@ class ListPage(BasePage):
 
     def expect_column_shown(self, header_name, shown=True):
         """Assert (auto-retrying) that a column headed *header_name* is, or is not, in the table."""
-        header = self.page.locator("table thead th").filter(has_text=header_name)
+        # Sortable headers add a visually-hidden sort instruction after the label.
+        label = re.compile(rf"^\s*{re.escape(header_name)}\s*(activate to .*)?$", re.DOTALL)
+        header = self.page.locator("table thead th").filter(has_text=label)
         expect(header).to_have_count(1 if shown else 0)
 
     # -------------------------------------------------------------------------
@@ -138,8 +140,8 @@ class ListPage(BasePage):
     def reset_table_columns(self):
         """Restore the table's default columns with the drawer's Reset button.
 
-        Reset clears the user's saved column config and reloads the page, so a test
-        that changed the columns can leave the shared user's table at its defaults.
+        Reset saves an empty column list, which the table treats as the defaults, and
+        reloads the page.
         """
         self.open_table_config()
         self._click_and_wait_for_navigation(self._TABLE_CONFIG_RESET)
