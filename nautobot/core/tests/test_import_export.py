@@ -770,6 +770,27 @@ class ExportAdapterTests(ImportExportJobTestCase):
         # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
         self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
 
+    def test_adapter_export__chunked_output_matches_unchunked(self):
+        """An export serialized over many chunks writes exactly the file a single chunk would, in order."""
+        self.assertGreater(Status.objects.count(), 4)
+        for export_format in ("csv", "json", "yaml"):
+            with self.subTest(export_format=export_format):
+                single_chunk = self._export_bytes(
+                    self.run_export(
+                        query_string="sort=name",
+                        export_format=export_format,
+                        # content_types M2M doesn't have a guaranteed order so it may differ from export to export
+                        export_fields="name,color",
+                    )
+                )
+                with mock.patch.object(ExportObjectList, "export_chunk_size", 2):
+                    many_chunks = self._export_bytes(
+                        self.run_export(
+                            query_string="sort=name", export_format=export_format, export_fields="name,color"
+                        )
+                    )
+                self.assertEqual(many_chunks, single_chunk)
+
     def test_adapter_export__uuid_valued_lookup_is_canonically_formatted(self):
         """A UUID reached through a relation is hyphenated, as the object's own `id` is.
 

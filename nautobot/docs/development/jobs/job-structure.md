@@ -671,7 +671,21 @@ class ExportText(Job):
 register_jobs(ExportText)
 ```
 
-The `create_file()` method accepts a filename and file contents (as `str` or `bytes`). Files are saved alongside the JobResult and remain available until the JobResult is deleted.
+The `create_file()` method accepts a filename and file contents (as `str` or `bytes`, or as a seekable binary file object). Files are saved alongside the JobResult and remain available until the JobResult is deleted.
+
++/- 3.3.0 "Support for file objects"
+    `create_file()` now also accepts a seekable binary file object, such as a `tempfile.TemporaryFile`, whose contents are read from the start of the file. This lets a Job write large output to disk incrementally rather than building it all in memory first.
+
+```python
+import tempfile
+
+
+def run(self):
+    with tempfile.TemporaryFile() as output:
+        for chunk in self.generate_report_chunks():
+            output.write(chunk)
+        self.create_file("report.txt", output)
+```
 
 !!! note
     The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`STORAGES["nautobotjobfiles"]`](../../user-guide/administration/configuration/settings.md#storages) settings.

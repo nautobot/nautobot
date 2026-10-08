@@ -1,12 +1,14 @@
 """Tests for `nautobot.extras.conditions.model_fields`."""
 
+from django.contrib.contenttypes.models import ContentType
 from django.test import tag
 
 from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import TestCase as NautobotTestCase
 from nautobot.dcim.models import CablePath, Device, Location, LocationType
+from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.conditions.model_fields import _where_values_are_listed, addressable_fields
-from nautobot.extras.models import Status
+from nautobot.extras.models import CustomField, CustomFieldChoice, Status
 
 
 @tag("unit")
@@ -15,6 +17,8 @@ class AddressableFieldsTest(NautobotTestCase):
 
     @classmethod
     def setUpTestData(cls):
+        note = CustomField.objects.create(label="Addressable Note", type=CustomFieldTypeChoices.TYPE_TEXT)
+        note.content_types.add(ContentType.objects.get_for_model(Location), ContentType.objects.get_for_model(Status))
         cls.location = Location.objects.create(
             name="Addressable Fields Test",
             location_type=LocationType.objects.create(name="Addressable Fields Test Type"),
@@ -27,11 +31,21 @@ class AddressableFieldsTest(NautobotTestCase):
         return next(entry for entry in addressable_fields(*models or (Location,)) if entry["name"] == name)
 
     def test_every_field_is_one_the_record_carries(self):
-        """A serializer also declares fields only an annotated queryset fills in, and those never appear."""
-        self.assertEqual({field["name"] for field in addressable_fields(Location)}, set(self.record))
+        """A serializer also declares fields only an annotated queryset fills in, and those never appear.
 
-    def test_a_relation_offers_what_the_record_nests_under_it(self):
-        self.assertEqual({sub["name"] for sub in self.entry("status")["subfields"]}, set(self.record["status"]))
+        A custom field is offered under its own path, so each name folds back to the key the record holds.
+        """
+        for label, entries, record in (
+            ("the record itself", addressable_fields(Location), self.record),
+            ("what it nests under a relation", self.entry("status")["subfields"], self.record["status"]),
+        ):
+            with self.subTest(label):
+                self.assertEqual({entry["name"].partition(".")[0] for entry in entries}, set(record))
+
+    def test_a_field_holding_json_is_not_offered(self):
+        self.assertNotIn("local_config_context_data", {entry["name"] for entry in addressable_fields(Device)})
+        platform = self.entry("platform", Device)
+        self.assertNotIn("napalm_args", {sub["name"] for sub in platform["subfields"]})
 
     def test_a_relation_inside_a_relation_is_not_offered(self):
         """A path that stops at a mapping matches nothing, so going deeper would only mislead."""
@@ -102,3 +116,64 @@ class AddressableFieldsTest(NautobotTestCase):
         self.assertIn("name", shared)
         self.assertIn("asn", location_only)
         self.assertEqual(shared, {field["name"] for field in addressable_fields(Device)} & set(self.record))
+
+
+@tag("unit")
+class CustomFieldsOfferedTest(NautobotTestCase):
+    """A custom field is offered as a field of its own, named for the path a condition stores."""
+
+    # The kind each type compares as, or None where no operator compares it and the field is left out.
+    KIND_BY_TYPE = {
+        CustomFieldTypeChoices.TYPE_TEXT: "text",
+        CustomFieldTypeChoices.TYPE_URL: "text",
+        CustomFieldTypeChoices.TYPE_MARKDOWN: "text",
+        CustomFieldTypeChoices.TYPE_SELECT: "text",
+        CustomFieldTypeChoices.TYPE_MULTISELECT: "list",
+        CustomFieldTypeChoices.TYPE_INTEGER: "number",
+        CustomFieldTypeChoices.TYPE_BOOLEAN: "boolean",
+        CustomFieldTypeChoices.TYPE_DATE: "date",
+        CustomFieldTypeChoices.TYPE_DATETIME: "date",
+        CustomFieldTypeChoices.TYPE_JSON: None,
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        location_content_type = ContentType.objects.get_for_model(Location)
+        cls.custom_fields = {}
+        for custom_field_type, label in CustomFieldTypeChoices.CHOICES:
+            custom_field = CustomField.objects.create(label=f"Offered {label}", type=custom_field_type)
+            custom_field.content_types.add(location_content_type)
+            cls.custom_fields[custom_field_type] = custom_field
+        for custom_field_type in CustomFieldTypeChoices.SELECTION_TYPES:
+            CustomFieldChoice.objects.create(custom_field=cls.custom_fields[custom_field_type], value="Chosen")
+
+    def entry(self, custom_field):
+        """What the picker offers for that custom field, or None where it offers nothing."""
+        name = f"custom_fields.{custom_field.key}"
+        return next((entry for entry in addressable_fields(Location) if entry["name"] == name), None)
+
+    def test_each_type_carries_the_kind_and_the_label(self):
+        """The table covers every type, because one nobody classified would be offered with every operator
+        and a box to type into.
+        """
+        self.assertEqual(set(self.KIND_BY_TYPE), {value for value, _ in CustomFieldTypeChoices.CHOICES})
+        for custom_field_type, kind in self.KIND_BY_TYPE.items():
+            with self.subTest(custom_field_type):
+                custom_field = self.custom_fields[custom_field_type]
+                entry = self.entry(custom_field)
+                if kind is None:
+                    self.assertIsNone(entry)
+                else:
+                    self.assertEqual(entry["kind"], kind)
+                    self.assertEqual(entry["label"], custom_field.label)
+
+    def test_only_a_type_with_choices_says_where_they_can_be_read(self):
+        """A form offers the choices themselves rather than asking somebody to type one exactly."""
+        for custom_field_type in (*CustomFieldTypeChoices.SELECTION_TYPES, CustomFieldTypeChoices.TYPE_TEXT):
+            with self.subTest(custom_field_type):
+                custom_field = self.custom_fields[custom_field_type]
+                expected = f"/api/extras/custom-field-choices/?custom_field={custom_field.key}"
+                if custom_field_type in CustomFieldTypeChoices.SELECTION_TYPES:
+                    self.assertEqual(self.entry(custom_field)["values_url"], expected)
+                else:
+                    self.assertNotIn("values_url", self.entry(custom_field))

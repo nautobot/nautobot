@@ -718,7 +718,7 @@ class CustomField(
         Returns:
             list[str]: List of choice values, ordered by weight.
         """
-        if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
+        if self.type not in CustomFieldTypeChoices.SELECTION_TYPES:
             return []
         cache_key = construct_cache_key(self, method_name="choices", branch_aware=True)
         choices = cache.get(cache_key)
@@ -801,10 +801,7 @@ class CustomField(
             )
 
         # Choices can be set only on selection fields
-        if self.custom_field_choices.exists() and self.type not in (
-            CustomFieldTypeChoices.TYPE_SELECT,
-            CustomFieldTypeChoices.TYPE_MULTISELECT,
-        ):
+        if self.custom_field_choices.exists() and self.type not in CustomFieldTypeChoices.SELECTION_TYPES:
             raise ValidationError("Choices may be set only for custom selection fields.")
 
         # A selection field's default (if any) must be present in its available choices
@@ -883,11 +880,7 @@ class CustomField(
             )
 
         # Text-like fields
-        elif self.type in (
-            CustomFieldTypeChoices.TYPE_URL,
-            CustomFieldTypeChoices.TYPE_TEXT,
-            CustomFieldTypeChoices.TYPE_MARKDOWN,
-        ):
+        elif self.type in CustomFieldTypeChoices.TEXT_LIKE_TYPES:
             if self.type == CustomFieldTypeChoices.TYPE_URL:
                 field = LaxURLField(
                     required=required,
@@ -976,11 +969,7 @@ class CustomField(
         """
         if value not in [None, "", []]:
             # Validate text field
-            if self.type in (
-                CustomFieldTypeChoices.TYPE_TEXT,
-                CustomFieldTypeChoices.TYPE_URL,
-                CustomFieldTypeChoices.TYPE_MARKDOWN,
-            ):
+            if self.type in CustomFieldTypeChoices.TEXT_LIKE_TYPES:
                 if not isinstance(value, str):
                     raise ValidationError("Value must be a string")
                 if self.validation_minimum is not None and len(value) < self.validation_minimum:
@@ -1165,9 +1154,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         to="extras.CustomField",
         on_delete=models.CASCADE,
         related_name="custom_field_choices",
-        limit_choices_to=models.Q(
-            type__in=[CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]
-        ),
+        limit_choices_to=models.Q(type__in=list(CustomFieldTypeChoices.SELECTION_TYPES)),
     )
     value = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     weight = models.PositiveSmallIntegerField(default=100, help_text="Higher weights appear later in the list")
@@ -1183,7 +1170,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         return self.value
 
     def clean(self):
-        if self.custom_field.type not in (CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT):
+        if self.custom_field.type not in CustomFieldTypeChoices.SELECTION_TYPES:
             raise ValidationError("Custom field choices can only be assigned to selection fields.")
 
         if self.custom_field.validation_minimum is not None and len(self.value) < self.custom_field.validation_minimum:

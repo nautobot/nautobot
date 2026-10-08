@@ -85,9 +85,9 @@ class ComparedField:
     """The field a row compares, and how the operator compares it.
 
     `kind` is one of the value kinds `operators` declares, such as `text` or `date`. `picker` names a
-    form control the field asks for whatever its kind. `values_url` is where the related objects can
-    be listed and `key` is the sub-field compared against them, both set only for a relation's
-    sub-field. `whole` and `many` are settled by `compared_with`.
+    form control the field asks for whatever its kind. `values_url` is where the values can be listed
+    and `key` is the field of each one that is compared, both set only where the values can be picked
+    from a list. `whole` and `many` are settled by `compared_with`.
     """
 
     kind: str | None = None
@@ -125,27 +125,33 @@ class ComparedField:
         if top is None:
             return ComparedField()
         if not subname:
-            values_can_be_listed = top.get("kind") == KIND_LIST and top.get("values_url")
+            # Tags and a custom field's choices compare as what they display. A relation's belong to its sub-field.
+            lists_its_own_values = top.get("kind") in (KIND_TEXT, KIND_LIST) and top.get("values_url")
             return ComparedField(
                 kind=top.get("kind"),
                 picker=top.get("picker"),
-                values_url=top["values_url"] if values_can_be_listed else None,
-                key=DISPLAY_KEY if values_can_be_listed else None,
+                values_url=top["values_url"] if lists_its_own_values else None,
+                key=DISPLAY_KEY if lists_its_own_values else None,
             )
         sub = next((entry for entry in top.get("subfields", ()) if entry["name"] == subname), None)
         if sub is None:
             return ComparedField()
+        lists_its_own_values = "values_url" in sub
         return ComparedField(
-            kind=sub.get("kind"), picker=sub.get("picker"), values_url=top.get("values_url"), key=sub["name"]
+            kind=sub.get("kind"),
+            picker=sub.get("picker"),
+            values_url=sub["values_url"] if lists_its_own_values else top.get("values_url"),
+            key=DISPLAY_KEY if lists_its_own_values else sub["name"],
         )
 
     @property
     def values_worth_listing(self):
         """Whether to offer the values themselves instead of a box to type one into.
 
-        Either a sub-field of a single relation, `status.name`, or a many-valued relation named on
-        its own, `tags`. A sub-field that is a date or a number gets the widget its kind asks for,
-        and a partial comparison such as `contains` on text wants typing rather than picking.
+        A sub-field of a single relation, `status.name`, a many-valued relation named on its own,
+        `tags`, or a custom field with choices. A sub-field that is a date or a number gets the
+        widget its kind asks for, and a partial comparison such as `contains` on text wants typing
+        rather than picking.
         """
         return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT, KIND_LIST))
 
@@ -168,20 +174,22 @@ def _options_for_chosen_values(value):
 
 
 def _name_choices(entries):
-    """Field names as a select offers them. The name is the path a condition stores, so it is the label."""
-    return add_blank_choice((entry["name"], entry["name"]) for entry in entries)
+    """Fields as a select offers them in label order, storing the path and showing the label."""
+    ordered = sorted(entries, key=lambda entry: entry["label"].casefold())
+    return add_blank_choice((entry["name"], entry["label"]) for entry in ordered)
 
 
 def _subfield_choices(subfields):
-    """Sub-field names, with no blank among them.
+    """Sub-fields as a select offers them, storing the name and showing the label, with no blank among them.
 
     A path that stops at a relation addresses a mapping, which nothing a condition compares can equal,
     so there is no such thing as a relation with no sub-field chosen. `name` leads where there is one,
-    being what a reader of a change record recognises the related object by.
+    being what a reader of a change record recognises the related object by, and the rest follow in
+    label order.
     """
-    names = [entry["name"] for entry in subfields]
-    ordered = ["name", *(name for name in names if name != "name")] if "name" in names else names
-    return [(name, name) for name in ordered]
+    label_by_name = {entry["name"]: entry["label"] for entry in subfields}
+    ordered = sorted(label_by_name, key=lambda name: (name != "name", label_by_name[name].casefold()))
+    return [(name, label_by_name[name]) for name in ordered]
 
 
 def _condition_type_choices():
@@ -324,8 +332,12 @@ def _without_stale_values(data, prefix, triggered_by):
     return data
 
 
-def _stored_row_as_initial(row):
-    """A stored row as a form's initial values. A dotted field path becomes the two selects that edit it."""
+def _stored_row_as_initial(row, addressable):
+    """A stored row as a form's initial values.
+
+    A dotted field path becomes the field select and the sub-field select that edit it, unless the
+    whole path is a field of its own in `addressable`, as `custom_fields.site_code` is.
+    """
     if not row:
         return {}
     negation = "not" if row.get("negate") else "when"
@@ -342,10 +354,13 @@ def _stored_row_as_initial(row):
     # Whatever the JSON tab holds, down to the values of a single row, is typed by hand and may be
     # anything at all. A row that cannot be spread renders empty and is refused on save.
     values = row.get("values")
-    values = values if isinstance(values, dict) else {}
+    if not isinstance(values, dict):
+        values = {}
+    field_names = {entry["name"] for entry in addressable}
     for parameter in preset.parameters:
         value = values.get(parameter.name)
-        if parameter.kind == PARAM_KIND_FIELD and isinstance(value, str) and "." in value:
+        splits_into_field_and_subfield = isinstance(value, str) and "." in value and value not in field_names
+        if parameter.kind == PARAM_KIND_FIELD and splits_into_field_and_subfield:
             initial[parameter.name], _, initial[_subfield_name(parameter.name)] = value.partition(".")
         else:
             initial[parameter.name] = value
@@ -391,11 +406,14 @@ class ConditionRowForm(forms.Form):
 
     def __init__(self, data=None, *, index, addressable=(), row=None, errors=None, triggered_by=None):
         prefix = f"condition-{index}"
+        addressable = list(addressable)
         super().__init__(
-            data=_without_stale_values(data, prefix, triggered_by), prefix=prefix, initial=_stored_row_as_initial(row)
+            data=_without_stale_values(data, prefix, triggered_by),
+            prefix=prefix,
+            initial=_stored_row_as_initial(row, addressable),
         )
         self.index = index
-        self.addressable = list(addressable)
+        self.addressable = addressable
         # The form shows what a save would refuse rather than deciding it, so it never cleans itself.
         # Its errors are put in by hand, which needs the two places cleaning would otherwise fill.
         self.cleaned_data = {}
