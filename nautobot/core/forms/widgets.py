@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-import hashlib
 import json
 from urllib.parse import urljoin
 
@@ -144,6 +143,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
     turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
     """
 
+    # The ids and the selector below are also used by the UI bundle's `export-fields.js`; keep them in step.
+
     # The element the picker is rebuilt into. `render_field` emits it around the whole field from the
     # field's `htmx_attrs`, and it persists across swaps -- so it is what a rebuild targets, and it is
     # where the URL to rebuild from is carried. See `ExportFieldsStringVar.as_field()`.
@@ -183,7 +184,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
-        self.attrs["class"] = "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list py-8"
+        # `nb-export-field-select` is what the UI bundle's `export-fields.js`, the tree's behavior, looks for.
+        self.attrs["class"] = (
+            "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list nb-export-field-select "
+            "py-8"
+        )
 
     def parent_of(self, path):
         """The value `path` nests under, or None if it is a top-level row."""
@@ -226,10 +231,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         if not options:
             # Say why there is nothing to pick from, rather than rendering an empty list under two
-            # buttons that cannot do anything. The script still goes out: without it nothing bridges
-            # Select2's pick to the `change` that rebuilds this, and a form opened with no content type
-            # chosen -- which is how the Job's own form opens -- would never leave this state.
-            return format_html('<div class="form-text">{}</div>{}', self._empty_message(), self._behavior_script())
+            # buttons that cannot do anything.
+            return format_html('<div class="form-text">{}</div>', self._empty_message())
 
         nodes = {str(option["value"]): {"option": option, "children": []} for option in options}
         roots = []
@@ -243,21 +246,16 @@ class ExportFieldSelect(SelectMultipleOrderable):
         rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
         # No wrapper of its own: the whole picker is replaced at once when it has to be rebuilt
         # server-side, and the element that persists across those swaps is the one `render_field` puts
-        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents.
+        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents. Its behavior
+        # is the UI bundle's `export-fields.js`, which also works out the parent rows' states whenever a
+        # picker is loaded -- "indeterminate" having no markup of its own.
         return format_html(
-            '{}{}<ol id="{}" class="{}">{}</ol>{}{}',
+            '{}{}<ol id="{}" class="{}">{}</ol>',
             self._toolbar(selected_count=len(widget["value"])),
             self._omitted_hint() or self._no_list_view_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
             rows,
-            self._behavior_script(),
-            # The parent rows' states are worked out in the browser -- "indeterminate" has no markup of its
-            # own -- so every rendering, a swapped-in rebuild included, asks for that once it is in place.
-            format_html(
-                '<script>window.nbExportFieldSelect.refresh(document.getElementById("{}"));</script>',
-                widget_id,
-            ),
         )
 
     def _toolbar(self, selected_count=0):
@@ -312,7 +310,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         """What the export will contain: the default columns if nothing is selected, else the selected count.
 
         Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
-        Both versions are rendered; `refresh()` in the behavior script shows whichever applies. They share one grid
+        Both versions are rendered; `export-fields.js` in the UI bundle shows whichever applies. They share one grid
         cell and are hidden by `visibility` rather than `display`, so the summary keeps the height of the longer of
         them and the tree below does not move as the selection starts or empties. A screen reader is told only the
         short status as the selection changes, rather than the whole summary on every click.
@@ -385,198 +383,6 @@ class ExportFieldSelect(SelectMultipleOrderable):
             "Choose the fields to export below, or leave the selection empty to export the default columns."
             "</div>",
             self.OMITTED_ID,
-        )
-
-    def _behavior_script(self):
-        """The tree's own client-side behavior, shipped with the markup.
-
-        Delegated from `document`, and bound once per version of this script however many times a widget
-        renders -- the export form is rendered both as a full page and, repeatedly, into the HTMX modal. A
-        different version replaces one already bound, rather than leaving the page running the old one against
-        new markup. Kept here rather than in a template or the JS bundle so that every renderer of the widget gets
-        the behavior without having to include anything.
-
-        Relationships are read from DOM nesting rather than from the `__` structure of the values, so a
-        `cf_<key>` nested under `custom_fields` behaves like any other child despite sharing no prefix
-        with it.
-
-        Defines `window.nbExportFieldSelect.refresh(list)`, which each rendering calls on its own list to
-        bring the parent rows' states into line with the fields checked under them.
-        """
-        template = """<script>
-(function () {{
-    const VERSION = "{version}";
-    const previous = window.nbExportFieldSelect;
-    if (previous && previous.version === VERSION) return;
-    if (previous && previous.unbind) previous.unbind();
-    const LIST = ".nb-select-multiple-orderable-list";
-    const PARENT = "input.export-field-parent";
-    const LEAF = "input.export-field-leaf";
-    // A parent row's own checkbox is in its header; the fields it stands for are everything nested under it.
-    const leavesUnder = (row) => Array.from(row.querySelectorAll(":scope > .export-nested " + LEAF));
-    // The option selecting a row as a whole -- "Natural key", say -- is the first row nested directly under it.
-    const wholeOptionOf = (row) => row.querySelector(":scope > .export-nested > li > div input.export-field-whole");
-
-    // The rows making up a related object's natural key, where they are rows of their own.
-    const naturalKeyOf = (parent) => new Set(JSON.parse(parent.dataset.naturalKey || "[]"));
-
-    // What clicking a parent row does next, given how much of what is under it is checked: nothing goes to
-    // its natural key -- the rows that make it up, or else its option for selecting it as a whole -- if it has
-    // one; everything goes to nothing; and any partial selection, the natural key included, goes to everything.
-    function nextSelection(row, parent, leaves) {{
-        const checked = leaves.filter((leaf) => leaf.checked).length;
-        if (checked === leaves.length && checked > 0) return () => false;
-        if (checked === 0) {{
-            const naturalKey = naturalKeyOf(parent);
-            if (naturalKey.size > 0) return (leaf) => naturalKey.has(leaf.value);
-            const whole = wholeOptionOf(row);
-            if (whole) return (leaf) => leaf === whole;
-        }}
-        return () => true;
-    }}
-
-    // Bring each parent row's checkbox into line with what is checked under it: checked when all of it is,
-    // indeterminate when some of it is, with a count to say how much while it is collapsed.
-    function refresh(list) {{
-        if (!list) return;
-        list.querySelectorAll(PARENT).forEach((parent) => {{
-            const row = parent.closest("li");
-            const leaves = leavesUnder(row);
-            const checked = leaves.filter((leaf) => leaf.checked).length;
-            parent.checked = checked > 0 && checked === leaves.length;
-            parent.indeterminate = checked > 0 && checked < leaves.length;
-            const count = row.querySelector(":scope > div > .export-field-count");
-            if (count) count.textContent = checked > 0 ? `${{checked}} of ${{leaves.length}} selected` : "";
-            const whole = wholeOptionOf(row);
-            parent.title = parent.checked
-                ? "Clear these fields"
-                : checked > 0
-                  ? "Select all fields"
-                  : naturalKeyOf(parent).size > 0
-                    ? "Select the fields that identify this object"
-                    : whole
-                      ? `Select "${{whole.dataset.label}}"`
-                      : "Select all fields";
-        }});
-        // Above the tree, say what the export will contain: the default columns, or how much is selected.
-        const selected = list.querySelectorAll(LEAF + ":checked").length;
-        const picker = list.closest("#{wrapper}");
-        if (!picker) return;
-        const clear = picker.querySelector(".export-fields-clear");
-        if (clear) clear.disabled = selected === 0;
-        const summary = picker.querySelector("#{summary}");
-        if (summary) {{
-            summary.querySelector(".export-fields-summary-default").classList.toggle("invisible", selected > 0);
-            summary.querySelector(".export-fields-summary-selected").classList.toggle("invisible", selected === 0);
-            summary.querySelector(".export-fields-summary-count").textContent = String(selected);
-            // Rewritten only on a change, as any write to a live region may be announced.
-            const status = summary.querySelector(".export-fields-summary-status");
-            const statusText = selected > 0 ? `${{selected}} selected` : "No fields selected";
-            if (status.textContent !== statusText) status.textContent = statusText;
-        }}
-    }}
-
-    function setExpanded(row, expanded) {{
-        const nested = row.querySelector(":scope > .export-nested");
-        const caret = row.querySelector(":scope > div > .export-field-caret");
-        if (!nested || !caret) return;
-        nested.classList.toggle("d-none", !expanded);
-        caret.setAttribute("aria-expanded", String(expanded));
-        const icon = caret.querySelector(".mdi");
-        if (icon) {{
-            icon.classList.toggle("mdi-chevron-down", !expanded);
-            icon.classList.toggle("mdi-chevron-up", expanded);
-        }}
-    }}
-
-    function onChange(event) {{
-        const changed = event.target;
-        if (!changed.matches(LIST + ' input[type="checkbox"]')) return;
-        const list = changed.closest(LIST);
-        if (changed.matches(PARENT)) {{
-            // The browser has already toggled the box, which says nothing here: what it stands for is
-            // stepped on from what was checked under it, and its own state then follows from that.
-            const row = changed.closest("li");
-            const leaves = leavesUnder(row);
-            const select = nextSelection(row, changed, leaves);
-            // Left collapsed: expanding every row clicked through would bury the tree, and the row's count
-            // already says how much it now holds.
-            leaves.forEach((leaf) => {{
-                leaf.checked = select(leaf);
-            }});
-        }}
-        refresh(list);
-    }}
-
-    function onClear(event) {{
-        const clear = event.target.closest(".export-fields-clear");
-        if (!clear) return;
-        const picker = clear.closest("#{wrapper}");
-        const list = picker ? picker.querySelector(LIST) : null;
-        if (!list) return;
-        // Unchecking in script raises no "change" event, so the refresh the change handler would have
-        // done is done here.
-        list.querySelectorAll(LEAF).forEach((leaf) => {{
-            leaf.checked = false;
-        }});
-        // The columns a "match the list view" could not bring over are reported against that selection,
-        // so the report goes with it. A later match renders its own afresh.
-        const omitted = picker.querySelector("#{omitted}");
-        if (omitted) omitted.remove();
-        refresh(list);
-    }}
-
-    // Collapse/expand a parent's nested columns, at any depth.
-    function onCaret(event) {{
-        const caret = event.target.closest(".export-field-caret");
-        if (!caret || !caret.closest(LIST)) return;
-        const row = caret.closest("li");
-        if (row) setExpanded(row, caret.getAttribute("aria-expanded") !== "true");
-    }}
-
-    // Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX
-    // included -- ever sees (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real
-    // `change` so the picker's own `hx-trigger` can hear it; `objectmetadata_create.html` bridges its
-    // own select the same way. Delegated, so it survives the form being swapped into the modal. Namespaced,
-    // so that a later version of this script can unbind it.
-    const SELECT2_EVENTS = "select2:select.nbExportFieldSelect select2:clear.nbExportFieldSelect";
-    function bindSelect2ChangeBridge() {{
-        if (!window.jQuery) return;
-        window.jQuery(document).on(SELECT2_EVENTS, "{content_type_selector}", function () {{
-            this.dispatchEvent(new Event("change", {{bubbles: true}}));
-        }});
-    }}
-
-    document.addEventListener("change", onChange);
-    document.addEventListener("click", onClear);
-    document.addEventListener("click", onCaret);
-    // On a full page render this script runs while the document is still parsing, *before* the scripts at
-    // the end of the body have defined jQuery -- so binding is deferred to whenever that has happened.
-    // A widget swapped in by HTMX renders after page load, where jQuery is there already.
-    if (window.jQuery) bindSelect2ChangeBridge();
-    else document.addEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
-
-    window.nbExportFieldSelect = {{
-        version: VERSION,
-        refresh: refresh,
-        unbind: function () {{
-            document.removeEventListener("change", onChange);
-            document.removeEventListener("click", onClear);
-            document.removeEventListener("click", onCaret);
-            document.removeEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
-            if (window.jQuery) window.jQuery(document).off(SELECT2_EVENTS);
-        }},
-    }};
-}})();
-</script>"""
-        return format_html(
-            template,
-            # Of the script itself, so that a changed script is never mistaken for the one already bound.
-            version=hashlib.sha256(template.encode()).hexdigest()[:12],
-            content_type_selector=self.content_type_selector,
-            wrapper=self.WRAPPER_ID,
-            omitted=self.OMITTED_ID,
-            summary=self.SUMMARY_ID,
         )
 
     @staticmethod
@@ -657,7 +463,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
                 else "",
             )
         checkbox = self._checkbox(control, f"{widget_id}_option_{value}", option["label"], value, is_root)
-        # Filled in by the behavior script's `refresh()`, being a count of what is checked at the moment. It is
+        # Filled in by `export-fields.js` in the UI bundle, being a count of what is checked at the moment. It is
         # what says what a collapsed row holds, every row starting collapsed: expanding each that holds part
         # of a selection -- as a "match the list view" can make many -- would bury the tree.
         count = format_html('<span class="export-field-count small text-secondary text-nowrap ms-6"></span>')

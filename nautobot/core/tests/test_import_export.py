@@ -2198,17 +2198,9 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn(deep_path, [choice[0] for choice in form.fields["export_fields"].choices])
 
     def test_select__picker_says_why_it_is_empty(self):
-        """With nothing to choose from, the picker says which of the two reasons it is, and stays live.
-
-        The script goes out either way: it carries the bridge from Select2's pick to the `change` that
-        rebuilds the picker, and the Job's own form opens with no content type chosen -- so without it,
-        that first pick would leave this message in place forever.
-        """
+        """With nothing to choose from, the picker says which of the two reasons it is."""
         no_type = str(ExportObjectList.as_form(data={"content_type": ""})["export_fields"].as_widget())
         self.assertIn("Choose a content type", no_type)
-        self.assertIn("window.nbExportFieldSelect = {", no_type)
-        # Versioned by its own content, so a page already running another version of the script replaces it.
-        self.assertRegex(no_type, r'const VERSION = "[0-9a-f]{12}";')
 
         # `admin.logentry` is exportable only through an Export Template, having no serializer of its own.
         logentry = ContentType.objects.get(app_label="admin", model="logentry")
@@ -2217,7 +2209,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertIn("no fields an export can select", unserializable)
         self.assertNotIn("Choose a content type", unserializable)
-        self.assertIn("window.nbExportFieldSelect = {", unserializable)
 
     def test_select__form_offers_only_valid_paths(self):
         """Every path the picker offers passes validation, so it can never propose an unexportable column.
