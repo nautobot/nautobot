@@ -1003,6 +1003,21 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
             for path in self.widget.flatten_paths(selection)
             if path in self.widget.natural_keys
         }
+        # A selection may also name a related object with neither -- one with no natural-key lookups, nested under
+        # another -- whose row submits nothing. Such a path exports the related object's primary key, so it is shown
+        # as its `id` row; failing that, as an option of its own. Either way what was selected stays visible and can
+        # be unselected, rather than going unseen and being dropped when the form is resubmitted.
+        groups = {entry.parent for entry in entries}
+        for path in self.widget.flatten_paths(selection):
+            if path in groups and path not in self.widget.whole_options and path not in self.widget.natural_keys:
+                if parent_paths.get(f"{path}__id") == path:
+                    self.widget.substitutions[path] = [f"{path}__id"]
+                else:
+                    self.widget.whole_options[path] = (
+                        "As selected",
+                        "Selected by name, as this export was set up",
+                        None,
+                    )
         # As the widget will show it, which is what it is ordered by.
         selection = self.widget.format_value(selection)
         # A selected path the enumeration does not reach is offered anyway -- one naming a relation deeper
@@ -1049,7 +1064,8 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         selection = None
         if form.is_bound:
             content_type = form.data.get(form.add_prefix(self.content_type_field_name))
-            selection = form.data.get(form.add_prefix(name))
+            # As the widget reads it, which takes every checked box a browser posts rather than only the last.
+            selection = self.widget.value_from_datadict(form.data, form.files, form.add_prefix(name))
         if not content_type:
             content_type = form.initial.get(self.content_type_field_name)
         if not selection:

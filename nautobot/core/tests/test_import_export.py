@@ -25,6 +25,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
+from django.http import QueryDict
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -203,6 +204,22 @@ class MatchFieldsTests(TestCase):
         self.assertIn("module__pk", Interface.csv_natural_key_field_lookups())
         self.assertIsNone(self.match_fields(Interface, ["name", "device"]))
         self.assertEqual(self.match_fields(Interface, ["name", "device", "module"]), ["device", "module", "name"])
+
+    # A Location tree two levels below its roots, whatever the test data holds, so that the tree cannot reach a
+    # Location's whole natural key and a Device's is selected in part by its location's "Natural key" option.
+    @mock.patch.object(type(Location.objects), "max_depth", new_callable=mock.PropertyMock, return_value=2)
+    def test_match__natural_key_rows_cover_the_key(self, _max_depth):
+        """The rows the picker selects for a related object's natural key cover it as a match field.
+
+        Expanded as the Job expands them, an Interface's `device` rows -- the device's own fields, and its location's
+        "Natural key" option -- still stamp the match key, as selecting the bare `device` would.
+        """
+        device = next(
+            entry for entry in enumerate_field_paths(InterfaceSerializer) if entry.path == "device"
+        ).natural_key
+        self.assertIn("device__location", device)
+        export_field_paths = expand_relation_paths(Interface, ["name", *device, "module"])
+        self.assertEqual(self.match_fields(Interface, export_field_paths), ["device", "module", "name"])
 
     def test_match__partial_lookup_of_a_relation_is_not_enough(self):
         """`device__name` is one of three `device__` lookups the key needs; naming it alone is not coverage."""
@@ -2101,6 +2118,18 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertTrue(job_form.is_valid(), job_form.errors)
         self.assertEqual(job_form.cleaned_data["export_fields"], "name,device_type__manufacturer")
 
+    def test_select__selection_naming_a_relation_without_a_natural_key_shows_as_its_id(self):
+        """A selection naming a nested related object with no natural key shows as that object's `id`, checked.
+
+        A Relationship's `source_type` is a ContentType, which has no natural-key lookups, so naming it exports its
+        primary key -- just as its `id` row does. Shown as nothing, it would be dropped on resubmission.
+        """
+        job_form, rendered = self.render_picker(RelationshipAssociation, export_fields="relationship__source_type")
+        self.assertIn(" checked", self.checkbox_for(rendered, "relationship__source_type__id"))
+        self.assertIsNone(self.whole_option_for(rendered, "relationship__source_type"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "relationship__source_type")
+
     def test_select__rows_start_collapsed_even_holding_a_selection(self):
         """Every row starts collapsed, a count saying what it holds, so a broad selection does not bury the tree."""
         _form, rendered = self.render_picker(Device, export_fields="name,device_type,location,status")
@@ -2178,6 +2207,18 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(form["export_fields"].value(), ["color", "name"])
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["export_fields"], "color,name")
+
+    def test_select__form_keeps_the_order_a_browser_posts(self):
+        """A browser posts one value per checked box; all of them, in order, lead the rows when re-rendered.
+
+        As when the form comes back with an error: read as a single value, only the last box would count, and
+        the order the rows were dragged into would be lost.
+        """
+        data = QueryDict(mutable=True)
+        data["content_type"] = str(ContentType.objects.get_for_model(Status).pk)
+        data.setlist("export_fields", ["color", "name"])
+        field = ExportObjectList.as_form(data=data).fields["export_fields"]
+        self.assertEqual([choice[0] for choice in field.choices][:2], ["color", "name"])
 
     def test_select__form_keeps_a_path_deeper_than_the_picker_offers(self):
         """A hand-written path the enumeration never reaches survives the form, to be judged by the Job.

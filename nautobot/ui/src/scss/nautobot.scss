@@ -2568,6 +2568,18 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
   }
 }
 
+/*
+ * Children stacked in a single grid cell, so the box keeps the height of the tallest of them whichever is visible -
+ * e.g. alternative texts swapped with `.invisible` rather than `.d-none`, so nothing below moves as they change.
+ */
+.nb-stacked {
+  display: grid;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
 /* MDI icons */
 :is(i, span).mdi { /* `:is(i, span)` is required to overwrite the default `.mdi` class specificity. */
   &::before {

@@ -180,8 +180,8 @@ class ExportFieldsStringVar(StringVar):
         # API, a scheduled Job -- and would only repeat it below. See `ExportFieldSelect._summary()`.
         field.help_text = ""
         # A persistent HTMX swap target from `render_field`, rebuilt whenever the content type changes.
-        # Select2 raises only jQuery events, so the widget's script re-dispatches a native `change` for
-        # this trigger to hear. Set here rather than on the field class: the rebuild renders the field
+        # Select2 raises only jQuery events, so the UI bundle's `export-fields.js` re-dispatches a native
+        # `change` for this trigger to hear. Set here rather than on the field class: the rebuild renders the field
         # through `render_field` too, and would otherwise nest a second wrapper inside the first.
         field.htmx_attrs = {
             "id": ExportFieldSelect.WRAPPER_ID,

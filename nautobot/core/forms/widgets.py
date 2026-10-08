@@ -311,7 +311,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
         Both versions are rendered; `export-fields.js` in the UI bundle shows whichever applies. They share one grid
-        cell and are hidden by `visibility` rather than `display`, so the summary keeps the height of the longer of
+        cell (`.nb-stacked`) and are hidden by `visibility` rather than `display`, so the summary keeps the height of the longer of
         them and the tree below does not move as the selection starts or empties. A screen reader is told only the
         short status as the selection changes, rather than the whole summary on every click.
         """
@@ -321,14 +321,14 @@ class ExportFieldSelect(SelectMultipleOrderable):
             """
             <div id="{id}" class="form-text mb-6">
                 <span class="export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
-                <div class="d-grid">
-                    <div class="export-fields-summary-default{default_hidden}" style="grid-area: 1 / 1">
+                <div class="nb-stacked">
+                    <div class="export-fields-summary-default{default_hidden}">
                         <strong>No fields selected</strong><br>
                         The export has the default columns: each field of the {verbose_name} itself, with related
                         objects given as the fields that identify them, and any custom fields. Computed fields,
                         relationships, and similar opt-in data are not exported.
                     </div>
-                    <div class="export-fields-summary-selected{selected_hidden}" style="grid-area: 1 / 1">
+                    <div class="export-fields-summary-selected{selected_hidden}">
                         <strong><span class="export-fields-summary-count">{count}</span> selected</strong><br>
                         They are exported in the order shown. Clear the selection to export the default columns
                         instead.

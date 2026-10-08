@@ -181,10 +181,14 @@ export const initializeExportFields = () => {
   /*
    * Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX included -- ever sees
    * (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real `change` so the picker's own
-   * `hx-trigger` can hear it, rebuilding the picker for the newly chosen content type.
+   * `hx-trigger` can hear it, rebuilding the picker for the newly chosen content type. Only where there is a picker:
+   * jQuery handlers hear native events too, so elsewhere -- Import Objects' own content type, say -- the same
+   * selector would hear each pick twice.
    */
   $(document).on('select2:select select2:clear', CONTENT_TYPE_SELECTOR, (event) => {
-    event.currentTarget.dispatchEvent(new Event('change', { bubbles: true }));
+    if (document.getElementById(WRAPPER_ID)) {
+      event.currentTarget.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   });
 
   // Bring each picker's parent rows and summary into line with what it has checked, whenever one is loaded.
