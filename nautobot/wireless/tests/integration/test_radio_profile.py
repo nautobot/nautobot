@@ -20,7 +20,7 @@ class RadioProfileTestCase:
 
         radio_profiles.expect_bulk_edit_count(1)
         assert radio_profiles.get_bulk_edit_pks() == [created_radio_profile["id"]], (
-            "The bulk edit form should carry the id of the selected row"
+            "The bulk edit form should list the id of the selected row"
         )
         # Submit bulk edit form without any changes
         job_result_id = radio_profiles.apply_bulk_edit()

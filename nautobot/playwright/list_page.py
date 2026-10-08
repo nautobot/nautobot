@@ -43,7 +43,7 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
-    # The bulk edit form carries the selected ids as hidden pk inputs.
+    # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
     _JOB_RESULT_URL = re.compile(r"/extras/job-results/(?P<pk>[0-9a-f-]{36})/")
@@ -111,7 +111,7 @@ class ListPage(BasePage):
 
     @property
     def _edit_selected(self):
-        """Selector for Edit Selected. The formaction carries the active filter, and it has no name."""
+        """Selector for Edit Selected. The formaction includes the active filter, and it has no name."""
         return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
 
     def select_row(self, name):
