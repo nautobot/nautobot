@@ -144,6 +144,24 @@ def status_for(api):
 
 
 @pytest.fixture
+def user_favorites(api):
+    """The session user's navbar favorites, restored to their original value on teardown.
+
+    Favorites are entries in a single JSON field rather than REST records, so there is no
+    per-record handle for `create_object` to delete. Seeding and cleanup both go through
+    `/api/users/config/`, and teardown puts back whatever was there before the test.
+    """
+    original = api.get("/api/users/config/").json().get("navbar_favorites", [])
+
+    def _set(*favorites):
+        api.patch("/api/users/config/", data={"navbar_favorites": list(favorites)})
+
+    yield _set
+
+    api.patch("/api/users/config/", data={"navbar_favorites": original})
+
+
+@pytest.fixture
 def create_object(api):
     """Parameterized factory: create a REST object owned by this test, deleted on teardown.
 

@@ -17,7 +17,7 @@ const collapseSubtree = (event) => {
   event.target.setAttribute('hx-get', event.target.getAttribute('_hx-get'));
   htmx.process(event.target);
   url.searchParams.delete('expanded_subtree', event.target.closest('td').getAttribute('data-pk'));
-  window.history.replaceState(null, '', url);
+  window.nb.history.replaceState(null, '', url);
 };
 
 const afterSubtreeExpansion = (span, addExpandedPrefix) => {
@@ -31,7 +31,7 @@ const afterSubtreeExpansion = (span, addExpandedPrefix) => {
     const url = new URL(window.location.href);
     url.searchParams.delete('expanded_subtree', span.closest('td').getAttribute('data-pk')); // Avoid dupes
     url.searchParams.append('expanded_subtree', span.closest('td').getAttribute('data-pk'));
-    window.history.replaceState(null, '', url);
+    window.nb.history.replaceState(null, '', url);
   }
 };
 

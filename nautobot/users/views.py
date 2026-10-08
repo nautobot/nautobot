@@ -245,10 +245,19 @@ class UserConfigView(GenericView):
             return redirect("user:preferences")
 
 
+class UserNavbarFavoritesModalView(GenericView):
+    def get(self, request):
+        form = NavbarFavoritesAddForm(
+            initial={"link": request.GET.get("link", ""), "name": request.GET.get("name", "")},
+            auto_id="favorite_id_%s",
+        )
+        return render(request, "modals/inc/favorite_form.html", {"navbar_favorites_add_form": form})
+
+
 class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
     def post(self, request):
         if request.headers.get("HX-Request", False):
-            form = NavbarFavoritesAddForm(request.POST)
+            form = NavbarFavoritesAddForm(request.POST, user=request.user)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
                 navbar_favorites.append(form.cleaned_data)
@@ -260,6 +269,23 @@ class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
                     status=HTTPStatus.CREATED,
                 )
 
+            response = render(
+                request,
+                "modals/inc/favorite_form.html",
+                {"navbar_favorites_add_form": form},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            # The request asks for the favorites flyout, which is of no use when the form did not validate. Redirect
+            # the swap into the modal instead, so it stays open and shows what went wrong. Clearing the selection
+            # matters as well, as the form asks for a flyout this response does not carry, which would otherwise
+            # leave nothing to swap in. The error status keeps the client from treating this as a completed add,
+            # which would close the modal.
+            response["HX-Retarget"] = "#modal-content-container"
+            response["HX-Reselect"] = "unset"
+            response["HX-Reswap"] = "innerHTML"
+
+            return response
+
         return redirect(self.get_return_url(request))
 
 
@@ -269,7 +295,8 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
             form = NavbarFavoritesRemoveForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
-                navbar_favorites = [item for item in navbar_favorites if item.get("link") != form.cleaned_data["link"]]
+                removed_link = form.cleaned_data["link"].lower()
+                navbar_favorites = [item for item in navbar_favorites if item.get("link", "").lower() != removed_link]
                 request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
 
                 return render(

@@ -227,8 +227,8 @@ class User(BaseModel, AbstractUser):
         return self.get_config("navbar_favorites", [])
 
     @property
-    def navbar_favorites_link_list(self):
-        return [item.get("link") for item in self.navbar_favorites]
+    def navbar_favorite_links(self):
+        return [item.get("link", "").lower() for item in self.navbar_favorites]
 
 
 #

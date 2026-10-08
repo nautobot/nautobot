@@ -15,6 +15,7 @@ from django.core.validators import URLValidator
 from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
 from django.template.defaultfilters import date
+from django.template.loader import render_to_string
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
@@ -1354,10 +1355,11 @@ class ViewTestCases:
 
             # Check if title is rendered correctly
             title = self.get_title()
+            favorite_button = render_to_string("buttons/favorite.html", {"request": response.wsgi_request})
             expected_title = (
                 '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
                 '<img alt="" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
-                f"{title}</h1>"
+                f"{title}{favorite_button}</h1>"
             )
             self.assertBodyContains(response, expected_title, html=True)
 
@@ -1778,7 +1780,11 @@ class ViewTestCases:
             response = self.client.post(f"{self._get_url('bulk_edit')}?{query_string}", selected_data)
             # Expect a 200 status cause we are only rendering the bulk edit table after pressing Edit Selected button.
             self.assertHttpStatus(response, 200)
-            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            # The favorite star renders the page URL, filtered pks and all, so it is dropped before the check below.
+            favorite_button = render_to_string("buttons/favorite.html", {"request": response.wsgi_request})
+            response_body = utils.extract_page_body(response.content.decode(response.charset)).replace(
+                favorite_button, ""
+            )
             # Check if all pks is not part of the html.
             self.assertNotIn(str(first_pk), response_body)
             self.assertNotIn(str(second_pk), response_body)

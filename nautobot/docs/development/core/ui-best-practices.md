@@ -193,6 +193,37 @@ htmx.onLoad((content) => {
 });
 ```
 
+### Browser history
+
+The browser fires no event when a script changes the displayed URL through `history.pushState()` or
+`history.replaceState()`, which leaves any other component that depends on the current address with no way to notice.
+Nautobot wraps both methods so that they additionally dispatch a `nb-history:push-state` or `nb-history:replace-state`
+event on `window`, and those wrappers should be preferred over the native ones.
+
+```javascript
+window.nb.history.pushState(null, '', url);
+window.nb.history.replaceState(null, '', url);
+```
+
+!!! warning
+    `window.nb.history` is set up on the `DOMContentLoaded` event, so a script running before that has to fall back to
+    the native API, for example with `(window.nb?.history ?? window.history)?.replaceState(...)`.
+
+### Flipping element attributes
+
+An element that alternates between two sets of attributes, such as a button toggling between an add and a remove action,
+can declare both sets in its markup rather than having a script assemble them. The `data-nb-flip` attribute lists the
+names subject to flipping, and each `data-nb-flip-{name}` attribute parks the value that is not currently in effect.
+
+```html
+<button class="active" data-nb-flip="class title" data-nb-flip-class="" data-nb-flip-title="Add" title="Remove">
+```
+
+Calling `flipAttributes(element)` swaps every listed attribute with its parked counterpart, so the element is left
+describing the opposite state and another call brings it back. A listed attribute with no parked counterpart is removed
+rather than set, which is how an attribute that belongs to only one of the two states is expressed. Whenever any of the
+flipped names belongs to HTMX, the element is reprocessed so that the new attributes take effect.
+
 ### jQuery deprecation
 
 As of Nautobot 3.0, any jQuery usage is deprecated. There are other libraries still in use that depend on it (like Select2), but unless absolutely necessary, vanilla JavaScript should be used instead.

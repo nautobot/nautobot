@@ -1,9 +1,11 @@
 import json
+import re
 from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.template.loader import render_to_string
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from django.utils import timezone
@@ -199,6 +201,50 @@ class PreferenceTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
 
+class NavbarFavoritesAddViewTest(TestCase):
+    """Tests for the UserNavbarFavoritesAddView."""
+
+    def test_add_favorite(self):
+        """A submitted favorite is appended verbatim, query string and all."""
+        response = self.client.post(
+            reverse("user:navbar_favorites_add"),
+            data={"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 201)
+
+        self.user.refresh_from_db()
+        self.assertEqual(
+            self.user.navbar_favorites,
+            [{"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"}],
+        )
+
+
+class NavbarFavoritesDeleteViewTest(TestCase):
+    """Tests for the UserNavbarFavoritesDeleteView."""
+
+    def test_delete_favorite(self):
+        """Removal matches the whole link, so a query string makes a distinct favorite."""
+        self.user.set_config(
+            "navbar_favorites",
+            [
+                {"link": "/dcim/devices/", "name": "Devices", "tab_name": "Devices"},
+                {"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": ""},
+            ],
+            commit=True,
+        )
+
+        response = self.client.post(
+            reverse("user:navbar_favorites_delete"),
+            data={"link": "/dcim/devices/"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+
+        self.user.refresh_from_db()
+        self.assertEqual([item["link"] for item in self.user.navbar_favorites], ["/dcim/devices/?status=active"])
+
+
 class NavbarFavoritesReorderViewTest(TestCase):
     """Tests for the UserNavbarFavoritesReorderView."""
 
@@ -254,3 +300,78 @@ class NavbarFavoritesReorderViewTest(TestCase):
         self.assertIn("login", response.headers["HX-Redirect"])
         self.user.refresh_from_db()
         self.assertEqual(self.user.get_config("navbar_favorites", []), list(SAMPLE_FAVORITES))
+
+
+class NavbarFavoritesDuplicateNameTest(TestCase):
+    """Tests for the name uniqueness constraint on UserNavbarFavoritesAddView."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("user:navbar_favorites_add")
+        self.user.set_config(
+            "navbar_favorites",
+            [{"link": "/dcim/devices/", "name": "Devices", "tab_name": "Devices"}],
+            commit=True,
+        )
+
+    def test_duplicate_name_and_tab_name_is_rejected(self):
+        """A favorite is refused when both its name and tab name are already taken."""
+        response = self.client.post(
+            self.url,
+            data={"link": "/dcim/racks/", "name": "Devices", "tab_name": "Devices"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 400)
+        self.assertEqual(response.headers["HX-Retarget"], "#modal-content-container")
+        self.assertEqual(response.headers["HX-Reselect"], "unset")
+
+        self.user.refresh_from_db()
+        self.assertEqual(len(self.user.navbar_favorites), 1)
+
+    def test_same_name_under_a_different_tab_name_is_allowed(self):
+        """Name and tab name are unique together, so the same name may be reused under another tab."""
+        response = self.client.post(
+            self.url,
+            data={"link": "/dcim/racks/", "name": "Devices"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 201)
+
+        self.user.refresh_from_db()
+        self.assertEqual(len(self.user.navbar_favorites), 2)
+
+
+class NavbarFavoriteButtonTest(TestCase):
+    """Tests for the `data-nb-flip` configuration of the page title favorite button."""
+
+    LINK = "/dcim/locations/"
+
+    def _render_button(self, navbar_favorites):
+        """Render the button for a user with the given favorites, and return its flip configuration."""
+        self.user.set_config("navbar_favorites", navbar_favorites, commit=True)
+        request = RequestFactory().get(self.LINK)
+        request.user = self.user
+
+        attributes = dict(
+            re.findall(r'([\w:.-]+)="([^"]*)"', render_to_string("buttons/favorite.html", {"request": request}))
+        )
+        flipped = attributes["data-nb-flip"].split()
+        live = {name: attributes[name] for name in flipped if name in attributes}
+        parked = {name: attributes[f"data-nb-flip-{name}"] for name in flipped if f"data-nb-flip-{name}" in attributes}
+
+        return flipped, live, parked
+
+    def test_every_flipped_attribute_is_defined(self):
+        """A name listed in `data-nb-flip` is meaningless unless one of the two states defines it."""
+        for navbar_favorites in ([], [{"link": self.LINK, "name": "Locations", "tab_name": ""}]):
+            with self.subTest(navbar_favorites=navbar_favorites):
+                flipped, live, parked = self._render_button(navbar_favorites)
+                self.assertEqual(sorted(flipped), sorted(set(live) | set(parked)))
+
+    def test_flip_configuration_is_symmetric(self):
+        """What one state has in effect, the other has parked, so flipping either way restores the opposite state."""
+        _, inactive_live, inactive_parked = self._render_button([])
+        _, active_live, active_parked = self._render_button([{"link": self.LINK, "name": "Locations", "tab_name": ""}])
+
+        self.assertEqual(inactive_live, active_parked)
+        self.assertEqual(inactive_parked, active_live)

@@ -273,7 +273,6 @@
         {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
-    {% include 'inc/generic_modal.html' %}
 {% endblock content %}
 
 
@@ -301,7 +300,7 @@
             if (window.location.pathname !== '{{ object.get_absolute_url }}') {
                 window.location.href = next_href;
             } else if (window.history.state.id !== tab_id) {
-                window.history.pushState({ id: tab_id }, document.title, next_href);
+                window.nb.history.pushState({ id: tab_id }, document.title, next_href);
             }
 
             // If set, reload the page after asserting state.
@@ -332,7 +331,8 @@
 
         if (tab_id) {
             const tab_url = window.location.origin + window.location.pathname + window.location.search;
-            window.history.replaceState({ id: tab_id }, document.title, tab_url);
+            // `window.nb.history` may not be initialized yet, so it is fine to fall back to `window.history`.
+            (window.nb?.history ?? window.history)?.replaceState({ id: tab_id }, document.title, tab_url);
             show_tab(tab_id);
         }
 

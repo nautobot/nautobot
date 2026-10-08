@@ -26,6 +26,11 @@
     htmx.config.historyRestoreAsHxRequest = false;
     htmx.config.refreshOnHistoryMiss = true;
     document.addEventListener('DOMContentLoaded', () => {
+        window.nb.favorites.initializeFavorites(
+            '{% url "user:navbar_favorites_add" %}',
+            '{% url "user:navbar_favorites_delete" %}',
+            '{{ settings.BRANDING_TITLE }}',
+        );
         window.nb.messages.watchMessages('{% url "messages" %}');
     });
 </script>

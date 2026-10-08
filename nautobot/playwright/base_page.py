@@ -57,6 +57,12 @@ class BasePage:
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # The page title star marks itself as the button tracking the current URL, so it needs no structural scoping.
+    _FAVORITE_STAR = "[data-nb-favorite-current]"
+    # One anchor per entry in the sidenav favorites flyout, carrying the favorited link.
+    _FAVORITE_ENTRY = ".nb-sidenav-favorites-container li a"
+    # The star is `visibility: hidden` until its `#header` ancestor is hovered.
+    _HEADER = "#header"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -112,6 +118,22 @@ class BasePage:
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()
         self.wait_for_load()
+
+    # -------------------------------------------------------------------------
+    # Favorites
+    # -------------------------------------------------------------------------
+
+    def reveal_favorite_star(self):
+        """Hover the header, without which the page title star is not actionable."""
+        self.page.locator(self._HEADER).hover()
+
+    def favorite_star(self, label):
+        """Locator for the page title star, named *label*, e.g. "Add to Favorites"."""
+        return self.page.locator(f'{self._FAVORITE_STAR}[aria-label="{label}"]')
+
+    def favorite_entries(self, path):
+        """Locator for the sidenav favorites flyout entries pointing at *path*."""
+        return self.page.locator(f'{self._FAVORITE_ENTRY}[href="{path}"]')
 
     # -------------------------------------------------------------------------
     # Panels

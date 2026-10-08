@@ -1,0 +1,45 @@
+{% if request.user.is_authenticated %}
+    <button
+        data-bs-target="#nautobot-generic-modal"
+        data-nb-favorite-current {# Enable this button to follow any SPA-like URL changes, like switching tabs. #}
+        data-nb-favorite-link="{{ request.get_full_path|lower }}"
+        data-nb-flip="aria-label class data-bs-toggle hx-get hx-post hx-select hx-swap hx-target hx-vals title"
+        type="button"
+        {% if request.get_full_path|lower in request.user.navbar_favorite_links %}
+                {# Use aria-label instead of visually-hidden child element in order to be able to flip the attribute. #}
+            aria-label="Remove from Favorites"
+            class="nb-btn-favorite active"
+            hx-post="{% url 'user:navbar_favorites_delete' %}"
+            hx-select="#sidenav-flyout-favorites"
+            hx-swap="outerHTML"
+            hx-target="#sidenav-flyout-favorites"
+            hx-vals="javascript:{&quot;link&quot;:this.getAttribute('data-nb-favorite-link')}"
+            title="Remove from Favorites"
+            data-nb-flip-aria-label="Add to Favorites"
+            data-nb-flip-class="nb-btn-favorite"
+            data-nb-flip-data-bs-toggle="modal"
+            data-nb-flip-hx-get="{% url 'user:navbar_favorites_modal' %}"
+            data-nb-flip-hx-swap="innerHTML"
+            data-nb-flip-hx-target="#modal-content-container"
+            data-nb-flip-hx-vals="javascript:{&quot;link&quot;:window.nb.favorites.getFavoriteLink(),&quot;name&quot;:window.nb.favorites.getFavoriteName()}"
+            data-nb-flip-title="Add to Favorites"
+        {% else %}
+            aria-label="Add to Favorites"
+            class="nb-btn-favorite"
+            data-bs-toggle="modal"
+            hx-get="{% url 'user:navbar_favorites_modal' %}"
+            hx-swap="innerHTML"
+            hx-target="#modal-content-container"
+            hx-vals="javascript:{&quot;link&quot;:window.nb.favorites.getFavoriteLink(),&quot;name&quot;:window.nb.favorites.getFavoriteName()}"
+            title="Add to Favorites"
+            data-nb-flip-aria-label="Remove from Favorites"
+            data-nb-flip-class="nb-btn-favorite active"
+            data-nb-flip-hx-post="{% url 'user:navbar_favorites_delete' %}"
+            data-nb-flip-hx-select="#sidenav-flyout-favorites"
+            data-nb-flip-hx-swap="outerHTML"
+            data-nb-flip-hx-target="#sidenav-flyout-favorites"
+            data-nb-flip-hx-vals="javascript:{&quot;link&quot;:this.getAttribute('data-nb-favorite-link')}"
+            data-nb-flip-title="Remove from Favorites"
+        {% endif %}
+    ></button>
+{% endif %}
