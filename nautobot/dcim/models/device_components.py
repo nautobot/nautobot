@@ -1271,6 +1271,20 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         ),
     )
 
+    # NULL exempts module-owned names from the device-name constraint. A stored
+    # generated column supports PostgreSQL and MySQL, including MySQL 8.0.11.
+    # Never serialize this internal value or read it back just for change logging.
+    _device_name_scope = models.GeneratedField(
+        expression=models.Case(
+            models.When(module__isnull=True, then=models.Value(1)),
+            output_field=models.IntegerField(),
+        ),
+        output_field=models.IntegerField(),
+        db_persist=True,
+        null=True,
+        serialize=False,
+    )
+
     objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
@@ -1281,6 +1295,11 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         )  # Module.ordering is complex; don't order by module
         constraints = [
             *ModularComponentModel.Meta.constraints,
+            models.UniqueConstraint(
+                fields=("device", "name", "_device_name_scope"),
+                name="dcim_interface_device_name_unique",
+                violation_error_message="An interface with this name already exists directly on this device.",
+            ),
             # A given trunk position can be claimed by at most one child interface. Rows without a
             # breakout_position are exempt automatically: NULL != NULL, so they never collide.
             models.UniqueConstraint(
