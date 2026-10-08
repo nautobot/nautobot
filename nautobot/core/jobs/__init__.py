@@ -178,9 +178,8 @@ class ExportFieldsStringVar(StringVar):
         # `ScriptVariable.as_field()` adds Bootstrap's `form-control` to every non-checkbox widget, which
         # styles an input box; the widget renders a list of rows and brings its own classes.
         field.widget.attrs["class"] = field.widget.attrs.get("class", "").replace(" form-control", "")
-        # The picker says what an empty selection exports, and how to use it, above the tree where it is read
-        # before choosing; the variable's description is for those spelling the value out by hand -- the REST
-        # API, a scheduled Job -- and would only repeat it below. See `ExportFieldSelect._summary()`.
+        # The picker explains the default columns above the tree (`ExportFieldSelect._summary()`); the variable's
+        # description, written for REST API and scheduled-Job callers, would only repeat it below.
         field.help_text = ""
         # A persistent HTMX swap target from `render_field`, rebuilt whenever the content type changes.
         # Select2 raises only jQuery events, so the UI bundle's `export-fields.js` re-dispatches a native

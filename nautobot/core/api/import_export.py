@@ -315,28 +315,24 @@ class ExportFieldPath:
     # Whether an import needs this field to create a record. Only ever true at the top level, as an import
     # looks related objects up rather than creating them.
     required: bool
-    # For a related object with a natural key, the rows selecting it: those making it up -- fields, or the
-    # "Natural key" options of related objects nested under it -- or else its own "Natural key" option together
-    # with the parts of its natural key that are rows. E.g. for an Interface's `device`,
-    # `["device__name", "device__tenant__name", "device__location", "device__location__name"]`. None otherwise.
+    # For a related object with a natural key, the rows that select it, e.g. for an Interface's `device`,
+    # `["device__name", "device__tenant__name", "device__location", "device__location__name"]`. See
+    # `_natural_key_rows()`. None otherwise.
     natural_key: list[str] | None = None
-    # For a path that has paths nested under it but may also be selected as a whole -- a related object whose
-    # natural key is *not* made of rows offered under it, which then exports its natural key, or
-    # `custom_fields`, which exports every custom field -- the label of the option that does so, e.g.
-    # "Natural key". None otherwise.
-    whole_label: str | None = None
-    # What selecting the path as a whole exports, e.g. "The fields that identify this object by default:
+    # For a path with an option submitting the bare path -- a related object whose natural key is not made of rows
+    # offered under it, or `custom_fields` -- that option's label, e.g. "Natural key".
+    bare_label: str | None = None
+    # What that option exports, e.g. "The fields that identify this object by default:
     # location__name, location__parent__name".
-    whole_description: str | None = None
+    bare_description: str | None = None
     # The Material Design icon marking that option, if any, e.g. "mdi-key-link" for a natural key.
-    whole_icon: str | None = None
+    bare_icon: str | None = None
 
 
 def natural_key_lookups_for(model):
     """`model.csv_natural_key_field_lookups()`, or None if `model` is None or has no such natural key.
 
-    `ContentType` and `Group`, for example, are not Nautobot models, and are exported in a representation of
-    their own rather than as lookups.
+    `ContentType` and `Group`, for example, have none, and export in a representation of their own.
     """
     lookups_method = getattr(model, "csv_natural_key_field_lookups", None)
     if lookups_method is None:
@@ -358,7 +354,7 @@ def expand_relation_paths(model, paths):
         >>> expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"])
         ["image_file_name", "software_version__platform__name"]
 
-    Paths are kept in order; any other path is returned unchanged.
+    Paths are kept in order, without duplicates; any other path is returned unchanged.
     """
     expanded = []
     for path in paths:
@@ -463,8 +459,7 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                     # raising, so the file would come out missing a column that was asked for by name.
                     errors.append(f'"{path}": "{part}" is computed for display only and cannot be exported')
                 elif index > 0:
-                    # A nested path ending at a related object is expanded to its natural key
-                    # (`expand_relation_paths()`), which reads that object as surely as naming its fields would.
+                    # A nested path ending at a related object exports its natural key (`expand_relation_paths()`).
                     related_model = _traversable_relation_target(serializer, field)
                     if natural_key_lookups_for(related_model) and (
                         error := _view_permission_error(path, related_model, user)
@@ -502,12 +497,18 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
     identifies it leads (`PRIORITY_CSV_FIELDS`, as in an unordered export's columns), then the fields an
     import requires, then the rest, each of those two groups alphabetical, and `custom_fields` last with
     its own fields nested under it. Only the root has a required group, nothing below it being required
-    of anyone (see `required` under Returns). Serializer declaration order is deliberately not used: it is
+    of anyone (see `ExportFieldPath.required`). Serializer declaration order is deliberately not used: it is
     rarely arranged with intent, so it reads as arbitrary in a list someone has to find a field in.
 
     This is the order the fields are *offered* in, which is only the starting point for a selection: the
     order a selection is submitted in is the order its columns come out in, and rearranging it is what the
     picker is for.
+
+    A related object has its own fields nested under it, and the rows selecting its natural key are noted
+    (`ExportFieldPath.natural_key`). Where those can't all be fields -- the key reaches deeper than the tree, or
+    is the primary key, offered only as `id` -- it gets a "Natural key" option (`ExportFieldPath.bare_label`).
+    A top-level related object with no natural-key lookups, such as a `ContentType`, is offered as a plain
+    field, exported in its own representation. No relation is offered at the deepest level.
 
     The counterpart to `validate_field_paths()`, and for the shape of a path its subset: what is offered
     here validates, so a UI built on it cannot propose a column the export would reject or silently drop.
@@ -536,14 +537,6 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         for_csv (bool): Whether the paths are for a flat (CSV) export, which has fewer emittable fields
             than the document formats.
 
-    A related object has its own fields nested under it. Where its natural key is made of rows offered under
-    it, they are named as such (see `ExportFieldPath.natural_key`); where it is not -- reaching deeper than the
-    enumeration goes, or including the primary key, which is offered as `id` -- the object may instead be
-    selected as a whole, which exports its natural key (see `ExportFieldPath.whole_label`). A top-level one
-    with no natural-key lookups -- a `ContentType`, say, which exports in a representation of its own -- is
-    offered only as a field of its own. No relation is offered at the deepest level, where it could have
-    nothing under it.
-
     Returns:
         list[ExportFieldPath]: The offered paths, in reading order.
     """
@@ -557,7 +550,7 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         name for name in (EXCLUDED_CSV_FIELDS if for_csv else EXCLUDED_DOCUMENT_FIELDS) if name != "custom_fields"
     )
     paths = []
-    # Each offered related object's natural key, as the columns that selecting it as a whole exports.
+    # Each offered related object's natural key, as the columns its bare path exports.
     natural_keys = {}
     lookups_by_model = {}
 
@@ -654,8 +647,8 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         if custom_field_keys:
             for entry in paths:
                 if entry.path == "custom_fields":
-                    entry.whole_label = "All custom fields"
-                    entry.whole_description = "Every custom field, including any added after this export is set up"
+                    entry.bare_label = "All custom fields"
+                    entry.bare_description = "Every custom field, including any added after this export is set up"
 
     parents = {entry.parent for entry in paths}
     fields = {entry.path for entry in paths if entry.path not in parents}
@@ -664,10 +657,9 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
     def _represent(group):
         """The offered rows exporting exactly the natural key of the related object `group`, or None.
 
-        Each field of the natural key is its own row, if it is one; else, for a nested related object, the rows
-        selecting that object's natural key (see `_natural_key_rows()`). A nested object's "Natural key" option
-        stands in only if it exports exactly the columns it replaces: a Location's own natural key reaches one
-        ancestor further than its parent's part in its child's natural key does, the extra column always empty.
+        Each field of the key is its own row, or for a nested related object, the rows selecting its natural key.
+        The result must export exactly `group`'s key columns: a Location parent's own natural key, for one, goes
+        an ancestor further than its part in its child's key, adding an always-empty column.
         """
         if group not in represented:
             prefix = f"{group}__"
@@ -688,10 +680,9 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         return represented[group]
 
     def _natural_key_rows(group):
-        """The rows selecting the natural key of the related object `group`: those making it up, if there are any.
+        """The rows selecting the natural key of the related object `group`: those making it up, if possible.
 
-        Otherwise its "Natural key" option, together with the parts of that natural key that are rows: they add
-        no column, but show what the option includes.
+        Otherwise its "Natural key" option, plus whichever key fields are rows, to show what the option includes.
         """
         return _represent(group) or [group, *(column for column in natural_keys[group] if column in fields)]
 
@@ -700,10 +691,10 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
             continue
         entry.natural_key = _natural_key_rows(entry.path)
         if not _represent(entry.path):
-            entry.whole_label = "Natural key"
+            entry.bare_label = "Natural key"
             # As the import form marks a related object, identified by its natural key.
-            entry.whole_icon = "mdi-key-link"
-            entry.whole_description = "The fields that identify this object by default: " + ", ".join(
+            entry.bare_icon = "mdi-key-link"
+            entry.bare_description = "The fields that identify this object by default: " + ", ".join(
                 natural_keys[entry.path]
             )
 

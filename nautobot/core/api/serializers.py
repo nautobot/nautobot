@@ -357,8 +357,8 @@ class NaturalKeyRepresentationMixin:
             if selected_heads is not None:
                 if field.name not in selected_heads:
                     continue
-                # An explicit nested selection (e.g. `device_type__manufacturer__name`) is exported as named,
-                # and only adds to the relation's natural key if the bare relation is selected as well.
+                # Nested paths (e.g. `device_type__manufacturer__name`) are exported as named; the relation's
+                # natural key is added only if the bare relation is selected too.
                 field_lookups.extend(path for path in export_fields if path.startswith(f"{field.name}__"))
                 if field.name not in export_fields:
                     continue
@@ -366,7 +366,7 @@ class NaturalKeyRepresentationMixin:
             field_lookups.extend(
                 f"{field.name}__{lookup}" for lookup in natural_key_lookups_for(field.related_model) or ()
             )
-        # A nested selection may name a lookup of the natural key it is selected alongside.
+        # A nested path may repeat one of the natural key's lookups.
         return list(dict.fromkeys(field_lookups))
 
     def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):

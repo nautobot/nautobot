@@ -989,32 +989,30 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         parent_paths = {entry.path: entry.parent for entry in entries}
         choices = [(entry.path, entry.label + (" *" if entry.required else "")) for entry in entries]
         self.widget.parent_paths = parent_paths
-        # The rows that may also be selected as a whole, by an option of their own; see `ExportFieldPath.whole_label`.
-        self.widget.whole_options = {
-            entry.path: (entry.whole_label, entry.whole_description, entry.whole_icon)
+        # Rows with an option submitting their bare path; see `ExportFieldPath.bare_label`.
+        self.widget.bare_options = {
+            entry.path: (entry.bare_label, entry.bare_description, entry.bare_icon)
             for entry in entries
-            if entry.whole_label
+            if entry.bare_label
         }
-        # The rows making up each related object's natural key, where the tree offers them: what the first click
-        # on the related object's row selects, and what a selection naming the related object is shown as.
+        # The rows selecting each related object's natural key: what the first click on its row selects, and what
+        # a selection naming it is shown as.
         self.widget.natural_keys = {entry.path: entry.natural_key for entry in entries if entry.natural_key}
         self.widget.substitutions = {
             path: self.widget.natural_keys[path]
             for path in self.widget.flatten_paths(selection)
             if path in self.widget.natural_keys
         }
-        # A selection may also name a related object with neither -- one with no natural-key lookups, nested under
-        # another -- whose row submits nothing. Such a path exports the related object's primary key, so it is shown
-        # as its `id` row; failing that, as an option of its own. Either way what was selected stays visible and can
-        # be unselected, rather than going unseen and being dropped when the form is resubmitted.
+        # A nested related object with no natural-key lookups has neither, so a selection naming it would show as
+        # nothing and be dropped on resubmission. It exports the object's primary key, so show it as its `id` row.
         groups = {entry.parent for entry in entries}
         for path in self.widget.flatten_paths(selection):
-            if path in groups and path not in self.widget.whole_options and path not in self.widget.natural_keys:
+            if path in groups and path not in self.widget.bare_options and path not in self.widget.natural_keys:
                 if parent_paths.get(f"{path}__id") == path:
                     self.widget.substitutions[path] = [f"{path}__id"]
                 else:
                     # Defensive: every serializer the tree walks offers `id`, so this is not expected to be reached.
-                    self.widget.whole_options[path] = (
+                    self.widget.bare_options[path] = (
                         "As selected",
                         "Selected by name, as this export was set up",
                         None,

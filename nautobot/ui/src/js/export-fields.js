@@ -20,16 +20,15 @@ const LEAF = 'input.nb-export-field-leaf';
 // A parent row's own checkbox is in its header; the fields it stands for are everything nested under it.
 const leavesUnder = (row) => [...row.querySelectorAll(`:scope > .nb-export-nested ${LEAF}`)];
 
-// The option selecting a row as a whole -- "Natural key", say -- is the first row nested directly under it.
-const wholeOptionOf = (row) => row.querySelector(':scope > .nb-export-nested > li > div input.nb-export-field-whole');
+// The option submitting a row's bare path -- "Natural key", say -- is the first row nested directly under it.
+const bareOptionOf = (row) => row.querySelector(':scope > .nb-export-nested > li > div input.nb-export-field-bare');
 
-// The rows making up a related object's natural key, where it has any.
+// The rows selecting a related object's natural key, if it has one.
 const naturalKeyOf = (parent) => new Set(JSON.parse(parent.dataset.naturalKey || '[]'));
 
 /*
- * What clicking a parent row does next, given how much of what is under it is checked: nothing goes to its natural
- * key -- the rows that make it up, or else its option for selecting it as a whole -- if it has one; everything goes
- * to nothing; and any partial selection, the natural key included, goes to everything.
+ * What clicking a parent row selects next. From nothing: its natural key, or else its bare-path option, if it has
+ * either. From everything: nothing. From anything else: everything.
  */
 const nextSelection = (row, parent, leaves) => {
   const checked = leaves.filter((leaf) => leaf.checked).length;
@@ -41,9 +40,9 @@ const nextSelection = (row, parent, leaves) => {
     if (naturalKey.size > 0) {
       return (leaf) => naturalKey.has(leaf.value);
     }
-    const whole = wholeOptionOf(row);
-    if (whole) {
-      return (leaf) => leaf === whole;
+    const bare = bareOptionOf(row);
+    if (bare) {
+      return (leaf) => leaf === bare;
     }
   }
   return () => true;
@@ -57,9 +56,9 @@ const nextActionTitle = (row, parent, checked) => {
   if (checked === 0 && naturalKeyOf(parent).size > 0) {
     return 'Select the fields that identify this object';
   }
-  const whole = wholeOptionOf(row);
-  if (checked === 0 && whole) {
-    return `Select "${whole.dataset.label}"`;
+  const bare = bareOptionOf(row);
+  if (checked === 0 && bare) {
+    return `Select "${bare.dataset.label}"`;
   }
   return 'Select all fields';
 };
@@ -131,9 +130,8 @@ const onChange = (event) => {
   }
   if (changed.matches(PARENT)) {
     /*
-     * The browser has already toggled the box, which says nothing here: what it stands for is stepped on from what
-     * was checked under it, and its own state then follows from that. Left collapsed: expanding every row clicked
-     * through would bury the tree, and the row's count already says how much it now holds.
+     * The browser's own toggle of the box is ignored: what is under it is stepped on, and `refresh()` then sets the
+     * box to match. The row stays collapsed; its count shows what it now holds.
      */
     const row = changed.closest('li');
     const leaves = leavesUnder(row);
@@ -151,11 +149,11 @@ const onClear = (clear) => {
   if (!list) {
     return;
   }
-  // Unchecking in script raises no "change" event, so the refresh the change handler would have done is done here.
+  // Unchecking in script raises no "change" event, so refresh here.
   list.querySelectorAll(LEAF).forEach((leaf) => {
     leaf.checked = false;
   });
-  // The columns a "match the list view" could not bring over are reported against that selection, so go with it.
+  // The report of what "Match the list view" left out belongs to the selection being cleared.
   picker.querySelector(`#${OMITTED_ID}`)?.remove();
   refresh(list);
 };
@@ -179,11 +177,10 @@ export const initializeExportFields = () => {
   document.addEventListener('click', onClick);
 
   /*
-   * Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX included -- ever sees
-   * (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real `change` so the picker's own
-   * `hx-trigger` can hear it, rebuilding the picker for the newly chosen content type. Only where there is a picker:
-   * jQuery handlers hear native events too, so elsewhere -- Import Objects' own content type, say -- the same
-   * selector would hear each pick twice.
+   * Select2 announces a pick with a jQuery event only, which HTMX never sees
+   * (https://github.com/select2/select2/issues/1908). Re-dispatch it as a native `change`, so the picker's
+   * `hx-trigger` rebuilds it for the chosen content type. Only where there is a picker: jQuery handlers hear native
+   * events too, so elsewhere (Import Objects, say) each pick would be handled twice.
    */
   $(document).on('select2:select select2:clear', CONTENT_TYPE_SELECTOR, (event) => {
     if (document.getElementById(WRAPPER_ID)) {

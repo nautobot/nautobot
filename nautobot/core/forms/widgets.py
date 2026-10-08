@@ -127,13 +127,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
     orderable. The submitted order is therefore the order of the top-level rows, which is what the export
     lays its columns out in.
 
-    A row with rows nested under it is a tri-state control over them rather than a field of its own, and
-    submits nothing: it is checked when everything under it is, and indeterminate when some of it is. Clicking
-    a related object's row steps through its natural key, then everything, then nothing, or straight to
-    everything from any other partial selection. Its natural key is the rows that make it up where the tree
-    offers them (see `natural_keys`), and otherwise a "Natural key" option of its own, nested first under it,
-    which submits the bare path (see `whole_options`; `custom_fields` has such an option too, "All custom
-    fields"). Any other row with rows under it selects everything, then nothing.
+    A row with rows nested under it is a tri-state control over them, submitting nothing itself: checked when
+    everything under it is, indeterminate when some of it is. Clicking it selects first its natural key (see
+    `natural_keys`) or its option submitting the bare path (see `bare_options`: "Natural key", or "All
+    custom fields"), if it has either; then everything; then nothing. Any other partial selection goes to
+    everything.
 
     `parent_paths` maps each value to the value it nests under; `ExportFieldsChoiceField` sets it from
     `enumerate_field_paths()`. Without it, nesting falls back to the dunder structure of the path itself.
@@ -173,18 +171,17 @@ class ExportFieldSelect(SelectMultipleOrderable):
         self.no_list_view = False
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
-        # For each row that may also be selected as a whole, the label, description and icon of the option that
-        # does so; see `ExportFieldPath.whole_label`.
-        self.whole_options = {}
-        # For each related object whose natural key is made of rows the tree offers, those rows: what the first
-        # click on its row selects. See `ExportFieldPath.natural_key`.
+        # For each row with an option submitting its bare path, that option's label, description and icon; see
+        # `ExportFieldPath.bare_label`.
+        self.bare_options = {}
+        # For each related object, the rows selecting its natural key; see `ExportFieldPath.natural_key`.
         self.natural_keys = {}
         # Paths a selection may name that the tree has no row for, each with the rows it is shown as instead.
         self.substitutions = {}
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
-        # `nb-export-field-select` is what the UI bundle's `export-fields.js`, the tree's behavior, looks for.
+        # `nb-export-field-select` is what the UI bundle's `export-fields.js` looks for.
         self.attrs["class"] = (
             "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list nb-export-field-select "
             "py-8"
@@ -246,9 +243,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
         # No wrapper of its own: the whole picker is replaced at once when it has to be rebuilt
         # server-side, and the element that persists across those swaps is the one `render_field` puts
-        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents. Its behavior
-        # is the UI bundle's `export-fields.js`, which also works out the parent rows' states whenever a
-        # picker is loaded -- "indeterminate" having no markup of its own.
+        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents. The UI bundle's
+        # `export-fields.js` sets the parent rows' states once it is loaded, "indeterminate" having no markup.
         return format_html(
             '{}{}<ol id="{}" class="{}">{}</ol>',
             self._toolbar(selected_count=len(widget["value"])),
@@ -309,11 +305,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
     def _summary(self, selected_count):
         """What the export will contain: the default columns if nothing is selected, else the selected count.
 
-        Shown above the tree, in place of the field's help text below it (see `ExportFieldsStringVar.as_field()`).
-        Both versions are rendered; `export-fields.js` in the UI bundle shows whichever applies. They share one grid
-        cell (`.nb-stacked`) and are hidden by `visibility` rather than `display`, so the summary keeps the height of
-        the longer of them and the tree below does not move as the selection starts or empties. A screen reader is
-        told only the short status as the selection changes, rather than the whole summary on every click.
+        Shown above the tree in place of the field's help text (see `ExportFieldsStringVar.as_field()`). Both
+        versions are rendered and `export-fields.js` shows whichever applies; stacked in one grid cell
+        (`.nb-stacked`) and hidden by `visibility`, they keep the summary one height, so the tree doesn't move.
+        Screen readers are told only the short status, not the whole summary on every click.
         """
         model = self.content_type.model_class() if self.content_type is not None else None
         verbose_name = model._meta.verbose_name if model is not None else "object"
@@ -401,12 +396,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
             path=path,
         )
 
-    def _whole_option(self, path, widget_id, name, selected):
-        """The first row nested under `path`, selecting it as a whole -- "Natural key", say -- by submitting `path`."""
-        label, description, icon = self.whole_options[path]
-        control_id = f"{widget_id}_whole_{path}"
+    def _bare_option(self, path, widget_id, name, selected):
+        """The first row nested under `path`: the option submitting `path` itself, e.g. "Natural key"."""
+        label, description, icon = self.bare_options[path]
+        control_id = f"{widget_id}_bare_{path}"
         control = format_html(
-            '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-whole" id="{}" name="{}" '
+            '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-bare" id="{}" name="{}" '
             'type="checkbox" value="{}" data-label="{}"{}>',
             control_id,
             name,
@@ -463,9 +458,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
                 else "",
             )
         checkbox = self._checkbox(control, f"{widget_id}_option_{value}", option["label"], value, is_root)
-        # Filled in by `export-fields.js` in the UI bundle, being a count of what is checked at the moment. It is
-        # what says what a collapsed row holds, every row starting collapsed: expanding each that holds part
-        # of a selection -- as a "match the list view" can make many -- would bury the tree.
+        # Filled in by `export-fields.js` with how much is checked, so a collapsed row shows what it holds. Rows
+        # always start collapsed: expanding every one holding part of a selection would bury the tree.
         count = format_html('<span class="nb-export-field-count small text-secondary text-nowrap ms-6"></span>')
         caret = (
             format_html(
@@ -489,8 +483,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
             children = format_html_join(
                 "", "{}", ((self._render_node(child, widget_id, name, False),) for child in node["children"])
             )
-            if value in self.whole_options:
-                children = format_html("{}{}", self._whole_option(value, widget_id, name, selected), children)
+            if value in self.bare_options:
+                children = format_html("{}{}", self._bare_option(value, widget_id, name, selected), children)
             # First nested level clears the drag handle and parent checkbox; deeper levels compound. See
             # `.nb-export-nested` in the stylesheet.
             nested = format_html(
