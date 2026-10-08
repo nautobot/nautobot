@@ -1,9 +1,10 @@
 """The fields of a model a condition can name, and what a form needs to know about each.
 
 A condition addresses the change record, not the model, so what it can name is whatever
-`serialize_object_v2` puts there. Read from the same serializer, so the two cannot drift apart. Custom
-fields are not fields of the serializer, so they are read from `CustomField`, the set the record is
-written from.
+`serialize_object_v2` puts there. Read from the same serializer, so the two cannot drift apart. The
+serializer carries one field, `custom_fields`, holding them all as a mapping, so walking its fields
+never names a custom field on its own. Each one is read from `CustomField`, the same set that mapping
+is written from.
 """
 
 from functools import reduce

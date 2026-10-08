@@ -175,7 +175,7 @@ def _options_for_chosen_values(value):
 
 def _name_choices(entries):
     """Fields as a select offers them in label order, storing the path and showing the label."""
-    ordered = sorted(entries, key=lambda entry: entry["label"])
+    ordered = sorted(entries, key=lambda entry: entry["label"].casefold())
     return add_blank_choice((entry["name"], entry["label"]) for entry in ordered)
 
 

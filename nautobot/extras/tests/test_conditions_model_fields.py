@@ -17,8 +17,8 @@ class AddressableFieldsTest(NautobotTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        status_note = CustomField.objects.create(label="Status Note", type=CustomFieldTypeChoices.TYPE_TEXT)
-        status_note.content_types.add(ContentType.objects.get_for_model(Status))
+        note = CustomField.objects.create(label="Addressable Note", type=CustomFieldTypeChoices.TYPE_TEXT)
+        note.content_types.add(ContentType.objects.get_for_model(Location), ContentType.objects.get_for_model(Status))
         cls.location = Location.objects.create(
             name="Addressable Fields Test",
             location_type=LocationType.objects.create(name="Addressable Fields Test Type"),

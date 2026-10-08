@@ -30,7 +30,7 @@ A field holding a plain list is named the same way. Its values are typed rather 
 
 A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own is a mapping, like a relation.
 
-A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value is a mapping on one object and a plain value on the next, so no operator fits the field. A raw expression can still read it.
+A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value could be a mapping on one object and a plain value on the next, so no operator fits the field. A raw expression can still read it.
 
 ## Presets
 
