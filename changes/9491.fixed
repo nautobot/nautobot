@@ -1,0 +1,1 @@
+Fixed bulk component creation reporting success after a database error and committing earlier components when a later component failed form validation. Device and module component creation now roll back the complete batch on failure. Database errors propagate to normal error handling.
