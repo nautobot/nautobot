@@ -752,11 +752,18 @@ class ExportAdapterTests(ImportExportJobTestCase):
         for export_format in ("csv", "json", "yaml"):
             with self.subTest(export_format=export_format):
                 single_chunk = self._export_bytes(
-                    self.run_export(query_string="sort=name", export_format=export_format)
+                    self.run_export(
+                        query_string="sort=name",
+                        export_format=export_format,
+                        # content_types M2M doesn't have a guaranteed order so it may differ from export to export
+                        export_fields="name,color",
+                    )
                 )
                 with mock.patch.object(ExportObjectList, "export_chunk_size", 2):
                     many_chunks = self._export_bytes(
-                        self.run_export(query_string="sort=name", export_format=export_format)
+                        self.run_export(
+                            query_string="sort=name", export_format=export_format, export_fields="name,color"
+                        )
                     )
                 self.assertEqual(many_chunks, single_chunk)
 
