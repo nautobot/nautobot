@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+import itertools
 import json
 import logging
 
@@ -69,23 +70,34 @@ class NautobotCSVRenderer(BaseRenderer):
         if isinstance(data, dict):
             data = [data]
 
-        headers = self.get_headers(data, field_order=(renderer_context or {}).get("field_order"))
-
         buffer = StringIO()
-        writer = csv.writer(buffer)
+        self.render_to_stream(buffer, [data], renderer_context=renderer_context)
+        return buffer.getvalue()
+
+    def render_to_stream(self, stream, record_chunks, renderer_context=None):
+        """
+        Write CSV for a sequence of record lists to the given text stream, one chunk at a time.
+
+        The headers are taken from the first chunk, so a large export never has to hold every record at
+        once. That suffices because a serializer emits the same keys for every record of a model, custom
+        fields included (`CustomFieldsDataField` reports every custom field defined for the model).
+        Nothing at all is written if the first chunk is empty.
+        """
+        record_chunks = iter(record_chunks)
+        first_chunk = next(record_chunks, None)
+        if not first_chunk:
+            return
+
+        headers = self.get_headers(first_chunk, field_order=(renderer_context or {}).get("field_order"))
+
+        writer = csv.writer(stream)
         import_directives = (renderer_context or {}).get("import_directives")
         if import_directives:
             self.render_directive_row(writer, import_directives)
         writer.writerow(headers)
-        for record in data:
-            writer.writerow(
-                self.object_to_row_elements(
-                    record,
-                    headers=headers,
-                )
-            )
-
-        return buffer.getvalue()
+        for chunk in itertools.chain([first_chunk], record_chunks):
+            for record in chunk:
+                writer.writerow(self.object_to_row_elements(record, headers=headers))
 
     def render_directive_row(self, writer, directives):
         """
