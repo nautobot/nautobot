@@ -1676,6 +1676,36 @@ properties:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_CUSTOM_READ_COMPLEXITY_COST_ESTIMATION_FUNCTION:
+    default: ""
+    description: >-
+      Dotted path (e.g. module.to.path.function.name) to a function that replaces Nautobot's built-in complexity cost estimate for
+      REST API read requests. An empty string defaults the built-in cost calculator.
+    details: |-
+      The function takes one argument, a
+      `nautobot.core.rate_limiting.rest_calculator.RestReadRequestFeatures` object. This object describes the 
+      features of a REST request (filter count, indexable and unindexable lookups, `depth`,
+      `limit`, opt-in fields, response format, etc), and returns the number of cost points to
+      charge. It has the same signature as the built-in
+      `nautobot.core.rate_limiting.rest_calculator.estimate_rest_read_request_cost`, which it
+      replaces, and which may be called from it.
+
+      The dotted path must be importable, so the function has to live in an installed Python
+      package, in a Nautobot App, or in `nautobot_config.py` itself (referenced as
+      `nautobot_config.<function_name>`). Nautobot does not add any directory to `sys.path`,
+      so a loose file beside `nautobot_config.py` is not importable on its own.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CUSTOM_READ_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
+      "NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST": "#nautobot_rest_rate_limiting_indexable_lookup_cost"
+      "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST": "#nautobot_rest_rate_limiting_unindexable_lookup_cost"
+      "NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST": "#nautobot_rest_rate_limiting_pagination_cost"
+      "NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL": "#nautobot_rest_rate_limiting_depth_multiplier_per_level"
+      "NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER": "#nautobot_rest_rate_limiting_computed_fields_multiplier"
+      "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER": "#nautobot_rest_rate_limiting_csv_multiplier"
+    type: "string"
+    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL:
     default: 1.0
     description: "Weight of each level of serializer nesting requested via the `depth` query parameter."
