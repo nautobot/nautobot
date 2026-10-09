@@ -1,0 +1,1 @@
+Added REST API validation that a device being installed in a device bay must be assigned to the same location and rack as the parent device, matching the existing UI behavior.
