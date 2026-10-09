@@ -137,7 +137,7 @@
 
                 <li class="nb-sidenav-list-divider"></li>
 
-                {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
+                {% with request.user.navbar_favorite_links as navbar_favorite_links %}
                     {% for tab_name, tab_details in nav_menu.tabs.items %}
                         <li data-section-name="{{ tab_name }}">
                             <button
@@ -176,20 +176,20 @@
                                                     {{ item_details.name }}
                                                 </a>
                                                 <button
-                                                    class="nb-sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
-                                                    type="button"
-                                                    hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
-                                                    hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'
-                                                    hx-target="#sidenav-flyout-favorites"
+                                                    class="nb-sidenav-favorite{% if item_link|lower in navbar_favorite_links %} active{% endif %}"
+                                                    hx-post="{% if item_link|lower in navbar_favorite_links %}{% url 'user:navbar_favorites_delete' %}{% else %}{% url 'user:navbar_favorites_add' %}{% endif %}"
                                                     hx-select="#sidenav-flyout-favorites"
                                                     hx-swap="outerHTML"
-                                                    hx-on::after-request="toggleFavorite(this, event)"
-                                                    hx-on::config-request="setRequestUrl(this, event)"
-                                                    data-add-url="{% url "user:navbar_favorites_add" %}"
-                                                    data-delete-url="{% url "user:navbar_favorites_delete" %}"
+                                                    hx-target="#sidenav-flyout-favorites"
+                                                    hx-vals="{&quot;name&quot;:&quot;{{ item_details.name|escapejs }}&quot;,&quot;link&quot;:&quot;{{ item_link|escapejs }}&quot;}"
+                                                    type="button"
                                                 >
                                                     <span class="visually-hidden">
-                                                        Add to favorites
+                                                        {% if item_link|lower in navbar_favorite_links %}
+                                                            Remove from Favorites
+                                                        {% else %}
+                                                            Add to Favorites
+                                                        {% endif %}
                                                     </span>
                                                 </button>
                                             </li>

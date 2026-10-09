@@ -27,6 +27,20 @@ export const createElement = (tag, attributes = {}, ...children) => {
 };
 
 /**
+ * Set given `element` attribute to desired `value`. Remove null-value attribute instead of setting `{name}="null"`.
+ * @param {Element} element - Element.
+ * @param {string} name - Attribute name.
+ * @param {string|null} value - Attribute value.
+ */
+export const setAttribute = (element, name, value) => {
+  if (value === null) {
+    element.removeAttribute(name);
+  } else {
+    element.setAttribute(name, value);
+  }
+};
+
+/**
  * Remove all classes from given element, optionally excluding some explicitly.
  * @example
  * // Remove all classes except `container-fluid` from given element.

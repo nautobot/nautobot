@@ -72,7 +72,7 @@ export const initializeDrawers = () => {
     if (event.target.id) {
       const nextState = { ...window.history?.state, drawer: event.target.id };
       const url = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.history?.replaceState(nextState, '', url);
+      window.nb.history.replaceState(nextState, '', url);
     }
   });
 
@@ -82,7 +82,7 @@ export const initializeDrawers = () => {
       typeof window.history?.state === 'object' && window.history.state !== null ? window.history.state : {};
     const nextState = Object.keys(restState).length > 0 ? restState : null;
     const url = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    window.history?.replaceState(nextState, '', url);
+    window.nb.history.replaceState(nextState, '', url);
   });
 
   document.addEventListener('click', (event) => {
