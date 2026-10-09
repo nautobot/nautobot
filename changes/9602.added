@@ -1,0 +1,1 @@
+Added the `NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION` setting, allowing a deployment to replace Nautobot's built-in rate limiting complexity cost estimation with its own function.
