@@ -122,7 +122,9 @@ class CheckCoreSettingsTest(TestCase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].id, "nautobot.core.E012")
 
-    @override_settings(**{CUSTOM_COMPLEXITY_COST_FUNCTION_SETTING: "nautobot.core.tests.test_checks.A_STRING_NOT_A_FUNCTION"})
+    @override_settings(
+        **{CUSTOM_COMPLEXITY_COST_FUNCTION_SETTING: "nautobot.core.tests.test_checks.A_STRING_NOT_A_FUNCTION"}
+    )
     def test_check_custom_complexity_cost_estimation_function_not_callable(self):
         """Error if the dotted path resolves to something that cannot be called."""
         errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
