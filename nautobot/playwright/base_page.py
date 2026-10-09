@@ -63,6 +63,8 @@ class BasePage:
     _FAVORITE_ENTRY = ".nb-sidenav-favorites-container li a"
     # The star is `visibility: hidden` until its `#header` ancestor is hovered.
     _HEADER = "#header"
+    # The one modal every page includes; the favorite form is loaded into it over HTMX.
+    _GENERIC_MODAL = "#nautobot-generic-modal"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -134,6 +136,18 @@ class BasePage:
     def favorite_entries(self, path):
         """Locator for the sidenav favorites flyout entries pointing at *path*."""
         return self.page.locator(f'{self._FAVORITE_ENTRY}[href="{path}"]')
+
+    def favorite_modal(self):
+        """Locator for the modal the favorite form opens in."""
+        return self.page.locator(self._GENERIC_MODAL)
+
+    def favorite_modal_field(self, name):
+        """Locator for the favorite form input named *name*, `link` or `name`."""
+        return self.favorite_modal().locator(f'input[name="{name}"]')
+
+    def submit_favorite_modal(self):
+        """Submit the favorite form."""
+        self.favorite_modal().locator('button[type="submit"]').click()
 
     # -------------------------------------------------------------------------
     # Panels
