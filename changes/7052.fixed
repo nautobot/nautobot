@@ -1,0 +1,1 @@
+Fixed a `ValueError` raised when rendering `generic/object_list.html` from a view that does not provide `list_url` in the template context, such as an App list view that overrides `get()`.
