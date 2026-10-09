@@ -5,6 +5,7 @@ from django.core.checks import Error, register, Tags, Warning  # pylint: disable
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import connections
+from django.utils.module_loading import import_string
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import DeviceUniquenessChoices
@@ -53,6 +54,8 @@ E009 = Error(
 )
 
 # E010 is dynamically constructed inline below
+
+# E012 and E013 are dynamically constructed inline below
 
 # W005 was removed in v3.1.
 
@@ -173,6 +176,47 @@ def check_sensitive_fields_are_enforceable(app_configs, **kwargs):
                 )
             )
     return errors
+
+
+@register(Tags.compatibility)
+def check_custom_rate_limiting_complexity_cost_estimation_function(app_configs, **kwargs):
+    """Resolve NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION at startup."""
+    dotted_import_path = settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION
+
+    if not dotted_import_path:
+        return []
+
+    try:
+        custom_estimation_function = import_string(dotted_import_path)
+    except Exception as exception:
+        return [
+            Error(
+                "settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION could not be imported.",
+                hint=(
+                    f"{exception}. The value must be a dotted path to an importable function, for example "
+                    '"my_package.my_module.my_function". A loose file beside nautobot_config.py is not '
+                    "importable on its own. Define the function in nautobot_config.py and reference it as "
+                    '"nautobot_config.<function_name>", or ship it in an installed Python package.'
+                ),
+                obj=settings,
+                id="nautobot.core.E012",
+            )
+        ]
+
+    if not callable(custom_estimation_function):
+        return [
+            Error(
+                "settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION is not callable.",
+                hint=(
+                    f'"{dotted_import_path}" resolved to a {type(custom_estimation_function).__name__}. '
+                    "It must be a function that takes a HTTPRequest and returns an integer."
+                ),
+                obj=settings,
+                id="nautobot.core.E013",
+            )
+        ]
+
+    return []
 
 
 @register(Tags.security)

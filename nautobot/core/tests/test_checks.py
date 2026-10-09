@@ -3,6 +3,9 @@ from django.test import override_settings, TestCase
 from nautobot.core import checks
 from nautobot.dcim.choices import DeviceUniquenessChoices
 
+SETTING = "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+NOT_A_FUNCTION = "a string, not a function"
+
 
 class CheckCoreSettingsTest(TestCase):
     @override_settings(
@@ -88,3 +91,41 @@ class CheckCoreSettingsTest(TestCase):
 
         # No warnings with default nautobot_config
         self.assertEqual(checks.check_for_removed_storage_settings(None), [])
+
+    @override_settings(**{SETTING: ""})
+    def test_check_custom_complexity_cost_estimation_function_unset(self):
+        """No error when the setting is empty, which is the default."""
+        errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
+
+        self.assertEqual(errors, [])
+
+    @override_settings(**{SETTING: "nautobot.core.checks.check_release_check_url"})
+    def test_check_custom_complexity_cost_estimation_function_importable(self):
+        """No error when the dotted path resolves to a callable."""
+        errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
+
+        self.assertEqual(errors, [])
+
+    @override_settings(**{SETTING: "no_such_module.cost_function"})
+    def test_check_custom_complexity_cost_estimation_function_unimportable_module(self):
+        """Error if the module in the dotted path cannot be imported."""
+        errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].id, "nautobot.core.E012")
+
+    @override_settings(**{SETTING: "nautobot.core.checks.no_such_attribute"})
+    def test_check_custom_complexity_cost_estimation_function_missing_attribute(self):
+        """Error if the module imports but does not define the named attribute."""
+        errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].id, "nautobot.core.E012")
+
+    @override_settings(**{SETTING: "nautobot.core.tests.test_checks.NOT_A_FUNCTION"})
+    def test_check_custom_complexity_cost_estimation_function_not_callable(self):
+        """Error if the dotted path resolves to something that cannot be called."""
+        errors = checks.check_custom_rate_limiting_complexity_cost_estimation_function(None)
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].id, "nautobot.core.E013")

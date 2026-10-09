@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 Added the ability to define and specify a custom function for REST request complexity-cost estimation.
+=======
+Added the `NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION` setting, allowing a deployment to replace Nautobot's built-in rate limiting complexity cost estimation with its own function.
+>>>>>>> 877e1f2b6 (Address PR comments)

@@ -44,7 +44,7 @@ from nautobot.core.rate_limiting.metrics import (
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
-    get_custom_rest_request_read_complexity_cost_estimation_function,
+    get_custom_rate_limiting_complexity_cost_estimation_function,
     READ_METHODS,
     WRITE_METHODS,
 )
@@ -664,22 +664,20 @@ class ComplexityCostRateLimitingMiddleware:
         # ----------------------------------------------------------------------
         #  Calculate Cost
         # ----------------------------------------------------------------------
-        if request.method in READ_METHODS:
-            read_request_features = classify_rest_read_request_features(request)
-
-            custom_rest_request_read_complexity_cost_estimation_function = (
-                get_custom_rest_request_read_complexity_cost_estimation_function()
-            )
-            if custom_rest_request_read_complexity_cost_estimation_function is not None:
-                request_complexity_cost_estimate = custom_rest_request_read_complexity_cost_estimation_function(
-                    read_request_features
-                )
-            else:
-                request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
-        elif request.method in WRITE_METHODS:
-            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
-        else:
+        if request.method not in READ_METHODS and request.method not in WRITE_METHODS:
             return self.get_response(request)
+
+        custom_rate_limiting_complexity_cost_estimation_function = (
+            get_custom_rate_limiting_complexity_cost_estimation_function()
+        )
+
+        if custom_rate_limiting_complexity_cost_estimation_function is not None:
+            request_complexity_cost_estimate = custom_rate_limiting_complexity_cost_estimation_function(request)
+        elif request.method in READ_METHODS:
+            read_request_features = classify_rest_read_request_features(request)
+            request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
+        else:
+            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
 
         # ----------------------------------------------------------------------
         #  Spend The Caller's Budget
