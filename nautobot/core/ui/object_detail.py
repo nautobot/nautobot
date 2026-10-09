@@ -639,6 +639,20 @@ class Tab(Component):
         """
         return self.label
 
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        if self.required_permissions or not self.panels:
+            return True
+        if getattr(self, "related_object_attribute", None):
+            return True
+        should_render_any = False
+        for p in self.panels:
+            if p.should_render(context):
+                should_render_any = True
+                break
+        return should_render_any
+
     def should_render_content(self, context: Context):
         """
         Only render a main-view Tab if the active request is for the main object view rather than a separate action.
@@ -728,14 +742,25 @@ class DistinctViewTab(Tab):
             )
             return True
 
+        related_model = None
+        related_object_attribute = getattr(obj, self.related_object_attribute)
         try:
-            self.related_object_count = getattr(obj, self.related_object_attribute).count()
+            related_model = related_object_attribute.all().model
+            self.related_object_count = related_object_attribute.count()
         except AttributeError:
             # Not a warning log, as there are cases where this is expected.
             logger.debug(
                 f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
             )
 
+        if (
+            len(self.panels) == 1
+            and isinstance(self.panels[0], ObjectsTablePanel)
+            and related_model is not None
+            and not self.required_permissions
+            and not context["request"].user.has_perm(get_permission_for_model(related_model, "view"))
+        ):
+            return False
         if self.hide_if_empty and not self.related_object_count:
             return False
         return True
@@ -1430,6 +1455,21 @@ class ObjectsTablePanel(Panel):
             "include_paginator": self.include_paginator,
             "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
         }
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        if self.required_permissions:
+            return True
+        request = context["request"]
+        if self.context_table_key:
+            table_class = context.get(self.context_table_key)
+        else:
+            table_class = self.table_class
+        if table_class is None:
+            return True
+        table_model = table_class.Meta.model
+        return request.user.has_perm(get_permission_for_model(table_model, "view"))
 
 
 class ConnectedEndpointsPanel(ObjectsTablePanel):
