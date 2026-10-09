@@ -1,1 +1,1 @@
-Add Support For REST Request Read Custom Complexity Cost Estimation Function
+Added the ability to define and specify a custom function for REST request complexity-cost estimation.
