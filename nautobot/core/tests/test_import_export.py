@@ -1998,7 +1998,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("nb-export-field-parent", device_type)
         self.assertNotIn("name=", device_type)
         self.assertIn(
-            'data-natural-key="[&quot;device_type__manufacturer__name&quot;, &quot;device_type__model&quot;]"',
+            'data-nb-natural-key="[&quot;device_type__manufacturer__name&quot;, &quot;device_type__model&quot;]"',
             device_type,
         )
         self.assertIsNone(self.bare_option_for(rendered, "device_type"))
@@ -2006,7 +2006,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         # A nested related object's row is a control too, with a natural key of its own.
         manufacturer = self.checkbox_for(rendered, "device_type__manufacturer")
         self.assertIn("nb-export-field-parent", manufacturer)
-        self.assertIn('data-natural-key="[&quot;device_type__manufacturer__name&quot;]"', manufacturer)
+        self.assertIn('data-nb-natural-key="[&quot;device_type__manufacturer__name&quot;]"', manufacturer)
         self.assertIsNone(self.bare_option_for(rendered, "device_type__manufacturer"))
 
         name = self.checkbox_for(rendered, "name")
@@ -2021,12 +2021,12 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         """
         _form, rendered = self.render_picker(Interface)
         # Its first click checks the option, there being no part of the natural key offered as a row.
-        self.assertIn('data-natural-key="[&quot;module&quot;]"', self.checkbox_for(rendered, "module"))
+        self.assertIn('data-nb-natural-key="[&quot;module&quot;]"', self.checkbox_for(rendered, "module"))
         natural_key = self.bare_option_for(rendered, "module")
         self.assertIn("nb-export-field-leaf", natural_key)
         self.assertIn('name="export_fields"', natural_key)
         self.assertIn('value="module"', natural_key)
-        self.assertIn('data-label="Natural key"', natural_key)
+        self.assertIn('data-nb-label="Natural key"', natural_key)
         self.assertRegex(rendered, r'for="id_export_fields_bare_module"[^>]*>Natural key<span class="mdi mdi-key-link ')
         self.assertIn('title="The fields that identify this object by default: module__pk"', rendered)
 
@@ -2072,15 +2072,15 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("&quot;device__location&quot;", device)
         self.assertIn("&quot;device__location__name&quot;", device)
         self.assertIsNone(self.bare_option_for(rendered, "device"))
-        self.assertIn('data-label="Natural key"', self.bare_option_for(rendered, "device__location"))
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "device__location"))
 
         _form, rendered = self.render_picker(Device)
         self.assertIn(
-            'data-natural-key="[&quot;location&quot;, &quot;location__name&quot;, &quot;location__parent__name&quot;]"',
+            'data-nb-natural-key="[&quot;location&quot;, &quot;location__name&quot;, &quot;location__parent__name&quot;]"',
             self.checkbox_for(rendered, "location"),
         )
-        self.assertIn('data-label="Natural key"', self.bare_option_for(rendered, "location"))
-        self.assertIn('data-label="Natural key"', self.bare_option_for(rendered, "location__parent"))
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "location"))
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "location__parent"))
 
     def test_select__relation_without_a_natural_key_of_lookups_is_a_field(self):
         """A top-level relation with no natural-key lookups, such as a `ContentType`, is a plain field."""
@@ -2173,7 +2173,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("nb-export-field-parent", custom_fields)
         self.assertNotIn("name=", custom_fields)
         all_custom_fields = self.bare_option_for(rendered, "custom_fields")
-        self.assertIn('data-label="All custom fields"', all_custom_fields)
+        self.assertIn('data-nb-label="All custom fields"', all_custom_fields)
         self.assertRegex(rendered, r'for="id_export_fields_bare_custom_fields"[^>]*>All custom fields<span class="font')
         self.assertIn('value="custom_fields"', all_custom_fields)
         self.assertIn(" checked", all_custom_fields)

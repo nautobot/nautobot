@@ -402,7 +402,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         control_id = f"{widget_id}_bare_{path}"
         control = format_html(
             '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-bare" id="{}" name="{}" '
-            'type="checkbox" value="{}" data-label="{}"{}>',
+            'type="checkbox" value="{}" data-nb-label="{}"{}>',
             control_id,
             name,
             path,
@@ -453,7 +453,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
                 '<input class="form-check-input my-6 nb-export-field-parent" id="{}_option_{}" type="checkbox"{}>',
                 widget_id,
                 value,
-                format_html(' data-natural-key="{}"', json.dumps(self.natural_keys[value]))
+                format_html(' data-nb-natural-key="{}"', json.dumps(self.natural_keys[value]))
                 if value in self.natural_keys
                 else "",
             )

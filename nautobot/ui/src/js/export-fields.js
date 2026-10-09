@@ -13,54 +13,38 @@ const SUMMARY_ID = 'nb-export-fields-summary';
 // The sibling field naming the content type whose fields are offered; `ExportFieldSelect.content_type_selector`.
 const CONTENT_TYPE_SELECTOR = '#id_content_type';
 
-const LIST = '.nb-export-field-select';
-const PARENT = 'input.nb-export-field-parent';
-const LEAF = 'input.nb-export-field-leaf';
+const LIST_SELECTOR = '.nb-export-field-select';
+const PARENT_SELECTOR = 'input.nb-export-field-parent';
+const LEAF_SELECTOR = 'input.nb-export-field-leaf';
 
 // A parent row's own checkbox is in its header; the fields it stands for are everything nested under it.
-const leavesUnder = (row) => [...row.querySelectorAll(`:scope > .nb-export-nested ${LEAF}`)];
+const leavesUnder = (row) => [...row.querySelectorAll(`:scope > .nb-export-nested ${LEAF_SELECTOR}`)];
 
 // The option submitting a row's bare path -- "Natural key", say -- is the first row nested directly under it.
 const bareOptionOf = (row) => row.querySelector(':scope > .nb-export-nested > li > div input.nb-export-field-bare');
 
 // The rows selecting a related object's natural key, if it has one.
-const naturalKeyOf = (parent) => new Set(JSON.parse(parent.dataset.naturalKey || '[]'));
+const naturalKeyOf = (parent) => new Set(JSON.parse(parent.getAttribute('data-nb-natural-key') || '[]'));
 
 /*
- * What clicking a parent row selects next. From nothing: its natural key, or else its bare-path option, if it has
- * either. From everything: nothing. From anything else: everything.
+ * What clicking a parent row does next: which of the rows under it to check, and a tooltip saying so. From nothing:
+ * its natural key, or else its bare-path option, if it has either. From everything: nothing. From anything else:
+ * everything.
  */
-const nextSelection = (row, parent, leaves) => {
+const nextStep = (row, parent, leaves) => {
   const checked = leaves.filter((leaf) => leaf.checked).length;
-  if (checked === leaves.length && checked > 0) {
-    return () => false;
+  if (checked > 0 && checked === leaves.length) {
+    return { select: () => false, title: 'Clear these fields' };
   }
-  if (checked === 0) {
-    const naturalKey = naturalKeyOf(parent);
-    if (naturalKey.size > 0) {
-      return (leaf) => naturalKey.has(leaf.value);
-    }
-    const bare = bareOptionOf(row);
-    if (bare) {
-      return (leaf) => leaf === bare;
-    }
-  }
-  return () => true;
-};
-
-// What clicking a parent row will do next, as its tooltip.
-const nextActionTitle = (row, parent, checked) => {
-  if (parent.checked) {
-    return 'Clear these fields';
-  }
-  if (checked === 0 && naturalKeyOf(parent).size > 0) {
-    return 'Select the fields that identify this object';
+  const naturalKey = naturalKeyOf(parent);
+  if (checked === 0 && naturalKey.size > 0) {
+    return { select: (leaf) => naturalKey.has(leaf.value), title: 'Select the fields that identify this object' };
   }
   const bare = bareOptionOf(row);
   if (checked === 0 && bare) {
-    return `Select "${bare.dataset.label}"`;
+    return { select: (leaf) => leaf === bare, title: `Select "${bare.getAttribute('data-nb-label')}"` };
   }
-  return 'Select all fields';
+  return { select: () => true, title: 'Select all fields' };
 };
 
 // Above the tree, say what the export will contain: the default columns, or how much is selected.
@@ -89,7 +73,7 @@ const refreshSummary = (picker, selected) => {
  * when some of it is, with a count to say how much while it is collapsed. Then the summary above the tree.
  */
 const refresh = (list) => {
-  list.querySelectorAll(PARENT).forEach((parent) => {
+  list.querySelectorAll(PARENT_SELECTOR).forEach((parent) => {
     const row = parent.closest('li');
     const leaves = leavesUnder(row);
     const checked = leaves.filter((leaf) => leaf.checked).length;
@@ -99,11 +83,11 @@ const refresh = (list) => {
     if (count) {
       count.textContent = checked > 0 ? `${checked} of ${leaves.length} selected` : '';
     }
-    parent.title = nextActionTitle(row, parent, checked);
+    parent.title = nextStep(row, parent, leaves).title;
   });
   const picker = list.closest(`#${WRAPPER_ID}`);
   if (picker) {
-    refreshSummary(picker, list.querySelectorAll(`${LEAF}:checked`).length);
+    refreshSummary(picker, list.querySelectorAll(`${LEAF_SELECTOR}:checked`).length);
   }
 };
 
@@ -124,18 +108,18 @@ const setExpanded = (row, expanded) => {
 
 const onChange = (event) => {
   const changed = event.target;
-  const list = changed.closest(LIST);
+  const list = changed.closest(LIST_SELECTOR);
   if (!list || !changed.matches('input[type="checkbox"]')) {
     return;
   }
-  if (changed.matches(PARENT)) {
+  if (changed.matches(PARENT_SELECTOR)) {
     /*
      * The browser's own toggle of the box is ignored: what is under it is stepped on, and `refresh()` then sets the
      * box to match. The row stays collapsed; its count shows what it now holds.
      */
     const row = changed.closest('li');
     const leaves = leavesUnder(row);
-    const select = nextSelection(row, changed, leaves);
+    const { select } = nextStep(row, changed, leaves);
     leaves.forEach((leaf) => {
       leaf.checked = select(leaf);
     });
@@ -145,12 +129,12 @@ const onChange = (event) => {
 
 const onClear = (clear) => {
   const picker = clear.closest(`#${WRAPPER_ID}`);
-  const list = picker?.querySelector(LIST);
+  const list = picker?.querySelector(LIST_SELECTOR);
   if (!list) {
     return;
   }
   // Unchecking in script raises no "change" event, so refresh here.
-  list.querySelectorAll(LEAF).forEach((leaf) => {
+  list.querySelectorAll(LEAF_SELECTOR).forEach((leaf) => {
     leaf.checked = false;
   });
   // The report of what "Match the list view" left out belongs to the selection being cleared.
@@ -166,9 +150,8 @@ const onClick = (event) => {
   }
   // Collapse/expand a parent's nested rows, at any depth.
   const caret = event.target.closest('.nb-export-field-caret');
-  const row = caret?.closest(LIST) ? caret.closest('li') : null;
-  if (row) {
-    setExpanded(row, caret.getAttribute('aria-expanded') !== 'true');
+  if (caret) {
+    setExpanded(caret.closest('li'), caret.getAttribute('aria-expanded') !== 'true');
   }
 };
 
@@ -190,6 +173,6 @@ export const initializeExportFields = () => {
 
   // Bring each picker's parent rows and summary into line with what it has checked, whenever one is loaded.
   htmx.onLoad((content) => {
-    content.querySelectorAll(LIST).forEach(refresh);
+    content.querySelectorAll(LIST_SELECTOR).forEach(refresh);
   });
 };
