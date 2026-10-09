@@ -1,0 +1,1 @@
+Updated development npm dependency `postcss-selector-parser` to `7.1.6` to mitigate CVE-2026-104844.
