@@ -580,6 +580,12 @@ if "mysql" in DATABASES["default"]["ENGINE"]:
     DATABASES["default"].setdefault("TEST", {})["CHARSET"] = "utf8mb4"
     DATABASES["default"]["TEST"]["COLLATION"] = "utf8mb4_0900_ai_ci"
 
+# SQLite: keep the test database on disk next to the main database file, so that `--keepdb` can reuse it.
+if "sqlite" in DATABASES["default"]["ENGINE"]:
+    _sqlite_name = DATABASES["default"]["NAME"]
+    if _sqlite_name and _sqlite_name != ":memory:" and not _sqlite_name.startswith("file:"):
+        DATABASES["default"].setdefault("TEST", {}).setdefault("NAME", f"{_sqlite_name}.test")
+
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
 

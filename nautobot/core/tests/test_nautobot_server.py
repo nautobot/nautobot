@@ -120,7 +120,10 @@ class NautobotServerTestCase(TestCase):
             self.assertTrue(os.path.isdir(path))
 
         # Make sure DATABASES are set up correctly
-        self.assertRegex(result.stdout, r"DATABASES.*django_prometheus\.db\.backends")  # since METRICS_ENABLED
+        # since METRICS_ENABLED (SQLite goes through Nautobot's own backend, which wraps the prometheus one)
+        self.assertRegex(
+            result.stdout, r"DATABASES.*(django_prometheus\.db\.backends|nautobot\.core\.db\.backends\.sqlite3)"
+        )
         self.assertRegex(result.stdout, r"DATABASES.*job_logs")
 
         # Make sure apps are loaded into INSTALLED_APPS

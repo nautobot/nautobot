@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import F, Model, OuterRef, ProtectedError, Q, Subquery
 from django.db.models.functions import JSONObject
 
-from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
+from nautobot.core.models.query_functions import AsJSON, EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import ScheduledJobStateChoices
 from nautobot.extras.models.tags import TaggedItem
@@ -108,7 +108,7 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
                 .annotate(
                     _data=EmptyGroupByJSONBAgg(
                         JSONObject(
-                            data=F("data"),
+                            data=AsJSON(F("data")),
                             name=F("name"),
                             weight=F("weight"),
                         )

@@ -1291,7 +1291,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
-        if not self.use_job_logs_db or not JOB_LOGS:
+        if not self.uses_job_logs_connection:
             log.save()
         else:
             try:
@@ -1311,12 +1311,24 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         if self.celery_kwargs.get("nautobot_job_console_log", False):
             job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
-            if not self.use_job_logs_db or not JOB_LOGS:
+            if not self.uses_job_logs_connection:
                 job_console_entry.save()
             else:
                 job_console_entry.save(using=JOB_LOGS)
 
     log.alters_data = True
+
+    @property
+    def uses_job_logs_connection(self):
+        """
+        Whether this result's log entries are written through, and must be read through, the `job_logs` connection.
+
+        SQLite permits a single writer per database file, so a second connection cannot write while the job's own
+        transaction is open; on SQLite, log entries are written through the default connection instead.
+        """
+        if not self.use_job_logs_db or not JOB_LOGS:
+            return False
+        return connections[JOB_LOGS].vendor != "sqlite"
 
     def save(self, *args, **kwargs):
         """When a JobResult is saved and in a terminal state, store missing log counts for summary."""

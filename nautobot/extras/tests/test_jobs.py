@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import tempfile
 import time
-from unittest import mock
+from unittest import mock, skipIf
 import uuid
 
 from constance.test import override_config
@@ -17,7 +17,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connections
+from django.db import connection, connections
 from django.db.utils import InterfaceError, OperationalError
 from django.test import override_settings, tag
 from django.test.client import RequestFactory
@@ -933,6 +933,10 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_console_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
 
+    @skipIf(
+        connection.vendor == "sqlite",
+        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
+    )
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -950,6 +954,10 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    @skipIf(
+        connection.vendor == "sqlite",
+        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
+    )
     def test_atomic_transaction_decorator_job_fail_with_console_log(self):
         """
         Job with @transaction.atomic decorator test with fail result and console log enabled.
@@ -2483,6 +2491,7 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
                     mock_handle_failure.assert_not_called()
 
 
+@skipIf(connection.vendor == "sqlite", "Job log entries are written through the default connection on SQLite")
 class JobLogsDBConnectionTest(TransactionTestCase):
     databases = {"default", JOB_LOGS}
 

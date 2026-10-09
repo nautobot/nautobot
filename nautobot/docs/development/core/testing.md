@@ -143,6 +143,26 @@ To reduce the time taken between multiple test runs, a new argument has been add
     1. When the contents of an existing migration file are modified (the hashing implementation currently can't detect this change).
     2. When the definition of a factory is changed or a new factory is added.
 
+## Running Tests Against SQLite
+
++++ 3.3.0
+
+Nautobot's unit tests can be run against a SQLite database instead of PostgreSQL or MySQL, which removes the need for a database server when developing locally. Redis is still required. SQLite is supported for development and testing only, not for production.
+
+Set `NAUTOBOT_DB_ENGINE` to `django.db.backends.sqlite3` and `NAUTOBOT_DB_NAME` to the path of a database file; Nautobot automatically substitutes its own `nautobot.core.db.backends.sqlite3` backend, which supplies the SQL functions and query compilation that Nautobot's data model requires. The test database is created beside that file as `<NAME>.test`, so `--keepdb` reuses it between runs:
+
+```no-highlight
+export NAUTOBOT_DB_ENGINE=django.db.backends.sqlite3
+export NAUTOBOT_DB_NAME=/tmp/nautobot-dev.sqlite3
+nautobot-server test nautobot --config nautobot/core/tests/nautobot_config.py --keepdb --cache-test-fixtures --parallel
+```
+
+Behavioral differences to be aware of when a test passes on PostgreSQL but not on SQLite:
+
+- SQLite permits a single writer per database file, so Job log entries are written within the Job's own transaction rather than through the separate `job_logs` connection. A test that expects log entries to survive a rolled-back Job transaction must be skipped on SQLite (check `connection.vendor == "sqlite"`).
+- `select_for_update()` is a no-op on SQLite.
+- Case-insensitive lookups such as `icontains` only fold ASCII characters on SQLite.
+
 ## Test Code Style
 
 - Use more specific/feature-rich test assertion methods where available (e.g. `self.assertInHTML(fragment, html)` rather than `self.assertTrue(re.search(fragment, html))` or `assert re.search(fragment, html) is not None`).

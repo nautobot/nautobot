@@ -80,12 +80,16 @@ def _preprocess_settings(settings_module, config_path):
     # Databases
     #
 
-    # If metrics are enabled and postgres is the backend, set the driver to the
-    # one provided by django-prometheus.
-    if settings_module.METRICS_ENABLED:
-        # Avoid modifying nautobot.core.settings.DATABASES by accident!
-        settings_module.DATABASES = deepcopy(settings_module.DATABASES)
+    # Avoid modifying nautobot.core.settings.DATABASES by accident!
+    settings_module.DATABASES = deepcopy(settings_module.DATABASES)
 
+    # SQLite always goes through Nautobot's own backend, which adds the SQL functions and compiler behavior that
+    # Nautobot's query code needs. It wraps the django-prometheus backend itself when metrics are enabled.
+    if "sqlite" in settings_module.DATABASES["default"]["ENGINE"]:
+        settings_module.DATABASES["default"]["ENGINE"] = "nautobot.core.db.backends.sqlite3"
+    # If metrics are enabled and postgres or mysql is the backend, set the driver to the
+    # one provided by django-prometheus.
+    elif settings_module.METRICS_ENABLED:
         if "postgres" in settings_module.DATABASES["default"]["ENGINE"]:
             settings_module.DATABASES["default"]["ENGINE"] = "django_prometheus.db.backends.postgresql"
         elif "mysql" in settings_module.DATABASES["default"]["ENGINE"]:
