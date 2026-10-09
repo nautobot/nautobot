@@ -1,5 +1,7 @@
 """API serializers for nautobot_load_balancer_models."""
 
+from rest_framework.validators import UniqueTogetherValidator
+
 from nautobot.core.api import NautobotModelSerializer, ValidatedModelSerializer
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.load_balancers import models
@@ -13,6 +15,28 @@ class VirtualServerSerializer(TaggedModelSerializerMixin, NautobotModelSerialize
 
         model = models.VirtualServer
         fields = "__all__"
+        # Omit the UniqueTogetherValidator that would be automatically added to validate (vip, port, protocol).
+        # This prevents protocol from being interpreted as a required field.
+        validators = []
+
+    def validate(self, attrs):
+        # Validate uniqueness of (vip, port, protocol) since we omitted the automatically-created validator above.
+        # A null port never conflicts with another VirtualServer, matching the database constraint.
+        port = attrs.get("port", getattr(self.instance, "port", None))
+        if port is not None:
+            validator = UniqueTogetherValidator(
+                queryset=models.VirtualServer.objects.all(), fields=("vip", "port", "protocol")
+            )
+            if self.instance is None:
+                # On creation, an omitted protocol will be saved as the model field's empty-string default.
+                validator({"protocol": "", **attrs}, self)
+            else:
+                validator(attrs, self)
+
+        # Enforce model validation
+        super().validate(attrs)
+
+        return attrs
 
 
 class LoadBalancerPoolSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
