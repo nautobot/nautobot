@@ -58,6 +58,10 @@ class NautobotKombuJSONEncoder(JSONEncoder):
             # Convert a set to a list for passing to and from a task
             return list(obj)
         elif isinstance(obj, TagsManager):
+            warn_deprecated_at_caller(
+                f"Serializing a TagsManager instance {obj!r} to JSON. "
+                "This is generally undesirable and may raise an error in a future version of Nautobot."
+            )
             obj = obj.values_list("id", flat=True)
             return obj
         elif isinstance(obj, Exception):

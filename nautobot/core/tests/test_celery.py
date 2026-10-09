@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 from nautobot.core import celery
 from nautobot.core.testing import TestCase
@@ -31,3 +32,26 @@ class CeleryTest(TestCase):
             device_obj = celery._loads(json_data)
 
         self.assertEqual(device_obj.id, device.id)
+
+    def test__dumps_tags(self):
+        device = Device.objects.filter(tags__isnull=False).first()
+        self.assertIsNotNone(device)
+        with self.assertWarns(DeprecationWarning):
+            json_data = celery._dumps(device.tags)
+
+        self.assertEqual(
+            json_data, json.dumps([str(val) for val in device.tags.values_list("id", flat=True)], ensure_ascii=False)
+        )
+
+    def test__loads_unknown_type(self):
+        with self.assertRaises(TypeError):
+            celery._loads(
+                json.dumps(
+                    {
+                        "id": str(uuid4()),
+                        "__nautobot_type__": "nautobot.invalid.module.path",
+                        "display": "ignored",
+                    },
+                    ensure_ascii=False,
+                )
+            )
