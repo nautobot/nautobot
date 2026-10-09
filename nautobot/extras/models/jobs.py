@@ -534,56 +534,6 @@ class JobHook(ConditionsMixin, OrganizationalModel):
         if self.enabled and not (self.job.installed and self.job.enabled):
             raise ValidationError({"enabled": "The selected Job is not installed and enabled"})
 
-    @classmethod
-    def check_for_conflicts(
-        cls, instance=None, content_types=None, job=None, type_create=None, type_update=None, type_delete=None
-    ):
-        """
-        Helper method for enforcing uniqueness.
-
-        Don't allow two job hooks with the same content_type, same job, and any action(s) in common.
-        Called by JobHookForm.clean() and JobHookSerializer.validate()
-        """
-
-        conflicts = {}
-
-        job_hook_error_msg = "A job hook already exists for {action} on {content_type} to job {job}"
-
-        if instance is not None and instance.present_in_database:
-            # This is a PATCH and might not include all relevant data
-            # Therefore we get data not available from instance
-            content_types = instance.content_types.all() if content_types is None else content_types
-            type_create = instance.type_create if type_create is None else type_create
-            type_update = instance.type_update if type_update is None else type_update
-            type_delete = instance.type_delete if type_delete is None else type_delete
-
-        if content_types is not None:
-            for content_type in content_types:
-                job_hooks = cls.objects.filter(content_types__in=[content_type], job=job)
-                if instance and instance.present_in_database:
-                    job_hooks = job_hooks.exclude(pk=instance.pk)
-
-                existing_type_create = job_hooks.filter(type_create=type_create).exists() if type_create else False
-                existing_type_update = job_hooks.filter(type_update=type_update).exists() if type_update else False
-                existing_type_delete = job_hooks.filter(type_delete=type_delete).exists() if type_delete else False
-
-                if existing_type_create:
-                    conflicts.setdefault("type_create", []).append(
-                        job_hook_error_msg.format(content_type=content_type, action="create", job=job),
-                    )
-
-                if existing_type_update:
-                    conflicts.setdefault("type_update", []).append(
-                        job_hook_error_msg.format(content_type=content_type, action="update", job=job),
-                    )
-
-                if existing_type_delete:
-                    conflicts.setdefault("type_delete", []).append(
-                        job_hook_error_msg.format(content_type=content_type, action="delete", job=job),
-                    )
-
-        return conflicts
-
 
 @extras_features(
     "graphql",
