@@ -134,6 +134,9 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 
 Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL are officially supported.
 
++++ 3.3.0 "SQLite for development and testing"
+    SQLite is supported as an experimental backend for development and automated testing only. It is not supported for production deployments.
+
 --- 2.1.0 "PostgreSQL minimum version became 12.0"
     Support for versions of PostgreSQL older than 12.0 was removed.
 

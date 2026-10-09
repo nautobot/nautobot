@@ -40,6 +40,16 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  #
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405  # undefined-local-with-import-star-usage
 
+# SQLite allows a single writer per database file. The health-check view runs its checks in threads, each with its
+# own database connection, and a test case holds a write transaction open on the main connection for its whole
+# duration. Run the checks inline instead.
+if "sqlite" in DATABASES["default"]["ENGINE"]:  # noqa: F405  # undefined-local-with-import-star-usage
+    HEALTH_CHECK = {"DISABLE_THREADING": True}
+    # Nautobot's SQLite backend defaults to IMMEDIATE transactions, which take the write lock when a transaction
+    # begins. A test case holds a transaction open for its whole duration, so that would block the subprocesses and
+    # threads that some tests start to write to the same database. Defer taking the lock until the first write.
+    DATABASES["default"].setdefault("OPTIONS", {})["transaction_mode"] = "DEFERRED"  # noqa: F405
+
 # Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
 CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"
 

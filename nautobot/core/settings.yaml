@@ -363,10 +363,10 @@ properties:
       "Guide to Nautobot Redis configuration, including TLS and HA configuration": "redis.md"
     type: "object"
   CELERY_BEAT_HEARTBEAT_FILE:
+    "$ref": "#/definitions/absolute_path"
     default: "/tmp/nautobot_celery_beat_heartbeat"
     description: "A file touched by Celery Beat during health check."
     environment_variable: "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE"
-    type: "string"
   CELERY_BROKER_TRANSPORT_OPTIONS:
     additionalProperties: true
     default: {}
@@ -466,12 +466,12 @@ properties:
       "`CELERY_TASK_SOFT_TIME_LIMIT`": "#celery_task_soft_time_limit"
     type: "integer"
   CELERY_WORKER_HEARTBEAT_FILE:
+    "$ref": "#/definitions/absolute_path"
     default: "/tmp/nautobot_celery_worker_heartbeat"
     description: "A file touched by the Celery worker every second while it is alive, suitable for health checks."
     environment_variable: "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE"
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
-    type: "string"
   CELERY_WORKER_PREFETCH_MULTIPLIER:
     default: 4
     description: "How many tasks a worker is allowed to reserve for its own consumption and execution."
@@ -501,12 +501,12 @@ properties:
     type: "array"
     version_added: "1.5.10"
   CELERY_WORKER_READINESS_FILE:
+    "$ref": "#/definitions/absolute_path"
     default: "/tmp/nautobot_celery_worker_ready"
     description: "A file touched by the Celery worker when it starts and is ready to accept tasks."
     environment_variable: "NAUTOBOT_CELERY_WORKER_READINESS_FILE"
     see_also:
       "`CELERY_HEALTH_PROBES_AS_FILES`": "#celery_health_probes_as_files"
-    type: "string"
   CELERY_WORKER_REDIRECT_STDOUTS:
     default: true
     description: "If enabled stdout and stderr of running jobs will be redirected to the task logger."
@@ -680,11 +680,30 @@ properties:
 
       Nautobot supports either MySQL or PostgreSQL as a database backend. You must make sure that the `ENGINE`
       setting matches your selected database backend or **you will be unable to connect to the database**.
+
+      +++ 3.3.0 "SQLite for development and testing"
+          SQLite is additionally supported as an experimental backend for development and automated testing,
+          but not for production use. Set `ENGINE` to `django.db.backends.sqlite3` and `NAME` to the path of the
+          database file; Nautobot substitutes its own `nautobot.core.db.backends.sqlite3` backend, which adds the
+          SQL functions and query compilation that Nautobot's data model relies on.
     details: |-
       !!! note
           Nautobot supports all database options supported by the underlying Django framework.
           For a complete list of available parameters, please see the
           [official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
+
+      !!! info "SQLite behavior"
+          Log entries written inside a Job's `transaction.atomic()` block are re-created after the Job finishes
+          if the transaction was rolled back, so they are not lost, but they only become visible once the
+          Job has finished rather than while it runs.
+
+          Nautobot's SQLite backend applies connection defaults suited to several processes sharing one database
+          file: write-ahead logging (`PRAGMA journal_mode = WAL`) with `PRAGMA synchronous = NORMAL`, a 15-second
+          lock timeout, and `IMMEDIATE` transactions. Each can be overridden through `OPTIONS`
+          (`init_command`, `timeout`, and `transaction_mode` respectively).
+
+          A SQLite test database is kept on disk next to the configured database file (as `<NAME>.test`) so that
+          `--keepdb` can reuse it between test runs.
 
       !!! warning
           By default, MySQL is case-insensitive in its handling of text strings. This is different from

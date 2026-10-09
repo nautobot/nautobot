@@ -6,6 +6,7 @@ import logging
 import os
 import signal
 from statistics import median, quantiles
+import threading
 from typing import Optional, TYPE_CHECKING, Union
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -90,6 +91,10 @@ logger = logging.getLogger(__name__)
 # foreign key relationship works, but needs its own connection to avoid JobLogEntry
 # objects being created within transaction.atomic().
 JOB_LOGS = "job_logs"
+
+# Log entries written through the default connection while a job runs, keyed by JobResult pk; see
+# `JobResult.start_log_retention()`. Thread-local because each thread handles at most one job at a time.
+_retained_log_entries = threading.local()
 
 # The JOB_RESULT_METRIC variable is a counter metric that counts executions of jobs,
 # including information beyond what a tool like flower could get by introspecting
@@ -1291,8 +1296,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # Otherwise we want to use a separate database here so that the logs are created immediately
         # instead of within transaction.atomic(). This allows us to be able to report logs when the jobs
         # are running, and allow us to rollback the database without losing the log entries.
-        if not self.use_job_logs_db or not JOB_LOGS:
+        if not self.uses_job_logs_connection:
             log.save()
+            self._retain_log_entry(log)
         else:
             try:
                 conn = connections[JOB_LOGS]
@@ -1311,12 +1317,64 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         if self.celery_kwargs.get("nautobot_job_console_log", False):
             job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
-            if not self.use_job_logs_db or not JOB_LOGS:
+            if not self.uses_job_logs_connection:
                 job_console_entry.save()
+                self._retain_log_entry(job_console_entry)
             else:
                 job_console_entry.save(using=JOB_LOGS)
 
     log.alters_data = True
+
+    def start_log_retention(self):
+        """
+        Begin remembering log entries written through the default connection for this result.
+
+        Log entries normally go through the separate `job_logs` connection so that they are committed at once and
+        survive a rollback of the job's own transaction. When they go through the default connection instead (on
+        SQLite, or when `use_job_logs_db` is unset), an entry written inside `transaction.atomic()` is discarded along
+        with the rest of the transaction if the job fails. Between this call and `finish_log_retention()`, every such
+        entry is also kept in memory so that it can be re-created afterwards.
+        """
+        if self.uses_job_logs_connection:
+            return
+        retained = getattr(_retained_log_entries, "by_result", None)
+        if retained is None:
+            retained = _retained_log_entries.by_result = {}
+        retained[self.pk] = []
+
+    def finish_log_retention(self):
+        """Re-create any log entries remembered since `start_log_retention()` that a rolled-back transaction discarded."""
+        retained = getattr(_retained_log_entries, "by_result", None) or {}
+        entries = retained.pop(self.pk, [])
+        if not entries:
+            return
+        by_model = {}
+        for entry in entries:
+            by_model.setdefault(type(entry), []).append(entry)
+        for model, model_entries in by_model.items():
+            existing = set(
+                model.objects.filter(pk__in=[entry.pk for entry in model_entries]).values_list("pk", flat=True)
+            )
+            missing = [entry for entry in model_entries if entry.pk not in existing]
+            if missing:
+                model.objects.bulk_create(missing)
+
+    def _retain_log_entry(self, entry):
+        retained = getattr(_retained_log_entries, "by_result", None)
+        if retained is not None and self.pk in retained and connections["default"].in_atomic_block:
+            retained[self.pk].append(entry)
+
+    @property
+    def uses_job_logs_connection(self):
+        """
+        Whether this result's log entries are written through, and must be read through, the `job_logs` connection.
+
+        SQLite permits a single writer per database file, so a second connection cannot write while the job's own
+        transaction is open; on SQLite, log entries are written through the default connection instead.
+        """
+        if not self.use_job_logs_db or not JOB_LOGS:
+            return False
+        return connections[JOB_LOGS].vendor != "sqlite"
 
     def save(self, *args, **kwargs):
         """When a JobResult is saved and in a terminal state, store missing log counts for summary."""
