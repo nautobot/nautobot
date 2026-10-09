@@ -21,6 +21,12 @@ To use this tool:
 ![Merge Button](./images/ip-address-merge-tool/ss_ip_merge_button_dark.png#only-dark){ .on-glb }
 [//]: # "`https://demo.nautobot.com/ipam/ip-addresses/`"
 
++/- 3.2.7
+    Because a merge deletes the selected `IPAddress` objects and creates a new one, this tool requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions. Previously only `ipam.change_ipaddress` was required.
+
+!!! warning "Special permission behavior"
+    To carry existing assignments over to the merged IP address, the merge tool updates other objects (such as `Device` and `VirtualMachine` primary IPs, interface assignments, `Service` objects, and relationship associations) without checking if the user has been granted the required permissions on those objects. Likewise, the related objects selected for the merged IP address (such as its `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` IP address) are assigned without checking if the user has been granted `view` permission on them. As such, the merged IP address may be assigned to or reference objects the user cannot view directly. Object-level constraints on the user's IP address permissions are also not enforced by the merge itself. The merge page only lists IP addresses within the user's `change` constraints, but the merge does not re-check `add`, `change`, or `delete` constraints against the IP addresses it deletes or the one it creates. All of these changes are recorded in the [change log](../platform-functionality/change-logging.md). Grant these permissions together only to users you trust to perform merges; see [Special Permission Behaviors](../administration/guides/permissions.md#ip-address-merge-tool) for details.
+
 ## How it works
 
 1. If you de-select all other duplicates and attempt to merge, nothing will happen (the operation is a no-op) and the object will be skipped over as if you had clicked the `Skip and Go to the Next Duplicate` button.
