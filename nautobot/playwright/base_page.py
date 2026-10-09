@@ -57,6 +57,8 @@ class BasePage:
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # Both containers render on every page (inc/header_messages.html).
+    _FLASH_MESSAGES = "#header_messages, #toast-messages"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -96,6 +98,10 @@ class BasePage:
     def expect_url_lacks(self, fragment):
         """Assert (auto-retrying) that the URL does not contain *fragment*."""
         expect(self.page).not_to_have_url(re.compile(re.escape(fragment)))
+
+    def expect_flash_message(self, text):
+        """Assert (auto-retrying) that a flash message contains *text*."""
+        expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_have_count(1)
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""
