@@ -86,7 +86,7 @@
             {% endblock export_button %}
         {% endif %}
         <div class="align-items-center d-flex gap-4">
-            {% if model.is_saved_view_model %}
+            {% if model.is_saved_view_model and list_url %}
                 <button
                     type="button"
                     class="btn position-relative text-secondary"
@@ -188,7 +188,7 @@
             <div class="clearfix"></div>
         {% endblock %}
     </div>
-    {% if model.is_saved_view_model %}
+    {% if model.is_saved_view_model and list_url %}
         {% saved_view_modal request.GET.urlencode list_url model request %}
     {% endif %}
     {% dynamic_group_assignment_modal request=request content_type=content_type %}
