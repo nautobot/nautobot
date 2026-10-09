@@ -1,0 +1,1 @@
+Restored but marked as deprecated some logic for serialization and deserialization of in-memory `Model` objects to and from JSON (previously removed in v3.2.2) that turned out to be depended upon by a number of Apps.
