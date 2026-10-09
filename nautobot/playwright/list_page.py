@@ -128,7 +128,7 @@ class ListPage(BasePage):
         expect(self.page.locator("h1", has_text=re.compile(rf"\bEditing {count} "))).to_have_count(1)
 
     def get_bulk_edit_pks(self) -> list:
-        """Ids of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
+        """IDs of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
         return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
 
     def apply_bulk_edit(self) -> str:
