@@ -1,7 +1,10 @@
 import codecs
 import contextlib
+import io
 from io import StringIO
 import json
+import tempfile
+import textwrap
 
 from django.apps import apps as global_apps
 from django.conf import settings
@@ -22,9 +25,9 @@ import yaml
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.import_export import (
     build_document_records,
-    build_import_document,
     build_import_metadata,
     IMPORT_DOCUMENT_MODEL_KEY,
+    IMPORT_DOCUMENT_RECORDS_KEY,
     validate_field_paths,
 )
 from nautobot.core.api.parsers import (
@@ -245,6 +248,9 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
+    # How many records are serialized at a time; bounds the Job's memory use on a large export.
+    export_chunk_size = 1000
+
     # ---- SHARED (resolved once, consulted by more than one phase below) ----
 
     def _get_saved_view(self, query_params):
@@ -452,11 +458,13 @@ class ExportObjectList(Job):
     def _render_serialized(
         self, export_format, model, content_type, queryset, export_field_paths, match_fields, filename
     ):
-        """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
+        """Serialize the queryset in chunks, writing each as CSV or as part of a JSON/YAML document.
 
-        `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
-        consumes directly and the JSON/YAML document path reshapes into nested records. The queryset stops
-        here — the format renderers only ever see `records`.
+        `record_chunks` is the single normalized structure: lists of the flat, natural-key-flattened rows the
+        CSV renderer consumes directly and the JSON/YAML document path reshapes into nested records. The
+        queryset stops here — the format renderers only ever see `record_chunks`. Each chunk is written out
+        to a temporary file before the next is serialized, so memory use is bounded by the chunk size rather
+        than by the size of the export.
         """
         serializer_class = get_serializer_for_model(model)
         self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
@@ -464,23 +472,41 @@ class ExportObjectList(Job):
             "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
         )
         is_document = export_format in ("json", "yaml")
-        records = self._get_serializer_data(
+        record_chunks = self._get_serializer_data(
             model, serializer_class, queryset, for_csv=not is_document, export_field_paths=export_field_paths
         )
-        if is_document:
-            _filename, content = self._render_document(
-                export_format, content_type, records, match_fields, filename, export_field_paths
-            )
-        else:
-            _filename, content = self._render_csv(content_type, records, match_fields, filename, export_field_paths)
-        self.create_file(_filename, content)
+        with tempfile.TemporaryFile() as output:
+            if not is_document:
+                # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
+                output.write(codecs.BOM_UTF8)
+            # newline="" so that the CSV writer's own "\r\n" line terminators are written as-is.
+            stream = io.TextIOWrapper(output, encoding="utf-8", newline="")
+            if is_document:
+                extension = self._render_document(
+                    stream, export_format, content_type, record_chunks, match_fields, export_field_paths
+                )
+            else:
+                extension = self._render_csv(stream, content_type, record_chunks, match_fields, export_field_paths)
+            stream.flush()
+            # Hand the underlying file back so that closing the wrapper doesn't also close `output`.
+            stream.detach()
+            self.create_file(f"{filename}.{extension}", output)
 
     def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True, export_field_paths=None):
         """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
 
         Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
         JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
+
+        Yields the serialized records one list of up to `export_chunk_size` at a time. Each chunk is
+        serialized from its own `pk__in` queryset, so that the serializer's bulk natural-key lookup and the
+        M2M prefetches below cover only that chunk; the chunks are cut from the queryset's own ordering, so
+        they come out in that order.
         """
+        # `dict.fromkeys` de-duplicates while keeping the order: a `.distinct()` queryset ordered by a related
+        # field selects that field alongside the pk, and so may repeat a pk.
+        pks = list(dict.fromkeys(queryset.values_list("pk", flat=True)))
+
         selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
 
         # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
@@ -520,9 +546,11 @@ class ExportObjectList(Job):
         context = {"request": None}
         if export_field_paths:
             context["export_fields"] = export_field_paths
-        serializer = serializer_class(queryset, many=True, context=context, for_import_export=True, force_csv=for_csv)
-        self._log_lossy_m2m_fields(model, serializer.child.fields)
-        return serializer.data
+        serializer_kwargs = {"context": context, "for_import_export": True, "force_csv": for_csv}
+        self._log_lossy_m2m_fields(model, serializer_class(**serializer_kwargs).fields)
+        for offset in range(0, len(pks), self.export_chunk_size):
+            chunk_queryset = queryset.filter(pk__in=pks[offset : offset + self.export_chunk_size])
+            yield serializer_class(chunk_queryset, many=True, **serializer_kwargs).data
 
     def _log_lossy_m2m_fields(self, model, serializer_fields):
         """Report each exported M2M field whose through model records data this file cannot represent.
@@ -567,24 +595,50 @@ class ExportObjectList(Job):
         covered = set(getattr(through, "natural_key_field_lookups", ()))
         return [field_name for field_name in data_fields if field_name not in covered]
 
-    def _render_document(self, export_format, content_type, records, match_fields, filename, export_field_paths):
-        # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
-        # shared with the parsers that read it back, so writer and reader stay in lock-step.
-        document = build_import_document(
-            f"{content_type.app_label}.{content_type.model}",
-            build_document_records(records, field_order=export_field_paths),
-            match_fields=match_fields,
-        )
+    def _render_document(self, stream, export_format, content_type, record_chunks, match_fields, export_field_paths):
+        """Write the generic JSON/YAML export document to `stream`, one chunk of records at a time.
+
+        The output is exactly what dumping the whole of `build_import_document()` at once would produce; it is
+        assembled piecewise only so that no more than one chunk of records is in memory at a time. The
+        document format itself lives in nautobot.core.api.import_export, shared with the parsers that read it
+        back, so writer and reader stay in lock-step.
+
+        Returns the file extension for `export_format`.
+        """
+        metadata = build_import_metadata(f"{content_type.app_label}.{content_type.model}", match_fields=match_fields)
+        chunks = (build_document_records(records, field_order=export_field_paths) for records in record_chunks)
         if export_format == "json":
-            return (filename + ".json", json.dumps(document, indent=2, default=str))
-        else:
+            # `json.dumps(document, indent=2)`, opened up after the metadata so the records can follow
+            stream.write(json.dumps(metadata, indent=2).removesuffix("\n}"))
+            stream.write(f',\n  "{IMPORT_DOCUMENT_RECORDS_KEY}": [')
+            separator = "\n"
+            for chunk in chunks:
+                for record in chunk:
+                    stream.write(separator + textwrap.indent(json.dumps(record, indent=2, default=str), "    "))
+                    separator = ",\n"
+            # `separator` is still "\n" only if there were no records at all, which JSON renders as "[]"
+            stream.write("]\n}" if separator == "\n" else "\n  ]\n}")
+            return "json"
+        # PyYAML's block style doesn't indent a sequence nested under a mapping key, so the records list can
+        # be dumped as top-level sequences of its own, chunk by chunk, after its key.
+        stream.write(yaml.safe_dump(metadata, sort_keys=False))
+        stream.write(f"{IMPORT_DOCUMENT_RECORDS_KEY}:")
+        empty = True
+        for chunk in chunks:
+            if not chunk:
+                continue
+            if empty:
+                stream.write("\n")
+                empty = False
             # Round-trip through JSON first to reduce DRF's ReturnDict/OrderedDict and other
             # non-primitive values to plain types that yaml.safe_dump can represent.
-            plain_document = json.loads(json.dumps(document, default=str))
-            return (filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
+            stream.write(yaml.safe_dump(json.loads(json.dumps(chunk, default=str)), sort_keys=False))
+        if empty:
+            stream.write(" []\n")
+        return "yaml"
 
-    def _render_csv(self, content_type, records, match_fields, filename, export_field_paths):
-        # Generic CSV export
+    def _render_csv(self, stream, content_type, record_chunks, match_fields, export_field_paths):
+        """Write the generic CSV export to `stream`, one chunk of records at a time; returns the file extension."""
         renderer = NautobotCSVRenderer()
         renderer_context = {}
         if export_field_paths:
@@ -593,9 +647,8 @@ class ExportObjectList(Job):
         renderer_context["import_directives"] = build_import_metadata(
             f"{content_type.app_label}.{content_type.model}", match_fields=match_fields
         )
-        # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
-        csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
-        return (filename + ".csv", csv_data)
+        renderer.render_to_stream(stream, record_chunks, renderer_context=renderer_context)
+        return "csv"
 
     def run(
         self,

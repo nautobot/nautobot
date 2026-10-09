@@ -1,0 +1,1 @@
+Added support for passing a file object as the `content` of `Job.create_file()`.
