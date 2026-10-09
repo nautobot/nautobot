@@ -761,11 +761,11 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
         if not self.schema:
             self.schema = graphene_settings.SCHEMA
 
-        if self.middleware is not None:
-            if isinstance(self.middleware, MiddlewareManager):
-                self.middleware = graphene_settings.MIDDLEWARE
-            else:
-                self.middleware = list(instantiate_middleware(self.middleware))
+        if self.middleware is None:
+            self.middleware = graphene_settings.MIDDLEWARE
+
+        if self.middleware is not None and not isinstance(self.middleware, MiddlewareManager):
+            self.middleware = list(instantiate_middleware(self.middleware))
 
         if not isinstance(self.schema.graphql_schema, GraphQLSchema):
             raise ValueError("A Schema is required to be provided to GraphQLAPIView.")
