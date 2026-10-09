@@ -986,21 +986,50 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
                 # An export-template-only content type has no serializer, and so no fields to select.
                 pass
 
-        parent_paths = {entry["path"]: entry["parent"] for entry in entries}
-        choices = [(entry["path"], entry["path"] + (" *" if entry["required"] else "")) for entry in entries]
+        parent_paths = {entry.path: entry.parent for entry in entries}
+        choices = [(entry.path, entry.label + (" *" if entry.required else "")) for entry in entries]
+        self.widget.parent_paths = parent_paths
+        # Rows with an option submitting their bare path; see `ExportFieldPath.bare_label`.
+        self.widget.bare_options = {
+            entry.path: (entry.bare_label, entry.bare_description, entry.bare_icon, entry.bare_columns)
+            for entry in entries
+            if entry.bare_label
+        }
+        # The rows selecting each related object's natural key: what the first click on its row selects, and what
+        # a selection naming it is shown as.
+        self.widget.natural_keys = {entry.path: entry.natural_key for entry in entries if entry.natural_key}
+        self.widget.substitutions = {
+            path: self.widget.natural_keys[path]
+            for path in self.widget.flatten_paths(selection)
+            if path in self.widget.natural_keys
+        }
+        # A nested related object with no natural-key lookups has neither, so a selection naming it would show as
+        # nothing and be dropped on resubmission. It exports the object's primary key, so show it as its `id` row.
+        groups = {entry.parent for entry in entries}
+        for path in self.widget.flatten_paths(selection):
+            if path in groups and path not in self.widget.bare_options and path not in self.widget.natural_keys:
+                if parent_paths.get(f"{path}__id") == path:
+                    self.widget.substitutions[path] = [f"{path}__id"]
+                else:
+                    # Defensive: every serializer the tree walks offers `id`, so this is not expected to be reached.
+                    self.widget.bare_options[path] = (
+                        "As selected",
+                        "Selected by name, as this export was set up",
+                        None,
+                        None,
+                    )
+        # As the widget will show it, which is what it is ordered by.
+        selection = self.widget.format_value(selection)
         # A selected path the enumeration does not reach is offered anyway -- one naming a relation deeper
         # than the tree goes, say -- so that the selection stays visible and can be unselected.
         offered = set(parent_paths)
-        for path in selection or []:
+        for path in selection:
             if path not in offered:
                 choices.append((path, path))
                 parent_paths[path] = None
                 offered.add(path)
 
         self.choices = self._ordered_by_selection(choices, selection, parent_paths)
-        self.widget.parent_paths = parent_paths
-        # Which rows name a related object, so the widget can say what selecting one of them does.
-        self.widget.relation_paths = {entry["path"] for entry in entries if entry["relation"]}
 
     @staticmethod
     def _ordered_by_selection(choices, selection, parent_paths):
@@ -1035,7 +1064,8 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         selection = None
         if form.is_bound:
             content_type = form.data.get(form.add_prefix(self.content_type_field_name))
-            selection = form.data.get(form.add_prefix(name))
+            # As the widget reads it, which takes every checked box a browser posts rather than only the last.
+            selection = self.widget.value_from_datadict(form.data, form.files, form.add_prefix(name))
         if not content_type:
             content_type = form.initial.get(self.content_type_field_name)
         if not selection:

@@ -9,6 +9,7 @@ from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationErr
 from rest_framework import serializers
 import yaml
 
+from nautobot.core.api.import_export import natural_key_lookups_for
 from nautobot.core.constants import CSV_NO_OBJECT
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.requests import mock_wsgi_request
@@ -128,10 +129,8 @@ def natural_key_match_fields(model, serializer_class):
     if match_fields is not None:
         match_fields = list(match_fields)
     else:
-        try:
-            lookups = model.csv_natural_key_field_lookups()
-        except AttributeError:
-            # How `BaseModel.natural_key_field_lookups` reports a model with no identifiable natural key
+        lookups = natural_key_lookups_for(model)
+        if lookups is None:
             return None
         match_fields = []
         for lookup in lookups:

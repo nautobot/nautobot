@@ -1,0 +1,1 @@
+Fixed an export field selection naming a related object reached through another one, such as `device_type__manufacturer`, exporting that object's ID instead of the fields that identify it.
