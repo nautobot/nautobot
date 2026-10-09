@@ -933,10 +933,6 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_console_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -954,10 +950,6 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_atomic_transaction_decorator_job_fail_with_console_log(self):
         """
         Job with @transaction.atomic decorator test with fail result and console log enabled.

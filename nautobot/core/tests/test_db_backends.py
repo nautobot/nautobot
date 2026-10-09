@@ -1,8 +1,9 @@
 from unittest import skipIf
 
-from django.db import connection
+from django.db import connection, connections
 
 from nautobot.apps.testing import TestCase
+from nautobot.core.db.backends.sqlite3.base import DatabaseWrapper
 from nautobot.core.db.backends.sqlite3.functions import inet6_ntoa, json_contains
 from nautobot.extras.models import Status
 
@@ -100,6 +101,36 @@ class SQLiteBackendTest(TestCase):
         for lookup in non_matching:
             with self.subTest(lookup=lookup):
                 self.assertFalse(qs.filter(**lookup).exists())
+
+    def test_connection_defaults(self):
+        """The backend applies WAL, a longer lock timeout, and IMMEDIATE transactions unless overridden."""
+        self.assertEqual(connection.settings_dict["OPTIONS"]["timeout"], 15)
+        with connection.cursor() as cursor:
+            cursor.execute("PRAGMA journal_mode")
+            journal_mode = cursor.fetchone()[0]
+            cursor.execute("PRAGMA busy_timeout")
+            busy_timeout = cursor.fetchone()[0]
+        if not connection.creation.is_in_memory_db(connection.settings_dict["NAME"]):
+            self.assertEqual(journal_mode, "wal")
+        self.assertEqual(busy_timeout, 15000)
+
+        # The test configuration overrides the transaction mode, so check the computed defaults on fresh wrappers.
+        # (Django resolves the transaction mode when it prepares the connection parameters.)
+        def transaction_mode_for(**overrides):
+            wrapper = DatabaseWrapper(
+                {**connection.settings_dict, "OPTIONS": {}, "TEST": {"MIRROR": None}, **overrides}
+            )
+            wrapper.get_connection_params()
+            return wrapper.transaction_mode
+
+        self.assertEqual(transaction_mode_for(), "IMMEDIATE")
+        self.assertEqual(transaction_mode_for(OPTIONS={"transaction_mode": "DEFERRED"}), "DEFERRED")
+        # A test mirror of another alias must not reserve the write lock that the mirrored alias will need.
+        self.assertIsNone(transaction_mode_for(TEST={"MIRROR": "default"}))
+
+    def test_settings_dict_is_shared_with_the_connection_handler(self):
+        """Adding option defaults must not replace the dict that new threads build their connections from."""
+        self.assertIs(connection.settings_dict, connections.settings[connection.alias])
 
     def test_query_param_limit_is_raised(self):
         self.assertGreater(connection.features.max_query_params, 999)

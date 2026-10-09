@@ -159,7 +159,7 @@ nautobot-server test nautobot --config nautobot/core/tests/nautobot_config.py --
 
 Behavioral differences to be aware of when a test passes on PostgreSQL but not on SQLite:
 
-- SQLite permits a single writer per database file, so Job log entries are written within the Job's own transaction rather than through the separate `job_logs` connection. A test that expects log entries to survive a rolled-back Job transaction must be skipped on SQLite (check `connection.vendor == "sqlite"`).
+- SQLite permits a single writer per database file, so Job log entries are written within the Job's own transaction. Entries discarded by a rolled-back transaction are re-created when the Job finishes, so assertions made after `run_job_for_testing()` returns see them.
 - `select_for_update()` is a no-op on SQLite.
 - Case-insensitive lookups such as `icontains` only fold ASCII characters on SQLite.
 

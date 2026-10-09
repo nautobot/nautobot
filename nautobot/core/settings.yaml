@@ -692,11 +692,18 @@ properties:
           For a complete list of available parameters, please see the
           [official Django documentation on `DATABASES`](https://docs.djangoproject.com/en/stable/ref/settings/#databases).
 
-      !!! info "SQLite limitations"
-          SQLite allows a single writer per database file, so Nautobot writes Job log entries through the main
-          database connection rather than the separate `job_logs` connection; log entries from a Job that fails and
-          rolls back its transaction are therefore not retained. A SQLite test database is kept on disk next to the
-          configured database file (as `<NAME>.test`) so that `--keepdb` can reuse it between test runs.
+      !!! info "SQLite behavior"
+          Log entries written inside a Job's `transaction.atomic()` block are re-created after the Job finishes
+          if the transaction was rolled back, so they are not lost, but they only become visible once the
+          Job has finished rather than while it runs.
+
+          Nautobot's SQLite backend applies connection defaults suited to several processes sharing one database
+          file: write-ahead logging (`PRAGMA journal_mode = WAL`) with `PRAGMA synchronous = NORMAL`, a 15-second
+          lock timeout, and `IMMEDIATE` transactions. Each can be overridden through `OPTIONS`
+          (`init_command`, `timeout`, and `transaction_mode` respectively).
+
+          A SQLite test database is kept on disk next to the configured database file (as `<NAME>.test`) so that
+          `--keepdb` can reuse it between test runs.
 
       !!! warning
           By default, MySQL is case-insensitive in its handling of text strings. This is different from

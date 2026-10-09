@@ -45,6 +45,10 @@ CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa
 # duration. Run the checks inline instead.
 if "sqlite" in DATABASES["default"]["ENGINE"]:  # noqa: F405  # undefined-local-with-import-star-usage
     HEALTH_CHECK = {"DISABLE_THREADING": True}
+    # Nautobot's SQLite backend defaults to IMMEDIATE transactions, which take the write lock when a transaction
+    # begins. A test case holds a transaction open for its whole duration, so that would block the subprocesses and
+    # threads that some tests start to write to the same database. Defer taking the lock until the first write.
+    DATABASES["default"].setdefault("OPTIONS", {})["transaction_mode"] = "DEFERRED"  # noqa: F405
 
 # Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
 CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"

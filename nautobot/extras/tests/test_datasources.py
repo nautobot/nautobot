@@ -1,14 +1,13 @@
 import os
 import sys
 import tempfile
-from unittest import mock, skipIf
+from unittest import mock
 import uuid
 
 from celery.exceptions import NotRegistered
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection
 from django.test import RequestFactory
 from git import Repo
 import yaml
@@ -227,10 +226,6 @@ class GitTest(TransactionTestCase):
             with self.assertRaises(NotRegistered):
                 job_model.job_task
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_pull_git_repository_and_refresh_data_with_no_data(self):
         """
         The pull_git_repository_and_refresh_data job should fail if the given repo is empty.
@@ -417,10 +412,6 @@ class GitTest(TransactionTestCase):
                 jh = JobHook.objects.get(name="MyJobHook")
                 self.assertFalse(jh.enabled)
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_pull_git_repository_and_refresh_data_with_bad_data(self):
         """
         The test_pull_git_repository_and_refresh_data job should gracefully handle bad data in the Git repository.

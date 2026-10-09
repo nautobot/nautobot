@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 import re
 from types import SimpleNamespace
-from unittest import mock, skipIf
+from unittest import mock
 import uuid
 
 from django.apps import apps
@@ -24,7 +24,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.base import ContentFile
-from django.db import connection, IntegrityError
+from django.db import IntegrityError
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -3477,10 +3477,6 @@ class ImportRollbackTests(ImportExportJobTestCase):
         rows.insert(1, "test_status0,notacolor,dcim.device")
         return "\n".join(rows)
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_import_rollback__enabled_discards_every_row(self):
         """With rollback on, rows that individually succeeded are still rolled back."""
         job_result = self.run_import(
@@ -3502,10 +3498,6 @@ class ImportRollbackTests(ImportExportJobTestCase):
         self.assertEqual(log_warning[0].message, "Rolling back all 4 records.")
         self.assertEqual(log_warning[1].message, "No status objects were created or updated")
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_import_rollback__enabled_reverts_updated_rows(self):
         """With rollback on, a record that a row updated is restored as well."""
         status = self.create_status(color="111111")
@@ -3943,10 +3935,6 @@ class PermissionTests(ImportExportJobTestCase):
         status.refresh_from_db()
         self.assertEqual(status.color, "111111")
 
-    @skipIf(
-        connection.vendor == "sqlite",
-        "On SQLite, job log entries are written within the job transaction and are lost when it rolls back",
-    )
     def test_perm__import_update_constrained_change(self):
         """An update that would take a record outside the user's change constraint is refused."""
         obj_perm = ObjectPermission(name="Change 111111 only", constraints={"color": "111111"}, actions=["change"])

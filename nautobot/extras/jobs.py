@@ -1408,6 +1408,8 @@ def run_job(self, job_class_path, *args, **kwargs):
     started_jobs_counter.labels(
         job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
     ).inc()
+    job_result = job.job_result
+    job_result.start_log_retention()
     try:
         before_start_result = job.before_start(self.request.id, args, kwargs)
         if not job._failed:
@@ -1478,6 +1480,7 @@ def run_job(self, job_class_path, *args, **kwargs):
         raise
 
     finally:
+        job_result.finish_log_retention()
         _cleanup_job(job, event_payload, status, kwargs)
 
 
