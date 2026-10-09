@@ -257,7 +257,7 @@ class UserNavbarFavoritesModalView(GenericView):
 class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
     def post(self, request):
         if request.headers.get("HX-Request", False):
-            form = NavbarFavoritesAddForm(request.POST, user=request.user)
+            form = NavbarFavoritesAddForm(request.POST, user=request.user, auto_id="favorite_id_%s")
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
                 navbar_favorites.append(form.cleaned_data)

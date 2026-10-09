@@ -87,11 +87,15 @@ class NavbarFavoritesAddForm(BootstrapMixin, forms.Form):
     def clean(self):
         super().clean()
         name = self.cleaned_data.get("name")
+        link = self.cleaned_data.get("link")
 
         if self.user and name is not None:
             taken = {(item.get("name", ""), item.get("tab_name", "")) for item in self.user.navbar_favorites}
             if (name, self.cleaned_data.get("tab_name", "")) in taken:
                 self.add_error("name", "A favorite with this name already exists.")
+
+        if self.user and link is not None and link.lower() in self.user.navbar_favorite_links:
+            self.add_error("link", "A favorite with this link already exists.")
 
 
 class NavbarFavoritesRemoveForm(forms.Form):

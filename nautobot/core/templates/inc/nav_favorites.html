@@ -19,7 +19,7 @@
                 <button class="nb-sidenav-favorite active"
                         type="button"
                         hx-post="{% url "user:navbar_favorites_delete" %}"
-                        hx-vals="{&quot;link&quot;:&quot;{{ item.link }}&quot;}"
+                        hx-vals="{&quot;link&quot;:&quot;{{ item.link|escapejs }}&quot;}"
                 >
                     <span class="visually-hidden">
                         Remove from Favorites

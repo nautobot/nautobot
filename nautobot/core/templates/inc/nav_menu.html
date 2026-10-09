@@ -181,7 +181,7 @@
                                                     hx-select="#sidenav-flyout-favorites"
                                                     hx-swap="outerHTML"
                                                     hx-target="#sidenav-flyout-favorites"
-                                                    hx-vals="{&quot;name&quot;:&quot;{{ item_details.name }}&quot;,&quot;link&quot;:&quot;{{ item_link }}&quot;}"
+                                                    hx-vals="{&quot;name&quot;:&quot;{{ item_details.name|escapejs }}&quot;,&quot;link&quot;:&quot;{{ item_link|escapejs }}&quot;}"
                                                     type="button"
                                                 >
                                                     <span class="visually-hidden">

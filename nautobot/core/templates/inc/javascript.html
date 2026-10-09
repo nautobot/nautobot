@@ -29,7 +29,7 @@
         window.nb.favorites.initializeFavorites(
             '{% url "user:navbar_favorites_add" %}',
             '{% url "user:navbar_favorites_delete" %}',
-            '{{ settings.BRANDING_TITLE }}',
+            '{{ settings.BRANDING_TITLE|escapejs }}',
         );
         window.nb.messages.watchMessages('{% url "messages" %}');
     });

@@ -17,7 +17,7 @@ const brandingTitleRef = { current: '' };
  * Get the initial favorite link form field value.
  * @returns {string} Current page URL relative to the origin.
  */
-export const getFavoriteLink = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
+export const getFavoriteLink = () => `${window.location.pathname}${window.location.search}`;
 
 /**
  * Get the initial favorite name form field value.
@@ -55,7 +55,7 @@ export const initializeFavorites = (addUrl, deleteUrl, brandingTitle) => {
     }
 
     const link = formData.get('link')?.toLowerCase();
-    const buttons = document.querySelectorAll(`[${FAVORITE_LINK_DATA_ATTRIBUTE}="${link}"]`);
+    const buttons = document.querySelectorAll(`[${FAVORITE_LINK_DATA_ATTRIBUTE}="${CSS.escape(link)}"]`);
     const modal = document.getElementById(FAVORITE_MODAL_ID);
     const shouldBeActive = path === addUrl;
 
@@ -94,7 +94,6 @@ export const initializeFavorites = (addUrl, deleteUrl, brandingTitle) => {
   htmx.on('htmx:beforeSwap', onHtmxBeforeSwap);
   htmx.on('htmx:afterRequest', onHtmxAfterRequest);
   htmx.on('htmx:pushedIntoHistory', synchronizeFavoriteButtons);
-  window.addEventListener('hashchange', synchronizeFavoriteButtons);
   window.addEventListener('popstate', synchronizeFavoriteButtons);
   window.addEventListener('nb-history:push-state', synchronizeFavoriteButtons);
   window.addEventListener('nb-history:replace-state', synchronizeFavoriteButtons);
@@ -103,7 +102,6 @@ export const initializeFavorites = (addUrl, deleteUrl, brandingTitle) => {
     htmx.off('htmx:beforeSwap', onHtmxBeforeSwap);
     htmx.off('htmx:afterRequest', onHtmxAfterRequest);
     htmx.off('htmx:pushedIntoHistory', synchronizeFavoriteButtons);
-    window.removeEventListener('hashchange', synchronizeFavoriteButtons);
     window.removeEventListener('popstate', synchronizeFavoriteButtons);
     window.removeEventListener('nb-history:push-state', synchronizeFavoriteButtons);
     window.removeEventListener('nb-history:replace-state', synchronizeFavoriteButtons);
