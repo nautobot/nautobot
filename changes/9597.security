@@ -1,0 +1,1 @@
+Updated development npm dependency `shell-quote` to `1.12.0` to mitigate CVE-2026-102422.
