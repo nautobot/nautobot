@@ -14,7 +14,9 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models.deletion import Collector
 from django.db.utils import IntegrityError
 from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
@@ -42,6 +44,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -59,6 +62,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -4322,6 +4326,41 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    def test_cascade_delete_survives_concurrent_group_delete(self):
+        """Deleting a member object succeeds when another request deletes its group mid-cascade."""
+        device_type = DeviceType.objects.create(manufacturer=Manufacturer.objects.first(), model="Device Type 1")
+        device = Device.objects.create(
+            name="Device 1",
+            device_type=device_type,
+            role=Role.objects.get_for_model(Device).first(),
+            location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        # An empty filter matches every device, so saving the group caches a row for this device.
+        group = DynamicGroup.objects.create(
+            name="Dynamic Group 1",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={},
+        )
+        self.assertTrue(
+            StaticGroupAssociation.all_objects.filter(dynamic_group=group, associated_object_id=device.pk).exists()
+        )
+
+        user = get_user_model().objects.create_user(username="staticgroupassociationuser")
+        with web_request_context(user):
+            # What `DELETE /api/dcim/devices/<pk>/` does first: collect the cascade, including the cached row.
+            collector = Collector(using="default")
+            collector.collect([device])
+            # A second request, with its own change_id, deletes the group before the first one reaches `pre_delete`.
+            with web_request_context(user, change_id=uuid.uuid4()):
+                group.delete()
+            # Own savepoint, so a failure here does not also break the context manager's exit query.
+            with transaction.atomic():
+                collector.delete()
+
+        self.assertFalse(Device.objects.filter(pk=device.pk).exists())
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):
