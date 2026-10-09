@@ -250,6 +250,24 @@ Other notable behaviors:
 - Only the **submitter** (or a superuser) can cancel an in-flight approval workflow.
 - Any authenticated user with view access can **comment** on a workflow — commenting is not limited to approvers.
 
+### IP Address Merge Tool
+
+The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place.
+
++/- 3.2.7
+    `ipam.add_ipaddress` and `ipam.delete_ipaddress` are now required. Previously only `ipam.change_ipaddress` was required.
+
+Since the tool exists to consolidate duplicate records, a merge intentionally makes changes that may go beyond the user's other permissions:
+
+- Object-level constraints on the user's IP address permissions are **not** enforced by the merge itself. The merge page only lists IP addresses within the user's `change` constraints, but the merge does not re-check `add`, `change`, or `delete` constraints against the IP addresses it deletes or the one it creates.
+- Existing references to the merged IP addresses are moved to the new IP address **without** checking the user's permissions on the referencing objects, so the new IP address may end up assigned to objects the user cannot `view` or `change` directly. This includes `Device` and `VirtualMachine` primary IPs (`primary_ip4`/`primary_ip6`), interface and VM interface assignments, `Service` assignments, and the objects on the other side of relationship associations.
+- The `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` values selected for the new IP address, and the custom field data copied to it, are assigned **without** checking `view` permission, so the new IP address may reference related objects the user cannot view directly.
+
+These changes are not silent: the deleted and created IP addresses, and every updated device, virtual machine, interface, VM interface, and service, are recorded in the [change log](../../platform-functionality/change-logging.md) under the merging user's request.
+
+!!! warning
+    Treat the combination of `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` as granting access to the merge tool, and grant all three together only to users you trust to perform merges. A user who should manage IP addresses only within a constrained scope should not be given all three.
+
 ## Limitations and Edge Cases
 
 ### No Field-Level Permissions
@@ -356,6 +374,7 @@ Some other permissions, while not posing the same inherent security risks as tho
 - [Computed Fields](../../platform-functionality/computedfield.md) - poorly defined (expensive to calculate/render) custom field Jinja2 templates can significantly reduce performance of list views and object detail views.
 - [Custom Fields](../../platform-functionality/customfield.md) - the background task (job) started when a new custom field is defined or an existing custom field is deleted can consume significant resources in updating a large number of records. Large numbers of custom fields can clutter the UI and reduce performance.
 - [Relationships](../../platform-functionality/relationship.md) - large numbers of relationships can clutter the UI and reduce performance.
+- `ipam.add_ipaddress` + `ipam.change_ipaddress` + `ipam.delete_ipaddress` - together these grant access to the [IP Address Merge Tool](#ip-address-merge-tool), which updates related devices, virtual machines, and other objects without checking the user's permissions on them.
 - [Saved Views](../../platform-functionality/user-interface/savedview.md) - no `extras.*_savedview` or `extras.*_usersavedviewassociation` permission is needed for a user to make use of the feature. Any authenticated user can already create saved views, use their own and any shared view, and pin their own default view. Grant these permissions only to users who should control saved views for **other** users:
     - `extras.view_savedview` grants visibility into every user's saved views, including those that are not shared, and access to the dedicated saved views list page.
     - `extras.change_savedview` grants the ability to edit saved views belonging to other users, and to set the global default view that every user without a default of their own is redirected to.

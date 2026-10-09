@@ -1218,6 +1218,8 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
     queryset = IPAddress.objects.all()
     template_name = "ipam/ipaddress_merge.html"
+    # A merge deletes the collapsed IPs and creates the merged one, so it needs add and delete as well as change.
+    additional_permissions = ["ipam.add_ipaddress", "ipam.delete_ipaddress"]
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -1305,7 +1307,6 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         nat_inside=nat_inside,
                         _custom_field_data=ip_in_the_same_namespace._custom_field_data,
                     )
-                    merged_ip.tags.set(tags)
                     # Update custom_field_data
                     for key in merged_ip._custom_field_data.keys():
                         ip_pk = merged_attributes.get("cf_" + key)
@@ -1357,15 +1358,23 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     )
                     logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
                     merged_ip.validated_save()
+                    # Tags are set only after the save, so the change log records the merged IP as created.
+                    merged_ip.tags.set(tags)
                     # After some testing
                     # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
                     for assignment in ip_to_interface_assignments:
                         IPAddressToInterface.objects.create(**assignment)
-                    # Update Device primary_ip fields of the Collapsed IPs
-                    Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
-                    Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
+                    # Update Device/VM primary_ip fields of the Collapsed IPs. Save each object individually
+                    # (rather than queryset.update()) so that every change is recorded in the change log.
+                    for model, pk_list, field_name in (
+                        (Device, device_ip4, "primary_ip4"),
+                        (Device, device_ip6, "primary_ip6"),
+                        (VirtualMachine, vm_ip4, "primary_ip4"),
+                        (VirtualMachine, vm_ip6, "primary_ip6"),
+                    ):
+                        for obj in model.objects.filter(pk__in=pk_list):
+                            setattr(obj, field_name, merged_ip)
+                            obj.validated_save()
                     for service in services:
                         Service.objects.get(pk=service).ip_addresses.add(merged_ip)
                     logger.info(logger_msg)

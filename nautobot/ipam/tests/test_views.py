@@ -26,10 +26,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     VirtualDeviceContext,
 )
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1539,9 +1540,21 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         device_3.primary_ip4 = cls.dup_ip_3
         device_3.save()
 
+    MERGE_PERMISSIONS = ("ipam.add_ipaddress", "ipam.change_ipaddress", "ipam.delete_ipaddress")
+
+    def test_merging_ip_addresses_requires_add_and_delete_permissions(self):
+        for missing_perm in ("ipam.add_ipaddress", "ipam.delete_ipaddress"):
+            with self.subTest(missing_perm=missing_perm):
+                self.add_permissions(*(perm for perm in self.MERGE_PERMISSIONS if perm != missing_perm))
+                num_ips_before = IPAddress.objects.count()
+                self.assertHttpStatus(self.client.get(self.merge_url), 403)
+                self.assertHttpStatus(self.client.post(self.merge_url, data=post_data(self.merge_data)), 403)
+                self.assertEqual(num_ips_before, IPAddress.objects.count())
+                ObjectPermission.objects.filter(users=self.user).delete()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_success(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         num_ips_before = IPAddress.objects.all().count()
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         request = {
@@ -1586,8 +1599,54 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             self.assertEqual(merged_ip, device.primary_ip4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_records_object_changes(self):
+        """Every object the merge creates, deletes, or repoints must appear in the change log."""
+        self.add_permissions(*self.MERGE_PERMISSIONS)
+        cluster = Cluster.objects.create(
+            name="Merge IP Cluster", cluster_type=ClusterType.objects.create(name="Merge IP Cluster Type")
+        )
+        vm = VirtualMachine.objects.create(
+            name="Merge IP VM", cluster=cluster, status=Status.objects.get_for_model(VirtualMachine).first()
+        )
+        vm_interface = VMInterface.objects.create(
+            virtual_machine=vm, name="eth0", status=Status.objects.get_for_model(VMInterface).first()
+        )
+        vm_interface.ip_addresses.add(self.dup_ip_1)
+        vm.primary_ip4 = self.dup_ip_1
+        vm.save()
+
+        response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+
+        expected_changes = [
+            *((ip, ObjectChangeActionChoices.ACTION_DELETE) for ip in (self.dup_ip_1, self.dup_ip_2, self.dup_ip_3)),
+            (merged_ip, ObjectChangeActionChoices.ACTION_CREATE),
+            *((device, ObjectChangeActionChoices.ACTION_UPDATE) for device in self.devices),
+            (vm, ObjectChangeActionChoices.ACTION_UPDATE),
+            *((interface, ObjectChangeActionChoices.ACTION_UPDATE) for interface in self.interfaces),
+            (vm_interface, ObjectChangeActionChoices.ACTION_UPDATE),
+            *((service, ObjectChangeActionChoices.ACTION_UPDATE) for service in self.services),
+        ]
+        for obj, action in expected_changes:
+            with self.subTest(obj=obj, action=action):
+                self.assertTrue(
+                    ObjectChange.objects.filter(
+                        changed_object_type=ContentType.objects.get_for_model(obj),
+                        changed_object_id=obj.pk,
+                        action=action,
+                    ).exists()
+                )
+        for obj in (*self.devices, vm):
+            with self.subTest(primary_ip4_logged_for=obj):
+                change = ObjectChange.objects.get(
+                    changed_object_type=ContentType.objects.get_for_model(obj), changed_object_id=obj.pk
+                )
+                self.assertEqual(change.object_data["primary_ip4"], str(merged_ip.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         num_ips_before = IPAddress.objects.all().count()
         self.merge_data["pk"] = self.merge_data["pk"][0]
@@ -1611,7 +1670,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_relationship_data_changes_after_merging(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         num_ips_before = IPAddress.objects.all().count()
         ips = IPAddress.objects.all().exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk])
         self.assertGreaterEqual(len(ips), 6)
