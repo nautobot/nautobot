@@ -70,7 +70,7 @@ READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 WRITE_METHODS = frozenset({"DELETE", "PATCH", "POST", "PUT"})
 
 
-def get_custom_rest_request_read_complexity_cost_calculation_function():
+def get_custom_rest_request_read_complexity_cost_estimation_function():
     dotted_import_path = settings.NAUTOBOT_REST_RATE_LIMITING_CUSTOM_READ_COMPLEXITY_COST_ESTIMATION_FUNCTION
 
     if not dotted_import_path:

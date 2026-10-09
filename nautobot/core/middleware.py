@@ -44,7 +44,7 @@ from nautobot.core.rate_limiting.metrics import (
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
-    get_custom_rest_request_read_complexity_cost_calculation_function,
+    get_custom_rest_request_read_complexity_cost_estimation_function,
     READ_METHODS,
     WRITE_METHODS,
 )
@@ -667,11 +667,11 @@ class ComplexityCostRateLimitingMiddleware:
         if request.method in READ_METHODS:
             read_request_features = classify_rest_read_request_features(request)
 
-            custom_rest_request_read_complexity_cost_calculation_function = (
-                get_custom_rest_request_read_complexity_cost_calculation_function()
+            custom_rest_request_read_complexity_cost_estimation_function = (
+                get_custom_rest_request_read_complexity_cost_estimation_function()
             )
-            if custom_rest_request_read_complexity_cost_calculation_function is not None:
-                request_complexity_cost_estimate = custom_rest_request_read_complexity_cost_calculation_function(
+            if custom_rest_request_read_complexity_cost_estimation_function is not None:
+                request_complexity_cost_estimate = custom_rest_request_read_complexity_cost_estimation_function(
                     read_request_features
                 )
             else:

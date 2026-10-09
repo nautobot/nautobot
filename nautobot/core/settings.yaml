@@ -1683,7 +1683,7 @@ properties:
       REST API read requests. An empty string defaults the built-in cost calculator.
     details: |-
       The function takes one argument, a
-      `nautobot.core.rate_limiting.rest_calculator.RestReadRequestFeatures` object. This object describes the 
+      `nautobot.core.rate_limiting.rest_calculator.RestReadRequestFeatures` object. This object describes the
       features of a REST request (filter count, indexable and unindexable lookups, `depth`,
       `limit`, opt-in fields, response format, etc), and returns the number of cost points to
       charge. It has the same signature as the built-in
