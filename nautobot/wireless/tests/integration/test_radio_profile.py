@@ -27,7 +27,6 @@ class RadioProfileTestCase:
 
         # The job is not awaited: the CI job runs no Celery worker, so it stays pending there.
         response = api.get(f"/api/extras/job-results/{job_result_id}/")
-        if not response.ok:
-            pytest.fail(f"GET job result {job_result_id} returned {response.status}: {response.text()}")
+        assert response.ok, f"GET job result {job_result_id} returned {response.status}: {response.text()}"
         job_result = response.json()
         assert job_result["name"] == "Bulk Edit Objects", f"Apply redirected to a {job_result['name']!r} job result"
