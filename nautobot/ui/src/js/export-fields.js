@@ -1,3 +1,4 @@
+import { Tooltip } from 'bootstrap';
 import htmx from 'htmx.org';
 
 /*
@@ -171,8 +172,18 @@ export const initializeExportFields = () => {
     }
   });
 
-  // Bring each picker's parent rows and summary into line with what it has checked, whenever one is loaded.
+  /*
+   * Whenever a picker is loaded, bring its parent rows and summary into line with what it has checked, and set up its
+   * tooltips: the page's own setup only covers what is there when the page first loads, not what HTMX brings in.
+   */
   htmx.onLoad((content) => {
-    content.querySelectorAll(LIST_SELECTOR).forEach(refresh);
+    content.querySelectorAll(LIST_SELECTOR).forEach((list) => {
+      refresh(list);
+      list.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => Tooltip.getOrCreateInstance(element));
+    });
+  });
+  // And dispose of them as HTMX removes the picker, or one showing at the time would be left on the page.
+  document.addEventListener('htmx:beforeCleanupElement', (event) => {
+    Tooltip.getInstance(event.target)?.dispose();
   });
 };

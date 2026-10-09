@@ -322,9 +322,10 @@ class ExportFieldPath:
     # For a path with an option submitting the bare path -- a related object whose natural key is not made of rows
     # offered under it, or `custom_fields` -- that option's label, e.g. "Natural key".
     bare_label: str | None = None
-    # What that option exports, e.g. "The fields that identify this object by default:
-    # location__name, location__parent__name".
+    # What that option exports, e.g. "The fields that identify this object by default:".
     bare_description: str | None = None
+    # The columns that option exports, where known in advance, e.g. `["location__name", "location__parent__name"]`.
+    bare_columns: list[str] | None = None
     # The Material Design icon marking that option, if any, e.g. "mdi-key-link" for a natural key.
     bare_icon: str | None = None
 
@@ -694,8 +695,7 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
             entry.bare_label = "Natural key"
             # As the import form marks a related object, identified by its natural key.
             entry.bare_icon = "mdi-key-link"
-            entry.bare_description = "The fields that identify this object by default: " + ", ".join(
-                natural_keys[entry.path]
-            )
+            entry.bare_description = "The fields that identify this object by default:"
+            entry.bare_columns = natural_keys[entry.path]
 
     return paths

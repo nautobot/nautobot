@@ -2028,7 +2028,12 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn('value="module"', natural_key)
         self.assertIn('data-nb-label="Natural key"', natural_key)
         self.assertRegex(rendered, r'for="id_export_fields_bare_module"[^>]*>Natural key<span class="mdi mdi-key-link ')
-        self.assertIn('title="The fields that identify this object by default: module__pk"', rendered)
+        # An HTML tooltip, escaped once more as the attribute's value.
+        self.assertIn(
+            'data-bs-toggle="tooltip" data-bs-html="true" '
+            'title="The fields that identify this object by default:&lt;br&gt;&lt;code&gt;module__pk&lt;/code&gt;"',
+            rendered,
+        )
 
     def test_select__natural_key_rows_export_exactly_the_natural_key(self):
         """Whatever rows select a related object's natural key export exactly the columns of that natural key.

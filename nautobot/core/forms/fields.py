@@ -991,7 +991,7 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         self.widget.parent_paths = parent_paths
         # Rows with an option submitting their bare path; see `ExportFieldPath.bare_label`.
         self.widget.bare_options = {
-            entry.path: (entry.bare_label, entry.bare_description, entry.bare_icon)
+            entry.path: (entry.bare_label, entry.bare_description, entry.bare_icon, entry.bare_columns)
             for entry in entries
             if entry.bare_label
         }
@@ -1015,6 +1015,7 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
                     self.widget.bare_options[path] = (
                         "As selected",
                         "Selected by name, as this export was set up",
+                        None,
                         None,
                     )
         # As the widget will show it, which is what it is ordered by.

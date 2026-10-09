@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import conditional_escape, escape, format_html, format_html_join
 
 from nautobot.core import choices as core_choices
 from nautobot.core.forms import utils
@@ -171,8 +171,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         self.no_list_view = False
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
-        # For each row with an option submitting its bare path, that option's label, description and icon; see
-        # `ExportFieldPath.bare_label`.
+        # For each row with an option submitting its bare path, that option's label, description, icon and columns;
+        # see `ExportFieldPath.bare_label`.
         self.bare_options = {}
         # For each related object, the rows selecting its natural key; see `ExportFieldPath.natural_key`.
         self.natural_keys = {}
@@ -382,7 +382,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
     @staticmethod
     def _checkbox(control, control_id, label, path, is_root, title=None):
-        """A row's checkbox `control` with its label, and the path it selects alongside."""
+        """A row's checkbox `control` with its label, and the path it selects alongside.
+
+        A `title` -- plain text, or HTML from `format_html()` -- is shown as a Bootstrap tooltip, which
+        `export-fields.js` sets up when the picker is loaded.
+        """
         return format_html(
             '<div class="form-check flex-grow-1 my-0">{control}'
             '<label class="form-check-label py-6{pe}" for="{control_id}"{title}>{label}'
@@ -391,15 +395,24 @@ class ExportFieldSelect(SelectMultipleOrderable):
             control=control,
             control_id=control_id,
             pe="" if is_root else " pe-20",
-            title=format_html(' title="{}"', title) if title else "",
+            # The tooltip is HTML (plain text escaped into it), escaped once more to be the attribute's value.
+            title=format_html(
+                ' data-bs-toggle="tooltip" data-bs-html="true" title="{}"', escape(conditional_escape(title))
+            )
+            if title
+            else "",
             label=label,
             path=path,
         )
 
     def _bare_option(self, path, widget_id, name, selected):
         """The first row nested under `path`: the option submitting `path` itself, e.g. "Natural key"."""
-        label, description, icon = self.bare_options[path]
+        label, description, icon, columns = self.bare_options[path]
         control_id = f"{widget_id}_bare_{path}"
+        if columns:
+            description = format_html(
+                "{}<br>{}", description, format_html_join(", ", "<code>{}</code>", ((column,) for column in columns))
+            )
         control = format_html(
             '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-bare" id="{}" name="{}" '
             'type="checkbox" value="{}" data-nb-label="{}"{}>',
