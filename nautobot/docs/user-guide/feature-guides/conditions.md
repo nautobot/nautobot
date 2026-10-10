@@ -2,9 +2,9 @@
 
 +++ 3.3.0
 
-A condition narrows _which changes_ a Webhook or Job Hook reacts to. Without conditions, an action fires for every change to every object of its selected types. With conditions, it runs only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
+A condition narrows _which changes_ a Webhook or Job Hook reacts to. This page calls both a hook. Without conditions, a hook runs for every change to every object of its selected types. With conditions, it runs only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
 
-Conditions are a list of rows. Every row must pass for the action to run. An empty list passes. Each row is either a _preset_ chosen from a catalog and filled in, or a _raw expression_ written in Jinja2. Either kind can be negated.
+Conditions are a list of rows. Every row must pass for the hook to run. An empty list passes. Each row is either a _preset_ chosen from a catalog and filled in, or a _raw expression_ written in Jinja2. Either kind can be negated.
 
 ## The event payload
 
@@ -22,25 +22,23 @@ Every condition is checked against the same payload a webhook body template rece
 
 ### Fields and relations
 
-A field is addressed by name: `mtu`, `name`. A related object is serialized as a mapping, so it is addressed by the key inside it, separated by a dot: `status.name`, `primary_ip4.address`, `location.name`. Naming the relation alone, `status`, yields the whole mapping, which no comparison matches.
+A field is addressed by name: `mtu`, `name`. A related object holds fields of its own, so name the field inside it after a dot: `status.name`, `primary_ip4.address`, `location.name`. The relation alone, `status`, matches no comparison.
 
-A many-valued field such as `tags` is named on its own, and each related object in it compares as the name it is displayed under. A dot does not reach inside it: `tags.color` resolves to nothing. Asking about tags is below, under [Operators](#operators).
+A many-valued field such as `tags`, or a field holding a plain list, is named on its own. A dot does not reach inside it: `tags.color` resolves to nothing. See [Asking about tags](#asking-about-tags).
 
-A field holding a plain list is named the same way. Its values are typed rather than picked, because there is nowhere to read them from.
+A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own matches no comparison, like a relation alone.
 
-A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own is a mapping, like a relation.
-
-A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value could be a mapping on one object and a plain value on the next, so no operator fits the field. A raw expression can still read it.
+A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value can hold nested keys on one object and a single value on the next, so no operator fits the field. A raw expression can still read it.
 
 ## Presets
 
 A preset is a ready-made condition with a fixed meaning. You choose it and fill in its parameters.
 
-| Preset | Fires when |
-|--------|-----------|
+| Preset | Passes when |
+|--------|-------------|
 | **Field transition** | the field went from one value to another, within an update |
 | **Field change** | the field's value changed, whatever it changed to, within an update |
-| **Field comparison** | the field compares as chosen against a value |
+| **Field comparison** | the field matches the chosen operator and value |
 | **User is** | a specific user made the change |
 
 ### Field transition
@@ -77,7 +75,8 @@ Used by **Field comparison**. What a comparison does depends on the type of the 
 
 | Value type | `=` | `gt` `gte` `lt` `lte` | `in` | `contains` | `startswith` `endswith` |
 |------------|-----|-----------------------|------|------------|-------------------------|
-| text, date | exact match | alphabetical | any of the set | substring | prefix / suffix |
+| text | exact match | alphabetical | any of the set | substring | prefix / suffix |
+| date | exact match | chronological | any of the set | substring | prefix / suffix |
 | number | numeric | numeric | any of the set | – | – |
 | boolean | true / false | – | – | – | – |
 | list | same set of values | – | – | holds the value | – |
@@ -88,7 +87,7 @@ There is no `!=` operator: negate the row instead.
 
 `tags` is named on its own, with no sub-field beside it. The picker offers the tags the selected object types can hold, and a tag is matched by the name it is displayed under.
 
-`contains` takes one tag. Every condition must pass, so two of them ask for both tags.
+`contains` takes one tag. Every condition must pass, so two `contains` rows ask for both tags.
 
 | Conditions | Matches |
 |------------|---------|
@@ -109,23 +108,19 @@ not A
 
 The expression sees the payload variables above and the same filters as a webhook body template. Expressions run in a sandbox and cannot modify the payload.
 
-A field that can be empty arrives as `none`, and comparing that with `>` raises rather than returning false. Guard it, for example `data.mtu is not none and data.mtu > 9000`. A preset does this for you, and treats an empty field as a non-match.
-
-Prefer a preset when one fits.
+A field that can be empty arrives as `none`. Comparing `none` with `>` causes an error, so the row counts as not passing. Guard it, for example `data.mtu is not none and data.mtu > 9000`. A preset does this for you, and treats an empty field as a non-match. Prefer a preset when one fits.
 
 ## How conditions are checked
 
-When a change is recorded, Nautobot goes through the action's conditions one by one. Each row is checked on its own against the change. The action runs only if every row passes, so adding rows narrows the action down. An action with no rows runs for every change.
+When a change is recorded, Nautobot goes through the hook's conditions one by one. Each row is checked on its own against the change. The hook runs only if every row passes, so adding rows narrows the hook down. A hook with no rows runs for every change.
 
-A row passes when what it asks is true of the change. A negated row passes when it is false. A row that cannot be checked at all, for example because of a syntax error in an expression or a value of the wrong type for the operator, counts as not passing, so the action does not run.
+A row passes when what it asks is true of the change. A negated row passes when it is false. A row that cannot be checked at all, for example because of a syntax error in an expression or a value of the wrong type for the operator, counts as not passing, so the hook does not run.
 
-A row that cannot be checked is written to the Nautobot log at `ERROR` level, naming the action, the number of the row (counted from one, the way the form shows it) and the reason. Each fault is reported once per request, so a change touching many objects at once logs one message rather than one per object. The log is the only place this appears. An action stopped by a broken row looks no different in the web UI.
-
-All rows are checked even after one has failed, so the full verdict exists (which row passed, which failed and which could not be checked). Showing that verdict comes with the dry run feature, which is not available yet.
+A row that cannot be checked is written to the Nautobot log at `ERROR` level, naming the hook, the number of the row (counted from one, the way the form shows it) and the reason. Each fault is reported once per request, so a change touching many objects at once logs one message rather than one per object. The log is the only place this appears. A hook stopped by a broken row looks no different in the web UI.
 
 ## Setting conditions in the web UI
 
-The Conditions card on a Webhook or Job Hook edit form has two tabs. **Form** builds the rows for you. **JSON** holds the field that is actually saved. They are the same conditions seen two ways, and switching to Form reads the rows back from whatever the JSON tab holds.
+Conditions are set on the same form that creates or edits a Webhook (**Extensibility > Webhooks**) or a Job Hook (**Jobs > Job Hooks**). The Conditions card on that form has a **Form** tab, which builds the rows for you, and a **JSON** tab, which holds the field that is actually saved. They are the same conditions seen two ways, and switching to Form reads the rows back from whatever the JSON tab holds.
 
 Choose the object types first. Until you do, the field picker is empty and disabled, because the fields a condition may name are only those that every selected object type carries. Change the object types later and every row is offered the new set of fields.
 
@@ -137,17 +132,33 @@ A row reads as a sentence from left to right:
 | **Condition type** | A preset from the catalog above, or **Raw expression** |
 | The rest | The parameters that preset declares, one to a line |
 
-The parameters change with the type, so choosing a different one rebuilds the row. Naming a different field does the same, and clears the value that was being compared, because a value that meant something under the old field means nothing under the new one.
+![Conditions card](./images/conditions/conditions-card_light.png#only-light){ .on-glb }
+![Conditions card](./images/conditions/conditions-card_dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/webhooks/add/`"
+
+The JSON tab holds the same three rows as:
+
+```json
+[
+    {"type": "preset", "preset": "field_transition", "values": {"field": "status.name", "from": "Staged", "to": "Active"}, "negate": false},
+    {"type": "preset", "preset": "field_compare", "values": {"field": "tags", "operator": "contains", "value": "core"}, "negate": false},
+    {"type": "preset", "preset": "user_is", "values": {"username": "sync-account"}, "negate": true}
+]
+```
+
+After a save, the detail view of the Webhook or Job Hook shows this JSON in its **Conditions** panel.
+
+The parameters change with the type, so choosing a different one rebuilds the row. Naming a different field does the same, and clears the value that was being compared.
 
 The picker shows each field by its label, in alphabetical order, and stores the path behind it.
 
-Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A relation on its own addresses a mapping, which no comparison can equal, so a sub-field is always chosen for you and `name` is the one offered first. A many-valued field such as `tags` has no sub-field picker, because it is always compared by the name its objects are displayed under. A custom field has a dotted path too, but the whole of it names one field, so it is chosen in the first picker and has no sub-field beside it. A related object's custom fields are offered in the **Sub-field** picker.
+Naming a relation such as `status` adds a **Sub-field** picker beside it, and the two are stored joined by a dot. A sub-field is always chosen for you, with `name` offered first. A custom field such as `custom_fields.site_code` is chosen in the first picker, and a related object's custom fields in the **Sub-field** picker.
 
-What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a colour from a palette, a date from a calendar. `tags` is picked from the tags the selected object types can hold, several for `=` and one for `contains`. A selection custom field is picked from the choices that custom field declares. An operator that matches part of a value, such as `contains` on text, gives a plain box instead.
+What the value control looks like follows from the field and the operator together. A relation's sub-field is picked from the objects that exist, a color from a palette, a date from a calendar. `tags` is picked from the tags the selected object types can hold, several for `=` and one for `contains`. A selection custom field is picked from the choices that custom field declares. An operator that matches part of a value, such as `contains` on text, gives a plain box instead. So does a field holding a plain list, because there are no options to pick from.
 
-**Add another Condition** adds a row at the end, and the bin beside a row removes it. Every row must pass, so rows narrow the action down rather than widening it.
+**Add another Condition** adds a row at the end, and the bin beside a row removes it.
 
-Nothing is complained about while you fill a row in. A row half filled in is a row being filled in. Press **Create** or **Update** and anything a save refuses appears beside the control at fault, and stays there until you fix it.
+The form shows no errors while you fill in a row. After **Create** or **Update**, anything a save refuses appears next to the control at fault, and stays there until you fix it.
 
 You can paste into the JSON tab instead, in the format below. If what you paste cannot be read as conditions, the Form tab shows a message where the rows would be, and leaves your text alone so you can go back and fix it.
 
@@ -160,11 +171,13 @@ Conditions are a list. Each entry is a preset row or an expression row:
 ```json
 [
     {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}},
-    {"type": "expression", "source": "(data.mtu is not none and data.mtu > 9000) or username != 'sync-infoblox'", "negate": true}
+    {"type": "expression", "source": "(data.mtu is not none and data.mtu > 9000) or username != 'sync-account'", "negate": true}
 ]
 ```
 
-A preset row names the preset and gives its values. The preset keys are `field_transition`, `field_changed`, `field_compare` and `user_is`, and the value names are the parameter names from the tables above. Any other name is rejected.
+A preset row names the preset and gives its values. The preset keys are `field_transition`, `field_changed`, `field_compare` and `user_is`, and the value names are the parameter names from the tables above. Any other name is rejected. `GET /api/extras/condition-presets/` lists every preset with its parameters.
+
+For `in`, and for `=` on a list field such as `tags`, `value` is a list.
 
 An expression row has the expression in `source`.
 
