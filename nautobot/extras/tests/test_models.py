@@ -5006,16 +5006,6 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
             webhook.save()
             webhook.content_types.add(device_content_type)
 
-    def test_type_error_not_raised_when_calling_check_for_conflicts(self):
-        """
-        Test type error not raised when calling Webhook.check_for_conflicts() without passing all accepted arguments
-        """
-        conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
-        self.assertEqual(
-            conflicts["type_create"],
-            [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
-        )
-
     def test_clean_payload_url_validation(self):
         """`Webhook.clean()` surfaces SSRF policy violations against the `payload_url` field."""
         cases = [

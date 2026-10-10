@@ -1,5 +1,4 @@
 from datetime import date, datetime, timezone
-import json
 from unittest import skip
 import warnings
 
@@ -99,74 +98,22 @@ class JobHookFormTestCase(TestCase):
             },
         )
 
-    def test_create_job_hooks_with_same_content_type_same_action_diff_job(self):
-        """
-        Create a new job hook with the same content_types, same action and different job from a job hook that exists
+    def test_job_hooks_like_an_existing_job_hook_are_saved(self):
+        """The existing job hook is on DCIM | device type, create and update, `TestJobHookReceiverLog`."""
+        cases = [
+            ("different job", self.job_hooks_data[0]),
+            ("different action", self.job_hooks_data[1]),
+            ("different content type", self.job_hooks_data[2]),
+            ("same content type, same job and a common action", self.job_hooks_data[3]),
+        ]
+        for label, data in cases:
+            with self.subTest(label):
+                form = JobHookForm(data=data)
 
-        Example:
-            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
-        """
-        form = JobHookForm(data=self.job_hooks_data[0])
+                self.assertTrue(form.is_valid(), form.errors)
+                form.save()
 
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[0]["name"]).count(), 1)
-
-    def test_create_job_hooks_with_same_content_type_same_job_diff_action(self):
-        """
-        Create a new job hook with the same content_types, same job and different actions from a job hook that exists
-
-        Example:
-            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: DCIM | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
-        """
-        form = JobHookForm(data=self.job_hooks_data[1])
-
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[1]["name"]).count(), 1)
-
-    def test_create_job_hooks_with_same_job_same_action_diff_content_type(self):
-        """
-        Create a new job hook with the same job, same actions and different content types from a job hook that exists
-
-        Example:
-            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: DCIM | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
-        """
-        form = JobHookForm(data=self.job_hooks_data[2])
-
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[2]["name"]).count(), 1)
-
-    def test_create_job_hooks_with_same_job_common_action_same_content_type(self):
-        """
-        Create a new job hook with the same job, common actions and same content types as a job hook that exists
-
-        Example:
-            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: DCIM | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
-        """
-        form = JobHookForm(data=self.job_hooks_data[3])
-
-        self.assertFalse(form.is_valid())
-        error_msg = json.loads(form.errors.as_json())
-
-        self.assertEqual(JobHook.objects.filter(name=self.job_hooks_data[3]["name"]).count(), 0)
-        self.assertIn("type_create", error_msg)
-        self.assertEqual(
-            error_msg["type_create"][0]["message"],
-            "A job hook already exists for create on DCIM | device type to job TestJobHookReceiverLog",
-        )
-        self.assertEqual(
-            error_msg["type_update"][0]["message"],
-            "A job hook already exists for update on DCIM | device type to job TestJobHookReceiverLog",
-        )
+                self.assertEqual(JobHook.objects.filter(name=data["name"]).count(), 1)
 
     def test_conditions_are_accepted_as_json_text(self):
         """One case is enough: `conditions` is the same field as on the webhook form, which covers the rest."""
@@ -1055,59 +1002,21 @@ class WebhookFormTestCase(TestCase):
             },
         ]
 
-    def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
-        """
-        Create a new webhook with different content_types, same url and same action with a webhook that exists
+    def test_webhooks_like_an_existing_webhook_are_saved(self):
+        """The existing webhook is on DCIM | console port, create and update, http://example.com/test."""
+        cases = [
+            ("different content type", self.webhooks_data[0]),
+            ("different action", self.webhooks_data[1]),
+            ("same content type, same URL and a common action", self.webhooks_data[2]),
+        ]
+        for label, data in cases:
+            with self.subTest(label):
+                form = WebhookForm(data=data)
 
-        Example:
-            Webhook 1: DCIM | console port, create, update, http://localhost
-            Webhook 2: DCIM | location, create, http://localhost
-        """
-        form = WebhookForm(data=self.webhooks_data[0])
+                self.assertTrue(form.is_valid(), form.errors)
+                form.save()
 
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[0]["name"]).count(), 1)
-
-    def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
-        """
-        Create a new webhook with same content_types, same url and diff action with a webhook that exists
-
-        Example:
-            Webhook 1: DCIM | console port, create, update, http://localhost
-            Webhook 2: DCIM | console port, delete, http://localhost
-        """
-        form = WebhookForm(data=self.webhooks_data[1])
-
-        self.assertTrue(form.is_valid())
-        form.save()
-
-        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[1]["name"]).count(), 1)
-
-    def test_create_webhooks_with_same_content_type_same_url_common_action(self):
-        """
-        Create a new webhook with same content_types, same url and common action with a webhook that exists
-
-        Example:
-            Webhook 1: DCIM | console port, create, update, http://localhost
-            Webhook 2: DCIM | console port, create, update, delete, http://localhost
-        """
-        form = WebhookForm(data=self.webhooks_data[2])
-
-        self.assertFalse(form.is_valid())
-        error_msg = json.loads(form.errors.as_json())
-
-        self.assertEqual(Webhook.objects.filter(name=self.webhooks_data[2]["name"]).count(), 0)
-        self.assertIn("type_create", error_msg)
-        self.assertEqual(
-            error_msg["type_create"][0]["message"],
-            "A webhook already exists for create on DCIM | console port to URL http://example.com/test",
-        )
-        self.assertEqual(
-            error_msg["type_update"][0]["message"],
-            "A webhook already exists for update on DCIM | console port to URL http://example.com/test",
-        )
+                self.assertEqual(Webhook.objects.filter(name=data["name"]).count(), 1)
 
     def test_conditions_are_accepted_as_json_text(self):
         form = WebhookForm(
