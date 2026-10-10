@@ -1,0 +1,4 @@
+Added optional `depth`, `depth_unit`, `weight` and `weight_unit` fields to the Device Type model.
+Added optional `weight` and `weight_unit` fields to the Module Type model.
+Added the new depth and weight fields to the single-record YAML/JSON import and export of Device Types and Module Types, which follow the devicetype-library format.
+Added `WeightUnitChoices` to `nautobot.apps.choices`.

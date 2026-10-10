@@ -53,6 +53,7 @@ from nautobot.dcim.choices import (
     RackTypeChoices,
     RackWidthChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import (
     CABLE_TERMINATION_MODELS,
@@ -406,6 +407,8 @@ class DeviceFamilySerializer(TaggedModelSerializerMixin, NautobotModelSerializer
 
 
 class DeviceTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    depth_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
+    weight_unit = ChoiceField(choices=WeightUnitChoices, allow_blank=True, required=False)
     subdevice_role = ChoiceField(choices=SubdeviceRoleChoices, allow_blank=True, required=False)
     front_image = serializers.ImageField(allow_null=True, required=False)
     rear_image = serializers.ImageField(allow_null=True, required=False)
@@ -1498,6 +1501,7 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    weight_unit = ChoiceField(choices=WeightUnitChoices, allow_blank=True, required=False)
     front_image = serializers.ImageField(allow_null=True, required=False)
     rear_image = serializers.ImageField(allow_null=True, required=False)
 

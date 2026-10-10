@@ -32,6 +32,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.component_creation import SkipAutoComponentCreation
 from nautobot.dcim.constants import (
@@ -365,8 +366,10 @@ class DeviceTypeFactory(PrimaryModelFactory):
         model = DeviceType
         exclude = (
             "has_comments",
+            "has_depth",
             "has_device_family",
             "has_part_number",
+            "has_weight",
             "is_subdevice_child",
         )
 
@@ -399,6 +402,18 @@ class DeviceTypeFactory(PrimaryModelFactory):
     u_height = factory.Maybe("is_subdevice_child", 0, factory.Faker("pyint", min_value=1, max_value=2))
 
     is_full_depth = NautobotBoolIterator()
+
+    has_depth = NautobotBoolIterator()
+    depth = factory.Maybe("has_depth", factory.Faker("pyint", min_value=1, max_value=1200), None)
+    depth_unit = factory.Maybe(
+        "has_depth", factory.Faker("random_element", elements=RackDimensionUnitChoices.values()), ""
+    )
+
+    has_weight = NautobotBoolIterator()
+    weight = factory.Maybe(
+        "has_weight", factory.Faker("pydecimal", left_digits=3, right_digits=2, min_value=0, max_value=500), None
+    )
+    weight_unit = factory.Maybe("has_weight", factory.Faker("random_element", elements=WeightUnitChoices.values()), "")
 
     # If randomly a subdevice, also set subdevice_role to "child" or "parent-child". We might want to reconsider this.
     subdevice_role = factory.Maybe(
@@ -877,13 +892,19 @@ module_types = (
 class ModuleTypeFactory(PrimaryModelFactory):
     class Meta:
         model = ModuleType
-        exclude = ("has_part_number", "has_comments")
+        exclude = ("has_part_number", "has_comments", "has_weight")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
     module_family = random_instance(ModuleFamily, allow_null=True)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
+
+    has_weight = NautobotBoolIterator()
+    weight = factory.Maybe(
+        "has_weight", factory.Faker("pydecimal", left_digits=2, right_digits=2, min_value=0, max_value=50), None
+    )
+    weight_unit = factory.Maybe("has_weight", factory.Faker("random_element", elements=WeightUnitChoices.values()), "")
 
     has_comments = NautobotBoolIterator()
     comments = factory.Maybe("has_comments", factory.Faker("bs"))
