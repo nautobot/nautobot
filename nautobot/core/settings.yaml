@@ -1638,6 +1638,21 @@ properties:
       `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
+  NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION:
+    default: ""
+    description: >-
+      Dotted path (e.g. `my_package.my_module.my_function`) to a function that replaces Nautobot's
+      built-in complexity cost estimate. An empty string uses the built-in estimate.
+    details: |-
+      The function takes one argument, the `HttpRequest` being estimated, and returns an int. The returned int is what will be charged for the request.
+
+      The dotted path must be importable, so the function has to live in an installed Python
+      package, in a Nautobot App, or in `nautobot_config.py` itself (referenced as
+      `nautobot_config.<function_name>`). Nautobot does not add any directory to `sys.path`,
+      so a loose file beside `nautobot_config.py` is not importable on its own.
+    environment_variable: "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+    type: "string"
+    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_BUDGET:
     default: 1000
     description: >-

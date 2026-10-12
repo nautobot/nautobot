@@ -41,7 +41,8 @@ class Command(BaseCommand):
             "--fields",
             default="",
             help="Comma-separated list of fields to export, including nested references "
-            '(e.g. "name,status__name,device_type__manufacturer__name"); default is all fields',
+            '(e.g. "name,status__name,device_type__manufacturer__name"); default is the default columns, '
+            "which identify each related object by its natural key and leave out opt-in data such as computed fields",
         )
         parser.add_argument(
             "-o",
