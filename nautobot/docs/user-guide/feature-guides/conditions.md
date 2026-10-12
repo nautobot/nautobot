@@ -2,7 +2,7 @@
 
 +++ 3.3.0
 
-A condition narrows _which changes_ a Webhook or Job Hook reacts to. This page calls both a hook. Without conditions, a hook runs for every change to every object of its selected types. With conditions, it runs only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
+A condition narrows _which changes_ a Webhook or Job Hook (we'll use "hook" to refer to either) reacts to. Without conditions, a hook runs for every change to every object of its selected types. With conditions, it runs only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
 
 Conditions are a list of rows. Every row must pass for the hook to run. An empty list passes. Each row is either a _preset_ chosen from a catalog and filled in, or a _raw expression_ written in Jinja2. Either kind can be negated.
 
@@ -22,11 +22,11 @@ Every condition is checked against the same payload a webhook body template rece
 
 ### Fields and relations
 
-A field is addressed by name: `mtu`, `name`. A related object holds fields of its own, so name the field inside it after a dot: `status.name`, `primary_ip4.address`, `location.name`. The relation alone, `status`, matches no comparison.
+A field is addressed by name: `mtu`, `name`. A related object's individual field is included after a dot: `status.name`, `primary_ip4.address`, `location.name`. The related object alone, `status`, is not a valid comparison.
 
 A many-valued field such as `tags`, or a field holding a plain list, is named on its own. A dot does not reach inside it: `tags.color` resolves to nothing. See [Asking about tags](#asking-about-tags).
 
-A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own matches no comparison, like a relation alone.
+A custom field is addressed by its key under `custom_fields`: `custom_fields.site_code`. A related object's custom fields are reached the same way: `location.custom_fields.region_code`. `custom_fields` on its own is not a valid comparison.
 
 A field holding JSON, such as a device's `local_config_context_data` or a JSON custom field, is not offered. Its value can hold nested keys on one object and a single value on the next, so no operator fits the field. A raw expression can still read it.
 
@@ -116,7 +116,7 @@ When a change is recorded, Nautobot goes through the hook's conditions one by on
 
 A row passes when what it asks is true of the change. A negated row passes when it is false. A row that cannot be checked at all, for example because of a syntax error in an expression or a value of the wrong type for the operator, counts as not passing, so the hook does not run.
 
-A row that cannot be checked is written to the Nautobot log at `ERROR` level, naming the hook, the number of the row (counted from one, the way the form shows it) and the reason. Each fault is reported once per request, so a change touching many objects at once logs one message rather than one per object. The log is the only place this appears. A hook stopped by a broken row looks no different in the web UI.
+A row that cannot be checked is written to the Nautobot log at `ERROR` level, naming the hook, the row number, and the reason. Each fault is reported once per request, so a change touching many objects at once logs one message rather than one per object. The log is the only place this appears. A hook stopped by a broken row looks no different in the web UI.
 
 ## Setting conditions in the web UI
 
