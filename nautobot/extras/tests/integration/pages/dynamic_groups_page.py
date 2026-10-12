@@ -1,6 +1,7 @@
 """Page object for the Dynamic Group add, edit, and detail views (/extras/dynamic-groups/)."""
 
 import re
+import time
 
 from playwright.sync_api import expect
 
@@ -102,21 +103,30 @@ class DynamicGroupPage(DetailPage):
         self.page.locator(confirm).wait_for(state="visible", timeout=10_000)
         self._click_and_wait_for_navigation(confirm)
 
-    def wait_for_member_count(self, pk, expected, timeout=60_000):
+    def wait_for_member_count(self, pk, expected, timeout=60, interval=1):
         """Poll the group's cached-members REST count until it equals *expected*.
 
         The refresh job runs in a worker, and the detail view does not update itself when
-        it finishes, so there is nothing on the page to wait on. Instead, the browser
-        fetches the members endpoint (with its logged-in session) once a second, and the
-        wait fails with a TimeoutError if the count has not reached *expected* within
-        *timeout* milliseconds. Reload the page afterwards to assert the count in the UI.
+        it finishes, so there is nothing on the page to wait on. Instead, the members
+        endpoint is read every *interval* seconds through `page.request`, which shares the
+        browser's logged-in session, and the wait fails if the count has not reached
+        *expected* within *timeout* seconds. Reload the page afterwards to assert the
+        count in the UI.
+
+        (`page.wait_for_function` cannot do this: it does not await a predicate that
+        returns a Promise, so an async fetch predicate passes on the first poll.)
         """
-        self.page.wait_for_function(
-            """async ([url, expected]) => {
-                const response = await fetch(url, {headers: {Accept: "application/json"}});
-                return response.ok && (await response.json()).count === expected;
-            }""",
-            arg=[self.MEMBERS_API_PATH.format(pk=pk), expected],
-            polling=1_000,
-            timeout=timeout,
-        )
+        url = self.MEMBERS_API_PATH.format(pk=pk)
+        deadline = time.monotonic() + timeout
+        while True:
+            response = self.page.request.get(url, headers={"Accept": "application/json"})
+            assert response.ok, f"GET {url} returned {response.status}: {response.text()[:200]}"
+            count = response.json()["count"]
+            if count == expected:
+                return
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f"Group {pk} still has {count} cached members after {timeout}s, expected {expected}. "
+                    "Is a Celery worker consuming the Refresh Members job's queue?"
+                )
+            self.page.wait_for_timeout(interval * 1_000)
