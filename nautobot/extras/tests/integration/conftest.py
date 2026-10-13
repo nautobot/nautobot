@@ -68,6 +68,20 @@ def created_dynamic_group(create_object, created_device_set):
     )
 
 
+@pytest.fixture(scope="session")
+def require_celery_worker(api):
+    """Skip the test unless a Celery worker is running to execute the jobs it starts from the UI.
+
+    Without a worker, a job such as Refresh Members is queued but never runs. The
+    `playwright-test` CI job starts no worker, so these tests skip there for now.
+    """
+    response = api.get("/api/status/")
+    if not response.ok:
+        pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
+    if not response.json()["celery-workers-running"]:
+        pytest.skip("No Celery worker is running, so the Refresh Members job would never run.")
+
+
 @pytest.fixture
 def dynamic_group_cleanup(api):
     """Collect the ids of dynamic groups created through the UI and delete them on teardown.

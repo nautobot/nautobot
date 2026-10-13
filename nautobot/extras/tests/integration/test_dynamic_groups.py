@@ -10,12 +10,14 @@ from nautobot.extras.tests.integration.pages.dynamic_groups_page import DynamicG
 from nautobot.playwright.helpers import unique_name
 
 
+@pytest.mark.usefixtures("require_celery_worker")
 class DynamicGroupTestCase:
     """Playwright port of ``extras/tests/selenium/test_dynamicgroups.py::DynamicGroupTestCase.test_create_and_update``.
 
     The Selenium test is split into a create test and an edit test. Saving a group in the
     UI does not recalculate its membership, so both tests click "Refresh Members" and wait
-    for its job before asserting the new count.
+    for its job before asserting the new count. That job needs a Celery worker, so both
+    tests skip on an instance without one (currently including CI).
     """
 
     @pytest.mark.behavioral
