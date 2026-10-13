@@ -2,7 +2,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.apps.testing import FilterTestCases
+from nautobot.core.testing.filters import FilterTestCases
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress
 from nautobot.vpn import choices, factory as vpn_factory, filters, models

@@ -2140,6 +2140,58 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()
 
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_only_unfinished_job_results_are_run(self, mock_report_job_status, mock_executor_console_log):
+        """Command should run PENDING or STARTED job results and refuse job results that already finished."""
+        cases = [
+            {"status": JobResultStatusChoices.STATUS_PENDING, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_STARTED, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_SUCCESS, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_FAILURE, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_REVOKED, "runs": False},
+        ]
+        for case in cases:
+            with self.subTest(**case):
+                mock_executor_console_log.reset_mock()
+                self.job_result.status = case["status"]
+                self.job_result.save()
+
+                if case["runs"]:
+                    call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    mock_executor_console_log.return_value.execute.assert_called_once()
+                else:
+                    with self.assertRaises(CommandError) as err:
+                        call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    self.assertIn(f"invalid status {case['status']}", str(err.exception))
+                    mock_executor_console_log.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_retry_warning_is_logged_only_for_started_job_result(
+        self, mock_report_job_status, mock_executor_console_log
+    ):
+        """Command should log a retry warning when resuming a STARTED job result, and not for a PENDING one."""
+        for status, expected_warnings in (
+            (JobResultStatusChoices.STATUS_PENDING, 0),
+            (JobResultStatusChoices.STATUS_STARTED, 1),
+        ):
+            with self.subTest(status=status):
+                JobLogEntry.objects.filter(job_result=self.job_result).delete()
+                self.job_result.status = status
+                self.job_result.save()
+
+                call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+
+                self.assertEqual(
+                    JobLogEntry.objects.filter(
+                        job_result=self.job_result,
+                        log_level=LogLevelChoices.LOG_WARNING,
+                        grouping="initialization",
+                    ).count(),
+                    expected_warnings,
+                )
+
 
 class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
     def setUp(self):
@@ -2234,6 +2286,31 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
 
         self.job_result.refresh_from_db()
         self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_job_result_is_started_while_job_runs(self, mock_validate, mock_sync, mock_run_job):
+        """JobResult should be in STARTED status while the job runs, whether it was PENDING or already STARTED."""
+        eager_result = mock.MagicMock()
+        eager_result.failed.return_value = False
+        status_during_run = []
+
+        def record_status(*args, **kwargs):
+            status_during_run.append(JobResult.objects.get(pk=self.job_result.pk).status)
+            return eager_result
+
+        mock_run_job.apply.side_effect = record_status
+
+        for initial_status in (JobResultStatusChoices.STATUS_PENDING, JobResultStatusChoices.STATUS_STARTED):
+            with self.subTest(initial_status=initial_status):
+                status_during_run.clear()
+                self.job_result.status = initial_status
+                self.job_result.save()
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                self.assertEqual(status_during_run, [JobResultStatusChoices.STATUS_STARTED])
 
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")

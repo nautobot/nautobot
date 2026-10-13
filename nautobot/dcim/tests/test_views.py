@@ -1355,6 +1355,34 @@ module-bays:
             response_content,
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_embedded_create_form_invalid_returns_modal_partial(self):
+        """
+        An invalid HTMX (embedded modal) submission returns the modal partial, not the full create page.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/9062.
+        """
+        self.add_permissions("dcim.add_devicetype")
+        url = self._get_url("add")
+        response = self.client.post(
+            url,
+            post_data(
+                {
+                    "manufacturer": Manufacturer.objects.first().pk,
+                    "model": "Device Type Y",
+                    "u_height": -1,  # invalid
+                }
+            ),
+            headers={"HX-Request": "true"},
+        )
+
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('data-nb-obj-type="device type"', content)
+        self.assertIn("embedded_id_", content)
+        self.assertNotIn('id="nb-create-form"', content)
+        self.assertNotIn("<!DOCTYPE", content)
+
 
 class ModuleTypeTestCase(
     ViewTestCases.GetObjectViewTestCase,

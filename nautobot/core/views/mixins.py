@@ -1,6 +1,7 @@
 import logging
 from typing import ClassVar, Optional, Type
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.models import AnonymousUser
@@ -1114,11 +1115,13 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = form_class(
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=form_class),
             instance=self.obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
         if form.is_valid():
@@ -1614,7 +1617,14 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     logger = logging.getLogger(__name__)
     queryset: QuerySet
     bulk_rename_template_name = "generic/object_bulk_rename.html"
-    bulk_rename_regex_timeout = 1.0
+    # Seconds allowed for the rename regex; `None` defers to the `REGEX_TIMEOUT` setting.
+    bulk_rename_regex_timeout = None
+
+    def get_bulk_rename_regex_timeout(self):
+        """Seconds to allow the rename regex to run, from `bulk_rename_regex_timeout` or the `REGEX_TIMEOUT` setting."""
+        if self.bulk_rename_regex_timeout is None:
+            return settings.REGEX_TIMEOUT
+        return self.bulk_rename_regex_timeout
 
     @classmethod
     def get_extra_actions(cls):
@@ -1669,6 +1679,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
                 renamed_pks = []
                 if use_regex:
+                    timeout = self.get_bulk_rename_regex_timeout()
                     try:
                         pattern = regex.compile(find)
                     except regex.error as e:
@@ -1676,12 +1687,12 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                         return self._render_form_response(request, form, selected_objects)
                     try:
                         for obj in selected_objects:
-                            obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                            obj.new_name = pattern.sub(replace, obj.name, timeout=timeout)
                             renamed_pks.append(obj.pk)
                     except TimeoutError:
                         form.add_error(
                             "find",
-                            f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                            f"Regex matching exceeded {timeout}s and was aborted; "
                             "the pattern may have catastrophic backtracking. Please simplify the expression.",
                         )
                         return self._render_form_response(request, form, selected_objects)

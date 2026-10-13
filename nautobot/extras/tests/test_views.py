@@ -972,10 +972,33 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approver_dashboard")
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "extras/approval_dashboard.html")
         self.assertBodyContains(response, "My Approvals")  # Assert the dashboard title is present
+        # Initial full-page load should not render the queued messages directly (placeholder only)
+        self.assertNotContains(
+            response,
+            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
+        )
         stages = get_pending_approval_workflow_stages(self.user, ApprovalWorkflowStage.objects.all())
         for stage in stages:
             self.assertBodyContains(response, str(stage.pk))  # Assert the stage uuid is present in the response
+
+        # HTMX table request renders the list_view_table template with header_messages banner
+        hx_response = self.client.get(url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(hx_response, 200)
+        self.assertTemplateUsed(hx_response, "components/htmx/list_view_table.html")
+        self.assertBodyContains(
+            hx_response,
+            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
+        )
+
+        # Subsequent HTMX requests (e.g. pagination or sorting) do not re-add the banner
+        hx_page_response = self.client.get(url + "?page=1", headers={"HX-Request": "true"})
+        self.assertHttpStatus(hx_page_response, 200)
+        self.assertNotContains(
+            hx_page_response,
+            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approvee_dashboard(self):
@@ -987,10 +1010,33 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvee_dashboard")
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "extras/approval_dashboard.html")
         self.assertBodyContains(response, "My Requests")  # Assert the dashboard title is present
+        # Initial full-page load should not render the queued messages directly (placeholder only)
+        self.assertNotContains(
+            response,
+            "You are viewing a dashboard of approval workflows that are requested by you.",
+        )
         stages = ApprovalWorkflow.objects.filter(user=self.user)
         for stage in stages:
             self.assertBodyContains(response, str(stage.pk))  # Assert the stage uuid is present in the response
+
+        # HTMX table request renders the list_view_table template with header_messages banner
+        hx_response = self.client.get(url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(hx_response, 200)
+        self.assertTemplateUsed(hx_response, "components/htmx/list_view_table.html")
+        self.assertBodyContains(
+            hx_response,
+            "You are viewing a dashboard of approval workflows that are requested by you.",
+        )
+
+        # Subsequent HTMX requests do not re-add the banner
+        hx_page_response = self.client.get(url + "?page=1", headers={"HX-Request": "true"})
+        self.assertHttpStatus(hx_page_response, 200)
+        self.assertNotContains(
+            hx_page_response,
+            "You are viewing a dashboard of approval workflows that are requested by you.",
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approve_endpoint(self):
