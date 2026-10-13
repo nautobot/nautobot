@@ -261,7 +261,7 @@ Since the tool exists to consolidate duplicate records, a merge intentionally ma
 
 - Object-level constraints on the user's IP address permissions are **not** enforced by the merge itself. The merge page only lists IP addresses within the user's `change` constraints, but the merge does not re-check `add`, `change`, or `delete` constraints against the IP addresses it deletes or the one it creates.
 - Existing references to the merged IP addresses are moved to the new IP address **without** checking the user's permissions on the referencing objects, so the new IP address may end up assigned to objects the user cannot `view` or `change` directly. This includes `Device` and `VirtualMachine` primary IPs (`primary_ip4`/`primary_ip6`), interface and VM interface assignments, `Service` assignments, and the objects on the other side of relationship associations.
-- The `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` values selected for the new IP address, and the custom field data copied to it, are assigned **without** checking `view` permission, so the new IP address may reference related objects the user cannot view directly.
+- The `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` values selected for the new IP address are assigned **without** checking `view` permission on these related objects, so the new IP address may reference related objects the user cannot view directly.
 
 These changes are not silent: the deleted and created IP addresses, and every updated device, virtual machine, interface, VM interface, and service, are recorded in the [change log](../../platform-functionality/change-logging.md) under the merging user's request.
 
