@@ -287,18 +287,17 @@ The Device detail view "Module Bays" tab now supports a hierarchical view with a
 As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.2.7 (2026-10-13)
 
 ### Security in v3.2.7
 
-- [#GHSA-8894-x54w-hhpm](https://github.com/nautobot/nautobot/issues/GHSA-8894-x54w-hhpm) - Added a timeout to regular expression evaluation in the data validation engine, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
-- [#GHSA-9fgc-m542-2g84](https://github.com/nautobot/nautobot/issues/GHSA-9fgc-m542-2g84) - Fixed a Jinja2 template sandbox escape that allowed a user-authored template to execute arbitrary read queries against the database.
-- [#GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/issues/GHSA-gffr-x2x7-7fgh) - Added a timeout to the evaluation of custom field `validation_regex` values, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
-- [#GHSA-5q66-3x3p-rxmh](https://github.com/nautobot/nautobot/issues/GHSA-5q66-3x3p-rxmh) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read sensitive fields through a queryset projection.
-- [#GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/issues/GHSA-w9cw-3w8f-phq4) - Stopped the data being validated from influencing the structure of a `RegularExpressionValidationRule` regular expression that uses Jinja2 context processing, to protect against bypass of a validation rule.
+- [GHSA-8894-x54w-hhpm](https://github.com/nautobot/nautobot/security/advisories/GHSA-8894-x54w-hhpm) - Added a timeout to regular expression evaluation in the data validation engine, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
+- [GHSA-9fgc-m542-2g84](https://github.com/nautobot/nautobot/security/advisories/GHSA-9fgc-m542-2g84) - Fixed a Jinja2 template sandbox escape that allowed a user-authored template to execute arbitrary read queries against the database.
+- [GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh) - Added a timeout to the evaluation of custom field `validation_regex` values, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
+- [GHSA-5q66-3x3p-rxmh](https://github.com/nautobot/nautobot/security/advisories/GHSA-5q66-3x3p-rxmh) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read sensitive fields through a queryset projection.
+- [GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-w9cw-3w8f-phq4) - Stopped the data being validated from influencing the structure of a `RegularExpressionValidationRule` regular expression that uses Jinja2 context processing, to protect against bypass of a validation rule.
 - [#9565](https://github.com/nautobot/nautobot/issues/9565) - Updated dependency `gitpython` to `>=3.2.0,<3.3` to mitigate multiple vulnerabilities.
 - [#9565](https://github.com/nautobot/nautobot/issues/9565) - Updated dependency `urllib3` to `>=2.8.0,<3.0` to mitigate multiple vulnerabilities.
 - [#9567](https://github.com/nautobot/nautobot/issues/9567) - Updated dependency `django` to `>=5.2.18,<5.3` to mitigate multiple vulnerabilities.
@@ -309,12 +308,12 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Added in v3.2.7
 
-- [#GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/issues/GHSA-gffr-x2x7-7fgh) - Added utilities, exceptions, and model validators to the `nautobot.apps` API for App developers to use when evaluating user-supplied regular expressions.
+- [GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh) - Added utilities, exceptions, and model validators to the `nautobot.apps` API for App developers to use when evaluating user-supplied regular expressions.
 - [#9551](https://github.com/nautobot/nautobot/issues/9551) - Added `get_saved_views_for_user` to `nautobot.apps.views`.
 
 ### Changed in v3.2.7
 
-- [#GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/issues/GHSA-w9cw-3w8f-phq4) - Values interpolated into a `RegularExpressionValidationRule` regular expression via Jinja2 context processing are now escaped and treated as literal text, so that the data being validated can no longer alter the structure of the pattern. Rules that deliberately drew regular expression syntax from a field value will no longer behave the same way.
+- [GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-w9cw-3w8f-phq4) - Values interpolated into a `RegularExpressionValidationRule` regular expression via Jinja2 context processing are now escaped and treated as literal text, so that the data being validated can no longer alter the structure of the pattern. Rules that deliberately drew regular expression syntax from a field value will no longer behave the same way.
 - [#9590](https://github.com/nautobot/nautobot/issues/9590) - Changed form-control styling to show placeholder text in italic to reduce the likelihood of confusing it for an entered value.
 
 ### Fixed in v3.2.7
