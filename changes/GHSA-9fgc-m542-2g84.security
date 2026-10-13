@@ -1,0 +1,1 @@
+Fixed a Jinja2 template sandbox escape that allowed a user-authored template to execute arbitrary read queries against the database.

@@ -91,6 +91,7 @@ from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProv
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import Token
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -1163,6 +1164,23 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
                 )
                 with self.assertRaises(SecurityError):
                     gadget_template.render(Device.objects.all())
+
+    def test_render_narrows_a_bare_projection_on_a_model_with_sensitive_fields(self):
+        """Integration regression for GHSA-5q66-3x3p-rxmh via the ExportTemplate.render() path.
+
+        A projection naming no fields selects every concrete column, so the sandbox narrows it to the
+        model's non-sensitive fields rather than letting the declared sensitive ones through.
+        """
+        user = User.objects.create_user(username="export-template-bare-projection")
+        token = Token.objects.create(user=user, description="export template regression")
+        export_template = ExportTemplate(
+            content_type=ContentType.objects.get_for_model(Token),
+            name="Bare Projection Export Template",
+            template_code="{{ queryset.values() | list }}",
+        )
+        rendered = export_template.render(Token.objects.filter(user=user))
+        self.assertNotIn(token.key, rendered)
+        self.assertIn(token.description, rendered)
 
     def test_name_contenttype_uniqueness(self):
         """

@@ -1,0 +1,1 @@
+Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read sensitive fields through a queryset projection.
