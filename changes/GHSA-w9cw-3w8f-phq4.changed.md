@@ -1,0 +1,1 @@
+Values interpolated into a `RegularExpressionValidationRule` regular expression via Jinja2 context processing are now escaped and treated as literal text, so that the data being validated can no longer alter the structure of the pattern. Rules that deliberately drew regular expression syntax from a field value will no longer behave the same way.

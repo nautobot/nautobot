@@ -1183,7 +1183,8 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_rename.html"
-    bulk_rename_regex_timeout = 1.0
+    # Seconds allowed for the rename regex; `None` defers to the `REGEX_TIMEOUT` setting.
+    bulk_rename_regex_timeout = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1196,6 +1197,12 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
+
+    def get_bulk_rename_regex_timeout(self):
+        """Seconds to allow the rename regex to run, from `bulk_rename_regex_timeout` or the `REGEX_TIMEOUT` setting."""
+        if self.bulk_rename_regex_timeout is None:
+            return settings.REGEX_TIMEOUT
+        return self.bulk_rename_regex_timeout
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".BulkRenameView")
@@ -1217,6 +1224,7 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 # Phase 1: compute new_name for each object so the preview can show old → new,
                 # surfacing any regex compile error or timeout to the form.
                 if use_regex:
+                    timeout = self.get_bulk_rename_regex_timeout()
                     try:
                         pattern = regex.compile(find)
                     except regex.error as e:
@@ -1224,11 +1232,11 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                     else:
                         try:
                             for obj in selected_objects:
-                                obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                                obj.new_name = pattern.sub(replace, obj.name, timeout=timeout)
                         except TimeoutError:
                             form.add_error(
                                 "find",
-                                f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                                f"Regex matching exceeded {timeout}s and was aborted; "
                                 "the pattern may have catastrophic backtracking. Please simplify the expression.",
                             )
                 else:

@@ -113,6 +113,9 @@ CONFIG_SETTING_SEPARATOR = ","
 
 CHARFIELD_MAX_LENGTH = 255
 
+# Max seconds allowed per untrusted regex match (prevents ReDoS).
+REGEX_TIMEOUT_DEFAULT = 1.0
+
 # Default values for pagination settings.
 MAX_PAGE_SIZE_DEFAULT = 1000
 PAGINATE_COUNT_DEFAULT = 50

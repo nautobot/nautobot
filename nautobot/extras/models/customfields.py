@@ -2,14 +2,13 @@ from collections import defaultdict, OrderedDict
 from datetime import date, datetime, timezone as datetime_timezone
 import json
 import logging
-import re
 
 from django import forms
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
-from django.core.validators import RegexValidator, ValidationError
+from django.core.validators import ValidationError
 from django.db import models
 from django.db.models import Model
 from django.forms.widgets import TextInput
@@ -35,7 +34,7 @@ from nautobot.core.forms import (
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.models.validators import validate_regex
+from nautobot.core.models.validators import TimeLimitedRegexValidator, validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key
@@ -43,6 +42,7 @@ from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.otel import traced_span
+from nautobot.core.utils.regex import regex_search
 from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -913,7 +913,7 @@ class CustomField(
                 )
             if self.validation_regex:
                 field.validators = [
-                    RegexValidator(
+                    TimeLimitedRegexValidator(
                         regex=self.validation_regex,
                         message=format_html("Values must match this regex: <code>{}</code>", self.validation_regex),
                     )
@@ -987,7 +987,7 @@ class CustomField(
                     raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
                 if self.validation_maximum is not None and len(value) > self.validation_maximum:
                     raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
-                if self.validation_regex and not re.search(self.validation_regex, value):
+                if self.validation_regex and not regex_search(self.validation_regex, value):
                     raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate JSON
@@ -998,7 +998,7 @@ class CustomField(
                         raise ValidationError(f"Value must be at least {self.validation_minimum} characters in length")
                     if self.validation_maximum is not None and len(json_value) > self.validation_maximum:
                         raise ValidationError(f"Value must not exceed {self.validation_maximum} characters in length")
-                    if self.validation_regex and not re.search(self.validation_regex, json_value):
+                    if self.validation_regex and not regex_search(self.validation_regex, json_value):
                         raise ValidationError(f"Value must match regex '{self.validation_regex}'")
 
             # Validate integer
@@ -1191,7 +1191,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         if self.custom_field.validation_maximum is not None and len(self.value) > self.custom_field.validation_maximum:
             raise ValidationError(f"Value must not exceed {self.custom_field.validation_maximum} characters long.")
 
-        if not re.search(self.custom_field.validation_regex, self.value):
+        if self.custom_field.validation_regex and not regex_search(self.custom_field.validation_regex, self.value):
             raise ValidationError(f"Value must match regex {self.custom_field.validation_regex} got {self.value}.")
 
     def save(self, *args, **kwargs):
