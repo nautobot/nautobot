@@ -5,8 +5,8 @@ import threading
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
-from nautobot.apps.dcim import is_auto_component_creation_suppressed, SkipAutoComponentCreation
 from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.component_creation import is_auto_component_creation_suppressed, SkipAutoComponentCreation
 from nautobot.dcim.models import (
     Device,
     DeviceType,
