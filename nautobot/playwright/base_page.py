@@ -59,9 +59,9 @@ class BasePage:
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
     # The page title star marks itself as the button tracking the current URL, so it needs no structural scoping.
     _FAVORITE_STAR = "[data-nb-favorite-current]"
-    # One anchor per entry in the sidenav favorites flyout, carrying the favorited link.
+    # One anchor per entry in the sidenav favorites flyout, whose `href` is the favorited link.
     _FAVORITE_ENTRY = ".nb-sidenav-favorites-container li a"
-    # The star is `visibility: hidden` until its `#header` ancestor is hovered.
+    # The star is `visibility: hidden` unless `#header` is hovered or has focus.
     _HEADER = "#header"
     # The one modal every page includes; the favorite form is loaded into it over HTMX.
     _GENERIC_MODAL = "#nautobot-generic-modal"

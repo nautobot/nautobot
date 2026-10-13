@@ -7,6 +7,7 @@ class AboutPage(BasePage):
     """The About page, a static core page every installation has."""
 
     PATH = "/about/"
+    TITLE = "About Nautobot"
 
     def navigate(self):
         """Go to the About page."""
