@@ -7,6 +7,7 @@ from django.db.models import Count
 from django.test import override_settings, TestCase
 from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
+import regex
 
 from nautobot.core.exceptions import SensitiveFieldError
 from nautobot.core.templating import NautobotSandboxedContext, NautobotSandboxedEnvironment
@@ -594,3 +595,56 @@ class NautobotJinjaFilterTest(TestCase):
         template_code = "{{ (obj | meta('managers_map'))['objects'].values_list('name', flat=True)|list }}"
         with self.assertRaises(SecurityError):
             data.render_jinja2(template_code=template_code, context=context)
+
+
+class RenderJinja2ForRegexTest(TestCase):
+    """Tests for rendering a Jinja2 template whose output is used as a regular expression."""
+
+    def test_interpolated_metacharacters_are_escaped(self):
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": "a.b"})
+        self.assertEqual(rendered, r"^a\.b$")
+
+    def test_literal_template_text_is_not_escaped(self):
+        """The template author keeps full control of the pattern's own syntax."""
+        self.assertEqual(data.render_jinja2_for_regex("^[a-z]+$", {}), "^[a-z]+$")
+
+    def test_interpolated_value_cannot_change_the_pattern_structure(self):
+        """A value of `.*` must become a literal, not a wildcard that defeats the rule."""
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": ".*"})
+        self.assertEqual(rendered, r"^\.\*$")
+        self.assertIsNone(regex.match(rendered, "anything else"))
+
+    def test_interpolated_value_is_not_html_escaped(self):
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": "a&b"})
+        self.assertIsNotNone(regex.match(rendered, "a&b"))
+
+    def test_escaping_applies_through_filters_and_safe(self):
+        for template_code, expected in [
+            ("{{ v|safe }}", r"a\.b"),
+            ("{{ v|upper }}", r"A\.B"),
+            ("{% set x = v %}{{ x }}", r"a\.b"),
+        ]:
+            with self.subTest(template_code=template_code):
+                self.assertEqual(data.render_jinja2_for_regex(template_code, {"v": "a.b"}), expected)
+
+    def test_non_string_values_are_coerced(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ v }}", {"v": 42}), "42")
+
+    def test_undefined_variables_render_empty(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ nope }}", {}), "")
+
+    def test_context_is_passed_through_to_the_template(self):
+        """Regression guard: a mis-wired context would silently render every variable empty."""
+        location = dcim_models.Location.objects.first()
+        self.assertEqual(data.render_jinja2_for_regex("{{ obj.name }}", {"obj": location}), regex.escape(location.name))
+
+    def test_rendering_is_still_sandboxed(self):
+        with self.assertRaises(SecurityError):
+            data.render_jinja2_for_regex("{{ ''.__class__.__name__ }}", {})
+
+    def test_registered_filters_are_still_available(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ v|upper }}", {"v": "abc"}), "ABC")
+
+    def test_standard_rendering_is_unaffected(self):
+        """The regex environment is an overlay; it must not change `render_jinja2()`."""
+        self.assertEqual(data.render_jinja2("{{ v }}", {"v": "a&b"}), "a&amp;b")

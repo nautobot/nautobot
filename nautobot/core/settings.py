@@ -16,6 +16,7 @@ from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+    REGEX_TIMEOUT_DEFAULT as _REGEX_TIMEOUT_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
@@ -1081,6 +1082,10 @@ CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseSchedul
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
+
+# Seconds allowed for a single evaluation of an operator-supplied regular expression against
+# user-supplied data, such as a custom field `validation_regex`.
+REGEX_TIMEOUT = float(os.getenv("NAUTOBOT_REGEX_TIMEOUT", str(_REGEX_TIMEOUT_DEFAULT)))
 
 #
 # Custom branding (logo and title)

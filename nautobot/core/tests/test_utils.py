@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import tempfile
 from unittest import mock
@@ -11,6 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
+from django.test import override_settings
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -21,6 +23,12 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
+from nautobot.core.utils.regex import (
+    InvalidRegexError,
+    regex_match,
+    regex_search,
+    RegexTimeoutError,
+)
 from nautobot.dcim import (
     filters as dcim_filters,
     forms as dcim_forms,
@@ -1226,3 +1234,87 @@ class TestQuerySetUtils(TestCase):
             new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
             mock_prefetch_related.assert_not_called()
             self.assertIs(new_queryset, queryset)
+
+
+# Wide alternation rather than a nested quantifier: the `regex` module optimizes the classic
+# `((((a*)*)*)*)*` form away, but backtracks catastrophically on this one. The trailing "X" prevents
+# `$` from ever matching, forcing the engine to try every partition of the leading "a" run.
+REDOS_PATTERN = "(a|a|a|a|a)+$"
+REDOS_SUBJECT = "a" * 20 + "X"
+
+
+class RegexUtilsTestCase(TestCase):
+    """Tests for the timeout-bounded regular expression helpers."""
+
+    def test_regex_search_finds_match_anywhere_in_value(self):
+        self.assertIsNotNone(regex_search("b+", "aaabbb"))
+
+    def test_regex_search_returns_none_when_value_does_not_match(self):
+        self.assertIsNone(regex_search("z+", "aaabbb"))
+
+    def test_regex_match_is_anchored_at_start_of_value(self):
+        self.assertIsNotNone(regex_match("a+", "aaabbb"))
+        self.assertIsNone(regex_match("b+", "aaabbb"))
+
+    def test_empty_pattern_matches_at_position_zero(self):
+        match = regex_search("", "anything")
+        self.assertIsNotNone(match)
+        self.assertEqual(match.start(), 0)
+
+    def test_uncompilable_pattern_raises_invalid_regex_error(self):
+        with self.assertRaises(InvalidRegexError) as context:
+            regex_search("(", "anything")
+        # A ValidationError subclass so that a caller which does not catch it still fails closed.
+        self.assertIsInstance(context.exception, ValidationError)
+        self.assertEqual(context.exception.code, "regex_invalid")
+
+    def test_catastrophic_pattern_raises_regex_timeout_error(self):
+        with self.assertRaises(RegexTimeoutError) as context:
+            regex_search(REDOS_PATTERN, REDOS_SUBJECT, timeout=0.1)
+        self.assertIsInstance(context.exception, ValidationError)
+        self.assertEqual(context.exception.code, "regex_timeout")
+        self.assertIn("catastrophic backtracking", context.exception.messages[0])
+
+    def test_regex_match_is_also_bounded(self):
+        with self.assertRaises(RegexTimeoutError):
+            regex_match(REDOS_PATTERN, REDOS_SUBJECT, timeout=0.1)
+
+    @override_settings(REGEX_TIMEOUT=0.05)
+    def test_configured_timeout_applies_when_not_passed_explicitly(self):
+        with self.assertRaises(RegexTimeoutError):
+            regex_search(REDOS_PATTERN, REDOS_SUBJECT)
+
+    def test_timeout_is_logged_with_the_offending_pattern(self):
+        # Operators need to be able to find which stored pattern is responsible.
+        with self.assertLogs("nautobot.core.utils.regex", level="ERROR") as logs:
+            with self.assertRaises(RegexTimeoutError):
+                regex_search(REDOS_PATTERN, REDOS_SUBJECT, timeout=0.1)
+        self.assertIn(REDOS_PATTERN, logs.output[0])
+
+
+class TimeLimitedRegexValidatorTestCase(TestCase):
+    """Tests for the `RegexValidator` replacement that bounds how long matching may run."""
+
+    def test_matching_value_is_accepted(self):
+        validators.TimeLimitedRegexValidator(regex=r"^[A-Z]{3}$")("ABC")
+
+    def test_non_matching_value_is_rejected_with_the_configured_message(self):
+        validator = validators.TimeLimitedRegexValidator(regex=r"^[A-Z]{3}$", message="Must be three capitals.")
+        with self.assertRaisesMessage(ValidationError, "Must be three capitals."):
+            validator("abcd")
+
+    def test_inverse_match_inverts_the_outcome(self):
+        validator = validators.TimeLimitedRegexValidator(regex=r"^[A-Z]{3}$", inverse_match=True)
+        validator("abcd")
+        with self.assertRaises(ValidationError):
+            validator("ABC")
+
+    def test_catastrophic_pattern_raises_regex_timeout_error(self):
+        validator = validators.TimeLimitedRegexValidator(regex=REDOS_PATTERN, timeout=0.1)
+        with self.assertRaises(RegexTimeoutError):
+            validator(REDOS_SUBJECT)
+
+    def test_flags_are_rejected(self):
+        # `re` and `regex` disagree on several flag integers, so a stdlib flag cannot be forwarded.
+        with self.assertRaises(ValueError):
+            validators.TimeLimitedRegexValidator(regex="abc", flags=re.IGNORECASE)

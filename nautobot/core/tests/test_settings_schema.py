@@ -243,7 +243,11 @@ class SettingsJSONSchemaTestCase(TestCase):
                     self.assertEqual(getattr(django_defaults, key), self.settings_schema["properties"][key]["default"])
 
     def _get_fake_env_value(self, value_type):
-        """Return a random fake value for an environment variable based on its type."""
+        """Return a random fake value for an environment variable based on its type.
+
+        Possible types are: null, boolean, object, array, number, integer, string
+        (Ref: https://json-schema.org/draft/2020-12/json-schema-validation#name-type)
+        """
         fake = faker.Faker()
         if value_type == "boolean":
             return str(fake.boolean())
@@ -251,6 +255,8 @@ class SettingsJSONSchemaTestCase(TestCase):
             return datetime.date.today().isoformat()
         elif value_type == "integer":
             return str(fake.random_int())
+        elif value_type == "number":
+            return str(fake.pyfloat(positive=True, max_value=100))
         return f"FAKE_ENV_{fake.word()}"
 
     def _parse_environment_variable_for_setting(self, setting_name, setting_schema):
@@ -276,6 +282,8 @@ class SettingsJSONSchemaTestCase(TestCase):
             return is_truthy(os.environ[env_var])
         elif setting_type == "integer":
             return int(os.environ[env_var])
+        elif setting_type == "number":
+            return float(os.environ[env_var])
         else:
             return os.environ[env_var]
 

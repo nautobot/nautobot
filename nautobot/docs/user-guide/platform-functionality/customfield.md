@@ -61,6 +61,11 @@ Nautobot supports limited custom validation for custom field values. Following a
 | Select       | ✅ (length) | ✅ (length) | ✅    | Must match defined choice; validators apply to defining choices    |
 | Multi-select | ✅ (length) | ✅ (length) | ✅    | Must match defined choice(s); validators apply to defining choices |
 
++/- 2.4.44 "Regular expression evaluation is now time-bounded"
+    A regular expression is evaluated every time a value for the custom field is saved, so an expensive expression slows down every such save. Evaluation is bounded to one second per value, configurable via [`REGEX_TIMEOUT`](../administration/configuration/settings.md#regex_timeout); if that limit is exceeded the value is rejected with a validation error and the event is logged at `ERROR` level so that the responsible custom field can be identified.
+
+    Some regular expressions take exponentially longer to evaluate as the value being tested grows, which means an expression that looks harmless can be made to consume that full second by a sufficiently long value. The usual causes are a quantifier applied to a group that itself contains a quantifier, and alternations whose branches can match the same input. Prefer a simple, anchored expression, and test it against a long non-matching value before saving it.
+
 ### Custom Selection Fields
 
 Choices are stored as independent values and are assigned a numeric weight which affects their ordering in selection lists and dropdowns. Note that choice values are saved exactly as they appear, so it's best to avoid superfluous punctuation or symbols where possible.
