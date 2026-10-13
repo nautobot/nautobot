@@ -938,15 +938,31 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
   > tbody > tr {
     /* By default Bootstrap 5 defines only `:hover` and we need to slightly extend it to improve end user experience. */
     &:hover,
-    &:focus-within,
+    &:has( :focus-visible),
     &:has( .dropdown-toggle.show) { /* Leading space inside `has` is intentional and stands for descendant nodes. */
       > * {
         --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
         --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
 
-        &.nb-actions .dropdown-toggle {
+        &.nb-actions .dropdown-toggle,
+        .nb-overview-toggle {
           opacity: 1;
         }
+      }
+    }
+
+    /* Set expanded object overview table row background color. */
+    &.nb-overview-row > td {
+      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
+    }
+
+    &:has(.nb-overview-toggle[aria-expanded="true"]) {
+      .nb-overview-toggle {
+        opacity: 1;
+      }
+
+      > td {
+        border-bottom-color: var(--#{$prefix}tertiary-bg);
       }
     }
   }
@@ -954,21 +970,10 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
   > tbody > tr > * {
     transition: $btn-transition; /* Use `$btn-transition` but in fact it is just for `background-color`. */
 
-    &.nb-actions .dropdown-toggle {
+    &.nb-actions .dropdown-toggle,
+    .nb-overview-toggle {
       @include transition($btn-transition, $transition-fade);
       opacity: 0;
-    }
-  }
-
-  /* Set expanded object overview table row background color. */
-  > tbody > tr {
-    &.nb-overview-row > td {
-      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
-    }
-
-    &:has(.nb-overview-toggle[aria-expanded="true"]) > td {
-      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
-      border-bottom-color: var(--#{$prefix}table-bg-state);
     }
   }
 }
