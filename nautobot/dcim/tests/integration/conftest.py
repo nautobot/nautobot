@@ -56,12 +56,8 @@ def created_manufacturer(create_object):
 
 
 @pytest.fixture
-def created_device(create_object, status_for, created_manufacturer):
-    """A device owned by this test, with its own location type, location, device type and role.
-
-    Also returns the related records. The device's API response gives only their id and
-    URL, and the tests need their names.
-    """
+def device_prerequisites(create_object, status_for, created_manufacturer):
+    """A location, device type and role created for this test, and a device Status, as API records."""
     unique = unique_name()
     # Nautobot rejects a device whose location type does not list dcim.device in its content types.
     location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
@@ -77,22 +73,27 @@ def created_device(create_object, status_for, created_manufacturer):
         manufacturer=created_manufacturer["id"],
     )
     role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
-    status = status_for("dcim.device")
-    device = create_object(
-        "dcim/devices/",
-        name=unique,
-        location=location["id"],
-        device_type=device_type["id"],
-        role=role["id"],
-        status=status["id"],
-    )
     return {
-        "device": device,
         "location": location,
         "device_type": device_type,
         "role": role,
-        "status": status,
+        "status": status_for("dcim.device"),
     }
+
+
+@pytest.fixture
+def created_device(create_object, device_prerequisites):
+    """A device created for this test, plus its related records, since the device record has only their ids."""
+    prerequisites = device_prerequisites
+    device = create_object(
+        "dcim/devices/",
+        name=unique_name(),
+        location=prerequisites["location"]["id"],
+        device_type=prerequisites["device_type"]["id"],
+        role=prerequisites["role"]["id"],
+        status=prerequisites["status"]["id"],
+    )
+    return {"device": device, **prerequisites}
 
 
 @pytest.fixture
