@@ -340,6 +340,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 ### Dependencies in v3.2.7
 
 - [#9567](https://github.com/nautobot/nautobot/issues/9567) - Updated dependency `regex` to `>=2026.9.29`.
+- [#9619](https://github.com/nautobot/nautobot/issues/9619) - Pinned dependency `drf-spectacular-sidecar` to `>=2026.9.1,<2026.10.1`.
 
 ### Documentation in v3.2.7
 
