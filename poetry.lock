@@ -1651,18 +1651,18 @@ waitress = ["waitress"]
 
 [[package]]
 name = "djangorestframework"
-version = "3.17.2"
+version = "3.18.3"
 description = "Web APIs for Django, made easy."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "djangorestframework-3.17.2-py3-none-any.whl", hash = "sha256:cb0546a7415d5b46c04e0f4fe0a54b2109f4fdd5e83ca773c8c6183a6493d042"},
-    {file = "djangorestframework-3.17.2.tar.gz", hash = "sha256:89ed713b6dc83e1539f214b7d10808ae19bb8511004beba886225da6d5c9dafa"},
+    {file = "djangorestframework-3.18.3-py3-none-any.whl", hash = "sha256:8544bb674846731b1e3c9b309236ee1dc412905a0aa725be2ec193ca950a7d12"},
+    {file = "djangorestframework-3.18.3.tar.gz", hash = "sha256:446a9b352e7eff630421ab3f2328bd2401b109a9470afa4a31189994911ed030"},
 ]
 
 [package.dependencies]
-django = ">=4.2"
+django = ">=5.2"
 
 [[package]]
 name = "djhtml"
@@ -7697,4 +7697,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "74d05f42f6e8108efa0cb8a4892477f3235134b9450188fa51c0a54b2d91686a"
+content-hash = "886b023194de155e89b82073d2668618926376e27cd3fd58cdb55d6b93776cad"
