@@ -224,6 +224,9 @@ mkdocs-section-index = "~0.3.12"
 mkdocstrings = "~1.0.6"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~2.0.9"
+# Indirect dependency of several of the above - pinned because 12.2 has breaking API changes that impact
+# mkdocstrings, but the fixed version of mkdocstrings requires Python 3.11 or later
+pymdown-extensions = {version = "<12.2", python = "<3.11"}
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
