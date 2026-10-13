@@ -282,6 +282,20 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.44 (2026-10-13)
+
+### Security in v2.4.44
+
+- [#GHSA-9fgc-m542-2g84](https://github.com/nautobot/nautobot/issues/GHSA-9fgc-m542-2g84) - Fixed a Jinja2 template sandbox escape that allowed a user-authored template to execute arbitrary read queries against the database.
+- [#GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/issues/GHSA-gffr-x2x7-7fgh) - Added a timeout to the evaluation of custom field `validation_regex` values, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
+- [#GHSA-5q66-3x3p-rxmh](https://github.com/nautobot/nautobot/issues/GHSA-5q66-3x3p-rxmh) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read sensitive fields through a queryset projection.
+- [#9566](https://github.com/nautobot/nautobot/issues/9566) - Updated dependency `GitPython` to `~3.2.0` to mitigate multiple vulnerabilities.
+- [#9566](https://github.com/nautobot/nautobot/issues/9566) - Updated dependency `urllib3` to `^2.8.0` to mitigate multiple vulnerabilities.
+
+### Added in v2.4.44
+
+- [#GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/issues/GHSA-gffr-x2x7-7fgh) - Added utilities, exceptions, and model validators to the `nautobot.apps` API for App developers to use when evaluating user-supplied regular expressions.
+
 ## v2.4.43 (2026-09-28)
 
 ### Security in v2.4.43
