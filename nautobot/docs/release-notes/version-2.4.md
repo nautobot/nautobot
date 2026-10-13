@@ -296,9 +296,13 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 - [GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh) - Added utilities, exceptions, and model validators to the `nautobot.apps` API for App developers to use when evaluating user-supplied regular expressions.
 
-### Documentation in 2.4.44
+### Documentation in v2.4.44
 
 - [#9582](https://github.com/nautobot/nautobot/issues/9582) - Updated `SECURITY.md` to remove outdated instructions for sending security reports.
+
+### Housekeeping in v2.4.44
+
+- [#9618](https://github.com/nautobot/nautobot/pull/9618) - Updated development dependency `mkdocstrings` to `~1.0.6` to resolve a documentation build error.
 
 ## v2.4.43 (2026-09-28)
 
