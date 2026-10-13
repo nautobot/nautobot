@@ -91,7 +91,10 @@ django-webserver = "~1.2.0"
 djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 # Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
-drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
+drf-spectacular = "~0.28.0"
+# Swagger/Redoc API UI (TODO: add swagger-ui-dist and redoc as proper NPM dependencies instead)
+# 2026.10.1 has test-impacting behavior changes (https://github.com/swagger-api/swagger-ui/issues/11056)
+drf-spectacular-sidecar = "~2026.9.1"
 # Emoji terminal output for Python.
 emoji = "~2.15.0"
 # Git integrations for Python
