@@ -1053,6 +1053,36 @@ table.attr-table td:nth-child(1) {
 
 $nb-overview-fields-columns-min-width: 40rem;
 
+$chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$white-0}'/></svg>";
+
+@include color-mode(dark, true) {
+  .nb-overview-toggle {
+    /* `$white-0` → `$gray-2-dark` */
+    --overview-toggle-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(204%) contrast(100%);
+  }
+}
+
+.nb-overview-toggle {
+  /* `$white-0` → `$gray-2` */
+  --overview-toggle-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
+}
+
+.nb-overview-toggle::before {
+  @include transition($accordion-icon-transition);
+  background: no-repeat center/1rem #{escape-svg(url("data:image/svg+xml,#{$chevron-svg}"))};
+  content: "";
+  display: inline-block;
+  filter: var(--overview-toggle-icon-color-filter);
+  height: 1rem;
+  transform: rotate(180deg);
+  vertical-align: middle;
+  width: 1rem;
+}
+
+.nb-overview-toggle[aria-expanded="true"]::before {
+  transform: rotate(270deg);
+}
+
 .table-responsive:has(.nb-overview-toggle) {
   /* Size an expanded row's overview against the table it belongs to, not against the viewport. */
   container-type: inline-size;
@@ -1118,7 +1148,6 @@ $nb-overview-fields-columns-min-width: 40rem;
 }
 
 .nb-subtree {
-  $subtree-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$white-0}'/></svg>";
   $subtree-icon-height: 5.625rem; /* 90px */
   $subtree-icon-width: 1.25rem; /* 20px */
   $subtree-ancestor-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/></svg>";
@@ -1178,7 +1207,7 @@ $nb-overview-fields-columns-min-width: 40rem;
     &::before {
       @include subtree-icon-color-filter;
       @include transition($accordion-icon-transition);
-      background: no-repeat center/1rem #{escape-svg(url("data:image/svg+xml,#{$subtree-chevron-svg}"))};
+      background: no-repeat center/1rem #{escape-svg(url("data:image/svg+xml,#{$chevron-svg}"))};
       content: "";
       display: inline-block;
       font-size: 1rem;

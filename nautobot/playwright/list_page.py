@@ -176,11 +176,9 @@ class ListPage(BasePage):
         toggle = self.overview_toggle(index)
         row_id = self._overview_row_id(index)
         label = "Hide details for " if expanded else "Show details for "
-        icon = "less" if expanded else "more"
         expect(toggle).to_have_attribute("aria-expanded", "true" if expanded else "false")
         expect(toggle).to_have_attribute("title", re.compile(f"^{label}"))
         expect(toggle.locator("span.visually-hidden")).to_have_text(re.compile(f"^{label}"))
-        expect(toggle.locator(f"span.mdi.mdi-unfold-{icon}-horizontal")).to_have_count(1)
         expect(self.page.locator(f"#{row_id}")).to_have_count(1 if expanded else 0)
         if expanded:
             expect(toggle).to_have_attribute("aria-controls", row_id)

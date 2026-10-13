@@ -1,10 +1,8 @@
-const ICON_COLLAPSED_CLASS = 'mdi-unfold-more-horizontal';
-const ICON_EXPANDED_CLASS = 'mdi-unfold-less-horizontal';
 const OVERVIEW_ROW_ID_DATA_ATTRIBUTE = 'data-nb-overview-row-id';
 const OVERVIEW_TOGGLE_BUTTON_CLASS = 'nb-overview-toggle';
 
 /**
- * Set the toggle button expanded state along with a title, accessible label and icon.
+ * Set the toggle button expanded state along with a title and accessible label.
  * @param {HTMLButtonElement} button - Overview toggle button.
  * @param {boolean} isExpanded - Whether the overview row this button controls is currently expanded or not.
  * @returns {void} Do not return any value, modify the given button in-place.
@@ -16,10 +14,6 @@ const setToggleButtonState = (button, isExpanded) => {
 
   const accessibleLabel = button.querySelector('span.visually-hidden');
   accessibleLabel?.replaceChildren(title);
-
-  const icon = button.querySelector('span.mdi');
-  icon?.classList.toggle(ICON_COLLAPSED_CLASS, !isExpanded);
-  icon?.classList.toggle(ICON_EXPANDED_CLASS, isExpanded);
 };
 
 /**
