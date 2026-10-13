@@ -53,6 +53,10 @@ class BasePage:
     # hx-indicator target) while a fragment request is in flight; it is the only
     # in-page loading indicator core renders.
     _LOADING_INDICATOR = ".htmx-request"
+    # One per panel header. A panel's own label renders uppercased ("MANAGEMENT"), a table's title does not.
+    _PANEL_TITLE = ".card > .card-header strong"
+    # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
+    _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -108,3 +112,32 @@ class BasePage:
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()
         self.wait_for_load()
+
+    # -------------------------------------------------------------------------
+    # Panels
+    # -------------------------------------------------------------------------
+
+    def panel(self, title):
+        """Locator for the panel card titled *title*, matched without regard to case."""
+        heading = self.page.locator(self._PANEL_TITLE).filter(
+            has_text=re.compile(rf"^\s*{re.escape(title)}\s*$", re.IGNORECASE)
+        )
+        return heading.locator(self._ENCLOSING_CARD)
+
+    def expect_panel(self, title):
+        """Assert (auto-retrying) that exactly one panel on the page is titled *title*."""
+        expect(self.panel(title)).to_have_count(1)
+
+    def expect_no_panel(self, title):
+        """Assert (auto-retrying) that no panel on the page is titled *title*."""
+        expect(self.panel(title)).to_have_count(0)
+
+    def expect_panel_to_contain(self, title, text):
+        """Assert (auto-retrying) that the panel titled *title* shows *text*, scoped to that one card."""
+        expect(self.panel(title)).to_contain_text(text)
+
+    def expect_panel_field(self, title, key, value):
+        """Assert (auto-retrying) that in panel *title*, the row whose first cell is *key* shows *value* in its second cell."""
+        key_cell = self.page.locator("td:first-child").filter(has_text=re.compile(rf"^\s*{re.escape(key)}\s*$"))
+        row = self.panel(title).locator("tr").filter(has=key_cell)
+        expect(row.locator("td").nth(1)).to_contain_text(value)

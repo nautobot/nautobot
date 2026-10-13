@@ -1,12 +1,13 @@
 import csv
 from io import StringIO
+import itertools
 import json
 import logging
 
 from django.conf import settings
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
-from nautobot.core.api.import_export import EXCLUDED_CSV_FIELDS, PRIORITY_CSV_FIELDS
+from nautobot.core.api.import_export import EXCLUDED_CSV_FIELDS, PRIORITY_CSV_FIELDS, selection_position
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 
@@ -69,23 +70,34 @@ class NautobotCSVRenderer(BaseRenderer):
         if isinstance(data, dict):
             data = [data]
 
-        headers = self.get_headers(data, field_order=(renderer_context or {}).get("field_order"))
-
         buffer = StringIO()
-        writer = csv.writer(buffer)
+        self.render_to_stream(buffer, [data], renderer_context=renderer_context)
+        return buffer.getvalue()
+
+    def render_to_stream(self, stream, record_chunks, renderer_context=None):
+        """
+        Write CSV for a sequence of record lists to the given text stream, one chunk at a time.
+
+        The headers are taken from the first chunk, so a large export never has to hold every record at
+        once. That suffices because a serializer emits the same keys for every record of a model, custom
+        fields included (`CustomFieldsDataField` reports every custom field defined for the model).
+        Nothing at all is written if the first chunk is empty.
+        """
+        record_chunks = iter(record_chunks)
+        first_chunk = next(record_chunks, None)
+        if not first_chunk:
+            return
+
+        headers = self.get_headers(first_chunk, field_order=(renderer_context or {}).get("field_order"))
+
+        writer = csv.writer(stream)
         import_directives = (renderer_context or {}).get("import_directives")
         if import_directives:
             self.render_directive_row(writer, import_directives)
         writer.writerow(headers)
-        for record in data:
-            writer.writerow(
-                self.object_to_row_elements(
-                    record,
-                    headers=headers,
-                )
-            )
-
-        return buffer.getvalue()
+        for chunk in itertools.chain([first_chunk], record_chunks):
+            for record in chunk:
+                writer.writerow(self.object_to_row_elements(record, headers=headers))
 
     def render_directive_row(self, writer, directives):
         """
@@ -146,13 +158,7 @@ class NautobotCSVRenderer(BaseRenderer):
         if field_order:
             # Order headers to match the explicit field selection; a header belongs to the earliest
             # selection entry it equals or nests under (e.g. `location__name` under `location`).
-            def selection_index(header):
-                for index, selected in enumerate(field_order):
-                    if header == selected or header.startswith(f"{selected}__"):
-                        return (index, header)
-                return (len(field_order), header)
-
-            headers.sort(key=selection_index)
+            headers.sort(key=lambda header: selection_position(header, field_order))
         else:
             # Coerce important fields, if present, to the front of the list. Walked back-to-front, each
             # insert going ahead of the last, so the result reads in `PRIORITY_CSV_FIELDS` order.

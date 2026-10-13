@@ -1,3 +1,4 @@
+import html
 import json
 import os
 from pathlib import Path
@@ -25,12 +26,17 @@ from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.templatetags.buttons import job_export_url
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.ui.object_detail import get_overview_panel
-from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
+from nautobot.core.utils.lookup import (
+    get_filterset_for_model,
+    get_model_from_name,
+    get_url_for_url_pattern,
+    get_url_patterns,
+)
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -152,6 +158,36 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn("Export to file", body)  # the dialog is still offered
         self.assertNotIn("Export Templates", body)
         self.assertNotIn("Provider inventory", body)
+
+    def _import_button_tag(self):
+        match = re.search(r'<button[^>]*id="import-button"[^>]*>', self._provider_list_body())
+        self.assertIsNotNone(match, "import button not rendered")
+        return match.group(0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_opens_job_modal(self):
+        """The Import action opens the ImportObjects job form in the modal, prefilled with the list's content type."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        button = self._import_button_tag()
+
+        run_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
+        self.assertIn(f'hx-post="{run_url}"', button)
+        hx_vals = json.loads(html.unescape(re.search(r"hx-vals='([^']+)'", button).group(1)))
+        self.assertEqual(hx_vals["job_modal_button"], "core.import_objects")
+        self.assertEqual(hx_vals["content_type"], str(ContentType.objects.get_for_model(Provider).pk))
+        self.assertTrue(hx_vals["render_job_form"])
+        self.assertTrue(hx_vals["refresh_on_close_if_done"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_disabled_without_run_job_permission(self):
+        """A user who may add objects but not run the ImportObjects job sees the Import action, disabled."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        button = self._import_button_tag()
+
+        self.assertIn("disabled", button)
+        self.assertIn('title="You do not have permission to run this Job."', button)
+        self.assertNotIn("hx-post", button)
 
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
@@ -338,16 +374,29 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        def assertBodyContains(html):
-            return self.assertBodyContains(response, html, html=True)
-
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
-        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
-        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""", html=True
+        )
+        self.assertBodyContains(
+            response, """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""", html=True
+        )
+        self.assertBodyContains(
+            response,
+            """<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""",
+            html=True,
+        )
 
 
 class AppDocsViewTestCase(TestCase):
@@ -1389,6 +1438,76 @@ class LoginUITestCase(TestCase):
         )
         self.assertNotIn("password", cm.output)
         self.assertNotIn("pass", cm.output)
+
+
+class AuthenticationEnforcedTestCase(TestCase):
+    r"""
+    Test that all\* registered views require authentication to access.
+
+    \* with a very small number of known exceptions such as login and logout views.
+    """
+
+    def test_all_views_require_authentication(self):
+        self.client.logout()
+        url_patterns = get_url_patterns(ignore_redirects=True)
+
+        for url_pattern in url_patterns:
+            with self.subTest(url_pattern=url_pattern):
+                url = get_url_for_url_pattern(url_pattern)
+
+                if "/plugins/example-app/" in url and not url.startswith("/plugins/example-app/docs/"):
+                    # We're generally not interested in whether the example-app enforces authentication
+                    continue
+
+                response = self.client.get(url, follow=True)
+
+                if response.status_code == 405:  # Method not allowed
+                    response = self.client.post(url, follow=True)
+
+                # Is a view that *should* be open to unauthenticated users?
+                if url in [
+                    "/admin/login/",
+                    "/health/",
+                    "/login/",
+                    "/media-failure/",
+                    "/robots.txt",
+                    "/template.css",
+                ]:
+                    self.assertHttpStatus(response, 200, msg=url)
+                elif response.status_code == 200:
+                    # UI views generally should redirect unauthenticated users to the appropriate login page
+                    if url.startswith("/admin"):
+                        if "logout" in url:
+                            # /admin/logout/ sets next=/admin/ because having login redirect to logout would be silly
+                            redirect_url = "/admin/login/?next=/admin/"
+                        else:
+                            redirect_url = f"/admin/login/?next={url}"
+                    else:
+                        if "logout" in url:
+                            # /logout/ sets next=/ because having login redirect back to logout would be silly
+                            redirect_url = "/login/?next=/"
+                        else:
+                            redirect_url = f"/login/?next={url}"
+                    self.assertRedirects(response, redirect_url)
+                elif response.status_code != 403:
+                    if any(
+                        url.startswith(path)
+                        for path in [
+                            "/app-launch/",  # social auth
+                            "/complete/",  # social auth
+                            "/health/string/",  # health-check
+                            "/idp-launch/",  # social auth
+                            "/login/",  # social auth
+                            "/media/",  # MEDIA_ROOT
+                            "/plugins/example-app/docs/",  # STATIC_ROOT
+                        ]
+                    ):
+                        self.assertEqual(response.status_code, 404)
+                    else:
+                        self.fail(
+                            f"Unexpected {response.status_code} response at {url}: "
+                            + response.content.decode(response.charset)
+                        )
 
 
 class MetricsViewTestCase(TestCase):

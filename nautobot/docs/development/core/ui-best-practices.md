@@ -299,6 +299,16 @@ Django already emits `required`, `aria-invalid="true"` on error, and
 `id="{{ field.auto_id }}_helptext"` and `id="{{ field.auto_id }}_error"` attributes, otherwise the reference dangles and
 neither the help text nor the errors are announced. Prefer `{% render_field %}`, which handles this.
 
+#### Select and Multiselect Widgets
+
+All select and multiselect inputs in Nautobot should use the appropriate Select2 widget. For related objects, or more generally any selection input that can dynamically identify its choices from the database or the REST API, define the form using a `DynamicModelChoiceField` or `DynamicModelMultipleChoiceField` as appropriate. For selections with a fixed set of valid choices, use the `StaticSelect2` or `StaticSelect2Multiple` widget classes as appropriate.
+
+#### Input Placeholders
+
+Most form inputs (widgets) do not need explicit `placeholder` text. By default, a text field with no entered value displays just that -- an empty value -- and a Select2 dropdown menu displays a default placeholder of "—" when no selection has been made. A placeholder is also not a substitute for appropriate `label` and/or `help_text`.
+
+Where a `placeholder` **is** useful is for fields that have specific and non-obvious syntax requirements. For example, a field that takes a date and time (`"YYYY-MM-DD hh:mm:ss"`) or a field that takes a fully-specified HTTP URL (`"https://example.com/example/"`). In these cases, you should provide an appropriate placeholder value _in addition to any relevant `help_text`_.
+
 ### Tables
 
 `th` elements need `scope="col"`. Sortable columns need `aria-sort` reflecting the current state, since a sort arrow icon

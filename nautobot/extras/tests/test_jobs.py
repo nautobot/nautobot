@@ -132,10 +132,10 @@ class JobTest(TestCase):
         form = job_class.as_form()
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input type="number" name="var_int" value="0" max="3600" class="form-control" required placeholder="None" aria-describedby="id_var_int_helptext" id="id_var_int">
+<input type="number" name="var_int" value="0" max="3600" class="form-control" required aria-describedby="id_var_int_helptext" id="id_var_int">
 <br><span class="helptext" id="id_var_int_helptext">Test default of 0 Falsey</span></td></tr>
 <tr><th><label for="id_var_int_no_default">Var int no default:</label></th> <td>
-<input type="number" name="var_int_no_default" max="3600" class="form-control" placeholder="None" aria-describedby="id_var_int_no_default_helptext" id="id_var_int_no_default">
+<input type="number" name="var_int_no_default" max="3600" class="form-control" aria-describedby="id_var_int_no_default_helptext" id="id_var_int_no_default">
 <br><span class="helptext" id="id_var_int_no_default_helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
@@ -1370,6 +1370,20 @@ class JobFileOutputTest(TransactionTestCase):
             models.FileProxy.objects.get(name="output.txt")
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
+
+    def test_output_file_from_file_object(self):
+        """`create_file()` accepts a file object, read from its start, and enforces the size limit on it."""
+        data = {"lines": 3, "use_file_object": True}
+        job_result = create_job_result_and_run_job("file_output", "FileOutputJob", **data)
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(1, job_result.files.count())
+        self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
+
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n" * 3) - 1):
+            job_result = create_job_result_and_run_job("file_output", "FileOutputJob", **data)
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertIn("ValueError", job_result.traceback)
+            self.assertEqual(0, job_result.files.count())
 
     # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
     # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,

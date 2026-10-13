@@ -54,7 +54,9 @@
                 {% endif %}
             </div>
             {% block job_form_wrapper %}
-                {% render_form job_form excluded_fields=advanced_field_names %}
+                {% block job_form %}
+                    {% render_form job_form excluded_fields=advanced_field_names %}
+                {% endblock job_form %}
                 <div class="form-check mb-10 d-md-flex justify-content-center">
                     <div class="col-md-9 offset-md-3">
                         <div class="form-check mt-6">

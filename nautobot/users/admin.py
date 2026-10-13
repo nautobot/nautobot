@@ -205,7 +205,7 @@ class ObjectPermissionForm(forms.ModelForm):
 
         # Format ContentType choices
         order_content_types(self.fields["object_types"])
-        self.fields["object_types"].choices.insert(0, ("", "---------"))
+        self.fields["object_types"].choices.insert(0, ("", "—"))
 
         # Order group and user fields
         self.fields["groups"].queryset = self.fields["groups"].queryset.order_by("name")

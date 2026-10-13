@@ -349,6 +349,7 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
         ]
         widgets = {
             "date_allocated": DateTimePicker(),
+            "type": StaticSelect2(),
         }
 
     def _get_validation_exclusions(self):

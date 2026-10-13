@@ -91,7 +91,7 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
                     d.find_element(By.ID, "select2-id_device_type-container")
                     .find_element(By.CLASS_NAME, "select2-selection__placeholder")
                     .text.strip()
-                    == "---------"
+                    == "—"
                 )
             )
         )

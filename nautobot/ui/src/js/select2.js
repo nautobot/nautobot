@@ -90,7 +90,7 @@ export const initializeSelect2 = (context, selector, options) =>
     } = $(element)
       .select2({
         allowClear: true,
-        placeholder: '---------',
+        placeholder: '—',
         selectionCssClass: 'select2--small',
         theme: 'bootstrap-5',
         width: 'off',

@@ -50,6 +50,7 @@ import { initializeConditionsEditor, nextIndex } from './conditions-editor.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
+import { initializeExportFields } from './export-fields.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
@@ -98,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Drawer
   initializeDrawers();
+
+  // Export field picker
+  initializeExportFields();
 
   // ECharts
   window.nb.echarts = { getEchartsOptionsThemeOverrides };

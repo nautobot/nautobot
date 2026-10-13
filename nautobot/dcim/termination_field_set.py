@@ -83,9 +83,7 @@ TERMINATION_TYPE_CONFIGS = {
 }
 
 # Choices for the type selector dropdown
-TERMINATION_TYPE_CHOICES = [("", "---------")] + [
-    (key, config["display"]) for key, config in TERMINATION_TYPE_CONFIGS.items()
-]
+TERMINATION_TYPE_CHOICES = [("", "—")] + [(key, config["display"]) for key, config in TERMINATION_TYPE_CONFIGS.items()]
 
 
 def detect_termination_type(term):
@@ -143,7 +141,7 @@ class CableTerminationFieldSet:
                 "meta": dict with type info for template rendering
         """
         # Treat an empty string the same as None: this happens when form data carries the
-        # "---------" choice (value="") from the type dropdown — a legitimate "no type
+        # "—" choice (value="") from the type dropdown — a legitimate "no type
         # selected" input, not an unknown type.
         if not term_type:
             term_type = detect_termination_type(existing_term)

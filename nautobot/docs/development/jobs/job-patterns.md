@@ -146,6 +146,8 @@ Use the `Job.create_file(filename, content)` method:
 <!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
+    import tempfile
+
     from nautobot.apps.jobs import Job, register_jobs
 
 
@@ -156,6 +158,9 @@ Use the `Job.create_file(filename, content)` method:
         def run(self):
             self.create_file("greeting.txt", "Hello world!")
             self.create_file("farewell.txt", b"Goodbye for now!")  # Content can be str or bytes
+            with tempfile.TemporaryFile() as output:  # ...or a seekable binary file object
+                output.write(b"Large content written incrementally")
+                self.create_file("large.txt", output)
 
 
     register_jobs(MyJob)

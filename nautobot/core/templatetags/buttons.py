@@ -166,9 +166,10 @@ def import_button(url):  # 3.0 TODO: remove, unused
 @register.simple_tag
 def job_import_url(content_type):
     """
-    URL to the run view for the CSV Import system job, prefilled with the given content-type.
+    URL to the run view for the Import Objects system job, prefilled with the given content-type.
 
-    Helper to `job_import_button` tag, but can be used separately if needed.
+    For templates that link to the full-page import form; `job_import_button` instead opens that same job's
+    form in a modal.
     """
     try:
         import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
@@ -540,16 +541,23 @@ def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals, r
     }
 
 
-@register.inclusion_tag("buttons/job_import.html")
-def job_import_button(content_type, list_element=False):
+@register.inclusion_tag("buttons/job_import.html", takes_context=True)
+def job_import_button(context, content_type, list_element=False):
     """Display an Import Button/List Element on the page.
 
     This allows an Import Button to either be displayed on a page or within a Button Group.
     Args:
-        content_type (str): Django.contrib.ContentType for the model.
+        context (dict): current Django Template context
+        content_type (ContentType | None): ContentType of the model; renders nothing if None.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
-    return {"import_url": job_import_url(content_type), "list_element": list_element}
+    # The registered ImportObjectsModalButton lets the job-result modal resolve this trigger, and sets
+    # refresh_on_close_if_done so the list refreshes on close and newly imported objects appear.
+    if content_type is None:
+        return {"trigger_url": None, "list_element": list_element}
+    return job_modal_trigger_context(
+        context, "core.import_objects", list_element, {"content_type": str(content_type.pk)}, render_form=True
+    )
 
 
 @register.simple_tag
@@ -586,7 +594,7 @@ def export_button(context, content_type=None, list_element=False):
     # the registered ExportObjectListModalButton lets the job-result modal offer a file download once the
     # export completes.
     #
-    # No field selection is seeded here. The dialog opens exporting every field, and its picker's "match
+    # No field selection is seeded here. The dialog opens exporting the default columns, and its picker's "match
     # the list view" button fills in this view's columns on request -- resolved then, by the one helper
     # the Job itself uses, rather than computed on every list-view render for an export nobody may run.
     trigger = job_modal_trigger_context(

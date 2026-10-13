@@ -1,0 +1,1 @@
+Removed default `placeholder` text identical to the form-field `label` from most forms. Form fields with explicitly specified `placeholder` values are unaffected.

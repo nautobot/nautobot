@@ -117,7 +117,7 @@ class MetadataType(PrimaryModel):
             field = forms.NullBooleanField(
                 required=required,
                 initial=initial,
-                widget=StaticSelect2(choices=((None, "---------"), (True, "True"), (False, "False"))),
+                widget=StaticSelect2(choices=((None, "—"), (True, "True"), (False, "False"))),
             )
         elif self.data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
             field = NullableDateField(required=required, initial=initial, widget=DatePicker())
