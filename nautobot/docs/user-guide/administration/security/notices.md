@@ -3,7 +3,6 @@
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
 <!-- pyml disable-num-lines 2000 proper-names -->
-
 ## GHSA-gffr-x2x7-7fgh
 
 <!-- pyml disable-next-line no-inline-html -->
