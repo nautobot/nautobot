@@ -202,8 +202,8 @@ def _condition_type_choices():
     )
 
 
-def _apply_bootstrap_styling(widget, placeholder=""):
-    """Give a widget the Bootstrap class and placeholder, which `BootstrapMixin` cannot reach here.
+def _apply_bootstrap_styling(widget):
+    """Give a widget the Bootstrap class, which `BootstrapMixin` cannot reach here.
 
     It dresses the fields a form declares, and a row's are built after it has run.
     """
@@ -211,9 +211,6 @@ def _apply_bootstrap_styling(widget, placeholder=""):
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
-    # A select keeps the placeholder every other Nautobot select shows, which `initializeSelect2` sets.
-    if placeholder and not isinstance(widget, forms.Select):
-        widget.attrs.setdefault("placeholder", placeholder)
     return widget
 
 
@@ -242,7 +239,7 @@ def _mark_for_editor_script(widget, role, *, key=None, rebuild_index=None):
     return widget
 
 
-def _build_control(label, widget, *, placeholder=None):
+def _build_control(label, widget):
     """Build a form field around `widget`. A `CharField` throughout, since nothing here validates.
 
     The `help_text` field for the parameter was intentionally omitted.
@@ -252,7 +249,7 @@ def _build_control(label, widget, *, placeholder=None):
     return forms.CharField(
         label=label,
         required=False,
-        widget=_apply_bootstrap_styling(widget, label if placeholder is None else placeholder),
+        widget=_apply_bootstrap_styling(widget),
     )
 
 
@@ -426,7 +423,6 @@ class ConditionRowForm(forms.Form):
         self.fields["negate"] = _build_control(
             "Negate",
             _mark_for_editor_script(StaticSelect2(choices=NEGATION_CHOICES), ROLE_NEGATE),
-            placeholder="",
         )
         self._add_chosen_controls(self._current_value("type"))
         chosen = set(self._chosen_control_names)
@@ -463,7 +459,6 @@ class ConditionRowForm(forms.Form):
             self.fields["source"] = _build_control(
                 "Expression",
                 _mark_for_editor_script(forms.TextInput(), ROLE_SOURCE),
-                placeholder="Jinja2 expression",
             )
             return
         preset = get_condition_preset(chosen)
@@ -495,7 +490,6 @@ class ConditionRowForm(forms.Form):
             self.fields[parameter.name] = _build_control(
                 parameter.label,
                 _mark_for_editor_script(closed, ROLE_PATH, key=parameter.name),
-                placeholder="",
             )
             return
 
@@ -515,7 +509,6 @@ class ConditionRowForm(forms.Form):
                     key=parameter.name,
                     rebuild_index=self.index,
                 ),
-                placeholder="",
             )
             # So the rendered select marks the one it is sending as chosen, rather than leaving the
             # browser to fall back to the first and the two to disagree about what the row holds.
