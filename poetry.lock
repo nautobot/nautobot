@@ -4173,11 +4173,32 @@ typing-extensions = ">=4.15.0"
 
 [[package]]
 name = "pymdown-extensions"
+version = "12.1"
+description = "Extension pack for Python Markdown."
+optional = false
+python-versions = ">=3.10"
+groups = ["docs"]
+markers = "python_version == \"3.10\""
+files = [
+    {file = "pymdown_extensions-12.1-py3-none-any.whl", hash = "sha256:4a254b771acfcddc6c110a7f4590d818f1f849e2d5aacf69b4b07c8dd2a9700d"},
+    {file = "pymdown_extensions-12.1.tar.gz", hash = "sha256:fdb8f47f5d7fd069d10ef2a7d8908e613d7865ff0419d544a0ffd3984e884f11"},
+]
+
+[package.dependencies]
+markdown = ">=3.6"
+pyyaml = "*"
+
+[package.extras]
+extra = ["pygments (>=2.19.1)"]
+
+[[package]]
+name = "pymdown-extensions"
 version = "12.2"
 description = "Extension pack for Python Markdown."
 optional = false
 python-versions = ">=3.10"
 groups = ["docs"]
+markers = "python_version >= \"3.11\""
 files = [
     {file = "pymdown_extensions-12.2-py3-none-any.whl", hash = "sha256:caea66e916b4cfe987b5dabb0a78558e3506988f6353812b0b0288be8f976c16"},
     {file = "pymdown_extensions-12.2.tar.gz", hash = "sha256:02da896c362b548d85123e7a377a40024ea6ea938b4e45ca064e408afd994b64"},
@@ -6215,4 +6236,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "b50c284c85ebbfae77d3b818618853997eb61584a74df988e4d5aa3751c5a8f2"
+content-hash = "b1e3cfa7da00fe4cb01afe04f71bdf88d4822f9121aed81ebe6b57a261b35c29"
