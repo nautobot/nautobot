@@ -1,1 +1,0 @@
-Stopped the data being validated from influencing the structure of a `RegularExpressionValidationRule` regular expression that uses Jinja2 context processing, to protect against bypass of a validation rule.
