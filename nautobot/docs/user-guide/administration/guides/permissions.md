@@ -252,21 +252,20 @@ Other notable behaviors:
 
 ### IP Address Merge Tool
 
-The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place.
+The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place. Object-level constraints on these permissions are enforced: IP addresses outside the user's `change` or `delete` constraints are left out of the merge, and the merge is rolled back if the new IP address does not satisfy the user's `add` constraints.
 
-+/- 3.2.7
-    `ipam.add_ipaddress` and `ipam.delete_ipaddress` are now required. Previously only `ipam.change_ipaddress` was required.
++/- 3.2.8
+    `ipam.add_ipaddress` and `ipam.delete_ipaddress` are now required, and object-level constraints on all three permissions are now enforced. Previously only `ipam.change_ipaddress` was required, and its constraints only limited which IP addresses the merge page listed.
 
 Since the tool exists to consolidate duplicate records, a merge intentionally makes changes that may go beyond the user's other permissions:
 
-- Object-level constraints on the user's IP address permissions are **not** enforced by the merge itself. The merge page only lists IP addresses within the user's `change` constraints, but the merge does not re-check `add`, `change`, or `delete` constraints against the IP addresses it deletes or the one it creates.
 - Existing references to the merged IP addresses are moved to the new IP address **without** checking the user's permissions on the referencing objects, so the new IP address may end up assigned to objects the user cannot `view` or `change` directly. This includes `Device` and `VirtualMachine` primary IPs (`primary_ip4`/`primary_ip6`), interface and VM interface assignments, `Service` assignments, and the objects on the other side of relationship associations.
 - The `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` values selected for the new IP address are assigned **without** checking `view` permission on these related objects, so the new IP address may reference related objects the user cannot view directly.
 
 These changes are not silent: the deleted and created IP addresses, and every updated device, virtual machine, interface, VM interface, and service, are recorded in the [change log](../../platform-functionality/change-logging.md) under the merging user's request.
 
 !!! warning
-    Treat the combination of `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` as granting access to the merge tool, and grant all three together only to users you trust to perform merges. A user who should manage IP addresses only within a constrained scope should not be given all three.
+    Treat the combination of `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` as granting access to the merge tool, and grant all three together only to users you trust to perform merges. Even when these permissions are constrained, a merge can update devices, virtual machines, and other related objects outside the user's permitted scope.
 
 ## Limitations and Edge Cases
 

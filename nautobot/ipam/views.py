@@ -1261,7 +1261,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         return self.find_duplicate_ips(request)
 
     def post(self, request):
-        collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
+        # Use the view's restricted queryset ("change"), further restricted to "delete", so a crafted POST
+        # cannot merge/delete IPAddresses the user has no object-level permission for.
+        collapsed_ips = self.queryset.restrict(request.user, "delete").filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         operation_invalid = len(collapsed_ips) < 2
         # Check if there are at least two IP addresses for us to merge
@@ -1307,10 +1309,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         nat_inside=nat_inside,
                         _custom_field_data=ip_in_the_same_namespace._custom_field_data,
                     )
-                    # Update custom_field_data
+                    # Update custom_field_data. Source values only from collapsed_ips (the restricted
+                    # merge set) so a crafted POST cannot pull custom-field data from an arbitrary IP.
                     for key in merged_ip._custom_field_data.keys():
                         ip_pk = merged_attributes.get("cf_" + key)
-                        merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
+                        merged_ip._custom_field_data[key] = collapsed_ips.get(pk=ip_pk)._custom_field_data[key]
                     # Update relationship data
                     handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
                     # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
@@ -1360,6 +1363,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     merged_ip.validated_save()
                     # Tags are set only after the save, so the change log records the merged IP as created.
                     merged_ip.tags.set(tags)
+                    # Enforce object-level "add" constraints on the merged IP, rolling back the whole merge if violated.
+                    if not IPAddress.objects.restrict(request.user, "add").filter(pk=merged_ip.pk).exists():
+                        transaction.set_rollback(True)
+                        messages.error(request, "Merge failed due to object-level permissions violation")
+                        return redirect(self.get_return_url(request))
                     # After some testing
                     # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
                     for assignment in ip_to_interface_assignments:
