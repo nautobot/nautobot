@@ -2,7 +2,115 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 1000 proper-names -->
+<!-- pyml disable-num-lines 2000 proper-names -->
+
+## GHSA-gffr-x2x7-7fgh
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot evaluates a custom field's <code>validation_regex</code> against submitted values using Python's standard <code>re</code> module, which places no bound on backtracking. If a custom field is configured with a pattern that exhibits catastrophic backtracking, a submitted value that fails to match can consume worker time without bound.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh">GHSA-gffr-x2x7-7fgh</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/24ead05fd570d220984643a099e78695a04df844">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/82b6d102cb880c59a6236e9bec94f36ac43d14c7">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-5q66-3x3p-rxmh
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An information-disclosure vulnerability in Nautobot's handling of user-authored Jinja2 templates. It is an incomplete fix for GHSA-8f2w-54mq-66gg. The disclosed values are REST API token keys and user password hashes belonging to other users, including administrators. A disclosed API token grants the full REST API privileges of the user it belongs to, so this is an account-takeover path from a low-privileged account.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-5q66-3x3p-rxmh">GHSA-5q66-3x3p-rxmh</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/bc38b5e82d6391c3e40f2b143d2e6cce7c545525">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/35dc20e4d47304ec346a0d8f20a9f6478718f12b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-9fgc-m542-2g84
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A Jinja2 template sandbox escape. An authenticated user with any template-authoring permission can make template rendering run arbitrary read queries against the database.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-9fgc-m542-2g84">GHSA-9fgc-m542-2g84</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/bc38b5e82d6391c3e40f2b143d2e6cce7c545525">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/35dc20e4d47304ec346a0d8f20a9f6478718f12b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## GHSA-m6h7-g92h-9p44
 
