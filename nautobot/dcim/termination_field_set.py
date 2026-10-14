@@ -187,6 +187,7 @@ class CableTerminationFieldSet:
             initial=location,
             query_params={"content_type": config["location_content_type"]},
             embedded_create=False,
+            embedded_search=True,
         )
         if location:
             initial[location_field_name] = location.pk
