@@ -2713,16 +2713,16 @@ class CeleryStrategyTestCase(_JobCancelTestBase):
     # ------------------------------------------------------------------ #
 
     @mock.patch("nautobot.extras.jobs_cancel.celery_app.control.revoke")
-    def test_terminate_reaps_when_worker_not_alive(self, mock_celery_cancel):
+    def test_terminate_reaps_when_worker_not_alive(self, mock_celery_revoke):
         for status in JobResultStatusChoices.UNREADY_STATES:
             with self.subTest(status=status):
-                mock_celery_cancel.reset_mock()
+                mock_celery_revoke.reset_mock()
                 job_result = self._make_job_result(status)
                 with self.assertLogs("nautobot.extras.jobs_cancel", level="INFO") as log_cm:
                     result = self.strategy.cancel(job_result, self.user)
 
                 # The message may still be queued in the broker, so workers must be told to skip it, but not killed.
-                mock_celery_cancel.assert_called_once_with(str(job_result.pk))
+                mock_celery_revoke.assert_called_once_with(str(job_result.pk))
 
                 self.assertTrue(
                     any("Reaped dead job" in msg for msg in log_cm.output),
