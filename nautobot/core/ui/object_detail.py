@@ -2724,7 +2724,7 @@ class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
 
     label = "Dynamic Groups"
-    required_permissions = ("extras.view_dynamic_group",)
+    required_permissions = ("extras.view_dynamicgroup",)
     tab_id = "dynamic_groups"
     weight = Tab.WEIGHT_GROUPS_TAB
 
