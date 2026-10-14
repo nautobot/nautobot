@@ -1,4 +1,4 @@
-"""The conditions editor on the Webhook form: the rows and the JSON field they write."""
+"""The conditions editor on the Webhook add and edit forms."""
 
 import pytest
 
@@ -11,6 +11,11 @@ PLANNED_TO_ACTIVE = {
     "type": "preset",
     "values": {"field": "status.name", "from": "Planned", "to": "Active"},
 }
+
+THREE_USER_CONDITIONS = [
+    {"negate": False, "preset": "user_is", "type": "preset", "values": {"username": username}}
+    for username in ("first", "second", "third")
+]
 
 
 def _fill_planned_to_active(webhook_form):
@@ -51,10 +56,11 @@ class ConditionsEditorTestCase:
             api.delete(f"/api/extras/webhooks/{pk}/")
 
     @pytest.mark.behavioral
-    def test_a_stored_condition_is_drawn_as_a_row_in_the_edit_form(self, auth_page, base_url, created_webhook):
+    def test_a_stored_condition_is_drawn_as_a_row_in_the_edit_form(self, auth_page, base_url, create_webhook):
+        webhook = create_webhook([PLANNED_TO_ACTIVE])
         webhook_form = WebhookFormPage(auth_page, base_url)
 
-        webhook_form.navigate_to_edit(created_webhook["id"])
+        webhook_form.navigate_to_edit(webhook["id"])
 
         assert webhook_form.get_condition_row_selections(0) == {
             "negate": "when",
@@ -64,3 +70,28 @@ class ConditionsEditorTestCase:
             "from": "Planned",
             "to": "Active",
         }
+
+    @pytest.mark.behavioral
+    def test_removing_a_row_drops_its_condition_and_announces_the_new_count(self, auth_page, base_url, create_webhook):
+        webhook = create_webhook(THREE_USER_CONDITIONS)
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate_to_edit(webhook["id"])
+
+        webhook_form.remove_condition(1)
+
+        assert [condition["values"]["username"] for condition in webhook_form.get_conditions()] == ["first", "third"]
+        webhook_form.expect_announced_count("2 conditions")
+
+    @pytest.mark.behavioral
+    def test_a_row_added_after_a_removal_takes_the_index_past_the_highest_and_is_counted(
+        self, auth_page, base_url, create_webhook
+    ):
+        webhook = create_webhook(THREE_USER_CONDITIONS)
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate_to_edit(webhook["id"])
+        webhook_form.remove_condition(1)
+
+        webhook_form.add_condition()
+
+        assert webhook_form.get_condition_row_indexes() == [0, 2, 3]
+        webhook_form.expect_announced_count("3 conditions")

@@ -23,6 +23,9 @@ class WebhookFormPage(BasePage):
     _PAYLOAD_URL_FIELD = "#id_payload_url"
     _CONDITIONS_FIELD = "#id_conditions"
     _CONDITION_ROW = "#conditions-rows .nb-condition"
+    _ADD_CONDITION_BUTTON = "#conditions-add"
+    _REMOVE_CONDITION_BUTTON_NAME = "Remove this condition"
+    _CONDITIONS_COUNT = "#conditions-count"
     # `conditions-editor.js` sets `data-nb-drawing` on this form while the rows are drawn from the JSON field.
     _CONDITIONS_FORM = "form:has(#id_conditions)"
     _CREATE_BUTTON = "button[name='_create']"
@@ -77,6 +80,21 @@ class WebhookFormPage(BasePage):
         """Choose *text* in the value control *key* of the row at *index*."""
         select2_filter_pick(self.page, f"condition-{index}-{key}", search=text, pick_text=text)
 
+    def add_condition(self):
+        """Click Add another Condition and wait for the new row to arrive."""
+        rows = self.page.locator(self._CONDITION_ROW)
+        expected = rows.count() + 1
+        self.page.locator(self._ADD_CONDITION_BUTTON).click()
+        expect(rows).to_have_count(expected)
+
+    def remove_condition(self, index):
+        """Click the remove button of the row at *index*."""
+        self._condition_row(index).get_by_role("button", name=self._REMOVE_CONDITION_BUTTON_NAME).click()
+
+    def expect_announced_count(self, text):
+        """Assert (auto-retrying) that the live region tells a screen reader *text*, such as "2 conditions"."""
+        expect(self.page.locator(self._CONDITIONS_COUNT)).to_have_text(text)
+
     def save(self) -> str:
         """Submit the add form and return the ID of the saved webhook, read from the detail view it redirects to."""
         self._click_and_wait_for_navigation(self._CREATE_BUTTON)
@@ -97,3 +115,8 @@ class WebhookFormPage(BasePage):
         prefix = f"condition-{index}-"
         selects = self._condition_row(index).locator("select").all()
         return {select.get_attribute("name").removeprefix(prefix): select.input_value() for select in selects}
+
+    def get_condition_row_indexes(self):
+        """The index of every row, in the order the rows are shown. Reads once, with no retry."""
+        rows = self.page.locator(self._CONDITION_ROW).all()
+        return [int(row.get_attribute("data-nb-condition-index")) for row in rows]
