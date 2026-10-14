@@ -1619,7 +1619,6 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE"
     see_also:
-      "Guide to Nautobot rate limiting": "./rate-limiting.md"
       "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
       "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
@@ -1734,7 +1733,6 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_RATE_LIMITING_REST_MODE"
     see_also:
-      "Guide to Nautobot rate limiting": "./rate-limiting.md"
       "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
     version_added: "3.3.0"
