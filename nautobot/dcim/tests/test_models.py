@@ -2151,7 +2151,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         """An IP address assigned to another device's interface is never a valid primary IP."""
         (ip,) = self._create_unassigned_ipv4_addresses(1)
         other_interface = Interface.objects.create(
-            name="Primary IP Test Interface", device=self.device, status=self.device_status, role=self.intf_role
+            name="Primary IP Test Interface",
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=self.intf_role,
         )
         other_interface.add_ip_addresses(ip)
         device = Device(

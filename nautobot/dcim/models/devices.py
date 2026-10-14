@@ -21,6 +21,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
@@ -2378,16 +2379,24 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
-    def clean(self):
-        super().clean()
+    def _validate_primary_ips(self):
         if self.device_id is not None:
             validate_primary_ips(self, Q(interface__in=self.device.all_interfaces.all()))
+
+    def clean(self):
+        super().clean()
+        self._validate_primary_ips()
 
         # Validate that device is not being modified
         if self.present_in_database:
             vdc = VirtualDeviceContext.objects.get(id=self.id)
             if vdc.device != self.device:
                 raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
+
+    @method_deprecated_in_favor_of(clean)
+    def validate_primary_ips(self):
+        """Deprecated - primary IP validation is performed by `clean()`."""
+        self._validate_primary_ips()
 
 
 @extras_features(

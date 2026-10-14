@@ -40,6 +40,12 @@
             {% if "unassigned_primary_ip6" in form.fields %}
                 {% render_field form.unassigned_primary_ip6 %}
             {% endif %}
+            {% if not editing %}
+                <div class="alert alert-info" role="alert">
+                    An IP address assigned to one of this virtual machine's interfaces can be selected as its primary IP
+                    after creating this virtual machine.
+                </div>
+            {% endif %}
             {% render_field form.software_version %}
             <div class="mb-10 d-flex justify-content-center"
                  id="software_version_image_container"

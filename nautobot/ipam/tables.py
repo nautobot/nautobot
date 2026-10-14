@@ -717,16 +717,20 @@ class IPAddressDetailTable(IPAddressTable):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, user=user, **kwargs)
+        if user is None:
+            return
         for relation in self.primary_ip_for_relations:
-            queryset = IPAddress._meta.get_field(relation).related_model.objects.all()
-            if user is not None:
-                queryset = queryset.restrict(user, "view")
+            queryset = IPAddress._meta.get_field(relation).related_model.objects.restrict(user, "view")
             self.add_conditional_prefetch("primary_ip_for", prefetch=Prefetch(relation, queryset=queryset))
 
     def render_primary_ip_for(self, record):
-        if not isinstance(record, IPAddress):
+        # Only render from the permission-restricted prefetch added in __init__, never from unrestricted queries
+        prefetched = getattr(record, "_prefetched_objects_cache", {})
+        if not isinstance(record, IPAddress) or not all(
+            relation in prefetched for relation in self.primary_ip_for_relations
+        ):
             return ""
-        hosts = [host for relation in self.primary_ip_for_relations for host in getattr(record, relation).all()]
+        hosts = [host for relation in self.primary_ip_for_relations for host in prefetched[relation]]
         if not hosts:
             return placeholder(None)
         return format_html_join(mark_safe("<br>"), "{}", ((hyperlinked_object(host),) for host in hosts))

@@ -31,6 +31,7 @@ from nautobot.dcim.forms import (
     ModuleForm,
     PopulateDeviceBayForm,
     RackForm,
+    VirtualDeviceContextForm,
 )
 from nautobot.dcim.models import (
     Cable,
@@ -55,6 +56,7 @@ from nautobot.dcim.models import (
     Rack,
     SoftwareImageFile,
     SoftwareVersion,
+    VirtualDeviceContext,
 )
 from nautobot.dcim.termination_field_set import CableTerminationFieldSet, detect_termination_type
 from nautobot.extras.models import Role, SecretsGroup, Status
@@ -1659,3 +1661,27 @@ class ModuleFormTestCase(TestCase):
         help_text = form.fields["module_family"].help_text
         self.assertNotIn("<script>", help_text)
         self.assertIn("&lt;script&gt;", help_text)
+
+
+class VirtualDeviceContextFormTestCase(TestCase):
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_create_vdc_with_unassigned_primary_ip(self):
+        namespace = Namespace.objects.create(name="Primary IP Test Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip = IPAddress.objects.create(
+            address="198.51.100.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        form = VirtualDeviceContextForm(
+            data={
+                "name": "Primary IP Test VDC",
+                "device": Device.objects.first().pk,
+                "status": Status.objects.get_for_model(VirtualDeviceContext).first().pk,
+                "unassigned_primary_ip4": ip.pk,
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        vdc = form.save()
+        vdc.refresh_from_db()
+        self.assertEqual(vdc.primary_ip4, ip)

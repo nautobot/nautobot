@@ -171,8 +171,8 @@ def validate_primary_ips(instance, host_assignments):
     (or be the NAT outside address of such an IP). If `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled,
     an IP that isn't assigned to any interface at all is also permitted.
 
-    A primary IP that is unchanged from its saved value is not re-validated against interface assignments,
-    so that toggling `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` doesn't render existing records uneditable.
+    A primary IP that isn't assigned to any interface, and is unchanged from its saved value, is permitted
+    regardless, so that enabling `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` doesn't render existing records uneditable.
 
     Args:
         instance (Model): The Device, VirtualMachine, or VirtualDeviceContext being validated.
@@ -180,26 +180,31 @@ def validate_primary_ips(instance, host_assignments):
     """
     require_assignment = get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT")
     verbose_name = instance._meta.verbose_name
+    errors = {}
     for field, ip_version in (("primary_ip4", 4), ("primary_ip6", 6)):
         ip = getattr(instance, field)
         if ip is None:
             continue
         if ip.ip_version != ip_version:
-            raise ValidationError({field: f"{ip} is not an IPv{ip_version} address."})
+            errors[field] = f"{ip} is not an IPv{ip_version} address."
+            continue
         if ip.interface_assignments.filter(host_assignments).exists():
             continue
         if ip.nat_inside is not None and ip.nat_inside.interface_assignments.filter(host_assignments).exists():
             continue
-        is_unassigned = not ip.interface_assignments.exists()
-        if is_unassigned and not require_assignment:
+        if ip.interface_assignments.exists():
+            errors[field] = (
+                f"The specified IP address ({ip}) is assigned to an interface that does not belong to this "
+                f"{verbose_name}."
+            )
+            continue
+        if not require_assignment:
             continue
         if instance.present_in_database and type(instance).objects.filter(pk=instance.pk, **{field: ip}).exists():
             continue
-        if is_unassigned:
-            message = f"The specified IP address ({ip}) is not assigned to this {verbose_name}."
-        else:
-            message = f"The specified IP address ({ip}) is assigned to an interface that does not belong to this {verbose_name}."
-        raise ValidationError({field: message})
+        errors[field] = f"The specified IP address ({ip}) is not assigned to this {verbose_name}."
+    if errors:
+        raise ValidationError(errors)
 
 
 def convert_watts_to_va(watts, power_factor):

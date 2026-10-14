@@ -767,6 +767,35 @@ class IPAddressToInterfaceTest(TestCase):
         self.test_device.refresh_from_db()
         self.assertIsNone(self.test_device.primary_ip4)
 
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_unassigned_primary_ip_cannot_be_assigned_to_another_host_interface(self):
+        """An IP address that is a host's primary IP without an interface can only be assigned to that host's interfaces."""
+        other_device = Device.objects.create(
+            name="device2",
+            role=self.test_device.role,
+            device_type=self.test_device.device_type,
+            location=self.test_device.location,
+            status=self.test_device.status,
+        )
+        other_interface = Interface.objects.create(
+            device=other_device,
+            name="int1",
+            status=self.test_int1.status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_device.primary_ip4 = ip_addr
+        self.test_device.validated_save()
+
+        with self.assertRaisesMessage(ValidationError, f"{ip_addr} is the primary IP of {self.test_device}"):
+            # m2m add() doesn't use a savepoint, so give it one to keep the test transaction usable afterward
+            with transaction.atomic():
+                other_interface.add_ip_addresses(ip_addr)
+        self.assertFalse(ip_addr.interface_assignments.exists())
+
+        self.test_int1.add_ip_addresses(ip_addr)
+        self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
+
     def test_vdc_primary_ip_cleared_when_removed_from_device_interface(self):
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
         self.test_int1.add_ip_addresses(ip_addr)

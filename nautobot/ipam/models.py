@@ -1950,6 +1950,55 @@ class IPAddressToInterface(BaseModel):
         if self.interface is None and self.vm_interface is None:
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
 
+        self._validate_primary_ip_hosts()
+
+    def _validate_primary_ip_hosts(self):
+        """
+        Prevent invalidating a primary IP designation that relies on the IP address not being assigned to any interface.
+
+        Such a designation (permitted when `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled) would be rendered
+        invalid by assigning the IP address to an interface belonging to a different host.
+        """
+        if self.ip_address_id is None:
+            return
+        ip_address = self.ip_address
+        if ip_address.interface_assignments.exclude(pk=self.pk).exists():
+            # Any host using an already-assigned IP address as its primary IP doesn't rely on it being unassigned
+            return
+
+        is_primary_ip = Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address)
+        devices = Device.objects.filter(is_primary_ip)
+        vdcs = VirtualDeviceContext.objects.filter(is_primary_ip)
+        virtual_machines = VirtualMachine.objects.filter(is_primary_ip)
+        if self.interface is not None and self.interface.device_id is not None:
+            devices = devices.exclude(pk=self.interface.device_id)
+            vdcs = vdcs.exclude(device_id=self.interface.device_id)
+        if self.vm_interface is not None:
+            virtual_machines = virtual_machines.exclude(pk=self.vm_interface.virtual_machine_id)
+
+        nat_inside_assignments = (
+            ip_address.nat_inside.interface_assignments.all()
+            if ip_address.nat_inside is not None
+            else IPAddressToInterface.objects.none()
+        )
+        affected_hosts = [
+            *(device for device in devices if not nat_inside_assignments.filter(interface__device=device).exists()),
+            *(vdc for vdc in vdcs if not nat_inside_assignments.filter(interface__device=vdc.device_id).exists()),
+            *(
+                vm
+                for vm in virtual_machines
+                if not nat_inside_assignments.filter(vm_interface__virtual_machine=vm).exists()
+            ),
+        ]
+        if affected_hosts:
+            raise ValidationError(
+                {
+                    "ip_address": f"{ip_address} is the primary IP of {', '.join(str(host) for host in affected_hosts)} "
+                    "without being assigned to any of its interfaces, "
+                    "so it cannot be assigned to an interface belonging to a different device or virtual machine."
+                }
+            )
+
     def __str__(self):
         if self.interface:
             parent_name = self.interface.parent.name if self.interface.parent else "No Parent"
