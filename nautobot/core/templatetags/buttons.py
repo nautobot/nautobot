@@ -594,7 +594,7 @@ def export_button(context, content_type=None, list_element=False):
     # the registered ExportObjectListModalButton lets the job-result modal offer a file download once the
     # export completes.
     #
-    # No field selection is seeded here. The dialog opens exporting every field, and its picker's "match
+    # No field selection is seeded here. The dialog opens exporting the default columns, and its picker's "match
     # the list view" button fills in this view's columns on request -- resolved then, by the one helper
     # the Job itself uses, rather than computed on every list-view render for an export nobody may run.
     trigger = job_modal_trigger_context(

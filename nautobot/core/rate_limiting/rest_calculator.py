@@ -2,6 +2,7 @@ import dataclasses
 import math
 
 from django.conf import settings
+from django.utils.module_loading import import_string
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils.config import get_settings_or_config
@@ -67,6 +68,15 @@ INDEXABLE_LOOKUPS = frozenset(
 
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 WRITE_METHODS = frozenset({"DELETE", "PATCH", "POST", "PUT"})
+
+
+def get_custom_rate_limiting_complexity_cost_estimation_function():
+    dotted_import_path = settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION
+
+    if not dotted_import_path:
+        return None
+
+    return import_string(dotted_import_path)
 
 
 def calculate_records_per_page(requested_records_per_page):

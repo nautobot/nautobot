@@ -25,6 +25,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
+from django.http import QueryDict
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -37,7 +38,9 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    enumerate_field_paths,
     EXCLUDED_CSV_FIELDS,
+    expand_relation_paths,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
@@ -55,7 +58,12 @@ from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.import_utils import detect_import_format, natural_key_match_fields
-from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
+from nautobot.core.testing import (
+    create_job_result_and_run_job,
+    get_job_class_and_model,
+    TestCase as NautobotTestCase,
+    TransactionTestCase,
+)
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
@@ -89,6 +97,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     FileProxy,
     JobLogEntry,
+    RelationshipAssociation,
     Role,
     SavedView,
     SecretsGroup,
@@ -195,6 +204,22 @@ class MatchFieldsTests(TestCase):
         self.assertIn("module__pk", Interface.csv_natural_key_field_lookups())
         self.assertIsNone(self.match_fields(Interface, ["name", "device"]))
         self.assertEqual(self.match_fields(Interface, ["name", "device", "module"]), ["device", "module", "name"])
+
+    # Locations nested two levels deep, whatever the test data holds, so that a Device's natural key is selected
+    # partly through its location's "Natural key" option.
+    @mock.patch.object(type(Location.objects), "max_depth", new_callable=mock.PropertyMock, return_value=2)
+    def test_match__natural_key_rows_cover_the_key(self, _max_depth):
+        """The rows the picker selects for a related object's natural key cover it as a match field.
+
+        Expanded as the Job expands them, an Interface's `device` rows -- the device's own fields, and its location's
+        "Natural key" option -- still stamp the match key, as selecting the bare `device` would.
+        """
+        device = next(
+            entry for entry in enumerate_field_paths(InterfaceSerializer) if entry.path == "device"
+        ).natural_key
+        self.assertIn("device__location", device)
+        export_field_paths = expand_relation_paths(Interface, ["name", *device, "module"])
+        self.assertEqual(self.match_fields(Interface, export_field_paths), ["device", "module", "name"])
 
     def test_match__partial_lookup_of_a_relation_is_not_enough(self):
         """`device__name` is one of three `device__` lookups the key needs; naming it alone is not coverage."""
@@ -668,11 +693,10 @@ class ImportExportJobTestCase(TransactionTestCase):
                 self.assertEqual(job_result.result[key], expected, key)
 
     def assertNoIssues(self, job_result):
-        self.assertFalse(
-            JobLogEntry.objects.filter(
-                job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
-            ).exists()
-        )
+        issues = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
+        ).values_list("log_level", "message")
+        self.assertFalse(issues.exists(), [f"{level}: {message}" for level, message in issues])
 
     def assertJobLogEntry(self, job_result, contains, *, level=None):
         qs = JobLogEntry.objects.filter(job_result=job_result, message__icontains=contains)
@@ -957,7 +981,7 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 self.assertEqual(record["import_targets"], [])
 
 
-class ValidateFieldPathsTests(TestCase):
+class ValidateFieldPathsTests(NautobotTestCase):
     """`validate_field_paths` vets an export field selection against the serializer field graph.
 
     DB-backed rather than `SimpleTestCase` because instantiating a serializer resolves ContentTypes (the
@@ -1318,14 +1342,41 @@ class ValidateFieldPathsTests(TestCase):
     def test_validate__unviewable_relation_cannot_be_traversed(self):
         self.assertPathsInvalid(
             DeviceSerializer,
-            ["device_type__model"],
-            '"device_type__model": requires permission to view dcim.devicetype',
+            ["device_type__u_height"],
+            '"device_type__u_height": requires permission to view dcim.devicetype',
             'only "id" may be selected',
             user=self.limited_user(),
         )
 
     def test_validate__id_of_an_unviewable_relation_is_allowed(self):
         self.assertPathsValid(DeviceSerializer, ["name", "device_type__id"], user=self.limited_user())
+
+    def test_validate__bare_relation_needs_no_permission_on_the_related_model(self):
+        """A bare relation exports its natural key, as the default export does, whatever the user may view.
+
+        Naming the same fields explicitly reaches into the related model, so needs permission to view it.
+        """
+        user = self.limited_user()
+        self.assertPathsValid(DeviceSerializer, ["location", "device_type"], user=user)
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["location__name"],
+            '"location__name": requires permission to view dcim.location',
+            user=user,
+        )
+
+    def test_validate__unviewable_relation_cannot_end_a_nested_path(self):
+        """A nested path ending at a related object exports its natural key, so needs permission to view it."""
+        self.add_permissions("dcim.view_device")
+        self.assertPathsInvalid(
+            InterfaceSerializer,
+            ["device__primary_ip4"],
+            '"device__primary_ip4": requires permission to view ipam.ipaddress',
+            user=self.user,
+        )
+        self.add_permissions("ipam.view_ipaddress")
+        user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+        self.assertPathsValid(InterfaceSerializer, ["device__primary_ip4"], user=user)
 
     def test_validate__viewable_relation_can_be_traversed(self):
         """A superuser holds every permission, so the gate never fires for one."""
@@ -1337,10 +1388,52 @@ class ValidateFieldPathsTests(TestCase):
         A user who cannot view DeviceTypes learns nothing about which fields one has.
         """
         user = self.limited_user()
-        real = self.assertPathsInvalid(DeviceSerializer, ["device_type__model"], user=user)
+        real = self.assertPathsInvalid(DeviceSerializer, ["device_type__u_height"], user=user)
         bogus = self.assertPathsInvalid(DeviceSerializer, ["device_type__no_such_field"], user=user)
         self.assertNotIn("unknown field", bogus)
-        self.assertEqual(real.replace("device_type__model", "X"), bogus.replace("device_type__no_such_field", "X"))
+        self.assertEqual(real.replace("device_type__u_height", "X"), bogus.replace("device_type__no_such_field", "X"))
+
+
+class ExpandRelationPathsTests(NautobotTestCase):
+    """`expand_relation_paths` spells a nested path ending at a related object as that object's natural key."""
+
+    def test_expand__nested_relation(self):
+        self.assertEqual(
+            expand_relation_paths(SoftwareImageFile, ["image_file_name", "software_version__platform"]),
+            ["image_file_name", "software_version__platform__name"],
+        )
+
+    def test_expand__other_paths_are_unchanged(self):
+        for model, path in (
+            (Device, "location"),  # A bare relation, which the serializer expands itself
+            (Device, "device_type__model"),  # Not a relation
+            (Device, "device_type__software_image_files"),  # A to-many relation
+            (RelationshipAssociation, "relationship__source_type"),  # A relation with no natural-key lookups
+            (Device, "device_type__no_such_field"),  # Not a field at all
+            (Device, "cf_some_field"),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(expand_relation_paths(model, [path]), [path])
+
+    def test_expand__order_is_kept_and_duplicates_dropped(self):
+        self.assertEqual(
+            expand_relation_paths(
+                SoftwareImageFile,
+                ["software_version__platform", "image_file_name", "software_version__platform__name"],
+            ),
+            ["software_version__platform__name", "image_file_name"],
+        )
+
+    def test_expand__deeper_relation(self):
+        """However deep, the related object's own natural key is used -- here a Prefix's, through an IPAddress."""
+        self.assertEqual(
+            expand_relation_paths(Interface, ["device__primary_ip4__parent"]),
+            [
+                "device__primary_ip4__parent__namespace__name",
+                "device__primary_ip4__parent__network",
+                "device__primary_ip4__parent__prefix_length",
+            ],
+        )
 
 
 class ExportRelatedObjectPermissionTests(ImportExportJobTestCase):
@@ -1457,6 +1550,47 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertEqual(lines[1], "model,manufacturer__name")  # the claimed column is present
         self.assertEqual(lines[2], "Head Key DT,Head Key Mfr")
+
+    def test_select__relation_head_together_with_its_fields(self):
+        """A bare relation exports its natural key alongside any of its fields selected with it, kept together."""
+        mfr = Manufacturer.objects.create(name="Both Mfr", description="Both description")
+        DeviceType.objects.create(manufacturer=mfr, model="Both DT", u_height=1)
+        lines = self.export_lines(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Both+DT",
+                export_fields="manufacturer,model,manufacturer__description",
+            )
+        )
+        self.assertIn("match_fields=manufacturer model", lines[0])
+        self.assertEqual(lines[1], "manufacturer__name,manufacturer__description,model")
+        self.assertEqual(lines[2], "Both Mfr,Both description,Both DT")
+
+        document = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Both+DT",
+                export_format="json",
+                export_fields="manufacturer,model,manufacturer__description",
+            )
+        )
+        self.assertEqual(
+            document["records"],
+            [{"manufacturer": {"name": "Both Mfr", "description": "Both description"}, "model": "Both DT"}],
+        )
+
+    def test_select__nested_relation_exports_its_natural_key(self):
+        """A path ending at a relation *through* another is its natural key, just as one at the root is."""
+        image_file = self.create_device_type_with_software_image_files()[0]
+        rows = self.export_rows(
+            self.run_export(
+                model=SoftwareImageFile,
+                query_string=f"id={image_file.pk}",
+                export_fields="image_file_name,software_version__platform",
+            )
+        )
+        self.assertEqual(list(rows[0]), ["image_file_name", "software_version__platform__name"])
+        self.assertEqual(rows[0]["software_version__platform__name"], "M2M Composite Platform")
 
     def test_select__nested_selection_that_misses_the_key(self):
         """A nested selection replaces the relation's natural-key columns, so the key is not covered."""
@@ -1766,9 +1900,10 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("status__name", paths)
         self.assertFalse([path for path in paths if path.startswith("tags__")])
         rendered = str(field.widget.render("export_fields", ["name"], attrs={"id": "id_export_fields"}))
-        self.assertIn("export-field-caret", rendered)
-        self.assertIn("export-nested", rendered)
-        self.assertIn('value="device_type__manufacturer"', rendered)
+        self.assertIn("nb-export-field-caret", rendered)
+        self.assertIn("nb-export-nested", rendered)
+        self.assertIn('id="id_export_fields_option_device_type__manufacturer"', rendered)
+        self.assertIn('value="device_type__manufacturer__name"', rendered)
 
     def test_select__form_offers_what_an_export_emits(self):
         """The picker enumerates the *export's* field set: the read-only fields a default export emits are
@@ -1836,28 +1971,220 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         if required_positions and optional:
             self.assertLess(max(required_positions), middle.index(optional[0]))
 
-    def test_select__relation_rows_are_marked_as_exporting_a_natural_key(self):
-        """A row naming a related object says so, its checkbox being the one that does something else.
+    @staticmethod
+    def checkbox_for(rendered, path):
+        """The `<input>` tag the rendered picker has for `path`."""
+        match = re.search(rf'<input [^>]*id="id_export_fields_option_{re.escape(path)}"[^>]*>', rendered)
+        return match.group(0) if match else None
 
-        Everywhere else a tree of checkboxes means "everything beneath this"; here it means "the columns
-        that identify this object", which is mutually exclusive with the fields listed under it. Marked
-        at every depth, the deepest offered level included -- there a relation has nothing listed under it
-        at all, so nothing else would tell it apart from an ordinary field.
+    def render_picker(self, model, export_fields=""):
+        """The picker as the Job's form renders it for `model`, with `export_fields` as the selection."""
+        job_form = ExportObjectList.as_form(
+            data={"content_type": str(ContentType.objects.get_for_model(model).pk), "export_fields": export_fields}
+        )
+        return job_form, str(job_form["export_fields"].as_widget())
+
+    @staticmethod
+    def bare_option_for(rendered, path):
+        """The `<input>` tag of the option submitting `path` itself, such as its "Natural key"."""
+        match = re.search(rf'<input [^>]*id="id_export_fields_bare_{re.escape(path)}"[^>]*>', rendered)
+        return match.group(0) if match else None
+
+    def test_select__relation_rows_control_what_is_under_them(self):
+        """A related object's row controls the rows under it, submits nothing itself, and knows its natural key."""
+        _form, rendered = self.render_picker(Device)
+
+        device_type = self.checkbox_for(rendered, "device_type")
+        self.assertIn("nb-export-field-parent", device_type)
+        self.assertNotIn("name=", device_type)
+        self.assertIn(
+            'data-nb-natural-key="[&quot;device_type__manufacturer__name&quot;, &quot;device_type__model&quot;]"',
+            device_type,
+        )
+        self.assertIsNone(self.bare_option_for(rendered, "device_type"))
+
+        # A nested related object's row is a control too, with a natural key of its own.
+        manufacturer = self.checkbox_for(rendered, "device_type__manufacturer")
+        self.assertIn("nb-export-field-parent", manufacturer)
+        self.assertIn('data-nb-natural-key="[&quot;device_type__manufacturer__name&quot;]"', manufacturer)
+        self.assertIsNone(self.bare_option_for(rendered, "device_type__manufacturer"))
+
+        name = self.checkbox_for(rendered, "name")
+        self.assertIn("nb-export-field-leaf", name)
+        self.assertIn('name="export_fields"', name)
+
+    def test_select__natural_key_not_offered_as_rows_has_an_option_of_its_own(self):
+        """Where the tree does not offer every field of a natural key, a "Natural key" option selects it.
+
+        A Module's natural key is its primary key, `module__pk`, which the tree offers only as `module__id`.
+        The option submits the bare relation, which exports the natural key, as its tooltip says.
         """
-        field, _paths = self.picker_paths(Device)
-        self.assertIn("device_type", field.widget.relation_paths)
-        self.assertIn("device_type__manufacturer", field.widget.relation_paths)
-        self.assertNotIn("name", field.widget.relation_paths)
-        self.assertNotIn("device_type__id", field.widget.relation_paths)
-        self.assertTrue(
-            [path for path in field.widget.relation_paths if path.count("__") == 2],
-            "a relation at the deepest offered level should still be marked",
+        _form, rendered = self.render_picker(Interface)
+        # Its first click checks the option, there being no part of the natural key offered as a row.
+        self.assertIn('data-nb-natural-key="[&quot;module&quot;]"', self.checkbox_for(rendered, "module"))
+        natural_key = self.bare_option_for(rendered, "module")
+        self.assertIn("nb-export-field-leaf", natural_key)
+        self.assertIn('name="export_fields"', natural_key)
+        self.assertIn('value="module"', natural_key)
+        self.assertIn('data-nb-label="Natural key"', natural_key)
+        self.assertRegex(rendered, r'for="id_export_fields_bare_module"[^>]*>Natural key<span class="mdi mdi-key-link ')
+        # An HTML tooltip, escaped once more as the attribute's value.
+        self.assertIn(
+            'data-bs-toggle="tooltip" data-bs-html="true" '
+            'title="The fields that identify this object by default:&lt;br&gt;&lt;code&gt;module__pk&lt;/code&gt;"',
+            rendered,
         )
 
-        rendered = str(field.widget.render("export_fields", [], attrs={"id": "id_export_fields"}))
-        # `device_type` carries both marks: required to create a Device, and exported as a natural key.
-        self.assertRegex(rendered, r'option_device_type">device_type[^<]*<span class="text-warning[^>]*>')
-        self.assertRegex(rendered, r'option_name">name[^<]*</label>')  # unmarked, being a value of its own
+    def test_select__natural_key_rows_export_exactly_the_natural_key(self):
+        """Whatever rows select a related object's natural key export exactly the columns of that natural key.
+
+        So the first click on a related object exports what its bare path would -- no column fewer,
+        and none more, such as an always-empty extra ancestor of a Location.
+        """
+        for model in (Device, Interface, Rack, RackReservation, IPAddress, Cable, SoftwareImageFile):
+            for entry in enumerate_field_paths(get_serializer_for_model(model)):
+                if not entry.natural_key:
+                    continue
+                with self.subTest(model=model._meta.label_lower, path=entry.path):
+                    related_model = model
+                    for segment in entry.path.split("__"):
+                        related_model = related_model._meta.get_field(segment).related_model
+                    natural_key = {
+                        f"{entry.path}__{lookup}" for lookup in related_model.csv_natural_key_field_lookups()
+                    }
+                    columns = set()
+                    for row in entry.natural_key:
+                        if row == entry.path and "__" not in row:
+                            # A top-level "Natural key" option, which the serializer exports as the natural key.
+                            columns.update(natural_key)
+                        else:
+                            columns.update(expand_relation_paths(model, [row]))
+                    self.assertEqual(columns, natural_key)
+
+    # A Location tree two levels below its roots, whatever the test data holds, so that a Location's natural key
+    # (`name`, `parent__name`, `parent__parent__name`) reaches deeper than the tree under any related Location goes.
+    @mock.patch.object(type(Location.objects), "max_depth", new_callable=mock.PropertyMock, return_value=2)
+    def test_select__nested_natural_key_option_stands_in_for_its_part(self, _max_depth):
+        """A nested related object's "Natural key" option makes up its part of the natural key it is under.
+
+        An Interface's `device` is identified partly by its Location, whose key the tree can't reach, so the
+        device's natural key is its own fields plus `device__location`'s option (and `device__location__name`).
+        A Location's parent can't stand in that way, as its own key goes an ancestor further, so `location` gets
+        its own option.
+        """
+        _form, rendered = self.render_picker(Interface)
+        device = self.checkbox_for(rendered, "device")
+        self.assertIn("&quot;device__location&quot;", device)
+        self.assertIn("&quot;device__location__name&quot;", device)
+        self.assertIsNone(self.bare_option_for(rendered, "device"))
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "device__location"))
+
+        _form, rendered = self.render_picker(Device)
+        self.assertIn(
+            'data-nb-natural-key="[&quot;location&quot;, &quot;location__name&quot;, &quot;location__parent__name&quot;]"',
+            self.checkbox_for(rendered, "location"),
+        )
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "location"))
+        self.assertIn('data-nb-label="Natural key"', self.bare_option_for(rendered, "location__parent"))
+
+    def test_select__relation_without_a_natural_key_of_lookups_is_a_field(self):
+        """A top-level relation with no natural-key lookups, such as a `ContentType`, is a plain field."""
+        _field, paths = self.picker_paths(ExportTemplate)
+        self.assertIn("content_type", paths)
+        self.assertFalse([path for path in paths if path.startswith("content_type__")])
+
+    def test_select__rows_are_labeled_for_reading(self):
+        """Each row reads as the field's own name, with its path alongside for anyone writing one by hand."""
+        self.create_status_with_custom_fields()
+        field, _paths = self.picker_paths(Status)
+        labels = dict(field.choices)
+        self.assertEqual(labels["name"], "Name *")
+        self.assertEqual(labels["cf_export_cf_a"], CustomField.objects.get(key="export_cf_a").label)
+        _form, rendered = self.render_picker(Device)
+        self.assertRegex(rendered, r'for="id_export_fields_option_device_type">Device type \*<span[^>]*>device_type<')
+        self.assertRegex(
+            rendered,
+            r'for="id_export_fields_option_device_type__manufacturer">Manufacturer'
+            r"<span[^>]*>device_type__manufacturer<",
+        )
+
+    def test_select__selection_naming_a_relation_shows_as_its_natural_key(self):
+        """A selection naming a top-level related object shows as its natural key: the rows, or else the option.
+
+        The REST API, a scheduled Job, or a "match the list view" may name one; it is passed on as given.
+        """
+        job_form, rendered = self.render_picker(Device, export_fields="name,device_type")
+        self.assertIn(" checked", self.checkbox_for(rendered, "name"))
+        self.assertIn(" checked", self.checkbox_for(rendered, "device_type__manufacturer__name"))
+        self.assertIn(" checked", self.checkbox_for(rendered, "device_type__model"))
+        self.assertNotIn(" checked", self.checkbox_for(rendered, "device_type__u_height"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "name,device_type")
+
+        _form, rendered = self.render_picker(Interface, export_fields="name,module")
+        self.assertIn(" checked", self.bare_option_for(rendered, "module"))
+
+    def test_select__selection_naming_a_nested_relation_shows_as_what_it_exports(self):
+        """A selection naming a nested related object shows as its natural key's rows, and is passed on as given."""
+        job_form, rendered = self.render_picker(Device, export_fields="name,device_type__manufacturer")
+        self.assertIn(" checked", self.checkbox_for(rendered, "device_type__manufacturer__name"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "name,device_type__manufacturer")
+
+    def test_select__selection_naming_a_relation_without_a_natural_key_shows_as_its_id(self):
+        """A selection naming a nested related object with no natural key shows as that object's `id`, checked.
+
+        A Relationship's `source_type` is a ContentType, which has no natural-key lookups, so naming it exports its
+        primary key -- just as its `id` row does. Shown as nothing, it would be dropped on resubmission.
+        """
+        job_form, rendered = self.render_picker(RelationshipAssociation, export_fields="relationship__source_type")
+        self.assertIn(" checked", self.checkbox_for(rendered, "relationship__source_type__id"))
+        self.assertIsNone(self.bare_option_for(rendered, "relationship__source_type"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "relationship__source_type")
+
+    def test_select__rows_start_collapsed_even_holding_a_selection(self):
+        """Every row starts collapsed, a count saying what it holds, so a broad selection does not bury the tree."""
+        _form, rendered = self.render_picker(Device, export_fields="name,device_type,location,status")
+        self.assertNotRegex(rendered, r'<ul class="nb-export-nested(?![^"]*\bd-none\b)[^"]*"')
+        self.assertNotIn('aria-expanded="true"', rendered)
+        self.assertIn("nb-export-field-count", rendered)
+
+    def test_select__summary_says_what_the_export_will_contain(self):
+        """Above the tree, the picker says what an empty selection exports, or how much is selected.
+
+        The field's help text, which would repeat it below, is dropped; the variable's description is kept.
+        """
+        job_form, rendered = self.render_picker(Device)
+        self.assertRegex(rendered, r'<div class="nb-export-fields-summary-default"[^>]*>\s*<strong>No fields selected')
+        self.assertIn("each field of the device itself", " ".join(rendered.split()))  # as a browser collapses it
+        # Hidden by visibility, not display, so that it still holds the summary at its height.
+        self.assertIn('class="nb-export-fields-summary-selected invisible"', rendered)
+        self.assertIn('aria-live="polite">No fields selected</span>', rendered)
+        self.assertEqual(job_form.fields["export_fields"].help_text, "")
+        self.assertIn("default columns", ExportObjectList.export_fields.field_attrs["help_text"])
+
+        _form, rendered = self.render_picker(Device, export_fields="name,status__name")
+        self.assertIn('class="nb-export-fields-summary-default invisible"', rendered)
+        self.assertIn('<span class="nb-export-fields-summary-count">2</span>', rendered)
+        self.assertIn('aria-live="polite">2 selected</span>', rendered)
+        self.assertIn("Export Templates and devicetype-library YAML exports ignore the selection", rendered)
+
+    def test_select__custom_fields_has_an_option_for_every_custom_field(self):
+        """`custom_fields` has an "All custom fields" option, asking for every one, those added later included."""
+        self.create_status_with_custom_fields()
+        job_form, rendered = self.render_picker(Status, export_fields="name,custom_fields")
+        custom_fields = self.checkbox_for(rendered, "custom_fields")
+        self.assertIn("nb-export-field-parent", custom_fields)
+        self.assertNotIn("name=", custom_fields)
+        all_custom_fields = self.bare_option_for(rendered, "custom_fields")
+        self.assertIn('data-nb-label="All custom fields"', all_custom_fields)
+        self.assertRegex(rendered, r'for="id_export_fields_bare_custom_fields"[^>]*>All custom fields<span class="font')
+        self.assertIn('value="custom_fields"', all_custom_fields)
+        self.assertIn(" checked", all_custom_fields)
+        self.assertNotIn(" checked", self.checkbox_for(rendered, "cf_export_cf_a"))
+        self.assertTrue(job_form.is_valid(), job_form.errors)
+        self.assertEqual(job_form.cleaned_data["export_fields"], "name,custom_fields")
 
     def test_select__only_the_object_s_own_fields_are_marked_required(self):
         """The `*` marker is about creating a record, which is only ever the object the export is of.
@@ -1891,6 +2218,14 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["export_fields"], "color,name")
 
+    def test_select__form_keeps_the_order_a_browser_posts(self):
+        """When a posted form is re-rendered (after an error, say), every checked box keeps its dragged order."""
+        data = QueryDict(mutable=True)
+        data["content_type"] = str(ContentType.objects.get_for_model(Status).pk)
+        data.setlist("export_fields", ["color", "name"])
+        field = ExportObjectList.as_form(data=data).fields["export_fields"]
+        self.assertEqual([choice[0] for choice in field.choices][:2], ["color", "name"])
+
     def test_select__form_keeps_a_path_deeper_than_the_picker_offers(self):
         """A hand-written path the enumeration never reaches survives the form, to be judged by the Job.
 
@@ -1910,15 +2245,9 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn(deep_path, [choice[0] for choice in form.fields["export_fields"].choices])
 
     def test_select__picker_says_why_it_is_empty(self):
-        """With nothing to choose from, the picker says which of the two reasons it is, and stays live.
-
-        The script goes out either way: it carries the bridge from Select2's pick to the `change` that
-        rebuilds the picker, and the Job's own form opens with no content type chosen -- so without it,
-        that first pick would leave this message in place forever.
-        """
+        """With nothing to choose from, the picker says which of the two reasons it is."""
         no_type = str(ExportObjectList.as_form(data={"content_type": ""})["export_fields"].as_widget())
         self.assertIn("Choose a content type", no_type)
-        self.assertIn("nbExportFieldSelectBound", no_type)
 
         # `admin.logentry` is exportable only through an Export Template, having no serializer of its own.
         logentry = ContentType.objects.get(app_label="admin", model="logentry")
@@ -1927,7 +2256,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertIn("no fields an export can select", unserializable)
         self.assertNotIn("Choose a content type", unserializable)
-        self.assertIn("nbExportFieldSelectBound", unserializable)
 
     def test_select__form_offers_only_valid_paths(self):
         """Every path the picker offers passes validation, so it can never propose an unexportable column.
@@ -1975,7 +2303,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn('id="id_export_fields-container"', content)
         self.assertNotIn(f'id="{ExportFieldSelect.WRAPPER_ID}"', content)
         self.assertIn('name="export_fields" type="checkbox" value="name"', content)
-        self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
+        self.assertNotRegex(content, r"<input [^>]* checked")  # nothing selected for a type just chosen
 
     # What "match the list view" resolves, and the order it comes back in, is `ExportViewColumnsTests`.
 
@@ -2011,7 +2339,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         content = response.content.decode(response.charset)
         self.assertIn("nb-select-multiple-orderable-list", content)
         self.assertInHTML(
-            '<input class="form-check-input my-6" id="id_export_fields_option_name" '
+            '<input class="form-check-input my-6 nb-export-field-leaf" id="id_export_fields_option_name" '
             'name="export_fields" type="checkbox" value="name" checked>',
             content,
         )
@@ -2486,7 +2814,7 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         self.assertEqual(selected, ["name", "cf_export_cf_a"])
 
     def test_columns__nothing_exportable_selects_nothing(self):
-        """A view showing only non-exportable columns fills nothing in, which exports every field.
+        """A view showing only non-exportable columns fills nothing in, which exports the default columns.
 
         An empty selection is what "export everything" means, so there is nothing further to say: the
         picker simply comes back with its columns named as unexportable and no box checked.

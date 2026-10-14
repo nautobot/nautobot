@@ -52,6 +52,7 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.filters import (
@@ -978,6 +979,10 @@ class DeviceTypeTestCase(
             "part_number": "123ABC",
             "u_height": 2,
             "is_full_depth": True,
+            "depth": 600,
+            "depth_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
+            "weight": Decimal("12.50"),
+            "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             "subdevice_role": "",  # CharField
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(DeviceType)],
@@ -986,8 +991,29 @@ class DeviceTypeTestCase(
         cls.bulk_edit_data = {
             "u_height": 0,
             "is_full_depth": False,
+            "depth": 24,
+            "depth_unit": RackDimensionUnitChoices.UNIT_INCH,
+            "weight": Decimal("27.60"),
+            "weight_unit": WeightUnitChoices.UNIT_POUND,
             "comments": "changed comment",
         }
+
+    def test_detail_view_renders_units(self):
+        """The detail view shows the depth and weight together with their units."""
+        device_type = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="Measured Device Type",
+            depth=600,
+            depth_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+            weight=Decimal("12.50"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        self.add_permissions("dcim.view_devicetype")
+        response = self.client.get(device_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("600 Millimeters", content)
+        self.assertIn("12.50 Kilograms", content)
 
     def test_list_has_correct_links(self):
         """Assert that the DeviceType list view has both import options (single-record YAML/JSON link, multi-record
@@ -1038,6 +1064,10 @@ manufacturer: {manufacturer.name}
 model: TEST-1000
 slug: test-1000
 u_height: 2
+depth: 600
+depth_unit: mm
+weight: 33.33
+weight_unit: kg
 subdevice_role: parent
 comments: test comment
 console-ports:
@@ -1133,6 +1163,10 @@ module-bays:
         self.assertHttpStatus(response, 200)
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
+        self.assertEqual(dt.depth, 600)
+        self.assertEqual(dt.depth_unit, RackDimensionUnitChoices.UNIT_MILLIMETER)
+        self.assertEqual(dt.weight, Decimal("33.33"))
+        self.assertEqual(dt.weight_unit, WeightUnitChoices.UNIT_KILOGRAM)
 
         # Verify all of the components were created
         self.assertEqual(dt.console_port_templates.count(), 3)
@@ -1396,14 +1430,32 @@ class ModuleTypeTestCase(
             "manufacturer": manufacturers[0].pk,
             "model": "Test Module Type X",
             "part_number": "123ABC",
+            "weight": Decimal("0.45"),
+            "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             "tags": [t.pk for t in Tag.objects.get_for_model(ModuleType)],
             "comments": "test comment",
         }
 
         cls.bulk_edit_data = {
             "manufacturer": manufacturers[1].pk,
+            "weight": Decimal("2.20"),
+            "weight_unit": WeightUnitChoices.UNIT_POUND,
             "comments": "changed comment",
         }
+
+    def test_detail_view_renders_weight_unit(self):
+        """The detail view shows the weight together with its unit."""
+        module_type = ModuleType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="Weighed Module Type",
+            weight=Decimal("0.45"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        self.add_permissions("dcim.view_moduletype")
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("0.45 Kilograms", content)
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has both import options (single-record YAML/JSON link, multi-record
@@ -1453,6 +1505,8 @@ class ModuleTypeTestCase(
 manufacturer: {manufacturer.name}
 model: TEST-1000
 slug: test-1000
+weight: 33.33
+weight_unit: g
 console-ports:
   - name: Console Port 1
     type: de-9
@@ -1540,6 +1594,8 @@ module-bays:
         response = self.client.post(reverse("dcim:moduletype_import"), data=form_data, follow=True)
         self.assertHttpStatus(response, 200)
         mt = ModuleType.objects.get(model="TEST-1000")
+        self.assertEqual(mt.weight, Decimal("33.33"))
+        self.assertEqual(mt.weight_unit, WeightUnitChoices.UNIT_GRAM)
 
         # Verify all of the components were created
         self.assertEqual(mt.console_port_templates.count(), 3)
