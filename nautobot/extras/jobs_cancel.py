@@ -316,7 +316,7 @@ class CeleryStrategy(JobCancelStrategy):
         return JobLiveness.RUNNING if found else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result, user) -> bool:
-        """Reap a dead Celery job: mark canceled without sending a signal.
+        """Reap a dead Celery job: mark canceled and send signal.
 
         Called when no worker is processing the task. Records cancel metadata
         and stamps a Celery-shaped `result` payload imitating what a worker
