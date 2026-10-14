@@ -144,8 +144,8 @@
                     // Find all hljs-string spans
                     const stringSpans = el.querySelectorAll('span.hljs-string');
 
-                        stringSpans.forEach(span => {
-                            const text = span.textContent;
+                    stringSpans.forEach(span => {
+                        const text = span.textContent;
 
                         // Check if the string is a quoted HTTP or HTTPS URL
                         if (text.match(/^["']https?:\/\/.*["']$/)) {
