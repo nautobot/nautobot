@@ -300,7 +300,7 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
 
     def test_edit_device_retains_unassigned_primary_ip_when_assignment_required(self):
         """Editing a device whose primary IP isn't assigned to an interface doesn't lose that primary IP."""
-        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        ip, other_ip = self._create_unassigned_ipv4_addresses(2)
         device = Device.objects.create(
             name="Unassigned Primary IP Device",
             status=self.device_status,
@@ -314,6 +314,16 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         self.assertIsNone(form["primary_ip4"].initial)
         self.assertNotIn("unassigned_primary_ip6", form.fields)
 
+        # It can't be replaced with a different unassigned IP address
+        form = DeviceForm(
+            instance=device,
+            data=self._non_racked_device_data(name=device.name, unassigned_primary_ip4=other_ip.pk),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("unassigned_primary_ip4", form.errors)
+
+        # The rejected form's construct_instance() modified the in-memory instance
+        device.refresh_from_db()
         form = DeviceForm(
             instance=device,
             data=self._non_racked_device_data(name=device.name, serial="abc123", unassigned_primary_ip4=ip.pk),
@@ -323,6 +333,32 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         device.refresh_from_db()
         self.assertEqual(device.primary_ip4, ip)
         self.assertEqual(device.serial, "abc123")
+
+    def test_edit_device_with_nat_outside_primary_ip(self):
+        """A NAT outside primary IP, whose NAT inside IP is on an interface, isn't treated as an unassigned IP."""
+        inside_ip, outside_ip = self._create_unassigned_ipv4_addresses(2)
+        outside_ip.nat_inside = inside_ip
+        outside_ip.save()
+        device = Device.objects.create(
+            name="NAT Primary IP Device",
+            status=self.device_status,
+            device_type=self.device_type,
+            role=self.device_role,
+            location=self.location,
+        )
+        interface = Interface.objects.create(
+            device=device,
+            name="NAT Test Interface",
+            status=Status.objects.get_for_model(Interface).first(),
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        interface.add_ip_addresses(inside_ip)
+        device.primary_ip4 = outside_ip
+        device.validated_save()
+
+        form = DeviceForm(instance=device)
+        self.assertEqual(form["primary_ip4"].initial, outside_ip.pk)
+        self.assertNotIn("unassigned_primary_ip4", form.fields)
 
     def test_filter_form_dg_priority_correct_value(self):
         """Validate the form allows a string separated by a comma for multiple values."""

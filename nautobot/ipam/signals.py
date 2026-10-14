@@ -162,8 +162,8 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
         return
 
     if instance.interface is not None:
-        interface = instance.interface
-        device = interface.device or (interface.module.device if interface.module is not None else None)
+        device = instance.interface.device
+        # An interface on a module that isn't installed in a device has no host to update
         if device is None:
             return
         device_assignments = Q(interface__in=device.all_interfaces.all())

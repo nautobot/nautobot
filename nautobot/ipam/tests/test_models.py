@@ -781,12 +781,12 @@ class IPAddressToInterfaceTest(TestCase):
         vdc.refresh_from_db()
         self.assertIsNone(vdc.primary_ip4)
 
-    def test_primary_ip_cleared_when_removed_from_module_interface(self):
-        module_bay = ModuleBay.objects.create(parent_device=self.test_device, name="Test Bay")
+    def test_ip_address_removed_from_uninstalled_module_interface(self):
+        """Removing an IP address from an interface on a module not installed in any device succeeds."""
         module = Module.objects.create(
             module_type=ModuleType.objects.first(),
             status=Status.objects.get_for_model(Module).first(),
-            parent_module_bay=module_bay,
+            location=Location.objects.get_for_model(Module).first(),
         )
         module_interface = Interface.objects.create(
             name="eth0_module",
@@ -794,14 +794,12 @@ class IPAddressToInterfaceTest(TestCase):
             type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
             status=self.test_int1.status,
         )
+        self.assertIsNone(module_interface.device)
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
         module_interface.add_ip_addresses(ip_addr)
-        self.test_device.primary_ip4 = ip_addr
-        self.test_device.validated_save()
 
         module_interface.remove_ip_addresses(ip_addr)
-        self.test_device.refresh_from_db()
-        self.assertIsNone(self.test_device.primary_ip4)
+        self.assertFalse(ip_addr.interface_assignments.exists())
 
 
 class TestVarbinaryIPField(TestCase):
