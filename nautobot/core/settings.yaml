@@ -1598,31 +1598,6 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
-  NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE:
-    default: "off"
-    description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
-    details: |-
-      | Value   | Behavior                                                                                                                |
-      |---------|-------------------------------------------------------------------------------------------------------------------------|
-      | off     | Requests are neither charged nor limited.                                                                               |
-      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
-      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
-
-      Only `"enforce"` consumes budget. In `report` mode the `RateLimit` header always reports a
-      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
-
-      Requests without an `Authorization` header are never charged. If Redis is unreachable the
-      limiter fails open: the request is served and a full budget is reported.
-    enum:
-    - "off"
-    - "report"
-    - "enforce"
-    environment_variable: "NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE"
-    see_also:
-      "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
-      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
-    type: "string"
-    version_added: "3.3.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
     type: "array"
     items:
@@ -1651,6 +1626,31 @@ properties:
       `nautobot_config.<function_name>`). Nautobot does not add any directory to `sys.path`,
       so a loose file beside `nautobot_config.py` is not importable on its own.
     environment_variable: "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+    type: "string"
+    version_added: "3.3.0"
+  NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE:
+    default: "off"
+    description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
+    details: |-
+      | Value   | Behavior                                                                                                                |
+      |---------|-------------------------------------------------------------------------------------------------------------------------|
+      | off     | Requests are neither charged nor limited.                                                                               |
+      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
+
+      Only `"enforce"` consumes budget. In `report` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
+
+      Requests without an `Authorization` header are never charged. If Redis is unreachable the
+      limiter fails open: the request is served and a full budget is reported.
+    enum:
+    - "off"
+    - "report"
+    - "enforce"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE"
+    see_also:
+      "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_REST_BUDGET:
