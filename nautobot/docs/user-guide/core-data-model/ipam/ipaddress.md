@@ -46,6 +46,9 @@ Types are used to indicate special functions of an IP address such as DHCP or SL
 
 An IP address can be assigned to device or virtual machine interfaces, and an interface may have multiple IP addresses assigned to it. Further, each device and virtual machine may have one of its interface IPs designated as its primary IP per address family (one for IPv4 and one for IPv6).
 
++++ 3.3.0
+    If the [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../../administration/configuration/settings.md#primary_ip_requires_interface_assignment) setting is disabled, an IP address that isn't assigned to any interface can also be designated as the primary IP of a device, virtual machine, or virtual device context.
+
 !!! note "Preferring IPv4 or IPv6 primary IPs"
     When primary IPs are set for both IPv4 and IPv6, Nautobot will prefer IPv6. This can be changed by setting the `PREFER_IPV4` configuration parameter.
 

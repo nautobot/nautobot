@@ -163,6 +163,45 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
 
+def validate_primary_ips(instance, host_assignments):
+    """
+    Validate the `primary_ip4` and `primary_ip6` fields of a Device, VirtualMachine, or VirtualDeviceContext.
+
+    A primary IP must be of the matching IP version, and must be assigned to one of the host's interfaces
+    (or be the NAT outside address of such an IP). If `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled,
+    an IP that isn't assigned to any interface at all is also permitted.
+
+    A primary IP that is unchanged from its saved value is not re-validated against interface assignments,
+    so that toggling `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` doesn't render existing records uneditable.
+
+    Args:
+        instance (Model): The Device, VirtualMachine, or VirtualDeviceContext being validated.
+        host_assignments (Q): Filter matching the `IPAddressToInterface` records that belong to this host.
+    """
+    require_assignment = get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT")
+    verbose_name = instance._meta.verbose_name
+    for field, ip_version in (("primary_ip4", 4), ("primary_ip6", 6)):
+        ip = getattr(instance, field)
+        if ip is None:
+            continue
+        if ip.ip_version != ip_version:
+            raise ValidationError({field: f"{ip} is not an IPv{ip_version} address."})
+        if ip.interface_assignments.filter(host_assignments).exists():
+            continue
+        if ip.nat_inside is not None and ip.nat_inside.interface_assignments.filter(host_assignments).exists():
+            continue
+        is_unassigned = not ip.interface_assignments.exists()
+        if is_unassigned and not require_assignment:
+            continue
+        if instance.present_in_database and type(instance).objects.filter(pk=instance.pk, **{field: ip}).exists():
+            continue
+        if is_unassigned:
+            message = f"The specified IP address ({ip}) is not assigned to this {verbose_name}."
+        else:
+            message = f"The specified IP address ({ip}) is assigned to an interface that does not belong to this {verbose_name}."
+        raise ValidationError({field: message})
+
+
 def convert_watts_to_va(watts, power_factor):
     """
     Convert watts to VA using power factor.

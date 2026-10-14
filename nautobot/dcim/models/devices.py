@@ -34,7 +34,11 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
 from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
-from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.dcim.utils import (
+    get_all_network_driver_mappings,
+    get_network_driver_mapping_tool_names,
+    validate_primary_ips,
+)
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.models import (
@@ -771,8 +775,6 @@ class Device(PrimaryModel, ConfigContextModel):
             self.clusters.set([cluster])
 
     def clean(self):
-        from nautobot.ipam import models as ipam_models  # circular import workaround
-
         super().clean()
 
         # Validate location
@@ -861,32 +863,7 @@ class Device(PrimaryModel, ConfigContextModel):
             except DeviceType.DoesNotExist:
                 pass
 
-        # Validate primary IP addresses
-        all_interfaces = self.all_interfaces.all()
-        for field in ["primary_ip4", "primary_ip6"]:
-            ip = getattr(self, field)
-            if ip is not None:
-                if field == "primary_ip4":
-                    if ip.ip_version != 4:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                else:
-                    if ip.ip_version != 6:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ipam_models.IPAddressToInterface.objects.filter(
-                    ip_address=ip, interface__in=all_interfaces
-                ).exists():
-                    pass
-                elif (
-                    ip.nat_inside is not None
-                    and ipam_models.IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=all_interfaces
-                    ).exists()
-                ):
-                    pass
-                else:
-                    raise ValidationError(
-                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this device."}
-                    )
+        validate_primary_ips(self, Q(interface__in=self.all_interfaces.all()))
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:
@@ -2401,22 +2378,10 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
-    def validate_primary_ips(self):
-        for field in ["primary_ip4", "primary_ip6"]:
-            ip = getattr(self, field)
-            if ip is not None:
-                if field == "primary_ip4" and ip.ip_version != 4:
-                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                if field == "primary_ip6" and ip.ip_version != 6:
-                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if not ip.interfaces.filter(device=self.device).exists():
-                    raise ValidationError(
-                        {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
-                    )
-
     def clean(self):
         super().clean()
-        self.validate_primary_ips()
+        if self.device_id is not None:
+            validate_primary_ips(self, Q(interface__in=self.device.all_interfaces.all()))
 
         # Validate that device is not being modified
         if self.present_in_database:

@@ -20,7 +20,15 @@
             {% render_field form.controller_managed_device_group %}
             {% if editing %}
                 {% render_field form.primary_ip4 %}
+            {% endif %}
+            {% if "unassigned_primary_ip4" in form.fields %}
+                {% render_field form.unassigned_primary_ip4 %}
+            {% endif %}
+            {% if editing %}
                 {% render_field form.primary_ip6 %}
+            {% endif %}
+            {% if "unassigned_primary_ip6" in form.fields %}
+                {% render_field form.unassigned_primary_ip6 %}
             {% endif %}
         </div>
     </div>

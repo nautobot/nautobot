@@ -1,0 +1,2 @@
+Added `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` configuration setting; when disabled, an IP address that is not assigned to any interface can be designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
+Added "Unassigned primary IPv4" and "Unassigned primary IPv6" fields to the Device, Virtual Machine, and Virtual Device Context create/edit forms when `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled, allowing a primary IP to be set at creation time.

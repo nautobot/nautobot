@@ -10,6 +10,7 @@ from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import BaseInterface
+from nautobot.dcim.utils import validate_primary_ips
 from nautobot.extras.models import (
     ConfigContextModel,
     RoleField,
@@ -264,32 +265,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
 
     def clean(self):
         super().clean()
-        from nautobot.ipam.models import IPAddressToInterface
-
-        # Validate primary IP addresses
-        vm_interfaces = VMInterface.objects.filter(virtual_machine=self)
-        for field in ["primary_ip4", "primary_ip6"]:
-            ip = getattr(self, field)
-            if ip is not None:
-                if field == "primary_ip4":
-                    if ip.ip_version != 4:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                else:
-                    if ip.ip_version != 6:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if IPAddressToInterface.objects.filter(ip_address=ip, vm_interface__in=vm_interfaces).exists():
-                    pass
-                elif (
-                    ip.nat_inside is not None
-                    and IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, vm_interface__in=vm_interfaces
-                    ).exists()
-                ):
-                    pass
-                else:
-                    raise ValidationError(
-                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this virtual machine."}
-                    )
+        validate_primary_ips(self, models.Q(vm_interface__virtual_machine=self))
 
     @property
     def primary_ip(self):

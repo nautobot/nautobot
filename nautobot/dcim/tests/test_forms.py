@@ -58,7 +58,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.termination_field_set import CableTerminationFieldSet, detect_termination_type
 from nautobot.extras.models import Role, SecretsGroup, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
@@ -255,6 +255,74 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("position", form.errors)
+
+    def _create_unassigned_ipv4_addresses(self, count):
+        namespace = Namespace.objects.create(name="Primary IP Test Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        return [
+            IPAddress.objects.create(address=f"198.51.100.{i}/24", namespace=namespace, status=ip_status)
+            for i in range(1, count + 1)
+        ]
+
+    def _non_racked_device_data(self, **kwargs):
+        return {
+            "name": "New Device",
+            "role": self.device_role.pk,
+            "device_type": self.device_type.pk,
+            "location": self.location.pk,
+            "status": self.device_status.pk,
+            **kwargs,
+        }
+
+    def test_unassigned_primary_ip_fields_absent_when_assignment_required(self):
+        form = DeviceForm()
+        self.assertNotIn("unassigned_primary_ip4", form.fields)
+        self.assertNotIn("unassigned_primary_ip6", form.fields)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_create_device_with_unassigned_primary_ip(self):
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        form = DeviceForm(data=self._non_racked_device_data(unassigned_primary_ip4=ip.pk))
+        self.assertTrue(form.is_valid(), form.errors)
+        device = form.save()
+        device.refresh_from_db()
+        self.assertEqual(device.primary_ip4, ip)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_unassigned_and_interface_primary_ip_both_selected(self):
+        ip_1, ip_2 = self._create_unassigned_ipv4_addresses(2)
+        form = DeviceForm(data=self._non_racked_device_data(primary_ip4=ip_1.pk, unassigned_primary_ip4=ip_2.pk))
+        self.assertFalse(form.is_valid())
+        self.assertIn("unassigned_primary_ip4", form.errors)
+
+    def test_edit_device_retains_unassigned_primary_ip_when_assignment_required(self):
+        """Editing a device whose primary IP isn't assigned to an interface doesn't lose that primary IP."""
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        device = Device.objects.create(
+            name="Unassigned Primary IP Device",
+            status=self.device_status,
+            device_type=self.device_type,
+            role=self.device_role,
+            location=self.location,
+            primary_ip4=ip,
+        )
+        form = DeviceForm(instance=device)
+        self.assertEqual(form["unassigned_primary_ip4"].initial, ip.pk)
+        self.assertIsNone(form["primary_ip4"].initial)
+        self.assertNotIn("unassigned_primary_ip6", form.fields)
+
+        form = DeviceForm(
+            instance=device,
+            data=self._non_racked_device_data(name=device.name, serial="abc123", unassigned_primary_ip4=ip.pk),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        device.refresh_from_db()
+        self.assertEqual(device.primary_ip4, ip)
+        self.assertEqual(device.serial, "abc123")
 
     def test_filter_form_dg_priority_correct_value(self):
         """Validate the form allows a string separated by a comma for multiple values."""

@@ -28,8 +28,18 @@
         <div class="card-header"><strong>Management</strong></div>
         <div class="card-body">
             {% render_field form.platform %}
-            {% render_field form.primary_ip4 %}
-            {% render_field form.primary_ip6 %}
+            {% if editing %}
+                {% render_field form.primary_ip4 %}
+            {% endif %}
+            {% if "unassigned_primary_ip4" in form.fields %}
+                {% render_field form.unassigned_primary_ip4 %}
+            {% endif %}
+            {% if editing %}
+                {% render_field form.primary_ip6 %}
+            {% endif %}
+            {% if "unassigned_primary_ip6" in form.fields %}
+                {% render_field form.unassigned_primary_ip6 %}
+            {% endif %}
             {% render_field form.software_version %}
             <div class="mb-10 d-flex justify-content-center"
                  id="software_version_image_container"

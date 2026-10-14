@@ -1,0 +1,3 @@
+Changed Virtual Device Context primary IP validation to also permit IP addresses assigned to module interfaces on the parent Device, or that are the NAT outside address of such an IP address.
+Removed the `VirtualDeviceContext.validate_primary_ips()` method; its logic is now part of `VirtualDeviceContext.clean()`.
+Changed the validation of Device, Virtual Machine, and Virtual Device Context primary IP addresses to skip interface-assignment checks for a primary IP that is unchanged from its saved value.
