@@ -87,7 +87,7 @@ add "&raw" to the end of the URL within a browser.
         <script src="{% static 'dist/js/graphql-libraries.js' %}" onerror="nb.media.handleFailure(this)"></script>
         <script src="{% static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
     </head>
-    <body>
+    <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}' hx-inherit="hx-headers">
         <!-- Nautobot page contents -->
         {% include 'inc/skip_link.html' %}
         {% include 'inc/nav_menu.html' %}
@@ -115,6 +115,7 @@ add "&raw" to the end of the URL within a browser.
             <div id="editor"></div>
         </main>
         {% include 'inc/footer.html' %}
+        {% include 'inc/generic_modal.html' %}
         {% csrf_token %}
         <script type="application/javascript">
             window.GRAPHENE_SETTINGS = {

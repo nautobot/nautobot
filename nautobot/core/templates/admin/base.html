@@ -51,7 +51,7 @@
             }
         </style>
     </head>
-    <body{% if is_popup %} class="ps-0"{% endif %}>
+    <body{% if is_popup %} class="ps-0"{% else %} hx-headers='{"x-csrftoken": "{{ csrf_token }}"}' hx-inherit="hx-headers"{% endif %}>
         {% if not is_popup %}
             {% include 'inc/skip_link.html' %}
             {% include 'inc/nav_menu.html' %}
@@ -77,11 +77,16 @@
                                     style="width: 1.5rem;"
                                 />
                                 {% block pretitle %}{% endblock %}
-                                {% block content_title %}
-                                    {% if title %}
-                                        {% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}
-                                    {% endif %}
-                                {% endblock %}
+                                <span>
+                                    {% block content_title %}
+                                        {% if title %}
+                                            {% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}
+                                        {% endif %}
+                                    {% endblock %}
+                                    <span class="ms-4 position-relative" style="top: 0.125rem">
+                                        {% include "buttons/favorite.html" %}
+                                    </span>
+                                </span>
                             </h1>
                         </div>
                         {% include 'inc/header.html' %}
@@ -111,6 +116,7 @@
                 </div>
             {% endif %}
             {% include 'inc/footer.html' %}
+            {% include 'inc/generic_modal.html' %}
         {% endif %}
 
         {% block javascript %}
