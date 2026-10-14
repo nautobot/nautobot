@@ -53,14 +53,10 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_mo
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
-from nautobot.data_validation.tables import DataComplianceTable
-from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import Job
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
-from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -1615,6 +1611,11 @@ class KeyValueTablePanel(Panel):
             display = render_ancestor_hierarchy(value)
 
         elif isinstance(value, models.Model):
+            # Nested on purpose: nautobot.core must not import the feature apps at module scope. Leave it here.
+            from nautobot.dcim.models import Rack
+            from nautobot.tenancy.models import Tenant
+            from nautobot.virtualization.models import Cluster
+
             if hasattr(value, "color"):
                 display = hyperlinked_object_with_color(value)
             elif isinstance(value, Cluster) and value.cluster_group is not None:
@@ -2667,6 +2668,9 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.panels:
+            # Nested on purpose: nautobot.core must not import the feature apps at module scope. Leave it here.
+            from nautobot.data_validation.tables import DataComplianceTable
+
             self.panels = (
                 ObjectsTablePanel(
                     weight=100,

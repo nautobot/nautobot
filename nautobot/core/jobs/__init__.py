@@ -31,12 +31,6 @@ from nautobot.core.jobs.customfields import (
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
-from nautobot.data_validation import models
-from nautobot.data_validation.custom_validators import (
-    BaseValidator,
-    get_data_compliance_classes_from_git_repo,
-    get_data_compliance_rules_map,
-)
 from nautobot.extras.datasources import (
     ensure_git_repository,
     git_repository_dry_run,
@@ -401,6 +395,12 @@ class ImportObjects(Job):
 
 def get_data_compliance_rules():
     """Generate a list of Audit Ruleset classes that exist from the registry as well as from any Git Repositories."""
+    # Nested on purpose: nautobot.core must not import the feature apps at module scope. Leave it here.
+    from nautobot.data_validation.custom_validators import (
+        get_data_compliance_classes_from_git_repo,
+        get_data_compliance_rules_map,
+    )
+
     validators = []
     for rule_sets in get_data_compliance_rules_map().values():
         validators.extend(rule_sets)
@@ -436,6 +436,10 @@ def clean_compliance_rules_results_for_instance(instance, excluded_pks):
         instance: The validated object to clean compliance results for.
         excluded_pks: List of primary keys of compliance results to exclude from deletion.
     """
+    # Nested on purpose: nautobot.core must not import the feature apps at module scope. Leave it here.
+    from nautobot.data_validation.custom_validators import BaseValidator
+    from nautobot.data_validation.models import DataCompliance
+
     model_class = instance.__class__
     model_custom_validators = registry["plugin_custom_validators"][model_class._meta.label_lower]
     # Prep for compliance names to be deleted.
@@ -445,7 +449,7 @@ def clean_compliance_rules_results_for_instance(instance, excluded_pks):
             compliance_class_names_to_be_deleted.append(cv.__name__)
 
     excluded_pks = excluded_pks or []
-    models.DataCompliance.objects.filter(
+    DataCompliance.objects.filter(
         object_id=instance.id,
         content_type=ContentType.objects.get_for_model(instance),
         compliance_class_name__in=compliance_class_names_to_be_deleted,
@@ -500,6 +504,9 @@ class RunRegisteredDataComplianceRules(Job):
     @staticmethod
     def report_for_validation_rules():
         """Run built-in data validation rules and add to report."""
+        # Nested on purpose: nautobot.core must not import the feature apps at module scope. Leave it here.
+        from nautobot.data_validation.custom_validators import BaseValidator
+
         query = (
             Q(uniquevalidationrule__isnull=False)  # pylint: disable=unsupported-binary-operation
             | Q(regularexpressionvalidationrule__isnull=False)

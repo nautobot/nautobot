@@ -89,15 +89,6 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
 )
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
-from nautobot.dcim.tables import (
-    ControllerTable,
-    DeviceTable,
-    InterfaceTable,
-    ModuleTable,
-    RackTable,
-    VirtualDeviceContextTable,
-)
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
@@ -109,12 +100,6 @@ from nautobot.extras.utils import (
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
-from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN
-from nautobot.ipam.tables import IPAddressRangeTable, IPAddressTable, PrefixTable, VLANTable
-from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
-from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
-from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
 
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
@@ -1062,6 +1047,10 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         # Bail out early if no usable schema
         if not isinstance(instance.data_schema, dict):
             return object_detail.ObjectDetailContent(panels=panels_common)
+
+        # Nested on purpose: nautobot.extras must not import the feature apps at module scope. Leave it here.
+        from nautobot.dcim.tables import DeviceTable
+        from nautobot.virtualization.tables import VirtualMachineTable
 
         try:
             Draft7Validator.check_schema(instance.data_schema)
@@ -4751,6 +4740,23 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
+            # Nested on purpose: nautobot.extras must not import the feature apps at module scope. Leave it here.
+            from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
+            from nautobot.dcim.tables import (
+                ControllerTable,
+                DeviceTable,
+                InterfaceTable,
+                ModuleTable,
+                RackTable,
+                VirtualDeviceContextTable,
+            )
+            from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN
+            from nautobot.ipam.tables import IPAddressRangeTable, IPAddressTable, PrefixTable, VLANTable
+            from nautobot.virtualization.models import VirtualMachine, VMInterface
+            from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
+            from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
+            from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
+
             context["content_types"] = instance.content_types.order_by("app_label", "model")
 
             paginate = {
