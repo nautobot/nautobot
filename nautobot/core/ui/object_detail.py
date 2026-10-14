@@ -2691,7 +2691,7 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
         obj = get_obj_from_context(context)
         if getattr(obj, "is_data_compliance_model", False):
             if obj.get_data_compliance_url() is not None:
-                return True
+                return obj.associated_data_compliance.exists()
             logger.warning("Missing data-compliance URL for %r", obj)
         return False
 
