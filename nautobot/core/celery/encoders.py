@@ -1,21 +1,69 @@
 import logging
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
+from django.db import models
 from rest_framework.utils.encoders import JSONEncoder
+
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 
 logger = logging.getLogger(__name__)
 
 
 class NautobotKombuJSONEncoder(JSONEncoder):
     """
-    Custom JSON encoder based on restframework's JSONEncoder that knows how to encode certain classes.
-    This is useful in passing special objects to and from Celery tasks.
+    Custom json encoder based on restframework's JSONEncoder that serializes objects that implement
+    the `nautobot_serialize()` method via the `__nautobot_type__` interface. This is useful
+    in passing special objects to and from Celery tasks.
+
+    This pattern should generally be avoided by passing pointers to persisted objects to the
+    Celery tasks and retrieving them from within the task execution. While this is always possible
+    for model instances (which covers 99% of use cases), for rare instances where it does not,
+    and the actual object must be passed, this pattern allows for encoding and decoding
+    of such objects.
+
+    Any `django.db.models.Model` instance is encoded as a dictionary containing its `id`, its fully
+    qualified class path as `__nautobot_type__`, and its `display` string. On decoding, the object is
+    lazily re-fetched from the database by `id`.
     """
 
     def default(self, obj):
-        if isinstance(obj, set):
+        # Import here to avoid django.core.exceptions.ImproperlyConfigured Error.
+        # Core App is not set up yet if we import this at the top of the file.
+        from nautobot.core.models.managers import TagsManager
+
+        if isinstance(obj, models.Model):
+            cls = obj.__class__
+            module = cls.__module__
+            qual_name = ".".join([module, cls.__qualname__])  # fully qualified dotted import path
+            warn_deprecated_at_caller(
+                f"Serializing a {qual_name} instance {obj!r} to JSON. "
+                "This is generally undesirable and may raise an error in a future version of Nautobot."
+            )
+            data = {
+                "id": obj.id,
+                "__nautobot_type__": qual_name,
+                # TODO: change to natural key to provide additional context if object is deleted from the db
+                "display": getattr(obj, "display", str(obj)),
+            }
+
+            if "nautobot_version_control" in settings.PLUGINS:
+                from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
+
+                data["__nautobot_branch__"] = active_branch()
+
+            return data
+
+        elif isinstance(obj, set):
             # Convert a set to a list for passing to and from a task
             return list(obj)
+        elif isinstance(obj, TagsManager):
+            warn_deprecated_at_caller(
+                f"Serializing a TagsManager instance {obj!r} to JSON. "
+                "This is generally undesirable and may raise an error in a future version of Nautobot."
+            )
+            obj = obj.values_list("id", flat=True)
+            return obj
         elif isinstance(obj, Exception):
             # JobResult.result uses NautobotKombuJSONEncoder as an encoder and expects a JSONSerializable object,
             # although an exception, such as a RuntimeException, can be supplied as the obj.

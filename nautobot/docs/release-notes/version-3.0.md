@@ -207,7 +207,6 @@ As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python
 Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.0.11 (2026-04-08)

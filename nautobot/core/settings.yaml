@@ -2063,6 +2063,23 @@ properties:
       when acquiring the Redis lock.
     environment_variable: "NAUTOBOT_REDIS_LOCK_TIMEOUT"
     type: "integer"
+  REGEX_TIMEOUT:
+    default: 1.0
+    description: >-
+      Maximum number of seconds that a single evaluation of an operator-supplied regular expression
+      against user-supplied data may run before it is aborted.
+    details: |-
+      This bounds regular expressions that Nautobot did not author, such as a custom field's
+      `validation_regex` or a data validation rule, when they are evaluated against data submitted by a
+      user. Some regular expressions take exponentially longer to evaluate as the value being tested
+      grows, so without a bound a single request can consume a worker indefinitely.
+
+      When the limit is exceeded the value is rejected with a validation error and the expression is
+      logged at `ERROR` level. Raise this only if a legitimate expression is being cut short; a large
+      value re-opens the denial-of-service exposure that the limit exists to prevent.
+    environment_variable: "NAUTOBOT_REGEX_TIMEOUT"
+    type: "number"
+    version_added: "3.2.7"
   RELEASE_CHECK_TIMEOUT:
     default: 86400
     description: >-
