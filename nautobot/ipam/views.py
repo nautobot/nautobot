@@ -6,7 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, models, transaction
-from django.db.models import Prefetch, ProtectedError
+from django.db.models import ExpressionWrapper, Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import redirect, render
@@ -1309,13 +1309,13 @@ class IPAddressUIViewSet(NautobotUIViewSet):
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
-        # The assigned_count annotation only feeds the IPAddressDetailTable, so only compute it (and the
+        # The is_assigned annotation only feeds the IPAddressDetailTable, so only compute it (and the
         # SavedView/column lookups it depends on) for the actions that render that table; skip the work
         # for detail/edit/delete/API and other actions.
         if self.action not in ["list", "bulk_update", "bulk_destroy"]:
             return queryset
 
-        # All of the below is just to determine whether we are displaying the "assigned_count" column, and if so,
+        # All of the below is just to determine whether we are displaying the "assigned" column, and if so,
         # perform the relevant queryset annotation. Ref: nautobot/nautobot#6605
         if request.user is None or isinstance(request.user, AnonymousUser):
             table_columns = None
@@ -1331,10 +1331,12 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             except ObjectDoesNotExist:
                 pass
 
-        # column name is "assigned", not "assigned_count", and it's shown by default if there is no table config
+        # The "assigned" column is shown by default if there is no table config
         if (table_columns and "assigned" in table_columns) or not table_columns:
             queryset = queryset.annotate(
-                assigned_count=count_related(Interface, "ip_addresses") + count_related(VMInterface, "ip_addresses"),
+                is_assigned=ExpressionWrapper(
+                    filters.IPAddressFilterSet().generate_query__assigned(True), output_field=models.BooleanField()
+                ),
             )
         return queryset
 
@@ -1366,6 +1368,12 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             # Virtual servers table
             virtual_servers = instance.virtual_servers.all().restrict(request.user, "view")
             virtual_servers_table = VirtualServerTable(virtual_servers, orderable=False, exclude=["vip"])
+
+            # Devices, VMs, and VDCs using this IP as their primary IP, displayed if it isn't assigned to any interface
+            primary_ip_hosts = []
+            if not instance.interface_assignments.exists():
+                for relation in tables.IPAddressDetailTable.primary_ip_for_relations:
+                    primary_ip_hosts.extend(getattr(instance, relation).restrict(request.user, "view"))
 
             paginate = {
                 "paginator_class": EnhancedPaginator,
@@ -1422,6 +1430,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                     "related_ips_table": related_ips_table,
                     "load_balancer_pool_members_table": load_balancer_pool_members_table,
                     "virtual_servers_table": virtual_servers_table,
+                    "primary_ip_hosts": primary_ip_hosts,
                 }
             )
         return context

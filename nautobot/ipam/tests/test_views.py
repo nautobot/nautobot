@@ -1,5 +1,6 @@
 import datetime
 import random
+import re
 from unittest import mock
 
 from constance.test import override_config
@@ -1175,6 +1176,57 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_unassigned_ip_address_shows_permitted_primary_ip_hosts(self):
+        """An IP address not assigned to any interface displays the objects using it as a primary IP."""
+        ip_address = IPAddress.objects.create(address="192.0.2.200/24", parent=self.prefix, status=self.statuses[0])
+        device = Device.objects.get(name="IP Interfaces Test Device")
+        device.primary_ip4 = ip_address
+        device.save()
+        vdc = VirtualDeviceContext.objects.create(
+            device=device,
+            name="IP Interfaces Test VDC",
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+            primary_ip4=ip_address,
+        )
+        virtual_machine = VirtualMachine.objects.get(name="IP Interfaces Test VM")
+        virtual_machine.primary_ip4 = ip_address
+        virtual_machine.save()
+        self.add_permissions("ipam.view_ipaddress", "dcim.view_device", "dcim.view_virtualdevicecontext")
+
+        response = self.client.get(ip_address.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        assignment_row = re.search(r"<td>Assignment</td>(.*?)</tr>", content, re.DOTALL).group(1)
+        self.assertIn(device.get_absolute_url(), assignment_row)
+        self.assertIn(vdc.get_absolute_url(), assignment_row)
+        self.assertIn("(primary IPv4)", assignment_row)
+        self.assertNotIn(virtual_machine.get_absolute_url(), assignment_row)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_unassigned_ip_address_assigned_and_primary_ip_for_columns(self):
+        """An IP address used only as a primary IP shows as assigned, and lists the permitted objects using it."""
+        ip_address = IPAddress.objects.create(address="192.0.2.201/24", parent=self.prefix, status=self.statuses[0])
+        device = Device.objects.get(name="IP Interfaces Test Device")
+        device.primary_ip4 = ip_address
+        device.save()
+        virtual_machine = VirtualMachine.objects.get(name="IP Interfaces Test VM")
+        virtual_machine.primary_ip4 = ip_address
+        virtual_machine.save()
+        self.add_permissions("ipam.view_ipaddress", "dcim.view_device")
+        self.user.set_config(
+            "tables.IPAddressDetailTable.columns", ["address", "assigned", "primary_ip_for"], commit=True
+        )
+
+        response = self.client.get(
+            f"{reverse('ipam:ipaddress_list')}?id={ip_address.pk}", headers={"HX-Request": "true"}
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('title="Yes"', content)
+        self.assertIn(device.get_absolute_url(), content)
+        self.assertNotIn(virtual_machine.get_absolute_url(), content)
+
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
@@ -1429,7 +1481,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_with_saved_view_table_config(self):
-        """A saved_view's table_config drives the assigned_count annotation in alter_queryset()."""
+        """A saved_view's table_config drives the is_assigned annotation in alter_queryset()."""
         list_url = reverse("ipam:ipaddress_list")
         # A saved view for this list whose table_config selects the "assigned" column
         # exercises the successful-lookup path (get + view_table_config + columns).

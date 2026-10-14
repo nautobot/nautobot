@@ -186,7 +186,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     primary_ip4 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name="+",
+        related_name="primary_ip4_for_virtual_machines",
         blank=True,
         null=True,
         verbose_name="Primary IPv4",
@@ -194,7 +194,7 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     primary_ip6 = models.ForeignKey(
         to="ipam.IPAddress",
         on_delete=models.SET_NULL,
-        related_name="+",
+        related_name="primary_ip6_for_virtual_machines",
         blank=True,
         null=True,
         verbose_name="Primary IPv6",

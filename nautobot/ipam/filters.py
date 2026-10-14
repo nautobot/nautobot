@@ -3,7 +3,7 @@ import ipaddress
 import uuid
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 import django_filters
 import netaddr
 
@@ -538,6 +538,10 @@ class IPAddressFilterSet(
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
+    assigned = django_filters.BooleanFilter(
+        method="_assigned",
+        label="Assigned to an interface or as a primary IP",
+    )
     nat_inside = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="NAT (Inside)",
@@ -569,6 +573,23 @@ class IPAddressFilterSet(
     def _has_interface_assignments(self, queryset, name, value):
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
+
+    def generate_query__assigned(self, value):
+        """
+        Match IP addresses that are (or are not) assigned to any interface or VM interface, or designated as the
+        primary IP of any Device, VirtualMachine, or VirtualDeviceContext.
+
+        Also used by `IPAddressUIViewSet` to annotate the "Assigned" table column.
+        """
+        if value is None:
+            return Q()
+        query = Q(Exists(IPAddressToInterface.objects.filter(ip_address=OuterRef("pk"))))
+        for model in (Device, VirtualMachine, VirtualDeviceContext):
+            query |= Q(Exists(model.objects.filter(Q(primary_ip4=OuterRef("pk")) | Q(primary_ip6=OuterRef("pk")))))
+        return query if value else ~query
+
+    def _assigned(self, queryset, name, value):
+        return queryset.filter(self.generate_query__assigned(value))
 
     def _strip_prefix_values(self, values):
         """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""

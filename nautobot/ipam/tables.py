@@ -1,4 +1,5 @@
 from django.db.models import Prefetch
+from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
 import django_tables2 as tables
 from django_tables2.utils import Accessor
@@ -11,7 +12,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean
+from nautobot.core.templatetags.helpers import hyperlinked_object, placeholder, render_boolean
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tables import InterfaceTable
 from nautobot.dcim.tables.devices import ModularDeviceComponentTable
@@ -701,10 +702,34 @@ class IPAddressDetailTable(IPAddressTable):
     nat_inside = tables.Column(linkify=True, verbose_name="NAT (Inside)")
     tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:ipaddress_list")
-    assigned = BooleanColumn(accessor="assigned_count")
+    assigned = BooleanColumn(accessor="is_assigned")
+    primary_ip_for = tables.Column(empty_values=(), orderable=False, verbose_name="Primary IP For")
 
-    def render_assigned(self, column, value):
-        return column.render(value > 0)
+    # Reverse relations from IPAddress to the Devices, VirtualMachines, and VirtualDeviceContexts using it as primary IP
+    primary_ip_for_relations = (
+        "primary_ip4_for",
+        "primary_ip6_for",
+        "primary_ip4_for_virtual_machines",
+        "primary_ip6_for_virtual_machines",
+        "ip4_vdcs",
+        "ip6_vdcs",
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, user=user, **kwargs)
+        for relation in self.primary_ip_for_relations:
+            queryset = IPAddress._meta.get_field(relation).related_model.objects.all()
+            if user is not None:
+                queryset = queryset.restrict(user, "view")
+            self.add_conditional_prefetch("primary_ip_for", prefetch=Prefetch(relation, queryset=queryset))
+
+    def render_primary_ip_for(self, record):
+        if not isinstance(record, IPAddress):
+            return ""
+        hosts = [host for relation in self.primary_ip_for_relations for host in getattr(record, relation).all()]
+        if not hosts:
+            return placeholder(None)
+        return format_html_join(mark_safe("<br>"), "{}", ((hyperlinked_object(host),) for host in hosts))
 
     class Meta(IPAddressTable.Meta):
         fields = (
@@ -717,6 +742,7 @@ class IPAddressDetailTable(IPAddressTable):
             "tenant",
             "nat_inside",
             "assigned",
+            "primary_ip_for",
             "dns_name",
             "description",
             "tags",

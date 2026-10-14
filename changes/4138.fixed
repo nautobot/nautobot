@@ -1,2 +1,2 @@
-Fixed an exception when removing an IP address from a module interface.
+Fixed an exception when removing an IP address from an interface on a module that is not installed in a Device.
 Fixed a Virtual Device Context's primary IP not being cleared when the IP address is removed from the parent Device's interfaces.
