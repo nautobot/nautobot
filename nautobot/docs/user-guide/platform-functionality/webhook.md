@@ -30,6 +30,8 @@ When setting up a webhook, you need to define the following parameters:
 
 A webhook with no conditions is sent for every change to the selected object types. Conditions narrow that down, for example to a device whose status moved to `Active`, or to changes made by anyone other than a sync account. Every condition must pass for the webhook to be sent.
 
+Two webhooks may have the same object types, events and URL. If both are sent for the same change, the receiver gets two requests. Give each webhook conditions that the other does not match to avoid this.
+
 See [Conditions](../feature-guides/conditions.md) for the presets, the operators and the payload that conditions read.
 
 ## Jinja2 Template Support
