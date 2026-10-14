@@ -245,13 +245,16 @@ class UserConfigView(GenericView):
             return redirect("user:preferences")
 
 
-class UserNavbarFavoritesModalView(GenericView):
+class UserNavbarFavoritesModalView(GetReturnURLMixin, GenericView):
     def get(self, request):
-        form = NavbarFavoritesAddForm(
-            initial={"link": request.GET.get("link", ""), "name": request.GET.get("name", "")},
-            auto_id="favorite_id_%s",
-        )
-        return render(request, "modals/inc/favorite_form.html", {"navbar_favorites_add_form": form})
+        if request.headers.get("HX-Request", False):
+            form = NavbarFavoritesAddForm(
+                initial={"link": request.GET.get("link", ""), "name": request.GET.get("name", "")},
+                auto_id="favorite_id_%s",
+            )
+            return render(request, "modals/inc/favorite_form.html", {"navbar_favorites_add_form": form})
+
+        return redirect(self.get_return_url(request))
 
 
 class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
@@ -295,8 +298,8 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
             form = NavbarFavoritesRemoveForm(request.POST)
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
-                removed_link = form.cleaned_data["link"].lower()
-                navbar_favorites = [item for item in navbar_favorites if item.get("link", "").lower() != removed_link]
+                removed_link = form.cleaned_data["link"]
+                navbar_favorites = [item for item in navbar_favorites if item.get("link", "") != removed_link]
                 request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
 
                 return render(

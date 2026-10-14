@@ -90,11 +90,11 @@ class NavbarFavoritesAddForm(BootstrapMixin, forms.Form):
         link = self.cleaned_data.get("link")
 
         if self.user and name is not None:
-            taken = {(item.get("name", ""), item.get("tab_name", "")) for item in self.user.navbar_favorites}
-            if (name, self.cleaned_data.get("tab_name", "")) in taken:
+            name_tab_pairs = {(item.get("name", ""), item.get("tab_name", "")) for item in self.user.navbar_favorites}
+            if (name, self.cleaned_data.get("tab_name", "")) in name_tab_pairs:
                 self.add_error("name", "A favorite with this name already exists.")
 
-        if self.user and link is not None and link.lower() in self.user.navbar_favorite_links:
+        if self.user and link is not None and link in self.user.navbar_favorites_link_list:
             self.add_error("link", "A favorite with this link already exists.")
 
 

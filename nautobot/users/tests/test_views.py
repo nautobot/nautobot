@@ -302,8 +302,8 @@ class NavbarFavoritesReorderViewTest(TestCase):
         self.assertEqual(self.user.get_config("navbar_favorites", []), list(SAMPLE_FAVORITES))
 
 
-class NavbarFavoritesDuplicateNameTest(TestCase):
-    """Tests for the name uniqueness constraint on UserNavbarFavoritesAddView."""
+class NavbarFavoritesUniquenessTest(TestCase):
+    """Tests for the name and link uniqueness constraints on UserNavbarFavoritesAddView."""
 
     def setUp(self):
         super().setUp()
@@ -339,6 +339,46 @@ class NavbarFavoritesDuplicateNameTest(TestCase):
 
         self.user.refresh_from_db()
         self.assertEqual(len(self.user.navbar_favorites), 2)
+
+    def test_duplicate_link_is_rejected(self):
+        """A favorite is refused when its link is already favorited, whatever name it is given."""
+        response = self.client.post(
+            self.url,
+            data={"link": "/dcim/devices/", "name": "Devices Again", "tab_name": ""},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 400)
+
+        self.user.refresh_from_db()
+        self.assertEqual(len(self.user.navbar_favorites), 1)
+
+
+class NavbarFavoritesModalViewTest(TestCase):
+    """Tests for the UserNavbarFavoritesModalView."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("user:navbar_favorites_modal")
+
+    def test_form_is_prefilled_from_the_query_string(self):
+        """The add form renders with the link and name that were passed in."""
+        response = self.client.get(
+            self.url,
+            data={"link": "/dcim/devices/", "name": "Devices"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+
+        content = response.content.decode(response.charset)
+        self.assertIn('id="favorite_id_name"', content)
+        self.assertIn('id="favorite_id_link"', content)
+        self.assertIn('value="Devices"', content)
+        self.assertIn('value="/dcim/devices/"', content)
+
+    def test_non_htmx_request_is_redirected(self):
+        """The modal body is a fragment, so a plain browser request goes back to the homepage instead."""
+        response = self.client.get(self.url, data={"link": "/dcim/devices/", "name": "Devices"})
+        self.assertHttpStatus(response, 302)
 
 
 class NavbarFavoriteButtonTest(TestCase):

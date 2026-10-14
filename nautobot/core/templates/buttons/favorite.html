@@ -2,10 +2,10 @@
     <button
         data-bs-target="#nautobot-generic-modal"
         data-nb-favorite-current {# Enable this button to follow any SPA-like URL changes, like switching tabs. #}
-        data-nb-favorite-link="{{ request.get_full_path|lower }}"
+        data-nb-favorite-link="{{ request.get_full_path }}"
         data-nb-flip="aria-label class data-bs-toggle hx-get hx-post hx-select hx-swap hx-target hx-vals title"
         type="button"
-        {% if request.get_full_path|lower in request.user.navbar_favorite_links %}
+        {% if request.get_full_path in request.user.navbar_favorites_link_list %}
                 {# Use aria-label instead of visually-hidden child element in order to be able to flip the attribute. #}
             aria-label="Remove from Favorites"
             class="nb-btn-favorite active"

@@ -137,7 +137,7 @@
 
                 <li class="nb-sidenav-list-divider"></li>
 
-                {% with request.user.navbar_favorite_links as navbar_favorite_links %}
+                {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
                     {% for tab_name, tab_details in nav_menu.tabs.items %}
                         <li data-section-name="{{ tab_name }}">
                             <button
@@ -176,8 +176,8 @@
                                                     {{ item_details.name }}
                                                 </a>
                                                 <button
-                                                    class="nb-sidenav-favorite{% if item_link|lower in navbar_favorite_links %} active{% endif %}"
-                                                    hx-post="{% if item_link|lower in navbar_favorite_links %}{% url 'user:navbar_favorites_delete' %}{% else %}{% url 'user:navbar_favorites_add' %}{% endif %}"
+                                                    class="nb-sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
+                                                    hx-post="{% if item_link in navbar_favorites_link_list %}{% url 'user:navbar_favorites_delete' %}{% else %}{% url 'user:navbar_favorites_add' %}{% endif %}"
                                                     hx-select="#sidenav-flyout-favorites"
                                                     hx-swap="outerHTML"
                                                     hx-target="#sidenav-flyout-favorites"
@@ -185,7 +185,7 @@
                                                     type="button"
                                                 >
                                                     <span class="visually-hidden">
-                                                        {% if item_link|lower in navbar_favorite_links %}
+                                                        {% if item_link in navbar_favorites_link_list %}
                                                             Remove from Favorites
                                                         {% else %}
                                                             Add to Favorites

@@ -54,7 +54,7 @@ export const initializeFavorites = (addUrl, deleteUrl, brandingTitle) => {
       return;
     }
 
-    const link = formData.get('link')?.toLowerCase();
+    const link = formData.get('link');
     const buttons = document.querySelectorAll(`[${FAVORITE_LINK_DATA_ATTRIBUTE}="${CSS.escape(link)}"]`);
     const modal = document.getElementById(FAVORITE_MODAL_ID);
     const shouldBeActive = path === addUrl;
@@ -80,9 +80,9 @@ export const initializeFavorites = (addUrl, deleteUrl, brandingTitle) => {
    * Favorite buttons without the `-current` attribute represent fixed links and are not subject to synchronization.
    */
   const synchronizeFavoriteButtons = () => {
-    const link = getFavoriteLink().toLowerCase();
+    const link = getFavoriteLink();
     const favorites = [...document.querySelectorAll('.nb-sidenav-favorites-container li a')];
-    const shouldBeActive = favorites.some((favorite) => favorite.getAttribute('href').toLowerCase() === link);
+    const shouldBeActive = favorites.some((favorite) => favorite.getAttribute('href') === link);
     document.querySelectorAll(`[${FAVORITE_CURRENT_DATA_ATTRIBUTE}]`).forEach((button) => {
       button.setAttribute(FAVORITE_LINK_DATA_ATTRIBUTE, link);
       if (button.classList.contains(FAVORITE_ACTIVE_CLASS) !== shouldBeActive) {
