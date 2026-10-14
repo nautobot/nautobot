@@ -92,6 +92,25 @@ _ALL_SENSITIVE_FIELD_NAMES = set()
 _NO_SENSITIVE_FIELDS = frozenset()
 
 
+class _NoNarrowing:
+    """Type of the `NO_NARROWING` sentinel."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return "NO_NARROWING"
+
+
+# Returned by `non_sensitive_field_names()` when a model declares nothing sensitive, meaning a projection
+# that names no fields must reach Django exactly as the caller wrote it.
+#
+# Deliberately not an empty list, and not a list of every concrete field: a projection that names no
+# fields also returns the query's annotations, which naming the fields explicitly would silently drop.
+# "Leave this alone" is therefore a third state, distinct from both of those, and it gets its own value
+# rather than riding on `None`.
+NO_NARROWING = _NoNarrowing()
+
+
 # Attributes holding a model's resolved sensitive-field names. `install_sensitive_fields()` is the only
 # writer and sets both together, including for a model that declares nothing, so that the getters below are
 # a single dict lookup on the path `Model.from_db()` runs for every row of every model.
@@ -165,6 +184,29 @@ def get_withheld_sensitive_field_names(model):
 def sensitive_field_alias(field_name):
     """Return the query annotation name used to carry an opted-in value for `field_name`."""
     return f"{SENSITIVE_FIELD_ALIAS_PREFIX}{field_name}"
+
+
+def non_sensitive_field_names(model, allowed=frozenset()):
+    """Return `model`'s concrete field attnames minus its sensitive fields, or `NO_NARROWING`.
+
+    Gives a projection that names no fields something safe to select on a model that declares sensitive
+    fields, since such a call would otherwise select every concrete column.
+
+    Uses `attname` rather than `name` to match the keys Django's own bare `values()` produces, which
+    for a foreign key is `<name>_id` holding the raw key rather than `<name>` holding the instance.
+
+    Args:
+        model (type): The model whose fields to list.
+        allowed (frozenset): Sensitive field names the caller has explicitly opted in to.
+
+    Returns:
+        (list | _NoNarrowing): The field names to project, or `NO_NARROWING` when the model declares
+            nothing sensitive and the caller's projection should be left exactly as written.
+    """
+    withheld = get_sensitive_field_names(model) - allowed
+    if not withheld:
+        return NO_NARROWING
+    return [field.attname for field in model._meta.concrete_fields if field.attname not in withheld]
 
 
 def is_possibly_sensitive_field_name(name):
