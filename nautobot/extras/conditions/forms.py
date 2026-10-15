@@ -30,8 +30,10 @@ from nautobot.core.forms.widgets import (
 )
 from nautobot.extras.choices import ConditionTypeChoices
 from nautobot.extras.conditions.operators import (
+    DISPLAY_KEY,
     KIND_BOOLEAN,
     KIND_DATE,
+    KIND_LIST,
     KIND_NUMBER,
     KIND_TEXT,
     OPERATOR_REGISTRY,
@@ -51,7 +53,7 @@ EXPRESSION_LABEL = "Raw expression"
 
 # Both words carry a value, because Select2 takes a blank-valued option for its placeholder, which
 # greys it out and drops it from the list, leaving nothing to choose to go back to.
-NEGATION_CHOICES = (("when", "When"), ("not", "not When"))
+NEGATION_CHOICES = (("when", "When"), ("not", "Not When"))
 
 # Said by the field select while the rule watches nothing, there being no fields to offer yet.
 PROMPT_FOR_OBJECT_TYPES = "Select object type(s) first"
@@ -83,9 +85,9 @@ class ComparedField:
     """The field a row compares, and how the operator compares it.
 
     `kind` is one of the value kinds `operators` declares, such as `text` or `date`. `picker` names a
-    form control the field asks for whatever its kind. `values_url` is where the related objects can
-    be listed and `key` is the sub-field compared against them, both set only for a relation's
-    sub-field. `whole` and `many` are settled by `compared_with`.
+    form control the field asks for whatever its kind. `values_url` is where the values can be listed
+    and `key` is the field of each one that is compared, both set only where the values can be picked
+    from a list. `whole` and `many` are settled by `compared_with`.
     """
 
     kind: str | None = None
@@ -100,11 +102,12 @@ class ComparedField:
 
         `whole` is a comparison against a complete value rather than part of one, `many` one against a
         set. `operator` is an `operators.Operator`, or None where the row has not named one yet, which
-        counts as one whole value.
+        counts as one whole value. A list overrides `compares_whole_value`, because every operator it
+        offers compares a whole value.
         """
         return replace(
             self,
-            whole=operator is None or operator.compares_whole_value,
+            whole=operator is None or operator.compares_whole_value or self.kind == KIND_LIST,
             many=bool(operator and self.kind and takes_a_set(operator.key, self.kind)),
         )
 
@@ -122,24 +125,35 @@ class ComparedField:
         if top is None:
             return ComparedField()
         if not subname:
-            return ComparedField(kind=top.get("kind"), picker=top.get("picker"))
+            # Tags and a custom field's choices compare as what they display. A relation's belong to its sub-field.
+            lists_its_own_values = top.get("kind") in (KIND_TEXT, KIND_LIST) and top.get("values_url")
+            return ComparedField(
+                kind=top.get("kind"),
+                picker=top.get("picker"),
+                values_url=top["values_url"] if lists_its_own_values else None,
+                key=DISPLAY_KEY if lists_its_own_values else None,
+            )
         sub = next((entry for entry in top.get("subfields", ()) if entry["name"] == subname), None)
         if sub is None:
             return ComparedField()
+        lists_its_own_values = "values_url" in sub
         return ComparedField(
-            kind=sub.get("kind"), picker=sub.get("picker"), values_url=top.get("values_url"), key=sub["name"]
+            kind=sub.get("kind"),
+            picker=sub.get("picker"),
+            values_url=sub["values_url"] if lists_its_own_values else top.get("values_url"),
+            key=DISPLAY_KEY if lists_its_own_values else sub["name"],
         )
 
     @property
     def values_worth_listing(self):
         """Whether to offer the values themselves instead of a box to type one into.
 
-        Only ever a sub-field of a relation, such as `status.name`, where the select lists the real
-        Status objects and stores the sub-field's value. `for_path` carries no `values_url` for the
-        relation on its own, a sub-field that is a date or a number gets the widget its kind asks for,
-        and a partial comparison such as `contains` wants typing rather than picking.
+        A sub-field of a single relation, `status.name`, a many-valued relation named on its own,
+        `tags`, or a custom field with choices. A sub-field that is a date or a number gets the
+        widget its kind asks for, and a partial comparison such as `contains` on text wants typing
+        rather than picking.
         """
-        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT))
+        return bool(self.values_url and self.key and self.whole and self.kind in (None, KIND_TEXT, KIND_LIST))
 
 
 def _subfield_name(name):
@@ -160,20 +174,22 @@ def _options_for_chosen_values(value):
 
 
 def _name_choices(entries):
-    """Field names as a select offers them. The name is the path a condition stores, so it is the label."""
-    return add_blank_choice((entry["name"], entry["name"]) for entry in entries)
+    """Fields as a select offers them in label order, storing the path and showing the label."""
+    ordered = sorted(entries, key=lambda entry: entry["label"].casefold())
+    return add_blank_choice((entry["name"], entry["label"]) for entry in ordered)
 
 
 def _subfield_choices(subfields):
-    """Sub-field names, with no blank among them.
+    """Sub-fields as a select offers them, storing the name and showing the label, with no blank among them.
 
     A path that stops at a relation addresses a mapping, which nothing a condition compares can equal,
     so there is no such thing as a relation with no sub-field chosen. `name` leads where there is one,
-    being what a reader of a change record recognises the related object by.
+    being what a reader of a change record recognises the related object by, and the rest follow in
+    label order.
     """
-    names = [entry["name"] for entry in subfields]
-    ordered = ["name", *(name for name in names if name != "name")] if "name" in names else names
-    return [(name, name) for name in ordered]
+    label_by_name = {entry["name"]: entry["label"] for entry in subfields}
+    ordered = sorted(label_by_name, key=lambda name: (name != "name", label_by_name[name].casefold()))
+    return [(name, label_by_name[name]) for name in ordered]
 
 
 def _condition_type_choices():
@@ -186,8 +202,8 @@ def _condition_type_choices():
     )
 
 
-def _apply_bootstrap_styling(widget, placeholder=""):
-    """Give a widget the Bootstrap class and placeholder, which `BootstrapMixin` cannot reach here.
+def _apply_bootstrap_styling(widget):
+    """Give a widget the Bootstrap class, which `BootstrapMixin` cannot reach here.
 
     It dresses the fields a form declares, and a row's are built after it has run.
     """
@@ -195,9 +211,6 @@ def _apply_bootstrap_styling(widget, placeholder=""):
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
-    if placeholder:
-        # A select takes `data-placeholder`: `initializeSelect2Fields` overwrites the real one.
-        widget.attrs.setdefault("data-placeholder" if isinstance(widget, forms.Select) else "placeholder", placeholder)
     return widget
 
 
@@ -226,7 +239,7 @@ def _mark_for_editor_script(widget, role, *, key=None, rebuild_index=None):
     return widget
 
 
-def _build_control(label, widget, *, placeholder=None):
+def _build_control(label, widget):
     """Build a form field around `widget`. A `CharField` throughout, since nothing here validates.
 
     The `help_text` field for the parameter was intentionally omitted.
@@ -236,7 +249,7 @@ def _build_control(label, widget, *, placeholder=None):
     return forms.CharField(
         label=label,
         required=False,
-        widget=_apply_bootstrap_styling(widget, label if placeholder is None else placeholder),
+        widget=_apply_bootstrap_styling(widget),
     )
 
 
@@ -316,8 +329,12 @@ def _without_stale_values(data, prefix, triggered_by):
     return data
 
 
-def _stored_row_as_initial(row):
-    """A stored row as a form's initial values. A dotted field path becomes the two selects that edit it."""
+def _stored_row_as_initial(row, addressable):
+    """A stored row as a form's initial values.
+
+    A dotted field path becomes the field select and the sub-field select that edit it, unless the
+    whole path is a field of its own in `addressable`, as `custom_fields.site_code` is.
+    """
     if not row:
         return {}
     negation = "not" if row.get("negate") else "when"
@@ -334,10 +351,13 @@ def _stored_row_as_initial(row):
     # Whatever the JSON tab holds, down to the values of a single row, is typed by hand and may be
     # anything at all. A row that cannot be spread renders empty and is refused on save.
     values = row.get("values")
-    values = values if isinstance(values, dict) else {}
+    if not isinstance(values, dict):
+        values = {}
+    field_names = {entry["name"] for entry in addressable}
     for parameter in preset.parameters:
         value = values.get(parameter.name)
-        if parameter.kind == PARAM_KIND_FIELD and isinstance(value, str) and "." in value:
+        splits_into_field_and_subfield = isinstance(value, str) and "." in value and value not in field_names
+        if parameter.kind == PARAM_KIND_FIELD and splits_into_field_and_subfield:
             initial[parameter.name], _, initial[_subfield_name(parameter.name)] = value.partition(".")
         else:
             initial[parameter.name] = value
@@ -383,11 +403,14 @@ class ConditionRowForm(forms.Form):
 
     def __init__(self, data=None, *, index, addressable=(), row=None, errors=None, triggered_by=None):
         prefix = f"condition-{index}"
+        addressable = list(addressable)
         super().__init__(
-            data=_without_stale_values(data, prefix, triggered_by), prefix=prefix, initial=_stored_row_as_initial(row)
+            data=_without_stale_values(data, prefix, triggered_by),
+            prefix=prefix,
+            initial=_stored_row_as_initial(row, addressable),
         )
         self.index = index
-        self.addressable = list(addressable)
+        self.addressable = addressable
         # The form shows what a save would refuse rather than deciding it, so it never cleans itself.
         # Its errors are put in by hand, which needs the two places cleaning would otherwise fill.
         self.cleaned_data = {}
@@ -400,7 +423,6 @@ class ConditionRowForm(forms.Form):
         self.fields["negate"] = _build_control(
             "Negate",
             _mark_for_editor_script(StaticSelect2(choices=NEGATION_CHOICES), ROLE_NEGATE),
-            placeholder="",
         )
         self._add_chosen_controls(self._current_value("type"))
         chosen = set(self._chosen_control_names)
@@ -437,17 +459,21 @@ class ConditionRowForm(forms.Form):
             self.fields["source"] = _build_control(
                 "Expression",
                 _mark_for_editor_script(forms.TextInput(), ROLE_SOURCE),
-                placeholder="Jinja2 expression",
             )
             return
         preset = get_condition_preset(chosen)
         if preset is None:
             return
+        # The field's controls come first, because building them settles the sub-field, and the field
+        # a row compares is the field and its sub-field together.
+        named = _parameter_of_kind(preset, PARAM_KIND_FIELD)
+        if named is not None:
+            self._add_field_controls(named)
         compared_field = self._field_this_row_compares(preset)
         for parameter in preset.parameters:
             if parameter.kind == PARAM_KIND_FIELD:
-                self._add_field_controls(parameter)
-            elif parameter.kind == PARAM_KIND_CHOICE:
+                continue
+            if parameter.kind == PARAM_KIND_CHOICE:
                 # The operator decides whether the value is typed or picked, so it fetches the row again.
                 control = _build_operator_control(parameter, compared_field.kind)
                 _mark_for_editor_script(control.widget, ROLE_VALUE, key=parameter.name, rebuild_index=self.index)
@@ -464,7 +490,6 @@ class ConditionRowForm(forms.Form):
             self.fields[parameter.name] = _build_control(
                 parameter.label,
                 _mark_for_editor_script(closed, ROLE_PATH, key=parameter.name),
-                placeholder="",
             )
             return
 
@@ -484,7 +509,6 @@ class ConditionRowForm(forms.Form):
                     key=parameter.name,
                     rebuild_index=self.index,
                 ),
-                placeholder="",
             )
             # So the rendered select marks the one it is sending as chosen, rather than leaving the
             # browser to fall back to the first and the two to disagree about what the row holds.

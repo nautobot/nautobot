@@ -936,23 +936,6 @@ class JobHookSerializer(NautobotModelSerializer):
         model = JobHook
         fields = "__all__"
 
-    def validate(self, attrs):
-        validated_attrs = super().validate(attrs)
-
-        conflicts = JobHook.check_for_conflicts(
-            instance=self.instance,
-            content_types=attrs.get("content_types"),
-            job=attrs.get("job"),
-            type_create=attrs.get("type_create"),
-            type_update=attrs.get("type_update"),
-            type_delete=attrs.get("type_delete"),
-        )
-
-        if conflicts:
-            raise serializers.ValidationError(conflicts)
-
-        return validated_attrs
-
 
 class JobCreationSerializer(BaseModelSerializer):
     """
@@ -1382,23 +1365,6 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = Webhook
         fields = "__all__"
-
-    def validate(self, attrs):
-        validated_attrs = super().validate(attrs)
-
-        conflicts = Webhook.check_for_conflicts(
-            instance=self.instance,
-            content_types=attrs.get("content_types"),
-            payload_url=attrs.get("payload_url"),
-            type_create=attrs.get("type_create"),
-            type_update=attrs.get("type_update"),
-            type_delete=attrs.get("type_delete"),
-        )
-
-        if conflicts:
-            raise serializers.ValidationError(conflicts)
-
-        return validated_attrs
 
 
 #

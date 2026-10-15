@@ -20,7 +20,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 from django.db.models import Model
@@ -853,7 +853,9 @@ class BaseJob:
 
         Args:
             filename (str): Name of the file to create, including extension
-            content (str, bytes): Content to populate the created file with.
+            content (str, bytes, file): Content to populate the created file with. A seekable binary file object
+                (such as a `tempfile.TemporaryFile`) is read in full from its start, so that large content need
+                not be held in memory as well.
 
         Raises:
             (ValueError): if the provided content exceeds JOB_CREATE_FILE_MAX_SIZE in length
@@ -864,12 +866,16 @@ class BaseJob:
         if isinstance(content, str):
             content = content.encode("utf-8")
         max_size = get_settings_or_config("JOB_CREATE_FILE_MAX_SIZE", fallback=10 << 20)
-        actual_size = len(content)
+        if isinstance(content, bytes):
+            actual_size = len(content)
+            file = ContentFile(content, name=filename)
+        else:
+            actual_size = content.seek(0, os.SEEK_END)
+            content.seek(0)
+            file = File(content, name=filename)
         if actual_size > max_size:
             raise ValueError(f"Provided {actual_size} bytes of content, but JOB_CREATE_FILE_MAX_SIZE is {max_size}")
-        fp = FileProxy.objects.create(
-            name=filename, job_result=self.job_result, file=ContentFile(content, name=filename)
-        )
+        fp = FileProxy.objects.create(name=filename, job_result=self.job_result, file=file)
         self.logger.info("Created file [%s](%s)", filename, fp.file.url)
         return fp
 

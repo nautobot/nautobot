@@ -1,0 +1,1 @@
+Added row selection and bulk edit helpers (`select_row`, `click_edit_selected`, `expect_bulk_edit_count`, `get_bulk_edit_pks`, `apply_bulk_edit`) to `nautobot.playwright.list_page.ListPage`.

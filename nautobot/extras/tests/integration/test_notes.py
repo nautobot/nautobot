@@ -25,7 +25,7 @@ class NoteTestCase:
         assert text in [note["note"] for note in saved]
 
     @pytest.mark.behavioral
-    def test_update_note(self, auth_page, base_url, created_location, created_note):
+    def test_update_note(self, auth_page, base_url, api, created_location, created_note):
         """Editing a note replaces its body in the notes table."""
         new_text = f"{unique_name()} updated note"
         notes = ObjectNotesPage(auth_page, base_url)
@@ -38,3 +38,4 @@ class NoteTestCase:
         notes.open_notes_tab()
         notes.expect_note(new_text)
         notes.expect_note(created_note["note"], present=False)
+        assert api.get(f"/api/extras/notes/{created_note['id']}/").json()["note"] == new_text

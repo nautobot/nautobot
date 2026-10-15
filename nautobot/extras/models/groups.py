@@ -1303,6 +1303,11 @@ class StaticGroupAssociation(OrganizationalModel):
 
     def to_objectchange(self, *args, **kwargs):
         """Change log StaticGroupAssociations belonging to a "static" group; all others are an implementation detail."""
-        if self.dynamic_group.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+        try:
+            group_type = self.dynamic_group.group_type
+        except DynamicGroup.DoesNotExist:
+            # A concurrent request deleted the group after Django collected this row for a cascade delete.
+            return None
+        if group_type != DynamicGroupTypeChoices.TYPE_STATIC:
             return None
         return super().to_objectchange(*args, **kwargs)

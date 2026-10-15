@@ -617,7 +617,7 @@ def cleanup_custom_field_data(
                 # Choice repair: replace invalid values for select/multiselect fields.
                 # Note: Stale choice values are unusable in the UI, so replacing them is preferable to leaving
                 # bad data in place.
-                if field.type in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
+                if field.type in CustomFieldTypeChoices.SELECTION_TYPES:
                     if not safe_change:
                         _replace_invalid_choice(field, queryset, job_logger=job_logger)
                 else:

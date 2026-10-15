@@ -30,10 +30,21 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
-from nautobot.core.rate_limiting.budget_helpers import charge_bucket, get_rate_limit_bucket_id
+from nautobot.core.rate_limiting.budget_helpers import (
+    charge_bucket,
+    get_rate_limit_bucket_id,
+    hash_user_identifier,
+)
+from nautobot.core.rate_limiting.metrics import (
+    record_request_db_duration,
+    record_request_total_duration,
+    record_rest_request_complexity_cost,
+    record_rest_request_rate_limiting_backend_exception,
+)
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
+    get_custom_rate_limiting_complexity_cost_estimation_function,
     READ_METHODS,
     WRITE_METHODS,
 )
@@ -547,11 +558,12 @@ class RequestMetricMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # TODO: Ask team if we want these metrics generated for HTML requests as well?
-
         enabled_metrics = self.get_enabled_metrics()
         if not enabled_metrics:
             return self.get_response(request)
+
+        user_token = request.META.get("HTTP_AUTHORIZATION", None)
+        hashed_user_token = hash_user_identifier(user_token) if user_token else "Anonymous"
 
         # ----------------------------------------------------------------------
         # Wrap Request Logic With Metrics
@@ -569,9 +581,18 @@ class RequestMetricMiddleware:
 
         header_metrics = []
         for enabled_metric in enabled_metrics:
-            rounded_duration = round(enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision)
-            enabled_metric_string = f'{enabled_metric.name};dur={rounded_duration};desc="{enabled_metric.description}"'
+            rounded_duration_in_milliseconds = round(
+                enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision
+            )
+            enabled_metric_string = (
+                f'{enabled_metric.name};dur={rounded_duration_in_milliseconds};desc="{enabled_metric.description}"'
+            )
             header_metrics.append(enabled_metric_string)
+            # Add Metric Data To Prometheus
+            if isinstance(enabled_metric, DatabaseDurationRequestMetric):
+                record_request_db_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
+            elif isinstance(enabled_metric, TotalDurationRequestMetric):
+                record_request_total_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
 
         # ----------------------------------------------------------------------
         # Add Metrics To Response Header
@@ -615,8 +636,8 @@ class ComplexityCostRateLimitingMiddleware:
 
     def __call__(self, request):
         is_complexity_cost_calculation_enabled = (
-            settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "report"
-            or settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+            settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "report"
+            or settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
         )
         if is_complexity_cost_calculation_enabled is False:
             return self.get_response(request)
@@ -632,46 +653,54 @@ class ComplexityCostRateLimitingMiddleware:
         return response
 
     def perform_rest_api_complexity_cost_rate_limiting(self, request):
-        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
 
         # ----------------------------------------------------------------------
         #  Extract Token
         # ----------------------------------------------------------------------
         user_token = request.META.get("HTTP_AUTHORIZATION", None)
+        hashed_user_token = hash_user_identifier(user_token) if user_token else "Anonymous"
 
         # ----------------------------------------------------------------------
         #  Calculate Cost
         # ----------------------------------------------------------------------
-        if request.method in READ_METHODS:
-            # TODO: try/catch this
+        if request.method not in READ_METHODS and request.method not in WRITE_METHODS:
+            return self.get_response(request)
+
+        custom_rate_limiting_complexity_cost_estimation_function = (
+            get_custom_rate_limiting_complexity_cost_estimation_function()
+        )
+
+        if custom_rate_limiting_complexity_cost_estimation_function is not None:
+            request_complexity_cost_estimate = custom_rate_limiting_complexity_cost_estimation_function(request)
+        elif request.method in READ_METHODS:
             read_request_features = classify_rest_read_request_features(request)
             request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
-        elif request.method in WRITE_METHODS:
-            # TODO: Revisit calculation for write requests
-            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
         else:
-            return self.get_response(request)
+            request_complexity_cost_estimate = settings.NAUTOBOT_RATE_LIMITING_REST_WRITE_COST
 
         # ----------------------------------------------------------------------
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
-        rate_limit_budget = settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET
-        rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS
+        rate_limit_budget = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET
+        rate_limiting_window_in_seconds = settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS
 
         consumed_budget = 0
         remaining_window_time_in_seconds = rate_limiting_window_in_seconds
 
         if user_token is not None and should_complexity_cost_calculation_enforced is True:
             rate_limit_bucket_id = get_rate_limit_bucket_id(user_token)
-            consumed_budget, remaining_window_time_in_seconds = charge_bucket(
-                rate_limit_bucket_id,
-                request_complexity_cost_estimate,
-                rate_limiting_window_in_seconds,
-            )
-
-        if consumed_budget is None:
-            consumed_budget = 0
-            remaining_window_time_in_seconds = rate_limiting_window_in_seconds
+            try:
+                consumed_budget, remaining_window_time_in_seconds = charge_bucket(
+                    rate_limit_bucket_id,
+                    request_complexity_cost_estimate,
+                    rate_limiting_window_in_seconds,
+                )
+            except Exception as budget_charge_exception:
+                record_rest_request_rate_limiting_backend_exception(
+                    hashed_user_token,
+                    budget_charge_exception,
+                )
 
         # ----------------------------------------------------------------------
         #  Generate Header Data
@@ -719,6 +748,11 @@ class ComplexityCostRateLimitingMiddleware:
             response.headers["Retry-After"] = str(advertised_remaining_window_time_in_seconds)
         else:
             response = self.get_response(request)
+
+        record_rest_request_complexity_cost(
+            hashed_user_token,
+            request_complexity_cost_estimate,
+        )
 
         # ----------------------------------------------------------------------
         #  Add To Header

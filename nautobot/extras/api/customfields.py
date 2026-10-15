@@ -53,6 +53,14 @@ class CustomFieldsDataField(Field):
     def custom_field_keys(self):
         return CustomField.objects.keys_for_model(self.parent.Meta.model)
 
+    @property
+    def custom_field_labels(self):
+        """Each custom field's human-readable label, by key."""
+        return {
+            custom_field.key: custom_field.label
+            for custom_field in CustomField.objects.get_for_model(self.parent.Meta.model, get_queryset=False)
+        }
+
     def to_representation(self, value):
         return {key: value.get(key) for key in self.custom_field_keys}
 

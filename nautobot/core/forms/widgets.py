@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix, reverse
-from django.utils.html import format_html, format_html_join
+from django.utils.html import conditional_escape, escape, format_html, format_html_join
 
 from nautobot.core import choices as core_choices
 from nautobot.core.forms import utils
@@ -121,11 +121,17 @@ class ExportFieldSelect(SelectMultipleOrderable):
     """
     `SelectMultipleOrderable` variant that nests each field path under the path it belongs to.
 
-    Top-level fields are draggable/orderable rows; nested paths (e.g. `device_type__manufacturer`, or a
+    Top-level fields are draggable/orderable rows; nested paths (e.g. `device_type__manufacturer__name`, or a
     `cf_<key>` under `custom_fields`) are rendered as indented, collapsible checkboxes inside their parent
     row, so reordering a parent moves its nested columns with it and nested columns are not independently
     orderable. The submitted order is therefore the order of the top-level rows, which is what the export
     lays its columns out in.
+
+    A row with rows nested under it is a tri-state control over them, submitting nothing itself: checked when
+    everything under it is, indeterminate when some of it is. Clicking it selects first its natural key (see
+    `natural_keys`) or its option submitting the bare path (see `bare_options`: "Natural key", or "All
+    custom fields"), if it has either; then everything; then nothing. Any other partial selection goes to
+    everything.
 
     `parent_paths` maps each value to the value it nests under; `ExportFieldsChoiceField` sets it from
     `enumerate_field_paths()`. Without it, nesting falls back to the dunder structure of the path itself.
@@ -135,6 +141,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
     turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
     """
 
+    # The ids and the selector below are also used by the UI bundle's `export-fields.js`; keep them in step.
+
     # The element the picker is rebuilt into. `render_field` emits it around the whole field from the
     # field's `htmx_attrs`, and it persists across swaps -- so it is what a rebuild targets, and it is
     # where the URL to rebuild from is carried. See `ExportFieldsStringVar.as_field()`.
@@ -142,6 +150,9 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
     # The report of what a "match the list view" could not bring over. One per picker, hence an id.
     OMITTED_ID = "nb-export-fields-omitted"
+
+    # What the selection amounts to, above the tree. One per picker, hence an id.
+    SUMMARY_ID = "nb-export-fields-summary"
 
     # The sibling field naming the content type whose fields are offered; changing it rebuilds the picker.
     content_type_selector = "#id_content_type"
@@ -160,12 +171,21 @@ class ExportFieldSelect(SelectMultipleOrderable):
         self.no_list_view = False
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
-        # The paths that name a related object rather than a value of the object being exported.
-        self.relation_paths = set()
+        # For each row with an option submitting its bare path, that option's label, description, icon and columns;
+        # see `ExportFieldPath.bare_label`.
+        self.bare_options = {}
+        # For each related object, the rows selecting its natural key; see `ExportFieldPath.natural_key`.
+        self.natural_keys = {}
+        # Paths a selection may name that the tree has no row for, each with the rows it is shown as instead.
+        self.substitutions = {}
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
-        self.attrs["class"] = "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list py-8"
+        # `nb-export-field-select` is what the UI bundle's `export-fields.js` looks for.
+        self.attrs["class"] = (
+            "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list nb-export-field-select "
+            "py-8"
+        )
 
     def parent_of(self, path):
         """The value `path` nests under, or None if it is a top-level row."""
@@ -195,8 +215,11 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return self.flatten_paths(super().value_from_datadict(data, files, name))
 
     def format_value(self, value):
-        """The selection being rendered, so that the right boxes come out checked."""
-        return self.flatten_paths(value)
+        """The selection being rendered, as flat paths with `substitutions` applied, so the right boxes are checked."""
+        shown = []
+        for path in self.flatten_paths(value):
+            shown.extend(entry for entry in self.substitutions.get(path, [path]) if entry not in shown)
+        return shown
 
     def render(self, name, value, attrs=None, renderer=None):
         context = super().get_context(name, value, attrs)
@@ -205,10 +228,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         if not options:
             # Say why there is nothing to pick from, rather than rendering an empty list under two
-            # buttons that cannot do anything. The script still goes out: without it nothing bridges
-            # Select2's pick to the `change` that rebuilds this, and a form opened with no content type
-            # chosen -- which is how the Job's own form opens -- would never leave this state.
-            return format_html('<div class="form-text">{}</div>{}', self._empty_message(), self._behavior_script())
+            # buttons that cannot do anything.
+            return format_html('<div class="form-text">{}</div>', self._empty_message())
 
         nodes = {str(option["value"]): {"option": option, "children": []} for option in options}
         roots = []
@@ -222,27 +243,28 @@ class ExportFieldSelect(SelectMultipleOrderable):
         rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
         # No wrapper of its own: the whole picker is replaced at once when it has to be rebuilt
         # server-side, and the element that persists across those swaps is the one `render_field` puts
-        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents.
+        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents. The UI bundle's
+        # `export-fields.js` sets the parent rows' states once it is loaded, "indeterminate" having no markup.
         return format_html(
-            '{}{}<ol id="{}" class="{}">{}</ol>{}',
-            self._toolbar(has_selection=bool(widget["value"])),
+            '{}{}<ol id="{}" class="{}">{}</ol>',
+            self._toolbar(selected_count=len(widget["value"])),
             self._omitted_hint() or self._no_list_view_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
             rows,
-            self._behavior_script(),
         )
 
-    def _toolbar(self, has_selection=False):
-        """The picker's controls: seeding the selection from the launching list view, and clearing it.
+    def _toolbar(self, selected_count=0):
+        """The picker's controls, what the selection currently amounts to, and how to use the tree.
 
         "Match the list view" puts what that view is displaying *into* the picker, to be seen, reordered
         and pruned before the export runs. It is a gesture rather than an input to the export: a caller
         with no picker -- the REST API, a scheduled Job -- names the fields it wants instead.
 
-        "Clear" is the way back to exporting every field, that being what an empty selection means. It is
-        disabled while there is nothing to clear, so it also reads as whether anything is selected.
+        "Clear" is the way back to the default columns, that being what an empty selection exports. It is
+        disabled while there is nothing to clear.
         """
+        has_selection = selected_count > 0
         # The `hx-params="not ...."` blocks inheriting the named hx-vals from the enclosing form.
         # This is needed because `hx-vals` inheritance is not affected by `htmx.config.disableInheritance = true` in
         # HTMX 2.0 -- see https://github.com/bigskysoftware/htmx/issues/1119
@@ -255,8 +277,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
                         hx-vals='{{"use_current_view": "1", "content_type": "{content_type}"}}'
                         title="Replace the selection with the columns this type's list view is configured to display"
                 ><span class="mdi mdi-table-eye me-4" aria-hidden="true"></span>Match the list view</button>
-                <button type="button" class="btn btn-secondary ms-6 export-fields-clear"{disabled}
-                        title="Clear the selection, so that every field is exported again"
+                <button type="button" class="btn btn-secondary ms-6 nb-export-fields-clear"{disabled}
+                        title="Clear the selection, to export the default columns instead"
                 ><span class="mdi mdi-close me-4" aria-hidden="true"></span>Clear</button>
             </div>
             """,
@@ -271,15 +293,52 @@ class ExportFieldSelect(SelectMultipleOrderable):
             '<span class="form-text d-block mb-6">'
             "Drag to reorder fields.<br>"
             '"*" marks a field an import requires to create new records.<br>'
-            '"<span aria-hidden="true" class="text-warning mdi mdi-key-link"></span>'
-            '<span class="visually-hidden">natural key</span>" marks a related object, which when selected, '
-            "exports the related field(s) that identify it.<br>"
+            "Checking a related object selects the fields that identify it (its natural key); checking it again "
+            "selects all of its fields, and again clears them. "
             '"<span aria-hidden="true" class="text-info mdi mdi-chevron-down"></span>'
-            '<span class="visually-hidden">show/hide related fields</span>" expands a related object row '
-            "to select different related fields to export."
+            '<span class="visually-hidden">show/hide related fields</span>" shows its fields, to choose '
+            "them individually."
             "</span>"
         )
-        return format_html("{}{}", buttons, legend)
+        return format_html("{}{}{}", buttons, self._summary(selected_count), legend)
+
+    def _summary(self, selected_count):
+        """What the export will contain: the default columns if nothing is selected, else the selected count.
+
+        Shown above the tree in place of the field's help text (see `ExportFieldsStringVar.as_field()`). Both
+        versions are rendered and `export-fields.js` shows whichever applies; stacked in one grid cell
+        (`.nb-stacked`) and hidden by `visibility`, they keep the summary one height, so the tree doesn't move.
+        Screen readers are told only the short status, not the whole summary on every click.
+        """
+        model = self.content_type.model_class() if self.content_type is not None else None
+        verbose_name = model._meta.verbose_name if model is not None else "object"
+        return format_html(
+            """
+            <div id="{id}" class="form-text mb-6">
+                <span class="nb-export-fields-summary-status visually-hidden" aria-live="polite">{status}</span>
+                <div class="nb-stacked">
+                    <div class="nb-export-fields-summary-default{default_hidden}">
+                        <strong>No fields selected</strong><br>
+                        The export has the default columns: each field of the {verbose_name} itself, with related
+                        objects given as the fields that identify them, and any custom fields. Computed fields,
+                        relationships, and similar opt-in data are not exported.
+                    </div>
+                    <div class="nb-export-fields-summary-selected{selected_hidden}">
+                        <strong><span class="nb-export-fields-summary-count">{count}</span> selected</strong><br>
+                        They are exported in the order shown. Clear the selection to export the default columns
+                        instead.
+                    </div>
+                </div>
+                <div>Export Templates and devicetype-library YAML exports ignore the selection.</div>
+            </div>
+            """,
+            id=self.SUMMARY_ID,
+            default_hidden=" invisible" if selected_count else "",
+            selected_hidden="" if selected_count else " invisible",
+            verbose_name=verbose_name,
+            count=selected_count,
+            status=f"{selected_count} selected" if selected_count else "No fields selected",
+        )
 
     def _empty_message(self):
         """Why there is nothing to pick from: no content type chosen, or one an export cannot serialize."""
@@ -288,31 +347,6 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             "This content type has no fields an export can select. It can still be exported using an "
             "Export Template, which renders its own output."
-        )
-
-    def _natural_key_marker(self, path):
-        """Mark a row that names a related object, selecting which exports what identifies it.
-
-        The checkbox on such a row is the one thing here that does not mean what a tree of checkboxes
-        usually means: it asks for the columns that identify the related object -- its natural key --
-        rather than for everything listed beneath it, and the two are mutually exclusive. The badge says
-        so where the checkbox is, which is where the assumption gets made.
-
-        Which columns those are is deliberately not spelled out: a natural key can span several fields
-        and several relations, and `Location`'s is computed from how deeply locations are nested at the
-        time, so any list of them would be long, particular to the deployment, and out of date the moment
-        someone nests one deeper.
-        """
-        if path not in self.relation_paths:
-            return ""
-        # The same icon the import form marks a related object with, so that the two forms say the same
-        # thing the same way; its meaning is spelled out in the legend, as it is there.
-        return format_html(
-            '<span class="text-warning ms-6" title="{}">'
-            '<span aria-hidden="true" class="mdi mdi-key-link"></span>'
-            '<span class="visually-hidden">natural key</span>'
-            "</span>",
-            "Exports the columns that identify this related object, rather than the fields listed under it",
         )
 
     def _omitted_hint(self):
@@ -341,129 +375,74 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             '<div id="{}" class="form-text text-info mb-6">'
             "This content type has no list view, so there are no displayed columns to match. "
-            "Choose the fields to export below, or leave the selection empty to export all of them."
+            "Choose the fields to export below, or leave the selection empty to export the default columns."
             "</div>",
             self.OMITTED_ID,
         )
 
-    def _behavior_script(self):
-        """The tree's own client-side behavior, shipped with the markup.
+    @staticmethod
+    def _checkbox(control, control_id, label, path, is_root, title=None):
+        """A row's checkbox `control` with its label, and the path it selects alongside.
 
-        Delegated from `document` and guarded by a flag, so that it binds once however many times a widget
-        renders -- the export form is rendered both as a full page and, repeatedly, into the HTMX modal.
-        Kept here rather than in a template or the JS bundle so that every renderer of the widget gets the
-        behavior without having to include anything.
-
-        Relationships are read from DOM nesting rather than from the `__` structure of the values, so a
-        `cf_<key>` nested under `custom_fields` behaves like any other child despite sharing no prefix
-        with it.
+        A `title` -- plain text, or HTML from `format_html()` -- is shown as a Bootstrap tooltip, which
+        `export-fields.js` sets up when the picker is loaded.
         """
         return format_html(
-            """<script type="text/javascript">
-(function () {{
-    if (window.nbExportFieldSelectBound) return;
-    window.nbExportFieldSelectBound = true;
-    const LIST = ".nb-select-multiple-orderable-list";
-    const boxesWithin = (element) => Array.from(element.querySelectorAll('input[type="checkbox"]'));
+            '<div class="form-check flex-grow-1 my-0">{control}'
+            '<label class="form-check-label py-6{pe}" for="{control_id}"{title}>{label}'
+            '<span class="font-monospace small text-secondary ms-6">{path}</span></label>'
+            "</div>",
+            control=control,
+            control_id=control_id,
+            pe="" if is_root else " pe-20",
+            # The tooltip is HTML (plain text escaped into it), escaped once more to be the attribute's value.
+            title=format_html(
+                ' data-bs-toggle="tooltip" data-bs-html="true" title="{}"', escape(conditional_escape(title))
+            )
+            if title
+            else "",
+            label=label,
+            path=path,
+        )
 
-    document.addEventListener("change", function (event) {{
-        const changed = event.target;
-        if (!changed.matches(LIST + ' input[type="checkbox"]')) return;
-        const list = changed.closest(LIST);
-        const row = changed.closest("li");
-        if (changed.checked && row) {{
-            // A field and any field nested under it are mutually exclusive: selecting the parent asks for
-            // its natural key (or, for `custom_fields`, every custom field), while selecting a descendant
-            // asks for that column instead. Enforcing it keeps what is shown equal to what will export.
-            boxesWithin(row).forEach((box) => {{
-                if (box !== changed) box.checked = false;
-            }});
-            for (let ancestor = row.parentElement; ancestor && list.contains(ancestor); ancestor = ancestor.parentElement) {{
-                if (ancestor.tagName !== "LI") continue;
-                // A row's own checkbox is the first in its subtree, its header preceding any nested rows.
-                const box = ancestor.querySelector('input[type="checkbox"]');
-                if (box) box.checked = false;
-            }}
-        }}
-        // A parent with a selected descendant but no selection of its own reads as "customized".
-        boxesWithin(list).forEach((box) => {{
-            const boxRow = box.closest("li");
-            box.indeterminate =
-                !box.checked && boxRow !== null && boxesWithin(boxRow).some((inner) => inner !== box && inner.checked);
-        }});
-        refreshClearButton(list);
-    }});
-
-    // Whether there is anything to clear is also whether anything is selected, so the button's state
-    // doubles as that: an empty selection is what exports every field.
-    function refreshClearButton(list) {{
-        const picker = list.closest("#{wrapper}");
-        const clear = picker ? picker.querySelector(".export-fields-clear") : null;
-        if (clear) clear.disabled = !boxesWithin(list).some((box) => box.checked);
-    }}
-
-    document.addEventListener("click", function (event) {{
-        const clear = event.target.closest(".export-fields-clear");
-        if (!clear) return;
-        const picker = clear.closest("#{wrapper}");
-        const list = picker ? picker.querySelector(LIST) : null;
-        if (!list) return;
-        // Unchecking in script raises no "change" event, so the housekeeping the change handler would
-        // have done -- the indeterminate marks, and this button's own state -- is done here.
-        boxesWithin(list).forEach((box) => {{
-            box.checked = false;
-            box.indeterminate = false;
-        }});
-        // The columns a "match the list view" could not bring over are reported against that selection,
-        // so the report goes with it. A later match renders its own afresh.
-        const omitted = picker.querySelector("#{omitted}");
-        if (omitted) omitted.remove();
-        clear.disabled = true;
-    }});
-
-    // Collapse/expand a parent's nested columns, at any depth.
-    document.addEventListener("click", function (event) {{
-        const caret = event.target.closest(".export-field-caret");
-        if (!caret || !caret.closest(LIST)) return;
-        const row = caret.closest("li");
-        const nested = row ? row.querySelector(":scope > .export-nested") : null;
-        if (!nested) return;
-        const collapsed = nested.classList.toggle("d-none");
-        caret.setAttribute("aria-expanded", String(!collapsed));
-        const icon = caret.querySelector(".mdi");
-        if (icon) {{
-            icon.classList.toggle("mdi-chevron-down", collapsed);
-            icon.classList.toggle("mdi-chevron-up", !collapsed);
-        }}
-    }});
-
-    // Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX
-    // included -- ever sees (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real
-    // `change` so the picker's own `hx-trigger` can hear it; `objectmetadata_create.html` bridges its
-    // own select the same way. Delegated, so it survives the form being swapped into the modal.
-    function bindSelect2ChangeBridge() {{
-        if (!window.jQuery) return;
-        window.jQuery(document).on("select2:select select2:clear", "{content_type_selector}", function () {{
-            this.dispatchEvent(new Event("change", {{bubbles: true}}));
-        }});
-    }}
-    // On a full page render this script runs while the document is still parsing, *before* the scripts at
-    // the end of the body have defined jQuery -- so binding is deferred to whenever that has happened.
-    // A widget swapped in by HTMX renders after page load, where jQuery is there already.
-    if (window.jQuery) bindSelect2ChangeBridge();
-    else document.addEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
-}})();
-</script>""",
-            content_type_selector=self.content_type_selector,
-            wrapper=self.WRAPPER_ID,
-            omitted=self.OMITTED_ID,
+    def _bare_option(self, path, widget_id, name, selected):
+        """The first row nested under `path`: the option submitting `path` itself, e.g. "Natural key"."""
+        label, description, icon, columns = self.bare_options[path]
+        control_id = f"{widget_id}_bare_{path}"
+        if columns:
+            description = format_html(
+                "{}<br>{}", description, format_html_join(", ", "<code>{}</code>", ((column,) for column in columns))
+            )
+        control = format_html(
+            '<input class="form-check-input my-6 nb-export-field-leaf nb-export-field-bare" id="{}" name="{}" '
+            'type="checkbox" value="{}" data-nb-label="{}"{}>',
+            control_id,
+            name,
+            path,
+            label,
+            format_html(" checked") if selected else "",
+        )
+        return format_html(
+            '<li class="my-0 nb-export-field-node"><div class="d-flex align-items-center">{}</div></li>',
+            self._checkbox(
+                control,
+                control_id,
+                # The icon only marks what the label already says, so it is hidden from screen readers.
+                format_html('{}<span class="mdi {} text-warning ms-4" aria-hidden="true"></span>', label, icon)
+                if icon
+                else label,
+                path,
+                is_root=False,
+                title=description,
+            ),
         )
 
     def _render_node(self, node, widget_id, name, is_root):
+        """One row, and the rows nested under it."""
         option = node["option"]
         value = str(option["value"])
         has_children = bool(node["children"])
-        checked = format_html(" checked") if option["attrs"].get("selected") else ""
+        selected = bool(option["attrs"].get("selected"))
         handle = (
             format_html(
                 '<span class="nb-draggable-handle pt-4 px-10"><span class="mdi mdi-drag-vertical text-secondary"></span></span>'
@@ -471,57 +450,72 @@ class ExportFieldSelect(SelectMultipleOrderable):
             if is_root
             else ""
         )
-        checkbox = format_html(
-            '<div class="form-check flex-grow-1 my-0">'
-            '<input class="form-check-input my-6{natural_key}" id="{wid}_option_{value}" name="{name}" '
-            'type="checkbox" value="{value}"{checked}>'
-            '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}{badge}</label>'
-            "</div>",
-            wid=widget_id,
-            value=value,
-            name=name,
-            checked=checked,
-            pe="" if is_root else " pe-20",
-            label=option["label"],
-            badge=self._natural_key_marker(value),
-            # Checking a relation asks for the columns that identify it, not for everything listed under
-            # it, so it is ticked with a key rather than a check -- see `nb-export-natural-key` in the
-            # stylesheet. The tree offers no "everything under this" selection for the usual mark to mean.
-            natural_key=" nb-export-natural-key" if value in self.relation_paths else "",
-        )
+        if not has_children:
+            control = format_html(
+                '<input class="form-check-input my-6 nb-export-field-leaf" id="{}_option_{}" name="{}" '
+                'type="checkbox" value="{}"{}>',
+                widget_id,
+                value,
+                name,
+                value,
+                format_html(" checked") if selected else "",
+            )
+        else:
+            # A control over what is nested under it, with no value of its own to submit.
+            control = format_html(
+                '<input class="form-check-input my-6 nb-export-field-parent" id="{}_option_{}" type="checkbox"{}>',
+                widget_id,
+                value,
+                format_html(' data-nb-natural-key="{}"', json.dumps(self.natural_keys[value]))
+                if value in self.natural_keys
+                else "",
+            )
+        checkbox = self._checkbox(control, f"{widget_id}_option_{value}", option["label"], value, is_root)
+        # Filled in by `export-fields.js` with how much is checked, so a collapsed row shows what it holds. Rows
+        # always start collapsed: expanding every one holding part of a selection would bury the tree.
+        count = format_html('<span class="nb-export-field-count small text-secondary text-nowrap ms-6"></span>')
         caret = (
             format_html(
-                '<button type="button" class="btn btn-link btn-sm p-0 ms-auto pe-10 export-field-caret" '
+                '<button type="button" class="btn btn-link btn-sm p-0 ms-auto pe-10 nb-export-field-caret" '
                 'aria-expanded="false" title="Show/hide related fields">'
                 '<span class="mdi mdi-chevron-down" aria-hidden="true"></span></button>'
             )
             if has_children
             else ""
         )
-        header = format_html('<div class="d-flex align-items-center">{}{}{}</div>', handle, checkbox, caret)
+        header = format_html(
+            '<div class="d-flex align-items-center">{}{}{}{}</div>',
+            handle,
+            checkbox,
+            count if has_children else "",
+            caret,
+        )
 
         nested = ""
         if has_children:
             children = format_html_join(
                 "", "{}", ((self._render_node(child, widget_id, name, False),) for child in node["children"])
             )
-            # First nested level clears the drag handle and parent checkbox; deeper levels compound.
+            if value in self.bare_options:
+                children = format_html("{}{}", self._bare_option(value, widget_id, name, selected), children)
+            # First nested level clears the drag handle and parent checkbox; deeper levels compound. See
+            # `.nb-export-nested` in the stylesheet.
             nested = format_html(
-                '<ul class="export-nested list-unstyled mb-0 d-none" style="margin-left: {}">{}</ul>',
-                "4.5rem" if is_root else "2rem",
+                '<ul class="nb-export-nested{} list-unstyled mb-0 d-none">{}</ul>',
+                " nb-export-nested-root" if is_root else "",
                 children,
             )
 
         if is_root:
             return format_html(
-                '<li class="list-group-item-action nb-draggable my-0 export-field-group" '
+                '<li class="list-group-item-action nb-draggable my-0 nb-export-field-group" '
                 'id="{}_option_{}_container" tabindex="0">{}{}</li>',
                 widget_id,
                 value,
                 header,
                 nested,
             )
-        return format_html('<li class="my-0 export-field-node">{}{}</li>', header, nested)
+        return format_html('<li class="my-0 nb-export-field-node">{}{}</li>', header, nested)
 
 
 class SelectWithDisabled(forms.Select):

@@ -171,6 +171,19 @@ class CustomFieldTypeChoices(ChoiceSet):
         TYPE_MARKDOWN,
     )
 
+    # Types whose values are free text
+    TEXT_LIKE_TYPES = (
+        TYPE_TEXT,
+        TYPE_URL,
+        TYPE_MARKDOWN,
+    )
+
+    # Types whose values come from CustomFieldChoice
+    SELECTION_TYPES = (
+        TYPE_SELECT,
+        TYPE_MULTISELECT,
+    )
+
 
 class ComputedFieldTypeChoices(ChoiceSet):
     TYPE_TEXT = "text"

@@ -147,7 +147,6 @@ export const initializeConditionsEditor = () => {
      */
     initializeSelect2(scope, 'select.nautobot-select2-static', (element) => ({
       allowClear: Boolean(element.querySelector('option[value=""]')),
-      placeholder: element.getAttribute('data-placeholder') ?? '—',
     }));
   };
 

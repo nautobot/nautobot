@@ -212,7 +212,7 @@ class ConditionsViewTest(NautobotTestCase):
         `mtu` is an interface field, so it is gone the moment a location is watched as well.
         """
         location = ContentType.objects.get(app_label="dcim", model="location").pk
-        self.assertInHTML("<option value='mtu' selected>mtu</option>", self.rows([self.compare(field="mtu")]))
+        self.assertInHTML("<option value='mtu' selected>MTU</option>", self.rows([self.compare(field="mtu")]))
         response = self.client.post(
             self.rows_url,
             {"conditions": json.dumps([self.compare(field="mtu")]), "content_types": [self.content_type, location]},

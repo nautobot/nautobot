@@ -1371,6 +1371,20 @@ class JobFileOutputTest(TransactionTestCase):
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
+    def test_output_file_from_file_object(self):
+        """`create_file()` accepts a file object, read from its start, and enforces the size limit on it."""
+        data = {"lines": 3, "use_file_object": True}
+        job_result = create_job_result_and_run_job("file_output", "FileOutputJob", **data)
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(1, job_result.files.count())
+        self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
+
+        with override_config(JOB_CREATE_FILE_MAX_SIZE=len("Hello world!\n" * 3) - 1):
+            job_result = create_job_result_and_run_job("file_output", "FileOutputJob", **data)
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertIn("ValueError", job_result.traceback)
+            self.assertEqual(0, job_result.files.count())
+
     # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
     # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
     # so override_settings(STORAGES["nautobotjobfiles"]["BACKEND"]) doesn't work the way you'd hope it would.

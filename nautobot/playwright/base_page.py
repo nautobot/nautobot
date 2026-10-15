@@ -57,8 +57,16 @@ class BasePage:
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
-    # Both containers render on every page (inc/header_messages.html).
-    _FLASH_MESSAGES = "#header_messages, #toast-messages"
+    # One element per message. A toast stays in the DOM after it hides, so check visibility, not presence.
+    _FLASH_MESSAGES = "#header_messages .alert, #toast-messages .toast"
+    # The page title star marks itself as the button tracking the current URL, so it needs no structural scoping.
+    _FAVORITE_STAR = "[data-nb-favorite-current]"
+    # One anchor per entry in the sidenav favorites flyout, whose `href` is the favorited link.
+    _FAVORITE_ENTRY = ".nb-sidenav-favorites-container li a"
+    # The star is `visibility: hidden` unless `#header` is hovered or has focus.
+    _HEADER = "#header"
+    # The one modal every page includes; the favorite form is loaded into it over HTMX.
+    _GENERIC_MODAL = "#nautobot-generic-modal"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -100,8 +108,8 @@ class BasePage:
         expect(self.page).not_to_have_url(re.compile(re.escape(fragment)))
 
     def expect_flash_message(self, text):
-        """Assert (auto-retrying) that a flash message contains *text*."""
-        expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_have_count(1)
+        """Assert (auto-retrying) that a visible flash message contains *text*."""
+        expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_be_visible()
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""
@@ -118,6 +126,34 @@ class BasePage:
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()
         self.wait_for_load()
+
+    # -------------------------------------------------------------------------
+    # Favorites
+    # -------------------------------------------------------------------------
+
+    def reveal_favorite_star(self):
+        """Hover the header, without which the page title star is not actionable."""
+        self.page.locator(self._HEADER).hover()
+
+    def favorite_star(self, label):
+        """Locator for the page title star, named *label*, e.g. "Add to Favorites"."""
+        return self.page.locator(f'{self._FAVORITE_STAR}[aria-label="{label}"]')
+
+    def favorite_entries(self, path):
+        """Locator for the sidenav favorites flyout entries pointing at *path*."""
+        return self.page.locator(f'{self._FAVORITE_ENTRY}[href="{path}"]')
+
+    def favorite_modal(self):
+        """Locator for the modal the favorite form opens in."""
+        return self.page.locator(self._GENERIC_MODAL)
+
+    def favorite_modal_field(self, name):
+        """Locator for the favorite form input named *name*, `link` or `name`."""
+        return self.favorite_modal().locator(f'input[name="{name}"]')
+
+    def submit_favorite_modal(self):
+        """Submit the favorite form."""
+        self.favorite_modal().locator('button[type="submit"]').click()
 
     # -------------------------------------------------------------------------
     # Panels

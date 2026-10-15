@@ -262,7 +262,7 @@
                         searchParams.delete('app');
                         const nextSearch = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
                         const nextURL = `${window.location.pathname}${nextSearch}${window.location.hash}`;
-                        history.pushState(history.state, "", nextURL);
+                        window.nb.history.pushState(history.state, "", nextURL);
                     }
 
                     previousApp = null;
@@ -272,7 +272,7 @@
             for (const appModalLink of appModalLinks) {
                 appModalLink.addEventListener("click", (event) => {
                     event.preventDefault();
-                    history.pushState(history.state, "", appModalLink.href);
+                    window.nb.history.pushState(history.state, "", appModalLink.href);
 
                     toggleAppModal(previousApp, "hide");
                     toggleAppModal(new URL(appModalLink.href).searchParams.get("app"), "show");

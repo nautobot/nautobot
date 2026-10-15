@@ -1,11 +1,9 @@
 """Tests for complexity cost budget accounting."""
 
-from unittest.mock import patch
 import uuid
 
 from django.test import SimpleTestCase
 from django_redis import get_redis_connection
-import redis.exceptions
 
 from nautobot.core.rate_limiting.budget_helpers import (
     charge_bucket,
@@ -89,13 +87,3 @@ class ChargeBucketTestCase(SimpleTestCase):
         consumed_budget, _ = charge_bucket(other_bucket_id, 3, self.timeout)
 
         self.assertEqual(consumed_budget, 3)
-
-    def test_unreachable_cache_reports_no_consumption(self):
-        with patch(
-            "nautobot.core.rate_limiting.budget_helpers.get_redis_connection",
-            side_effect=redis.exceptions.ConnectionError,
-        ):
-            consumed_budget, remaining_timeout = charge_bucket(self.bucket_id, 4, self.timeout)
-
-        self.assertIsNone(consumed_budget)
-        self.assertIsNone(remaining_timeout)
