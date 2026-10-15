@@ -88,7 +88,8 @@ class DeviceDetailTestCase:
         """A device without a power port and power outlet has no deferred components and no Power Utilization panel."""
         detail = DeviceDetailPage(auth_page, base_url)
 
-        # Any deferred component would stay as a placeholder, so a count of zero means none were rendered.
+        # Deferred requests fail, so a deferred component stays a placeholder.
+        # Power Utilization is the only deferred component on this page, so zero placeholders means it was not deferred.
         detail.fail_deferred_components()
         detail.navigate(created_device["device"]["id"])
         detail.expect_deferred_placeholder_count(0)
