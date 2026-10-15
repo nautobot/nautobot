@@ -2878,6 +2878,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     label="Dynamic Groups",
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
+                    required_permissions=["extras.view_dynamicgroup"],
+                    hide_if_empty=True,
                     panels=(
                         object_detail.DynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
