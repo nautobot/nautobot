@@ -143,3 +143,16 @@ class ConditionsEditorTestCase:
         webhook_form.expect_condition_row_to_show(0, {"type": "Field change"})
         webhook_form.expect_condition_row_to_show_nothing_in(0, "field")
         assert webhook_form.get_conditions() == [condition]
+
+    @pytest.mark.behavioral
+    def test_choosing_another_field_clears_the_values_chosen_for_the_old_one(self, auth_page, base_url, create_webhook):
+        """The server clears them only when told the field changed, which the browser says in `HX-Trigger-Name`."""
+        webhook = create_webhook([PLANNED_TO_ACTIVE])
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate_to_edit(webhook["id"])
+
+        webhook_form.pick_condition_field(0, "Role")
+
+        webhook_form.expect_condition_row_to_show_nothing_in(0, "from")
+        webhook_form.expect_condition_row_to_show_nothing_in(0, "to")
+        assert webhook_form.get_conditions()[0]["values"] == {"field": "role.name", "from": "", "to": ""}
