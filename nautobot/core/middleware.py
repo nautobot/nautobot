@@ -36,10 +36,10 @@ from nautobot.core.rate_limiting.budget_helpers import (
     hash_user_identifier,
 )
 from nautobot.core.rate_limiting.metrics import (
+    record_rate_limiting_rest_complexity_cost,
+    record_rate_limiting_rest_request_backend_exception,
     record_request_db_duration,
     record_request_total_duration,
-    record_rest_request_complexity_cost,
-    record_rest_request_rate_limiting_backend_exception,
 )
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
@@ -683,7 +683,7 @@ class ComplexityCostRateLimitingMiddleware:
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
         rate_limit_budget = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET
-        rate_limiting_window_in_seconds = settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS
+        rate_limiting_window_in_seconds = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS
 
         consumed_budget = 0
         remaining_window_time_in_seconds = rate_limiting_window_in_seconds
@@ -697,7 +697,7 @@ class ComplexityCostRateLimitingMiddleware:
                     rate_limiting_window_in_seconds,
                 )
             except Exception as budget_charge_exception:
-                record_rest_request_rate_limiting_backend_exception(
+                record_rate_limiting_rest_request_backend_exception(
                     hashed_user_token,
                     budget_charge_exception,
                 )
@@ -749,7 +749,7 @@ class ComplexityCostRateLimitingMiddleware:
         else:
             response = self.get_response(request)
 
-        record_rest_request_complexity_cost(
+        record_rate_limiting_rest_complexity_cost(
             hashed_user_token,
             request_complexity_cost_estimate,
         )
