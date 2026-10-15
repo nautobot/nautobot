@@ -66,8 +66,9 @@ class PresetParameter:
 
         Raises:
             ConditionPresetError: If a required value is missing or empty, the value is not a JSON
-                scalar (or a list of strings, for a `multiple` parameter), or a choice parameter is
-                given a value outside its declared choices. `params["parameter"]` is this parameter.
+                scalar (or a list of strings, for a `multiple` parameter), a choice parameter is
+                given a value outside its declared choices, or a field parameter names a path deeper
+                than a field and one sub-field. `params["parameter"]` is this parameter.
         """
         if self.required and value in (None, "", []):
             raise ConditionPresetError(f"Parameter `{self.name}` is required.", parameter=self.name)
@@ -89,6 +90,12 @@ class PresetParameter:
                 raise ConditionPresetError(
                     f"Parameter `{self.name}` must be one of: {', '.join(allowed)}.", parameter=self.name
                 )
+        # The editor has a select for a field and one for its sub-field, and writes a deeper path back cut short.
+        if self.kind == PARAM_KIND_FIELD and isinstance(value, str) and value.count(".") > 1:
+            raise ConditionPresetError(
+                f"Parameter `{self.name}` names a field and at most one sub-field, as `field.sub-field`.",
+                parameter=self.name,
+            )
 
     def as_dict(self):
         """The catalog entry for this parameter. `choices` is left out unless this parameter declares some."""

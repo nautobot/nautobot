@@ -1,0 +1,1 @@
+Fixed conditions accepting, through the JSON tab and the REST API, a field path deeper than a field and one sub-field, such as `location.parent.name`.

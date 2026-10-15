@@ -16,6 +16,7 @@ from nautobot.extras.conditions.presets import (
     get_condition_preset,
     get_condition_presets,
     PARAM_CONTEXT_PREFIX,
+    PARAM_KIND_FIELD,
     PresetParameter,
     register_builtin_condition_presets,
     register_condition_preset,
@@ -111,6 +112,15 @@ class PresetParameterCleanTest(TestCase):
         """A list left over from a set-valued operator must fail loudly, not silently never match."""
         with self.assertRaisesRegex(ConditionPresetError, re.escape("takes a single value, not a list")):
             PresetParameter(name="field", label="Field").clean(["a"])
+
+    def test_a_field_path_names_at_most_one_sub_field(self):
+        """The editor would write a deeper path back cut short on the next save, changing what it compares."""
+        parameter = PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD)
+        for value in ("status", "status.name", "custom_fields.site_code"):
+            with self.subTest(value=value):
+                parameter.clean(value)
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("at most one sub-field")):
+            parameter.clean("location.parent.name")
 
     def test_required_rejects_empty_list(self):
         with self.assertRaisesRegex(ConditionPresetError, re.escape("`value` is required")):
