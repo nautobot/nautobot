@@ -163,7 +163,7 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
 
-def validate_primary_ips(instance, host_assignments):
+def validate_primary_ips(instance):
     """
     Validate the `primary_ip4` and `primary_ip6` fields of a Device, VirtualMachine, or VirtualDeviceContext.
 
@@ -176,9 +176,9 @@ def validate_primary_ips(instance, host_assignments):
 
     Args:
         instance (Model): The Device, VirtualMachine, or VirtualDeviceContext being validated.
-        host_assignments (Q): Filter matching the `IPAddressToInterface` records that belong to this host.
     """
     require_assignment = get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT")
+    host_assignments = instance.get_interface_assignments_filter()
     verbose_name = instance._meta.verbose_name
     errors = {}
     for field, ip_version in (("primary_ip4", 4), ("primary_ip6", 6)):

@@ -40,7 +40,8 @@ from nautobot.core.views import mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device, Interface
+from nautobot.dcim.models import Device, Interface, VirtualDeviceContext
+from nautobot.dcim.utils import validate_primary_ips
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
 from nautobot.ipam.choices import PrefixTypeChoices
@@ -1172,6 +1173,16 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                         vm_ip6 = list(
                             VirtualMachine.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
                         )
+                        vdc_ip4 = list(
+                            VirtualDeviceContext.objects.filter(primary_ip4__in=collapsed_ips).values_list(
+                                "pk", flat=True
+                            )
+                        )
+                        vdc_ip6 = list(
+                            VirtualDeviceContext.objects.filter(primary_ip6__in=collapsed_ips).values_list(
+                                "pk", flat=True
+                            )
+                        )
 
                         ip_to_interface_assignments = []
                         # Update IPAddress to Interface Assignments
@@ -1213,8 +1224,24 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                         Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
                         VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
                         VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
+                        VirtualDeviceContext.objects.filter(pk__in=vdc_ip4).update(primary_ip4=merged_ip)
+                        VirtualDeviceContext.objects.filter(pk__in=vdc_ip6).update(primary_ip6=merged_ip)
+                        # The merged IP must be a valid primary IP for each host that used one of the collapsed IPs
+                        for host in (
+                            *Device.objects.filter(pk__in=device_ip4 + device_ip6),
+                            *VirtualMachine.objects.filter(pk__in=vm_ip4 + vm_ip6),
+                            *VirtualDeviceContext.objects.filter(pk__in=vdc_ip4 + vdc_ip6),
+                        ):
+                            try:
+                                validate_primary_ips(host)
+                            except ValidationError as e:
+                                raise ValidationError(f"{host}: {'; '.join(e.messages)}") from e
                         for service in Service.objects.filter(pk__in=services):
                             service.ip_addresses.add(merged_ip)
+                except ValidationError as e:
+                    # The transaction is rolled back, so the merge is aborted cleanly with a message.
+                    messages.error(request, f"Unable to merge: {'; '.join(e.messages)}")
+                    return redirect(self.get_return_url(request))
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(collapsed_ips, request, e)
@@ -1262,7 +1289,12 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                 if ip_addresses.count() != len(pks):
                     messages.error(request, "Object update failed due to object-level permissions violation")
                     return redirect(request.get_full_path())
-                interface.ip_addresses.add(*ip_addresses)
+                try:
+                    with transaction.atomic():
+                        interface.ip_addresses.add(*ip_addresses)
+                except ValidationError as e:
+                    messages.error(request, "; ".join(e.messages))
+                    return redirect(request.get_full_path())
                 return redirect(self.get_return_url(request))
             messages.error(request, "Please select at least one IP Address from the table.")
             return redirect(request.get_full_path())

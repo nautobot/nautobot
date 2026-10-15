@@ -864,7 +864,7 @@ class Device(PrimaryModel, ConfigContextModel):
             except DeviceType.DoesNotExist:
                 pass
 
-        validate_primary_ips(self, Q(interface__in=self.all_interfaces.all()))
+        validate_primary_ips(self)
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:
@@ -1166,6 +1166,10 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
         return Interface.objects.filter(device=self)
+
+    def get_interface_assignments_filter(self):
+        """Return a `Q` matching the `IPAddressToInterface` records for this device's interfaces."""
+        return Q(interface__in=self.all_interfaces)
 
     @property
     def all_module_bays(self):
@@ -2379,9 +2383,15 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
+    def get_interface_assignments_filter(self):
+        """Return a `Q` matching the `IPAddressToInterface` records for this VDC's parent device's interfaces."""
+        if self.device_id is None:
+            return Q(pk=None)
+        return self.device.get_interface_assignments_filter()
+
     def _validate_primary_ips(self):
         if self.device_id is not None:
-            validate_primary_ips(self, Q(interface__in=self.device.all_interfaces.all()))
+            validate_primary_ips(self)
 
     def clean(self):
         super().clean()

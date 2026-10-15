@@ -1,4 +1,5 @@
 Changed Virtual Device Context primary IP validation to also permit the NAT outside address of an IP address assigned to one of the parent Device's interfaces.
 Changed the "Assigned" column of the IP Address list view to also indicate IP addresses designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
 Changed the validation of Device, Virtual Machine, and Virtual Device Context primary IP addresses to permit a primary IP that is not assigned to any interface and is unchanged from its saved value, regardless of `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`.
+Changed the IP Address merge tool to abort with an error, rather than complete, if the merged IP address would not be a valid primary IP for the Devices, Virtual Machines, and Virtual Device Contexts using the merged IP addresses as their primary IP.
 Changed IP address to interface assignment validation to reject assigning an IP address to an interface of a different Device or Virtual Machine than the one(s) using it as a primary IP without an interface assignment.

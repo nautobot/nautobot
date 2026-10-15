@@ -1982,13 +1982,9 @@ class IPAddressToInterface(BaseModel):
             else IPAddressToInterface.objects.none()
         )
         affected_hosts = [
-            *(device for device in devices if not nat_inside_assignments.filter(interface__device=device).exists()),
-            *(vdc for vdc in vdcs if not nat_inside_assignments.filter(interface__device=vdc.device_id).exists()),
-            *(
-                vm
-                for vm in virtual_machines
-                if not nat_inside_assignments.filter(vm_interface__virtual_machine=vm).exists()
-            ),
+            host
+            for host in (*devices, *vdcs, *virtual_machines)
+            if not nat_inside_assignments.filter(host.get_interface_assignments_filter()).exists()
         ]
         if affected_hosts:
             raise ValidationError(

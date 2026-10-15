@@ -265,7 +265,11 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
 
     def clean(self):
         super().clean()
-        validate_primary_ips(self, models.Q(vm_interface__virtual_machine=self))
+        validate_primary_ips(self)
+
+    def get_interface_assignments_filter(self):
+        """Return a `Q` matching the `IPAddressToInterface` records for this virtual machine's interfaces."""
+        return models.Q(vm_interface__virtual_machine=self)
 
     @property
     def primary_ip(self):

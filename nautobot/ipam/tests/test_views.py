@@ -5,6 +5,7 @@ from unittest import mock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Count, ProtectedError, QuerySet
@@ -1450,6 +1451,23 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         self.assertHttpStatus(response, 200)
 
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_invalid_assignment_reports_error(self):
+        """Assigning another device's unassigned primary IP to an interface reports the error and assigns nothing."""
+        self.add_permissions("dcim.change_interface")
+        ip_address = IPAddress.objects.create(address="192.0.2.202/24", parent=self.prefix, status=self.statuses[0])
+        device = Device.objects.get(name="IP Interfaces Test Device")
+        device.primary_ip4 = ip_address
+        device.validated_save()
+        interface = Interface.objects.exclude(device=device).filter(device__isnull=False).first()
+
+        url = reverse("ipam:ipaddress_assign") + f"?interface={interface.pk}"
+        response = self.client.post(url, data=post_data({"pk": [ip_address.pk]}), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, f"{ip_address} is the primary IP of {device}")
+        self.assertFalse(interface.ip_addresses.filter(pk=ip_address.pk).exists())
+
     def test_assign_permissions_restriction(self):
         self.add_permissions("dcim.change_interface")
         interface = Interface.objects.first()
@@ -1803,6 +1821,12 @@ class IPAddressMergeTestCase(ModelViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_success(self):
         self.add_permissions("ipam.change_ipaddress")
+        vdc = VirtualDeviceContext.objects.create(
+            device=self.devices[0],
+            name="Merge IP VDC",
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+            primary_ip4=self.dup_ip_1,
+        )
         num_ips_before = IPAddress.objects.all().count()
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         request = {
@@ -1845,6 +1869,25 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         for device in self.devices:
             device.refresh_from_db()
             self.assertEqual(merged_ip, device.primary_ip4)
+        vdc.refresh_from_db()
+        self.assertEqual(merged_ip, vdc.primary_ip4)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_rejects_invalid_primary_ip(self):
+        """A merge that would leave a device's primary IP assigned only to other devices' interfaces is rolled back."""
+        self.add_permissions("ipam.change_ipaddress")
+        # Device 1 keeps dup_ip_1 as its primary IP without an interface assignment
+        self.interfaces[0].remove_ip_addresses(self.dup_ip_1)
+        num_ips_before = IPAddress.objects.count()
+
+        response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+        self.assertHttpStatus(response, 302)
+        error_messages = [str(message) for message in get_messages(response.wsgi_request)]
+        self.assertTrue(any(message.startswith("Unable to merge") for message in error_messages), error_messages)
+        self.assertEqual(IPAddress.objects.count(), num_ips_before)
+        self.devices[0].refresh_from_db()
+        self.assertEqual(self.devices[0].primary_ip4, self.dup_ip_1)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_without_optional_fields(self):
