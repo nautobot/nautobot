@@ -49,7 +49,7 @@ A token's budget resets when the budget window expires. Charges made during a to
 
 Each request has a level of complexity associated with it.
 
-Complexity is determined by how much work the Nautobot instance will need to perform to satisfy the request.
+Complexity is an estimate of how much work the Nautobot instance will need to perform to satisfy the request.
 
 Complexity costs are determined in one of two forms, read operations and write operations.
 
