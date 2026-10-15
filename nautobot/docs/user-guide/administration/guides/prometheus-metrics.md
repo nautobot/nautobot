@@ -76,19 +76,19 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 
 When Nautobot [rate-limiting](../configuration/rate-limiting.md) is enabled, these metrics will be tracked.
 
-| Name                                          | Description                                                               | Type      | Exposed By |
+| Name                                          | Description                                                               | Type      | Enabled By |
 |-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
 | `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   | [Rate Limiting](../configuration/rate-limiting.md) |
 | `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter | [Rate Limiting](../configuration/rate-limiting.md) |
 
-When Nautobot [request metrics](../configuration/request-metrics.md) are enabled, these metrics will be tracked.
+When Nautobot [request metrics](../configuration/request-performance.md) are enabled, these metrics will be tracked.
 
-| Name                                          | Description                                                               | Type      | Exposed By |
+| Name                                          | Description                                                               | Type      | Enabled By |
 |-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
-| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram | [Request Metrics](../configuration/request-metrics.md) |
-| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram | [Request Metrics](../configuration/request-metrics.md) |
+| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram | [Request Metrics](../configuration/request-performance.md) |
+| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram | [Request Metrics](../configuration/request-performance.md) |
 
-Each is metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
+Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
 
 !!! note
     Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.

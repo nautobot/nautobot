@@ -381,7 +381,7 @@ nav:
               - Settings: "user-guide/administration/configuration/settings.md"
               - Redis: "user-guide/administration/configuration/redis.md"
               - Rate Limiting: "user-guide/administration/configuration/rate-limiting.md"
-              - Request Metrics: "user-guide/administration/configuration/request-metrics.md"
+              - Request Metrics: "user-guide/administration/configuration/request-performance.md"
               - Time Zones: "user-guide/administration/configuration/time-zones.md"
               - External Authentication:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
