@@ -81,12 +81,12 @@ When Nautobot [rate-limiting](../configuration/rate-limiting.md) is enabled, the
 | `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   | [Rate Limiting](../configuration/rate-limiting.md) |
 | `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter | [Rate Limiting](../configuration/rate-limiting.md) |
 
-When Nautobot [request metrics](../configuration/request-performance.md) are enabled, these metrics will be tracked.
+When Nautobot [request metrics](../configuration/request-performance-measurements.md) are enabled, these metrics will be tracked.
 
 | Name                                          | Description                                                               | Type      | Enabled By |
 |-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
-| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram | [Request Metrics](../configuration/request-performance.md) |
-| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram | [Request Metrics](../configuration/request-performance.md) |
+| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram | [Request Performance Measurements](../configuration/request-performance-measurements.md) |
+| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram | [Request Performance Measurements](../configuration/request-performance-measurements.md) |
 
 Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
 

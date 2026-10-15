@@ -2134,7 +2134,7 @@ properties:
       Measures request SQL time.
     environment_variable: "NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED"
     see_also:
-      "Guide to Nautobot request metrics": "./request-performance.md"
+      "Guide to Nautobot request performance measurements": "./request-performance-measurements.md"
       "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
     type: "boolean"
     version_added: "3.3.0"
@@ -2148,7 +2148,7 @@ properties:
       Measures total request processing time.
     environment_variable: "NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED"
     see_also:
-      "Guide to Nautobot request metrics": "./request-performance.md"
+      "Guide to Nautobot request performance measurements": "./request-performance-measurements.md"
       "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
     type: "boolean"
     version_added: "3.3.0"
