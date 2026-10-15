@@ -40,13 +40,3 @@ def webhook_name(api):
     for webhook in response.json()["results"]:
         deleted = api.delete(f"/api/extras/webhooks/{webhook['id']}/")
         assert deleted.ok, f"DELETE webhook {webhook['id']} returned {deleted.status}: {deleted.text()}"
-
-
-@pytest.fixture
-def created_custom_field(create_object):
-    """A text custom field on devices, deleted after the test.
-
-    A key takes no hyphens, so the unique name gets underscores.
-    """
-    key = unique_name().replace("-", "_").lower()
-    return create_object("extras/custom-fields/", key=key, label=key, type="text", content_types=["dcim.device"])

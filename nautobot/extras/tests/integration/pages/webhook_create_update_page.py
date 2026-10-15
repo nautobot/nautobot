@@ -8,7 +8,7 @@ from playwright.sync_api import expect
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
-class WebhookFormPage(BasePage):
+class WebhookCreateUpdatePage(BasePage):
     """The Webhook add and edit forms.
 
     A condition row is addressed by its index, which prefixes every control in it as `condition-<index>-`.
@@ -38,12 +38,14 @@ class WebhookFormPage(BasePage):
     _UNREADABLE_MESSAGE = "#conditions-rows .nb-conditions-unreadable"
     # `conditions-editor.js` sets `data-nb-drawing` on this form while the rows are drawn from the JSON field.
     _CONDITIONS_FORM = "form:has(#id_conditions)"
-    _CREATE_BUTTON = "button[name='_create']"
+    # Create on the add form, Update on the edit form.
+    _SAVE_BUTTON = "button[name='_create'], button[name='_update']"
     _DETAIL_URL = re.compile(r"/extras/webhooks/(?P<pk>[0-9a-f-]{36})/$")
     # `{% render_field %}` gives a control's error list this id, which the control's `aria-describedby` names.
     _CONDITION_ERRORS = "#id_condition-{index}-{name}_error"
     # A day of the month the open flatpickr calendar shows, leaving out the days it shows from either side of it.
     _CALENDAR_DAY = ".flatpickr-calendar.open .flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)"
+    _FLATPICKR_SET_UP = re.compile(r"\bflatpickr-input\b")
 
     def navigate(self):
         """Go to the add form and wait for the conditions editor to draw its rows."""
@@ -69,13 +71,16 @@ class WebhookFormPage(BasePage):
         return self.page.locator(f"{self._CONDITION_ROW}[data-nb-condition-index='{index}']")
 
     def _pick_and_wait_for_new_row(self, index, name, text):
-        """Pick *text* in a control that asks for its row again, and wait until the new row has replaced the old one."""
+        """Pick *text* in a select whose change makes the server send a new row, such as the type or the field.
+
+        Wait until that new row has replaced the old one.
+        """
         old_row = self._condition_row(index).element_handle()
         select2_filter_pick(self.page, f"condition-{index}-{name}", search=text, pick_text=text)
         self.page.wait_for_function("row => !row.isConnected", arg=old_row)
 
     def pick_content_type(self, text):
-        """Add the object type reading *text* and wait until every row has been drawn again."""
+        """Select the content type reading *text* and wait until every row has been drawn again."""
         select2_filter_pick(self.page, "content_types", search=text, pick_text=text)
         self._wait_until_rows_are_drawn()
 
@@ -95,11 +100,6 @@ class WebhookFormPage(BasePage):
         """Choose the operator reading *text* in the row at *index*."""
         self._pick_and_wait_for_new_row(index, "operator", text)
 
-    def pick_condition_day(self, index, key, day):
-        """Open the calendar of the date control *key* in the row at *index* and click *day* of the month it shows."""
-        self.page.locator(f"[name='condition-{index}-{key}']").click()
-        self.page.locator(self._CALENDAR_DAY).filter(has_text=re.compile(rf"^{day}$")).click()
-
     def pick_condition_negation(self, index, text):
         """Choose `When` or `Not When`, reading *text*, in the row at *index*. The row is not asked for again."""
         select2_filter_pick(self.page, f"condition-{index}-negate", search=text, pick_text=text)
@@ -107,6 +107,14 @@ class WebhookFormPage(BasePage):
     def pick_condition_value(self, index, key, text):
         """Choose *text* in the value control *key* of the row at *index*."""
         select2_filter_pick(self.page, f"condition-{index}-{key}", search=text, pick_text=text)
+
+    def pick_condition_day(self, index, key, day):
+        """Open the calendar of the date control *key* in the row at *index* and click *day* of the month it shows."""
+        date = self.page.locator(f"[name='condition-{index}-{key}']")
+        # flatpickr marks the input when it sets up, in the `htmx.onLoad` that comes just after the row.
+        expect(date).to_have_class(self._FLATPICKR_SET_UP)
+        date.click()
+        self.page.locator(self._CALENDAR_DAY).filter(has_text=re.compile(rf"^{day}$")).click()
 
     def add_condition(self):
         """Click Add another Condition and wait until the editor has set up the new row and written the JSON field."""
@@ -154,18 +162,17 @@ class WebhookFormPage(BasePage):
         expect(self.page.locator(self._UNREADABLE_MESSAGE)).to_be_visible()
 
     def save(self) -> str:
-        """Submit the add form and return the ID of the saved webhook, read from the detail view it redirects to."""
-        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
+        """Submit the form and return the ID of the saved webhook, read from the detail view it redirects to."""
+        self._click_and_wait_for_navigation(self._SAVE_BUTTON)
         saved = self._DETAIL_URL.search(self.page.url)
-        if saved is None:
-            raise AssertionError(f"Create did not redirect to a webhook. Page is at {self.page.url}")
+        assert saved is not None, f"Saving did not redirect to a webhook. Page is at {self.page.url}"
         return saved.group("pk")
 
     def save_expecting_refusal(self):
-        """Submit the add form, check that it came back unsaved, and wait until the rows are drawn with their errors."""
-        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
-        if self._DETAIL_URL.search(self.page.url):
-            raise AssertionError(f"Create saved the webhook instead of refusing it. Page is at {self.page.url}")
+        """Submit the form, check that it came back unsaved, and wait until the rows are drawn with their errors."""
+        self._click_and_wait_for_navigation(self._SAVE_BUTTON)
+        saved = self._DETAIL_URL.search(self.page.url)
+        assert saved is None, f"Saving went through instead of being refused. Page is at {self.page.url}"
         self._wait_until_rows_are_drawn()
 
     def expect_condition_error(self, index, name, text):
