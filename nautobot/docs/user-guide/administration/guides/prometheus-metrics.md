@@ -81,7 +81,7 @@ When Nautobot [rate-limiting](../configuration/rate-limiting.md) is enabled, the
 | `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   | [Rate Limiting](../configuration/rate-limiting.md) |
 | `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter | [Rate Limiting](../configuration/rate-limiting.md) |
 
-When Nautobot request metrics are enabled, see [Request Metrics](../configuration/request-metrics.md), these metrics will be tracked.
+When Nautobot [request metrics](../configuration/request-metrics.md) are enabled, these metrics will be tracked.
 
 | Name                                          | Description                                                               | Type      | Exposed By |
 |-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
