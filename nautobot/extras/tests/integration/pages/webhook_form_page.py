@@ -38,6 +38,8 @@ class WebhookFormPage(BasePage):
     _CONDITIONS_FORM = "form:has(#id_conditions)"
     _CREATE_BUTTON = "button[name='_create']"
     _DETAIL_URL = re.compile(r"/extras/webhooks/(?P<pk>[0-9a-f-]{36})/$")
+    # `{% render_field %}` gives a control's error list this id, which the control's `aria-describedby` names.
+    _CONDITION_ERRORS = "#id_condition-{index}-{name}_error"
 
     def navigate(self):
         """Go to the add form and wait for the conditions editor to draw its rows."""
@@ -80,6 +82,10 @@ class WebhookFormPage(BasePage):
     def pick_condition_field(self, index, text):
         """Choose the field reading *text* in the row at *index*."""
         self._pick_and_wait_for_new_row(index, "field", text)
+
+    def pick_condition_negation(self, index, text):
+        """Choose `When` or `Not When`, reading *text*, in the row at *index*. The row is not asked for again."""
+        select2_filter_pick(self.page, f"condition-{index}-negate", search=text, pick_text=text)
 
     def pick_condition_value(self, index, key, text):
         """Choose *text* in the value control *key* of the row at *index*."""
@@ -137,6 +143,17 @@ class WebhookFormPage(BasePage):
         if saved is None:
             raise AssertionError(f"Create did not redirect to a webhook. Page is at {self.page.url}")
         return saved.group("pk")
+
+    def save_expecting_refusal(self):
+        """Submit the add form, check that it came back unsaved, and wait until the rows are drawn with their errors."""
+        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
+        if self._DETAIL_URL.search(self.page.url):
+            raise AssertionError(f"Create saved the webhook instead of refusing it. Page is at {self.page.url}")
+        self._wait_until_rows_are_drawn()
+
+    def expect_condition_error(self, index, name, text):
+        """Assert (auto-retrying) that the control *name* in the row at *index* shows the error *text*."""
+        expect(self.page.locator(self._CONDITION_ERRORS.format(index=index, name=name))).to_contain_text(text)
 
     def get_conditions(self):
         """The conditions the form would submit, read from the JSON field once, with no retry."""

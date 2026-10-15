@@ -156,3 +156,28 @@ class ConditionsEditorTestCase:
         webhook_form.expect_condition_row_to_show_nothing_in(0, "from")
         webhook_form.expect_condition_row_to_show_nothing_in(0, "to")
         assert webhook_form.get_conditions()[0]["values"] == {"field": "role.name", "from": "", "to": ""}
+
+    @pytest.mark.behavioral
+    def test_a_refused_save_shows_the_error_beside_the_control_at_fault(self, auth_page, base_url, webhook_name):
+        """The page comes back without rows, and HTMX fetches them with `?validate=1` to place each error."""
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.fill_disabled_update_webhook(webhook_name, "https://example.com/webhook")
+        webhook_form.pick_content_type("DCIM | device")
+        webhook_form.pick_condition_type(0, "Field comparison")
+        webhook_form.pick_condition_field(0, "Status")
+
+        webhook_form.save_expecting_refusal()
+
+        webhook_form.expect_condition_error(0, "operator", "Parameter `operator` is required.")
+
+    @pytest.mark.behavioral
+    def test_choosing_not_when_writes_the_negation(self, auth_page, base_url, create_webhook):
+        """Select2 sets the choice through jQuery, so the field is written only because the editor raises `input`."""
+        webhook = create_webhook([PLANNED_TO_ACTIVE])
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate_to_edit(webhook["id"])
+
+        webhook_form.pick_condition_negation(0, "Not When")
+
+        assert webhook_form.get_conditions() == [{**PLANNED_TO_ACTIVE, "negate": True}]
