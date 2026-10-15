@@ -74,7 +74,7 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 
 +++ 3.3.0
 
-When Nautobot rate-limiting is enabled, see [Rate-limiting](../configuration/rate-limiting.md), these metrics will be tracked.
+When Nautobot [rate-limiting](../configuration/rate-limiting.md) is enabled, these metrics will be tracked.
 
 | Name                                          | Description                                                               | Type      | Exposed By |
 |-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
