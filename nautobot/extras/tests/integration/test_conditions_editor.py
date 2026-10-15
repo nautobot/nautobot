@@ -181,3 +181,16 @@ class ConditionsEditorTestCase:
         webhook_form.pick_condition_negation(0, "Not When")
 
         assert webhook_form.get_conditions() == [{**PLANNED_TO_ACTIVE, "negate": True}]
+
+    @pytest.mark.behavioral
+    def test_the_field_select_opens_once_an_object_type_is_chosen(self, auth_page, base_url):
+        """Choosing an object type draws every row again, which is what offers that type's fields."""
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.pick_condition_type(0, "Field change")
+        webhook_form.expect_condition_select_enabled(0, "field", enabled=False)
+
+        webhook_form.pick_content_type("DCIM | device")
+
+        webhook_form.expect_condition_select_enabled(0, "field", enabled=True)
+        webhook_form.expect_condition_row_to_show(0, {"type": "Field change"})

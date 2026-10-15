@@ -27,9 +27,11 @@ class WebhookFormPage(BasePage):
     _TYPE_SELECT2 = "select[data-nb-condition-role='type'] + span.select2-container"
     _REMOVE_CONDITION_BUTTON_NAME = "Remove this condition"
     _CONDITIONS_COUNT = "#conditions-count"
+    _SELECT2_CONTAINER = "select[name='{name}'] + span.select2-container"
     # Select2 puts the text it shows in `title`. The element's own text also holds the × of its clear button.
-    _SELECT2_SHOWN_TEXT = "select[name='{name}'] + span.select2-container .select2-selection__rendered"
+    _SELECT2_SHOWN_TEXT = f"{_SELECT2_CONTAINER} .select2-selection__rendered"
     _SELECT2_PLACEHOLDER = ".select2-selection__placeholder"
+    _SELECT2_DISABLED = re.compile(r"\bselect2-container--disabled\b")
     _FORM_TAB = "#conditions_form-tab"
     _JSON_TAB = "#conditions_json-tab"
     # What the server sends in place of the rows when the JSON field cannot be read as conditions.
@@ -172,6 +174,14 @@ class WebhookFormPage(BasePage):
         """Assert (auto-retrying) that the Select2 of the control *name* in the row at *index* shows only `—`."""
         shown = self.page.locator(self._SELECT2_SHOWN_TEXT.format(name=f"condition-{index}-{name}"))
         expect(shown.locator(self._SELECT2_PLACEHOLDER)).to_be_visible()
+
+    def expect_condition_select_enabled(self, index, name, enabled):
+        """Assert (auto-retrying) that the Select2 of the control *name* in the row at *index* is *enabled* or not."""
+        container = self.page.locator(self._SELECT2_CONTAINER.format(name=f"condition-{index}-{name}"))
+        if enabled:
+            expect(container).not_to_have_class(self._SELECT2_DISABLED)
+        else:
+            expect(container).to_have_class(self._SELECT2_DISABLED)
 
     def get_condition_row_inputs(self, index):
         """The value of each input of the row at *index*, keyed by the input name without its row prefix.
