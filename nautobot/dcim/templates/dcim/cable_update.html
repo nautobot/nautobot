@@ -1,15 +1,55 @@
 {% extends 'generic/object_create.html' %}
 
 {% block form %}
+    {# Carry return_url as a submitted field so Cancel returns to filled add form #}
+    {% if return_url and not confirming %}<input type="hidden" name="return_url" value="{{ return_url }}">{% endif %}
     {% include 'dcim/inc/cable_form.html' %}
+{% endblock %}
+
+{% block buttons %}
+    {% if confirming %}
+        <button type="submit" name="_bulkconfirm" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span>Create {{ bulk_count }} cables
+        </button>
+        {# Cancel returns to the editable Add Cable form #}
+        <button type="submit" name="_edit" formaction="{% url 'dcim:cable_add' %}" class="btn btn-secondary">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel
+        </button>
+    {% elif editing %}
+        <button type="submit" name="_update" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span>Update
+        </button>
+        <a href="{{ return_url }}" class="btn btn-secondary">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel
+        </a>
+    {% else %}
+        <button type="submit" name="_create" formaction="{% url 'dcim:cable_add' %}" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create
+        </button>
+        <button type="submit" name="_addanother" formaction="{% url 'dcim:cable_add' %}" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create and Add Another
+        </button>
+        {% if form.count %}
+            <button type="submit" name="_bulkadd" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-plus-box-multiple-outline me-4"></span>Bulk add
+            </button>
+        {% endif %}
+        <a href="{{ return_url }}" class="btn btn-secondary">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel
+        </a>
+    {% endif %}
 {% endblock %}
 
 {% block javascript %}
     {{ block.super }}
     <script>
         // Select2's jQuery custom select2:select/unselect events don't surface as native
-        // `change` events that HTMX can observe. Bridge them on the cable's HTMX-driven selects.
-        $(document).on("select2:select select2:unselect", "#id_cable_type, select[name$='_type']", function () {
+        // `change` events that HTMX can observe. Bridge them on the cable's HTMX-driven selects
+        // (the cable type / lane type selects, and the parent + termination selects so the
+        // bulk-connect preview refreshes as the user picks terminations).
+        $(document).on("select2:select select2:unselect", "#id_cable_type, select[name$='_type'], select[name$='_parent'], select[name$='_termination']", function () {
             htmx.trigger(this, "change");
         });
         // Re-initialize Select2 on swapped-in content. We use `htmx:afterSettle` (rather than
@@ -18,6 +58,18 @@
         // underlying <select> without `select2-hidden-accessible`, leaving it visible.
         document.body.addEventListener("htmx:afterSettle", function (evt) {
             window.nb.select2.initializeSelect2Fields(evt.detail.target);
+        });
+
+        // Per-connector clear ("X"): empty that connector's parent + termination so it drops out of
+        // the cable (e.g. fill all 16 B connectors, then clear 13-16 to keep only 12).
+        $(document).on("click", ".cable-clear-connector", function () {
+            const prefix = this.dataset.prefix;
+            ["parent", "termination"].forEach(function (suffix) {
+                const sel = document.querySelector(`select[name="${prefix}_${suffix}"]`);
+                if (sel) {
+                    window.nb.select2.setSelect2Value(sel, null);
+                }
+            });
         });
 
         // When a lane's parent select (e.g. device, circuit, power panel) changes, clear that
