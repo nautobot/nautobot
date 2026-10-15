@@ -8,15 +8,24 @@ Django ORM's chain from a model instance to a raw database cursor reachable. It 
 `is_safe_callable` check only for calls compiled to `environment.call()`, not for calls made
 directly through `Context.call()`.
 
-This environment also denies access to any field a model declares in `sensitive_fields`, both as an
-attribute (`{{ obj.tokens.first().key }}`) and as a queryset projection (`{{ obj.tokens.values_list('key') }}`).
+This environment also denies access to any field a model declares in `sensitive_fields`, as an
+attribute, as a named queryset projection, and as a projection that names no fields at all,
+which is narrowed to the model's non-sensitive fields.
+
+To prevent templates from executing arbitrary SQL with database-level privileges, we block access
+to Python modules and app configs, restrict the `meta` filter from returning them, and refuse any
+query expression containing author-supplied SQL.
 """
 
+from types import ModuleType
+
+from django.apps.config import AppConfig
 from django.apps.registry import Apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.utils import CursorDebugWrapper, CursorWrapper
 from django.db.models import Model
+from django.db.models.expressions import BaseExpression, RawSQL
 from django.db.models.manager import BaseManager, Manager
 from django.db.models.options import Options
 from django.db.models.query import QuerySet, RawQuerySet
@@ -32,10 +41,13 @@ from nautobot.core.models.sensitive_fields import (
     check_lookup_path,
     get_sensitive_field_names,
     is_possibly_sensitive_field_name,
+    NO_NARROWING,
+    non_sensitive_field_names,
     SENSITIVE_FIELD_ALIAS_PREFIX,
 )
 
-# Types that templates must not introspect. Attribute access is denied both on these objects and on any value resolving to them.
+# Types that templates must not introspect. Attribute access is denied both on these objects and on any
+# value resolving to them, and the `meta` template filter refuses to return one.
 # Excludes BaseManager and QuerySet, as these are commonly and legitimately used in templates.
 DANGEROUS_TYPES = (
     Query,
@@ -47,6 +59,8 @@ DANGEROUS_TYPES = (
     Apps,
     ConnectionHandler,
     RawQuerySet,
+    ModuleType,
+    AppConfig,
 )
 
 # Allowed read/navigation methods for Django's Manager/QuerySet in templates.
@@ -143,6 +157,31 @@ SENSITIVE_FIELD_OPT_IN_ATTRS = frozenset(
     }
 )
 
+# Expression classes whose constructor takes a SQL string outright.
+RAW_SQL_EXPRESSION_TYPES = (RawSQL,)
+
+# Constructor keywords that put a caller-supplied SQL format string inside an expression.
+SQL_TEMPLATE_KWARGS = frozenset(
+    {
+        "template",
+        "function",
+        "arg_joiner",
+    }
+)
+
+# How far to walk a nested expression tree looking for the above. Deeper than any expression a template
+# can plausibly compose, and bounded so a cyclic tree cannot spin.
+MAX_EXPRESSION_DEPTH = 32
+
+# Projection methods that select every concrete column when called with no field names.
+BARE_PROJECTION_ATTRS = frozenset(
+    {
+        "values",
+        "values_list",
+        "distinct_values_list",
+    }
+)
+
 
 def deny_sensitive_field_attribute(obj, attribute):
     """Raise `SecurityError` for template access to a sensitive field, or to the API that opts in to one."""
@@ -162,6 +201,30 @@ def deny_sensitive_field_attribute(obj, attribute):
         )
 
 
+def projection_model(owner):
+    """Given an `owner`, return the model whose fields would be selected in a query, or None if not applicable.
+
+    A `Manager`'s own `model` attribute is not reliable for this, because a related manager is free to
+    set it to the model it hangs off rather than the one it yields; django-taggit's does, so
+    `obj.tags.model` is the tagged model while its queryset yields `Tag`. Ask the queryset, which is what
+    the projection actually runs against, so the field names are checked against the right model's
+    `sensitive_fields`.
+
+    `Manager.values()`, `values_list()`, `distinct_values_list()` and similar projection methods build
+    the same queryset before doing anything else, so a manager whose `get_queryset()` raises would have
+    raised on the call being guarded here regardless.
+
+    Returns:
+        (type | None): The model whose columns would be projected, or None when `owner` is not a queryset
+            or manager, which is the ordinary case for most calls a template makes.
+    """
+    if isinstance(owner, QuerySet):
+        return owner.model
+    if isinstance(owner, BaseManager):
+        return owner.get_queryset().model
+    return None
+
+
 def deny_sensitive_field_arguments(obj, args):
     """Raise `SecurityError` if a Manager/QuerySet method is called with a sensitive field's lookup path.
 
@@ -171,11 +234,11 @@ def deny_sensitive_field_arguments(obj, args):
     Only positional arguments are examined. Keyword arguments to a queryset method are overwhelmingly
     filter predicates, whose *values* are supplied by the template author and would produce false
     positives if treated as lookup paths; filtering by a sensitive field is permitted in any case.
+
+    A projection that names no fields has nothing here to inspect; `narrow_bare_projection_arguments()`
+    covers that case.
     """
-    owner = getattr(obj, "__self__", None)
-    if not isinstance(owner, (BaseManager, QuerySet)):
-        return
-    model = getattr(owner, "model", None)
+    model = projection_model(getattr(obj, "__self__", None))
     if model is None:
         return
     for arg in args:
@@ -193,6 +256,86 @@ def deny_sensitive_field_arguments(obj, args):
             raise SecurityError(str(exc)) from exc
 
 
+def narrow_bare_projection_arguments(obj, args):
+    """Return the positional arguments to call `obj` with, narrowing a projection that names no fields.
+
+    `values()`/`values_list()` called with no field names select every concrete column, including any the
+    model declares sensitive, so for those calls the empty argument list is replaced with the model's
+    non-sensitive field names. Every other call gets its arguments back unchanged.
+
+    `deny_sensitive_field_arguments()` cannot catch this, as there is no argument for it to inspect, and
+    neither can `deny_sensitive_field_attribute()`, because each row comes back as a plain dict or tuple
+    rather than a model instance.
+
+    Naming the non-sensitive fields is preferred to refusing the call outright: it is the documented
+    behavior of such a projection, and it is what the ORM itself does for the same call under
+    `STRICT_SENSITIVE_FIELDS`. Unlike the ORM's version this is not gated on that setting, because a
+    template is untrusted input and is denied a sensitive field unconditionally.
+    """
+    if getattr(obj, "__name__", None) not in BARE_PROJECTION_ATTRS:
+        return args
+    # A call that already names fields is `deny_sensitive_field_arguments()`'s to check, not this one's.
+    if any(isinstance(arg, str) for arg in args):
+        return args
+    model = projection_model(getattr(obj, "__self__", None))
+    if model is None:
+        return args
+    narrowed = non_sensitive_field_names(model)
+    return args if narrowed is NO_NARROWING else tuple(narrowed)
+
+
+def deny_caller_supplied_sql(obj, args, kwargs):
+    """Raise `SecurityError` if a query expression carrying caller-written SQL is built or passed to a call.
+
+    This is a defense-in-depth check that runs before any other checks, including the ones that
+    prevent a template from accessing a sensitive field.
+
+    Allows `annotate()`, `alias()`, `aggregate()`, and `order_by()` in templates based on field references,
+    but blocks any argument or expression that introduces caller-written SQL—since that code would run with
+    application DB privileges and bypass field-level checks.
+
+    Instead of class lists (which may miss new cases), this blocks known SQL-supplying keywords inside expressions,
+    including recursively nested ones. Reinforces `DANGEROUS_TYPES`, preventing any template route to raw SQL.
+    """
+    if isinstance(obj, type) and issubclass(obj, BaseExpression):
+        if issubclass(obj, RAW_SQL_EXPRESSION_TYPES):
+            raise SecurityError(f"{obj.__name__} builds a query from raw SQL and cannot be used in a template.")
+        supplied = SQL_TEMPLATE_KWARGS.intersection(kwargs)
+        if supplied:
+            raise SecurityError(
+                f"{obj.__name__} cannot be given {', '.join(sorted(supplied))} from a Jinja template, "
+                f"as that supplies the SQL it generates."
+            )
+    for value in (*args, *kwargs.values()):
+        _deny_nested_caller_supplied_sql(value)
+
+
+def _deny_nested_caller_supplied_sql(value, _depth=0):
+    """Raise `SecurityError` if `value` is, or contains, an expression carrying caller-written SQL."""
+    # Only instances (not classes) can carry or be evaluated for SQL by the ORM; exit early for classes.
+    if isinstance(value, type):
+        return
+    if isinstance(value, RAW_SQL_EXPRESSION_TYPES):
+        raise SecurityError(f"{type(value).__name__} builds a query from raw SQL and cannot be used in a template.")
+    if isinstance(value, BaseExpression):
+        # `extra` holds the keywords Django did not recognize, which is where a supplied SQL format string
+        # lands; the instance dictionary covers one assigned directly rather than through the constructor.
+        supplied = SQL_TEMPLATE_KWARGS.intersection(
+            getattr(value, "extra", None) or ()
+        ) | SQL_TEMPLATE_KWARGS.intersection(vars(value))
+        if supplied:
+            raise SecurityError(
+                f"{type(value).__name__} carries {', '.join(sorted(supplied))}, which supplies the SQL it "
+                f"generates, and cannot be used from a Jinja template."
+            )
+    # Bounded so a self-referential or pathologically nested expression cannot spin here.
+    if _depth >= MAX_EXPRESSION_DEPTH or not hasattr(value, "get_source_expressions"):
+        return
+    for source_expression in value.get_source_expressions():
+        if source_expression is not None:
+            _deny_nested_caller_supplied_sql(source_expression, _depth + 1)
+
+
 class NautobotSandboxedContext(Context):
     """Context that re-applies the sandbox's checks on the Context.call() path.
 
@@ -206,7 +349,10 @@ class NautobotSandboxedContext(Context):
         environment = __self.environment
         if getattr(environment, "sandboxed", False) and not environment.is_safe_callable(__obj):
             raise SecurityError(f"{__obj!r} is not safely callable")
+        # Check caller-supplied SQL before arg narrowing below, so it checks the original args.
+        deny_caller_supplied_sql(__obj, args, kwargs)
         deny_sensitive_field_arguments(__obj, args)
+        args = narrow_bare_projection_arguments(__obj, args)
         return super().call(__obj, *args, **kwargs)
 
 

@@ -44,6 +44,7 @@ from nautobot.core.rate_limiting.metrics import (
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
+    get_custom_rate_limiting_complexity_cost_estimation_function,
     READ_METHODS,
     WRITE_METHODS,
 )
@@ -635,8 +636,8 @@ class ComplexityCostRateLimitingMiddleware:
 
     def __call__(self, request):
         is_complexity_cost_calculation_enabled = (
-            settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "report"
-            or settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+            settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "report"
+            or settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
         )
         if is_complexity_cost_calculation_enabled is False:
             return self.get_response(request)
@@ -652,7 +653,7 @@ class ComplexityCostRateLimitingMiddleware:
         return response
 
     def perform_rest_api_complexity_cost_rate_limiting(self, request):
-        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
 
         # ----------------------------------------------------------------------
         #  Extract Token
@@ -663,21 +664,26 @@ class ComplexityCostRateLimitingMiddleware:
         # ----------------------------------------------------------------------
         #  Calculate Cost
         # ----------------------------------------------------------------------
-        if request.method in READ_METHODS:
-            # TODO: try/catch this
+        if request.method not in READ_METHODS and request.method not in WRITE_METHODS:
+            return self.get_response(request)
+
+        custom_rate_limiting_complexity_cost_estimation_function = (
+            get_custom_rate_limiting_complexity_cost_estimation_function()
+        )
+
+        if custom_rate_limiting_complexity_cost_estimation_function is not None:
+            request_complexity_cost_estimate = custom_rate_limiting_complexity_cost_estimation_function(request)
+        elif request.method in READ_METHODS:
             read_request_features = classify_rest_read_request_features(request)
             request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
-        elif request.method in WRITE_METHODS:
-            # TODO: Revisit calculation for write requests
-            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
         else:
-            return self.get_response(request)
+            request_complexity_cost_estimate = settings.NAUTOBOT_RATE_LIMITING_REST_WRITE_COST
 
         # ----------------------------------------------------------------------
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
-        rate_limit_budget = settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET
-        rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS
+        rate_limit_budget = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET
+        rate_limiting_window_in_seconds = settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS
 
         consumed_budget = 0
         remaining_window_time_in_seconds = rate_limiting_window_in_seconds

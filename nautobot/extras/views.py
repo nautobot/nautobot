@@ -726,6 +726,8 @@ class ApproverDashboardView(ObjectListViewMixin):
         """
         Override the template names to use the custom dashboard template.
         """
+        if self.request.headers.get("HX-Request", False):
+            return super().get_template_name()
         return self.template_name
 
     def get_extra_context(self, request, instance):
@@ -748,10 +750,11 @@ class ApproverDashboardView(ObjectListViewMixin):
         """
         Override the list method to display a helpful message regarding the page.
         """
-        messages.info(
-            request,
-            "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
-        )
+        if not self.request.headers.get("HX-Request", False):
+            messages.info(
+                request,
+                "You are viewing a dashboard of approval workflow stages that are pending for your approval.",
+            )
         return super().list(request, *args, **kwargs)
 
 
@@ -771,6 +774,8 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         Override the template names to use the custom dashboard template.
         """
+        if self.request.headers.get("HX-Request", False):
+            return super().get_template_name()
         return self.template_name
 
     def get_extra_context(self, request, instance):
@@ -795,10 +800,11 @@ class ApproveeDashboardView(ObjectListViewMixin):
         """
         Override the list method to display a helpful message regarding the page.
         """
-        messages.info(
-            request,
-            "You are viewing a dashboard of approval workflows that are requested by you.",
-        )
+        if not self.request.headers.get("HX-Request", False):
+            messages.info(
+                request,
+                "You are viewing a dashboard of approval workflows that are requested by you.",
+            )
         return super().list(request, *args, **kwargs)
 
 

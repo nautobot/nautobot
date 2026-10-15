@@ -58,6 +58,14 @@ class BasePage:
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
     # Django messages render as toasts. A message tagged `header_message` renders in #header_messages instead.
     _MESSAGE = "#toast-messages .toast, #header_messages .alert"
+    # The page title star marks itself as the button tracking the current URL, so it needs no structural scoping.
+    _FAVORITE_STAR = "[data-nb-favorite-current]"
+    # One anchor per entry in the sidenav favorites flyout, whose `href` is the favorited link.
+    _FAVORITE_ENTRY = ".nb-sidenav-favorites-container li a"
+    # The star is `visibility: hidden` unless `#header` is hovered or has focus.
+    _HEADER = "#header"
+    # The one modal every page includes; the favorite form is loaded into it over HTMX.
+    _GENERIC_MODAL = "#nautobot-generic-modal"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -117,6 +125,34 @@ class BasePage:
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()
         self.wait_for_load()
+
+    # -------------------------------------------------------------------------
+    # Favorites
+    # -------------------------------------------------------------------------
+
+    def reveal_favorite_star(self):
+        """Hover the header, without which the page title star is not actionable."""
+        self.page.locator(self._HEADER).hover()
+
+    def favorite_star(self, label):
+        """Locator for the page title star, named *label*, e.g. "Add to Favorites"."""
+        return self.page.locator(f'{self._FAVORITE_STAR}[aria-label="{label}"]')
+
+    def favorite_entries(self, path):
+        """Locator for the sidenav favorites flyout entries pointing at *path*."""
+        return self.page.locator(f'{self._FAVORITE_ENTRY}[href="{path}"]')
+
+    def favorite_modal(self):
+        """Locator for the modal the favorite form opens in."""
+        return self.page.locator(self._GENERIC_MODAL)
+
+    def favorite_modal_field(self, name):
+        """Locator for the favorite form input named *name*, `link` or `name`."""
+        return self.favorite_modal().locator(f'input[name="{name}"]')
+
+    def submit_favorite_modal(self):
+        """Submit the favorite form."""
+        self.favorite_modal().locator('button[type="submit"]').click()
 
     # -------------------------------------------------------------------------
     # Panels

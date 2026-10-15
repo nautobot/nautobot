@@ -2,6 +2,8 @@
 
 A device type represents a particular make and model of hardware that exists in the real world. Device types define the physical attributes of a [device](device.md) (rack height and depth) and its individual components ([console](consoleporttemplate.md), [power](powerporttemplate.md), network [interfaces](interfacetemplate.md), and so on).
 
+A device type can also record the physical depth and weight of the device. Each value is stored together with its unit: depth in millimeters or inches, and weight in kilograms, grams, pounds or ounces. A unit must be selected whenever a value is set.
+
 Device types are instantiated as devices installed within locations and/or equipment racks. For example, you might define a device type to represent a Juniper EX4300-48T network switch with 48 Ethernet interfaces. You can then create multiple _instances_ of this type named "switch1", "switch2", and so on. Each device will automatically inherit the components (such as interfaces) of its device type at the time of creation. However, changes made to a device type will **not** apply to instances of that device type retroactively.
 
 Some devices house child devices which share physical resources, like space and power, but which functional independently from one another. A common example of this is blade server chassis. Each device type is designated as one of the following:
@@ -53,3 +55,6 @@ Once component templates have been created, every new device that you create as 
 
 +/- 3.1.0
     The Parent/child status field now supports a "Parent and Child" option which allows the modeling of more deeply nested [Device](device.md) hierarchies. The "Parent and Child" option for "Parent/child status" can be used for Devices between the topmost Parent and the last Child.
+
++++ 3.3.0
+    The optional `depth`/`depth_unit` and `weight`/`weight_unit` fields have been added. They are also included when importing or exporting a single device type in the [devicetype-library](https://github.com/nautobot/devicetype-library) YAML or JSON format.

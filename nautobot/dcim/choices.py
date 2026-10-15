@@ -114,6 +114,23 @@ class RackElevationDetailRenderChoices(ChoiceSet):
 #
 
 
+class WeightUnitChoices(ChoiceSet):
+    # Metric
+    UNIT_KILOGRAM = "kg"
+    UNIT_GRAM = "g"
+
+    # Imperial
+    UNIT_POUND = "lb"
+    UNIT_OUNCE = "oz"
+
+    CHOICES = (
+        (UNIT_KILOGRAM, "Kilograms"),
+        (UNIT_GRAM, "Grams"),
+        (UNIT_POUND, "Pounds"),
+        (UNIT_OUNCE, "Ounces"),
+    )
+
+
 class SubdeviceRoleChoices(ChoiceSet):
     ROLE_PARENT = "parent"
     ROLE_CHILD = "child"

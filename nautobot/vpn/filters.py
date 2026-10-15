@@ -1,18 +1,12 @@
 """Filtering for the vpn models."""
 
-from nautobot.apps.filters import (
-    BaseFilterSet,
-    MultiValueCharFilter,
-    NaturalKeyOrPKMultipleChoiceFilter,
-    NautobotFilterSet,
-    RoleModelFilterSetMixin,
-    SearchFilter,
-    StatusModelFilterSetMixin,
-    TenancyModelFilterSetMixin,
-)
+from nautobot.core.filters import BaseFilterSet, MultiValueCharFilter, NaturalKeyOrPKMultipleChoiceFilter, SearchFilter
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.models import Device, Interface
+from nautobot.extras.filter_mixins import RoleModelFilterSetMixin, StatusModelFilterSetMixin
+from nautobot.extras.filters import NautobotFilterSet
 from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VMInterface
 
 from . import models

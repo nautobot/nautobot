@@ -1,0 +1,1 @@
+Fixed a nondeterministic ordering in the Object Metadata `assigned_object_type` filter test.

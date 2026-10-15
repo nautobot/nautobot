@@ -608,6 +608,7 @@ nav:
           - Template Filters: "user-guide/platform-functionality/template-filters.md"
           - User Interface:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
+              - Favorites: "user-guide/platform-functionality/user-interface/favorites.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
               - Search: "user-guide/platform-functionality/user-interface/search.md"
               - Searchable Fields: "user-guide/platform-functionality/user-interface/searchable-fields.md"
