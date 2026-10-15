@@ -16,7 +16,7 @@ Rate limiting is disabled by default.
 
 Rate limiting budgets are stored in Redis. See [Redis](redis.md) for setup instructions.
 
-If Redis cannot be reached, the rate limiting _fails open_. Meaning, the request is served and the response reports the full budget. The failure is counted in the `nautobot_rate_limiting_rest_backend_errors` Prometheus metric. See [Prometheus Metrics](../guides/prometheus-metrics.md).
+If Redis cannot be reached, the rate limiting _fails open_. Meaning, the request is served and the response reports the full budget. The failure is counted in the `nautobot_rate_limiting_rest_backend_errors` Prometheus metric. See [Prometheus Metrics](../guides/prometheus-metrics.md#rate-limiting-metrics).
 
 ## Budget and Window
 
@@ -209,4 +209,4 @@ def estimate_request_cost(request):
 
 ## Prometheus Monitoring
 
-When rate limiting is enabled, Prometheus metrics will be generated. See [Prometheus Metrics](../guides/prometheus-metrics.md).
+When rate limiting is enabled, Prometheus metrics will be generated. See [Prometheus Metrics](../guides/prometheus-metrics.md#rate-limiting-metrics).

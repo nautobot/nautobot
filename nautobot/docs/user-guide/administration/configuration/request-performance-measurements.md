@@ -73,4 +73,4 @@ curl --verbose \
 
 When a measurement is enabled, its measurements are also exported to Prometheus.
 
-Metrics generated using these measurements are labeled with the requesting user's hashed token. See [Prometheus Metrics](../guides/prometheus-metrics.md).
+Metrics generated using these measurements are labeled with the requesting user's hashed token. See [Prometheus Metrics](../guides/prometheus-metrics.md#request-performance-measurements).

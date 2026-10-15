@@ -72,30 +72,38 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 | `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
 | `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
 
-+++ 3.3.0
-
-When Nautobot [rate-limiting](../configuration/rate-limiting.md) is enabled, these metrics will be tracked.
-
-| Name                                          | Description                                                               | Type      | Enabled By |
-|-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
-| `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   | [Rate Limiting](../configuration/rate-limiting.md) |
-| `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter | [Rate Limiting](../configuration/rate-limiting.md) |
-
-When Nautobot [request metrics](../configuration/request-performance-measurements.md) are enabled, these metrics will be tracked.
-
-| Name                                          | Description                                                               | Type      | Enabled By |
-|-----------------------------------------------|---------------------------------------------------------------------------|-----------|------------|
-| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram | [Request Performance Measurements](../configuration/request-performance-measurements.md) |
-| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram | [Request Performance Measurements](../configuration/request-performance-measurements.md) |
-
-Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
-
 !!! note
     Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.
 
 These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to do perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
 
 For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance. For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
+
+## Rate Limiting Metrics
+
++++ 3.3.0
+
+When Nautobot [rate-limiting](../configuration/rate-limiting.md) features are enabled, these metrics will be tracked.
+
+| Name                                          | Description                                                               | Type      |
+|-----------------------------------------------|---------------------------------------------------------------------------|-----------|
+| `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   |
+| `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter |
+
+Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
+
+## Request Performance Measurements
+
++++ 3.3.0
+
+When Nautobot [request performance measurements](../configuration/request-performance-measurements.md) are enabled, these metrics will be tracked.
+
+| Name                                          | Description                                                               | Type      |
+|-----------------------------------------------|---------------------------------------------------------------------------|-----------|
+| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram |
+| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram |
+
+Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
 
 ## Multi Processing Notes
 
