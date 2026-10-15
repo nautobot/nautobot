@@ -1,5 +1,7 @@
 """The conditions editor on the Webhook add and edit forms."""
 
+import re
+
 import pytest
 
 from nautobot.extras.tests.integration.pages.webhook_form_page import WebhookFormPage
@@ -194,3 +196,21 @@ class ConditionsEditorTestCase:
 
         webhook_form.expect_condition_select_enabled(0, "field", enabled=True)
         webhook_form.expect_condition_row_to_show(0, {"type": "Field change"})
+
+    @pytest.mark.behavioral
+    def test_a_date_is_picked_from_the_calendar_of_a_row_swapped_in(self, auth_page, base_url):
+        """The row arrives as plain HTML, so its calendar works only because the editor sets up flatpickr on it."""
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.pick_content_type("DCIM | device")
+        webhook_form.pick_condition_type(0, "Field comparison")
+        webhook_form.pick_condition_field(0, "Status")
+        webhook_form.pick_condition_subfield(0, "Created")
+        webhook_form.pick_condition_operator(0, "> (greater than)")
+
+        webhook_form.pick_condition_day(0, "value", 15)
+
+        values = webhook_form.get_conditions()[0]["values"]
+        assert values["field"] == "status.created"
+        # The calendar opens on the current month, so only the day is known.
+        assert re.fullmatch(r"\d{4}-\d{2}-15", values["value"]), f"Picked {values['value']!r}, not the 15th"

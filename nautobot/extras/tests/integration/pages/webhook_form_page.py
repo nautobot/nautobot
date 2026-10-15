@@ -42,6 +42,8 @@ class WebhookFormPage(BasePage):
     _DETAIL_URL = re.compile(r"/extras/webhooks/(?P<pk>[0-9a-f-]{36})/$")
     # `{% render_field %}` gives a control's error list this id, which the control's `aria-describedby` names.
     _CONDITION_ERRORS = "#id_condition-{index}-{name}_error"
+    # A day of the month the open flatpickr calendar shows, leaving out the days it shows from either side of it.
+    _CALENDAR_DAY = ".flatpickr-calendar.open .flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)"
 
     def navigate(self):
         """Go to the add form and wait for the conditions editor to draw its rows."""
@@ -84,6 +86,19 @@ class WebhookFormPage(BasePage):
     def pick_condition_field(self, index, text):
         """Choose the field reading *text* in the row at *index*."""
         self._pick_and_wait_for_new_row(index, "field", text)
+
+    def pick_condition_subfield(self, index, text):
+        """Choose the sub-field reading *text* in the row at *index*."""
+        self._pick_and_wait_for_new_row(index, "field_subfield", text)
+
+    def pick_condition_operator(self, index, text):
+        """Choose the operator reading *text* in the row at *index*."""
+        self._pick_and_wait_for_new_row(index, "operator", text)
+
+    def pick_condition_day(self, index, key, day):
+        """Open the calendar of the date control *key* in the row at *index* and click *day* of the month it shows."""
+        self.page.locator(f"[name='condition-{index}-{key}']").click()
+        self.page.locator(self._CALENDAR_DAY).filter(has_text=re.compile(rf"^{day}$")).click()
 
     def pick_condition_negation(self, index, text):
         """Choose `When` or `Not When`, reading *text*, in the row at *index*. The row is not asked for again."""
