@@ -3,7 +3,6 @@
 import pytest
 
 from nautobot.extras.tests.integration.pages.webhook_form_page import WebhookFormPage
-from nautobot.playwright.helpers import unique_name
 
 PLANNED_TO_ACTIVE = {
     "negate": False,
@@ -31,48 +30,42 @@ class ConditionsEditorTestCase:
     """The conditions editor, driven through its rows."""
 
     @pytest.mark.behavioral
-    def test_a_filled_row_writes_its_condition_to_the_json_field(self, auth_page, base_url):
+    def test_a_condition_saved_through_the_form_reaches_the_api(self, auth_page, base_url, api, webhook_name):
+        """The row is filled through Select2 and HTMX, which the view tests never run, before the form is saved."""
         webhook_form = WebhookFormPage(auth_page, base_url)
         webhook_form.navigate()
-
-        _fill_planned_to_active(webhook_form)
-
-        assert webhook_form.get_conditions() == [PLANNED_TO_ACTIVE]
-
-    @pytest.mark.behavioral
-    def test_a_condition_saved_through_the_form_reaches_the_api(self, auth_page, base_url, api):
-        webhook_form = WebhookFormPage(auth_page, base_url)
-        webhook_form.navigate()
-        webhook_form.fill_name_and_payload_url(unique_name(), "https://example.com/webhook")
+        webhook_form.fill_disabled_update_webhook(webhook_name, "https://example.com/webhook")
         _fill_planned_to_active(webhook_form)
 
         pk = webhook_form.save()
 
-        try:
-            response = api.get(f"/api/extras/webhooks/{pk}/")
-            assert response.ok, f"GET webhook {pk} returned {response.status}: {response.text()}"
-            assert response.json()["conditions"] == [PLANNED_TO_ACTIVE]
-        finally:
-            api.delete(f"/api/extras/webhooks/{pk}/")
+        response = api.get(f"/api/extras/webhooks/{pk}/")
+        assert response.ok, f"GET webhook {pk} returned {response.status}: {response.text()}"
+        assert response.json()["conditions"] == [PLANNED_TO_ACTIVE]
 
     @pytest.mark.behavioral
     def test_a_stored_condition_is_drawn_as_a_row_in_the_edit_form(self, auth_page, base_url, create_webhook):
+        """Select2 is set up on rows HTMX swaps in, so it has to show the stored values, not only hold them."""
         webhook = create_webhook([PLANNED_TO_ACTIVE])
         webhook_form = WebhookFormPage(auth_page, base_url)
 
         webhook_form.navigate_to_edit(webhook["id"])
 
-        assert webhook_form.get_condition_row_selections(0) == {
-            "negate": "when",
-            "type": "field_transition",
-            "field": "status",
-            "field_subfield": "name",
-            "from": "Planned",
-            "to": "Active",
-        }
+        webhook_form.expect_condition_row_to_show(
+            0,
+            {
+                "negate": "When",
+                "type": "Field transition",
+                "field": "Status",
+                "field_subfield": "Name",
+                "from": "Planned",
+                "to": "Active",
+            },
+        )
 
     @pytest.mark.behavioral
     def test_removing_a_row_drops_its_condition_and_announces_the_new_count(self, auth_page, base_url, create_webhook):
+        """A row is removed in the browser with no request, so the script alone rewrites the JSON field and the count."""
         webhook = create_webhook(THREE_USER_CONDITIONS)
         webhook_form = WebhookFormPage(auth_page, base_url)
         webhook_form.navigate_to_edit(webhook["id"])
@@ -86,6 +79,7 @@ class ConditionsEditorTestCase:
     def test_a_row_added_after_a_removal_takes_the_index_past_the_highest_and_is_counted(
         self, auth_page, base_url, create_webhook
     ):
+        """An index prefixes every control of its row, so one freed by a removal is never handed out again."""
         webhook = create_webhook(THREE_USER_CONDITIONS)
         webhook_form = WebhookFormPage(auth_page, base_url)
         webhook_form.navigate_to_edit(webhook["id"])
@@ -95,3 +89,17 @@ class ConditionsEditorTestCase:
 
         assert webhook_form.get_condition_row_indexes() == [0, 2, 3]
         webhook_form.expect_announced_count("3 conditions")
+
+    @pytest.mark.behavioral
+    def test_conditions_typed_on_the_json_tab_are_drawn_as_rows_on_the_form_tab(self, auth_page, base_url):
+        """Only the browser sends what was typed, and only once Bootstrap shows the Form tab."""
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.show_json_tab()
+        webhook_form.fill_conditions(THREE_USER_CONDITIONS)
+
+        webhook_form.show_form_tab()
+
+        assert webhook_form.get_condition_row_indexes() == [0, 1, 2]
+        usernames = [webhook_form.get_condition_row_inputs(index)["username"] for index in (0, 1, 2)]
+        assert usernames == ["first", "second", "third"]

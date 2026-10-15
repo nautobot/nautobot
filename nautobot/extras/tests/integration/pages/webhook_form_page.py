@@ -26,6 +26,10 @@ class WebhookFormPage(BasePage):
     _ADD_CONDITION_BUTTON = "#conditions-add"
     _REMOVE_CONDITION_BUTTON_NAME = "Remove this condition"
     _CONDITIONS_COUNT = "#conditions-count"
+    # Select2 puts the text it shows in `title`. The element's own text also holds the × of its clear button.
+    _SELECT2_SHOWN_TEXT = "select[name='{name}'] + span.select2-container .select2-selection__rendered"
+    _FORM_TAB = "#conditions_form-tab"
+    _JSON_TAB = "#conditions_json-tab"
     # `conditions-editor.js` sets `data-nb-drawing` on this form while the rows are drawn from the JSON field.
     _CONDITIONS_FORM = "form:has(#id_conditions)"
     _CREATE_BUTTON = "button[name='_create']"
@@ -44,11 +48,8 @@ class WebhookFormPage(BasePage):
     def _wait_until_rows_are_drawn(self):
         expect(self.page.locator(self._CONDITIONS_FORM)).to_have_attribute("data-nb-drawing", "false")
 
-    def fill_name_and_payload_url(self, name, payload_url):
-        """Fill in the name and the payload URL, and call the webhook on update, with the webhook disabled so it never sends.
-
-        A webhook needs at least one event.
-        """
+    def fill_disabled_update_webhook(self, name, payload_url):
+        """Fill in *name* and *payload_url* for a webhook called on update, disabled so it never sends."""
         self.page.locator(self._NAME_FIELD).fill(name)
         self.page.locator(self._ENABLED_CHECKBOX).uncheck()
         self.page.locator(self._TYPE_UPDATE_CHECKBOX).check()
@@ -95,6 +96,22 @@ class WebhookFormPage(BasePage):
         """Assert (auto-retrying) that the live region tells a screen reader *text*, such as "2 conditions"."""
         expect(self.page.locator(self._CONDITIONS_COUNT)).to_have_text(text)
 
+    def show_json_tab(self):
+        """Switch the conditions editor to its JSON tab."""
+        self.page.locator(self._JSON_TAB).click()
+
+    def show_form_tab(self):
+        """Switch the conditions editor to its Form tab and wait until the rows are drawn from the JSON field.
+
+        The panes have no `fade`, so Bootstrap shows the tab, and the redraw starts, within the click.
+        """
+        self.page.locator(self._FORM_TAB).click()
+        self._wait_until_rows_are_drawn()
+
+    def fill_conditions(self, conditions):
+        """Type *conditions* into the JSON field as JSON. The field is visible on the JSON tab only."""
+        self.page.locator(self._CONDITIONS_FIELD).fill(json.dumps(conditions))
+
     def save(self) -> str:
         """Submit the add form and return the ID of the saved webhook, read from the detail view it redirects to."""
         self._click_and_wait_for_navigation(self._CREATE_BUTTON)
@@ -107,14 +124,23 @@ class WebhookFormPage(BasePage):
         """The conditions the form would submit, read from the JSON field once, with no retry."""
         return json.loads(self.page.locator(self._CONDITIONS_FIELD).input_value())
 
-    def get_condition_row_selections(self, index):
-        """What each select of the row at *index* has chosen, keyed by the control name without its row prefix.
+    def expect_condition_row_to_show(self, index, texts):
+        """Assert (auto-retrying) that each Select2 named in *texts* shows its text in the row at *index*.
+
+        *texts* is keyed by the control name without its row prefix, such as `{"type": "Field transition"}`.
+        """
+        for name, text in texts.items():
+            shown = self.page.locator(self._SELECT2_SHOWN_TEXT.format(name=f"condition-{index}-{name}"))
+            expect(shown).to_have_attribute("title", text)
+
+    def get_condition_row_inputs(self, index):
+        """The value of each input of the row at *index*, keyed by the input name without its row prefix.
 
         Reads once, with no retry.
         """
         prefix = f"condition-{index}-"
-        selects = self._condition_row(index).locator("select").all()
-        return {select.get_attribute("name").removeprefix(prefix): select.input_value() for select in selects}
+        inputs = self._condition_row(index).locator("input[name]").all()
+        return {control.get_attribute("name").removeprefix(prefix): control.input_value() for control in inputs}
 
     def get_condition_row_indexes(self):
         """The index of every row, in the order the rows are shown. Reads once, with no retry."""
