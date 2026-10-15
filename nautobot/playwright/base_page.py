@@ -11,12 +11,11 @@ from playwright.sync_api import expect, Page
 
 
 def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
-    """Type-and-pick in an API-backed Select2 filter field, addressed by field *name*.
+    """Type-and-pick in an API-backed Select2 field, addressed by field *name*.
 
-    Filter fields use the `nautobot-select2-api` pattern: the widget renders an
-    anonymous `<span class="select2-container">` adjacent to the hidden `<select>`
-    (there is no `#select2-<id>-container` element to click, unlike create/edit
-    forms). Options load via AJAX from the REST API, so `select_option()` cannot see
+    Filter fields and create/edit form fields use the `nautobot-select2-api` pattern:
+    the widget renders a `<span class="select2-container">` adjacent to the hidden
+    `<select>`. Options load via AJAX from the REST API, so `select_option()` cannot see
     them; the reliable gesture is click the container, type into the open dropdown's
     search field, then click the matching result.
 
@@ -57,6 +56,8 @@ class BasePage:
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # Django messages render as toasts. A message tagged `header_message` renders in #header_messages instead.
+    _MESSAGE = "#toast-messages .toast, #header_messages .alert"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -96,6 +97,10 @@ class BasePage:
     def expect_url_lacks(self, fragment):
         """Assert (auto-retrying) that the URL does not contain *fragment*."""
         expect(self.page).not_to_have_url(re.compile(re.escape(fragment)))
+
+    def expect_message(self, text):
+        """Assert (auto-retrying) that a page message contains *text*."""
+        expect(self.page.locator(self._MESSAGE).filter(has_text=text)).to_have_count(1)
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""

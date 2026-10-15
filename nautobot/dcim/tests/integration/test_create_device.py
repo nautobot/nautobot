@@ -25,8 +25,12 @@ class CreateDeviceTestCase:
             status=device_prerequisites["status"],
         )
         form.submit()
+        detail = DeviceDetailPage(auth_page, base_url)
+        detail.expect_message(f"Created device {name}")
 
-        saved = api.get("/api/dcim/devices/", params={"name": name}).json()["results"]
+        response = api.get("/api/dcim/devices/", params={"name": name})
+        assert response.ok, f"GET /api/dcim/devices/ returned {response.status}: {response.text()[:200]}"
+        saved = response.json()["results"]
         assert len(saved) == 1, f"Expected one device named {name}, found {len(saved)}"
         device = saved[0]
         assert device["location"]["id"] == device_prerequisites["location"]["id"]
@@ -34,7 +38,6 @@ class CreateDeviceTestCase:
         assert device["role"]["id"] == device_prerequisites["role"]["id"]
         assert device["status"]["id"] == device_prerequisites["status"]["id"]
 
-        detail = DeviceDetailPage(auth_page, base_url)
         detail.expect_url_contains(DeviceDetailPage.DETAIL_PATH.format(pk=device["id"]))
         detail.expect_heading(name)
         detail.expect_panel_field("Device", "Location", device_prerequisites["location"]["name"])

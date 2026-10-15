@@ -1,0 +1,1 @@
+Added `FormPage` and `create_object.track()` to `nautobot.playwright` for tests that create objects through a form.

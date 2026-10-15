@@ -173,6 +173,10 @@ def create_object(api):
         return record
 
     def _track(endpoint, **filters):
+        if not filters:
+            pytest.fail(
+                f"create_object.track({endpoint!r}) needs at least one filter, or teardown deletes every record."
+            )
         created.append((endpoint, filters))
 
     _create.track = _track
