@@ -27,6 +27,9 @@ PARAM_KIND_CHOICE = "choice"
 # Prefix under which a preset's parameters appear in its expression's render context.
 PARAM_CONTEXT_PREFIX = "param_"
 
+# Prefix of a field path naming a custom field. The rest of the path is the custom field's key.
+CUSTOM_FIELD_PATH_PREFIX = "custom_fields."
+
 
 class ConditionPresetError(ConditionValidationError):
     """Stored values do not fit a preset. `params` names the preset and, where one is at fault, the parameter."""
@@ -68,7 +71,8 @@ class PresetParameter:
             ConditionPresetError: If a required value is missing or empty, the value is not a JSON
                 scalar (or a list of strings, for a `multiple` parameter), a choice parameter is
                 given a value outside its declared choices, or a field parameter names a path deeper
-                than a field and one sub-field. `params["parameter"]` is this parameter.
+                than a field and one sub-field or a custom field that does not exist.
+                `params["parameter"]` is this parameter.
         """
         if self.required and value in (None, "", []):
             raise ConditionPresetError(f"Parameter `{self.name}` is required.", parameter=self.name)
@@ -93,9 +97,20 @@ class PresetParameter:
         # The editor has a select for a field and one for its sub-field, and writes a deeper path back cut short.
         if self.kind == PARAM_KIND_FIELD and isinstance(value, str) and value.count(".") > 1:
             raise ConditionPresetError(
-                f"Parameter `{self.name}` names a field and at most one sub-field, as `field.sub-field`.",
+                f"Parameter `{self.name}` names `{value}`, which goes deeper than `field.sub-field`.",
                 parameter=self.name,
             )
+        if self.kind == PARAM_KIND_FIELD and isinstance(value, str) and value.startswith(CUSTOM_FIELD_PATH_PREFIX):
+            key = value.removeprefix(CUSTOM_FIELD_PATH_PREFIX)
+            # Imported here to avoid a circular import: the extras models validate their conditions with this module.
+            from nautobot.extras.models import CustomField
+
+            if not CustomField.objects.filter(key=key).exists():
+                raise ConditionPresetError(
+                    f"Parameter `{self.name}` names the custom field `{key}`, which does not exist. "
+                    "Remove this condition.",
+                    parameter=self.name,
+                )
 
     def as_dict(self):
         """The catalog entry for this parameter. `choices` is left out unless this parameter declares some."""

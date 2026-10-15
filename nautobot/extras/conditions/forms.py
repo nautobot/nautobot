@@ -332,8 +332,10 @@ def _without_stale_values(data, prefix, triggered_by):
 def _stored_row_as_initial(row, addressable):
     """A stored row as a form's initial values.
 
-    A dotted field path becomes the field select and the sub-field select that edit it, unless the
-    whole path is a field of its own in `addressable`, as `custom_fields.site_code` is.
+    A field path becomes the field select and the sub-field select that edit it only when `addressable`
+    offers both halves, as it does `status` and its `name`. Any other path stays whole: one that is a field
+    of its own, as `custom_fields.site_code` is, and one the two selects cannot show exactly, which the
+    field select then shows as nothing rather than as some other field.
     """
     if not row:
         return {}
@@ -353,12 +355,15 @@ def _stored_row_as_initial(row, addressable):
     values = row.get("values")
     if not isinstance(values, dict):
         values = {}
-    field_names = {entry["name"] for entry in addressable}
+    subfield_names = {entry["name"]: {sub["name"] for sub in entry.get("subfields", ())} for entry in addressable}
     for parameter in preset.parameters:
         value = values.get(parameter.name)
-        splits_into_field_and_subfield = isinstance(value, str) and "." in value and value not in field_names
+        field, _, subfield = value.partition(".") if isinstance(value, str) else ("", "", "")
+        splits_into_field_and_subfield = (
+            isinstance(value, str) and value not in subfield_names and subfield in subfield_names.get(field, ())
+        )
         if parameter.kind == PARAM_KIND_FIELD and splits_into_field_and_subfield:
-            initial[parameter.name], _, initial[_subfield_name(parameter.name)] = value.partition(".")
+            initial[parameter.name], initial[_subfield_name(parameter.name)] = field, subfield
         else:
             initial[parameter.name] = value
     return initial

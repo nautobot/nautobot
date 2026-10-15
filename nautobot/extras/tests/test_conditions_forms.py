@@ -258,6 +258,14 @@ class StoredRowTest(RowFormTestCase):
         self.assertEqual(initial["field"], "status")
         self.assertEqual(initial[_subfield_name("field")], "name")
 
+    def test_a_path_the_two_selects_cannot_show_exactly_stays_whole(self):
+        """Split, it would show as some other field, and be written back as that on the next change."""
+        for path in ("custom_fields.gone", "status.name.extra", "status.no_such_key", "status.", "tags.name"):
+            with self.subTest(path=path):
+                form = self.form({"type": "preset", "preset": "field_changed", "values": {"field": path}})
+                self.assertEqual(form["field"].value(), path)
+                self.assertNotIn(_subfield_name("field"), form.fields)
+
     def test_negation_becomes_the_word_the_row_opens_with(self):
         for stored, word in ((True, "not"), (False, "when")):
             with self.subTest(stored):

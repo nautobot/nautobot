@@ -1,1 +1,3 @@
 Fixed conditions accepting, through the JSON tab and the REST API, a field path deeper than a field and one sub-field, such as `location.parent.name`.
+Fixed conditions accepting a custom field that does not exist, such as one deleted after the condition was saved. A save now asks to remove that condition.
+Fixed the condition editor showing a stored field path it cannot edit exactly, such as `location.parent.name` or `status.no_such_key`, as a different field. It now shows the field as empty.
