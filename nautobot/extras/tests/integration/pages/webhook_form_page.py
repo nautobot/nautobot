@@ -24,12 +24,15 @@ class WebhookFormPage(BasePage):
     _CONDITIONS_FIELD = "#id_conditions"
     _CONDITION_ROW = "#conditions-rows .nb-condition"
     _ADD_CONDITION_BUTTON = "#conditions-add"
+    _TYPE_SELECT2 = "select[data-nb-condition-role='type'] + span.select2-container"
     _REMOVE_CONDITION_BUTTON_NAME = "Remove this condition"
     _CONDITIONS_COUNT = "#conditions-count"
     # Select2 puts the text it shows in `title`. The element's own text also holds the × of its clear button.
     _SELECT2_SHOWN_TEXT = "select[name='{name}'] + span.select2-container .select2-selection__rendered"
     _FORM_TAB = "#conditions_form-tab"
     _JSON_TAB = "#conditions_json-tab"
+    # What the server sends in place of the rows when the JSON field cannot be read as conditions.
+    _UNREADABLE_MESSAGE = "#conditions-rows .nb-conditions-unreadable"
     # `conditions-editor.js` sets `data-nb-drawing` on this form while the rows are drawn from the JSON field.
     _CONDITIONS_FORM = "form:has(#id_conditions)"
     _CREATE_BUTTON = "button[name='_create']"
@@ -82,11 +85,13 @@ class WebhookFormPage(BasePage):
         select2_filter_pick(self.page, f"condition-{index}-{key}", search=text, pick_text=text)
 
     def add_condition(self):
-        """Click Add another Condition and wait for the new row to arrive."""
+        """Click Add another Condition and wait until the editor has set up the new row and written the JSON field."""
         rows = self.page.locator(self._CONDITION_ROW)
         expected = rows.count() + 1
         self.page.locator(self._ADD_CONDITION_BUTTON).click()
         expect(rows).to_have_count(expected)
+        # Select2 on the new row means the JSON field is written. One `htmx.onLoad` in `conditions-editor.js` does both.
+        expect(rows.last.locator(self._TYPE_SELECT2)).to_be_visible()
 
     def remove_condition(self, index):
         """Click the remove button of the row at *index*."""
@@ -110,7 +115,19 @@ class WebhookFormPage(BasePage):
 
     def fill_conditions(self, conditions):
         """Type *conditions* into the JSON field as JSON. The field is visible on the JSON tab only."""
-        self.page.locator(self._CONDITIONS_FIELD).fill(json.dumps(conditions))
+        self.fill_conditions_text(json.dumps(conditions))
+
+    def fill_conditions_text(self, text):
+        """Type *text* into the JSON field unchanged, such as JSON that does not parse. Visible on the JSON tab only."""
+        self.page.locator(self._CONDITIONS_FIELD).fill(text)
+
+    def expect_conditions_text(self, text):
+        """Assert (auto-retrying) that the JSON field holds exactly *text*."""
+        expect(self.page.locator(self._CONDITIONS_FIELD)).to_have_value(text)
+
+    def expect_unreadable_message(self):
+        """Assert (auto-retrying) that a message stands in for the rows, because the JSON field cannot be read."""
+        expect(self.page.locator(self._UNREADABLE_MESSAGE)).to_be_visible()
 
     def save(self) -> str:
         """Submit the add form and return the ID of the saved webhook, read from the detail view it redirects to."""

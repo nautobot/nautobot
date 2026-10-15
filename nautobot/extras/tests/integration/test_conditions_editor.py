@@ -16,6 +16,8 @@ THREE_USER_CONDITIONS = [
     for username in ("first", "second", "third")
 ]
 
+UNREADABLE_JSON = '[{"negate": false, "preset": "user_is",'
+
 
 def _fill_planned_to_active(webhook_form):
     webhook_form.pick_content_type("DCIM | device")
@@ -65,7 +67,7 @@ class ConditionsEditorTestCase:
 
     @pytest.mark.behavioral
     def test_removing_a_row_drops_its_condition_and_announces_the_new_count(self, auth_page, base_url, create_webhook):
-        """A row is removed in the browser with no request, so the script alone rewrites the JSON field and the count."""
+        """A row is removed in the browser with no request, so the script alone rewrites the JSON field and count."""
         webhook = create_webhook(THREE_USER_CONDITIONS)
         webhook_form = WebhookFormPage(auth_page, base_url)
         webhook_form.navigate_to_edit(webhook["id"])
@@ -103,3 +105,19 @@ class ConditionsEditorTestCase:
         assert webhook_form.get_condition_row_indexes() == [0, 1, 2]
         usernames = [webhook_form.get_condition_row_inputs(index)["username"] for index in (0, 1, 2)]
         assert usernames == ["first", "second", "third"]
+
+    @pytest.mark.behavioral
+    def test_json_that_cannot_be_read_shows_the_message_and_is_kept_when_a_row_is_added(self, auth_page, base_url):
+        """Adding a row writes the field from the rows, and with no rows to read the typed text would become `[]`."""
+        webhook_form = WebhookFormPage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.show_json_tab()
+        webhook_form.fill_conditions_text(UNREADABLE_JSON)
+        webhook_form.show_form_tab()
+
+        webhook_form.expect_unreadable_message()
+        webhook_form.expect_announced_count("Conditions could not be read.")
+
+        webhook_form.add_condition()
+
+        webhook_form.expect_conditions_text(UNREADABLE_JSON)
