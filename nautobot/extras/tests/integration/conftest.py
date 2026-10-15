@@ -1,4 +1,4 @@
-"""Extras Playwright fixtures: thin named fixtures over the shared `create_object` factory.
+"""Extras Playwright fixtures.
 
 Shared fixtures, including creation and teardown (create_object, auth_page, ...) are
 provided by nautobot.playwright.fixtures, registered in the repo-root conftest. Run
@@ -40,3 +40,13 @@ def webhook_name(api):
     for webhook in response.json()["results"]:
         deleted = api.delete(f"/api/extras/webhooks/{webhook['id']}/")
         assert deleted.ok, f"DELETE webhook {webhook['id']} returned {deleted.status}: {deleted.text()}"
+
+
+@pytest.fixture
+def created_custom_field(create_object):
+    """A text custom field on devices, deleted after the test.
+
+    A key takes no hyphens, so the unique name gets underscores.
+    """
+    key = unique_name().replace("-", "_").lower()
+    return create_object("extras/custom-fields/", key=key, label=key, type="text", content_types=["dcim.device"])

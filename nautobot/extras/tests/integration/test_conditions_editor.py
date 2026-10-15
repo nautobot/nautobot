@@ -121,3 +121,25 @@ class ConditionsEditorTestCase:
         webhook_form.add_condition()
 
         webhook_form.expect_conditions_text(UNREADABLE_JSON)
+
+    @pytest.mark.behavioral
+    def test_a_condition_on_a_deleted_custom_field_is_left_unchanged_by_the_edit_form(
+        self, auth_page, base_url, api, created_custom_field, create_webhook
+    ):
+        """The field select shows `—`, and writing the rows back while they are drawn would store it empty."""
+        condition = {
+            "negate": False,
+            "preset": "field_changed",
+            "type": "preset",
+            "values": {"field": f"custom_fields.{created_custom_field['key']}"},
+        }
+        webhook = create_webhook([condition])
+        deleted = api.delete(f"/api/extras/custom-fields/{created_custom_field['id']}/")
+        assert deleted.ok, f"DELETE custom field returned {deleted.status}: {deleted.text()}"
+        webhook_form = WebhookFormPage(auth_page, base_url)
+
+        webhook_form.navigate_to_edit(webhook["id"])
+
+        webhook_form.expect_condition_row_to_show(0, {"type": "Field change"})
+        webhook_form.expect_condition_row_to_show_nothing_in(0, "field")
+        assert webhook_form.get_conditions() == [condition]

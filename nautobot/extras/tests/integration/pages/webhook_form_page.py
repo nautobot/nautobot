@@ -29,6 +29,7 @@ class WebhookFormPage(BasePage):
     _CONDITIONS_COUNT = "#conditions-count"
     # Select2 puts the text it shows in `title`. The element's own text also holds the × of its clear button.
     _SELECT2_SHOWN_TEXT = "select[name='{name}'] + span.select2-container .select2-selection__rendered"
+    _SELECT2_PLACEHOLDER = ".select2-selection__placeholder"
     _FORM_TAB = "#conditions_form-tab"
     _JSON_TAB = "#conditions_json-tab"
     # What the server sends in place of the rows when the JSON field cannot be read as conditions.
@@ -149,6 +150,11 @@ class WebhookFormPage(BasePage):
         for name, text in texts.items():
             shown = self.page.locator(self._SELECT2_SHOWN_TEXT.format(name=f"condition-{index}-{name}"))
             expect(shown).to_have_attribute("title", text)
+
+    def expect_condition_row_to_show_nothing_in(self, index, name):
+        """Assert (auto-retrying) that the Select2 of the control *name* in the row at *index* shows only `—`."""
+        shown = self.page.locator(self._SELECT2_SHOWN_TEXT.format(name=f"condition-{index}-{name}"))
+        expect(shown.locator(self._SELECT2_PLACEHOLDER)).to_be_visible()
 
     def get_condition_row_inputs(self, index):
         """The value of each input of the row at *index*, keyed by the input name without its row prefix.
