@@ -50,8 +50,10 @@ import { initializeConditionsEditor, nextIndex } from './conditions-editor.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
+import { initializeExportFields } from './export-fields.js';
+import { getFavoriteLink, getFavoriteName, initializeFavorites } from './favorites.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
-import { loadState, saveState } from './history.js';
+import { loadState, pushState, replaceState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { initializeToasts, refreshMessages, watchMessages } from './messages.js';
 import { initializeModal } from './modal.js';
@@ -71,7 +73,7 @@ window.nb.form = { getFieldAutoId };
 document.addEventListener('DOMContentLoaded', () => {
   // History
   loadState();
-  window.nb.history = { saveState };
+  window.nb.history = { pushState, replaceState, saveState };
 
   // Tooltips
   // https://getbootstrap.com/docs/5.3/components/tooltips/#enable-tooltips
@@ -99,8 +101,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Drawer
   initializeDrawers();
 
+  // Export field picker
+  initializeExportFields();
+
   // ECharts
   window.nb.echarts = { getEchartsOptionsThemeOverrides };
+
+  // Favorites
+  window.nb.favorites = { getFavoriteLink, getFavoriteName, initializeFavorites };
 
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
@@ -144,19 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Theme
   initializeTheme();
-
-  const toggleFavorite = (element, event) => {
-    if (event.detail.successful) {
-      element.classList.toggle('active');
-    }
-  };
-  window.toggleFavorite = toggleFavorite;
-
-  const setRequestUrl = (element, event) => {
-    const isFavorite = element.classList.contains('active');
-    event.detail.path = isFavorite ? element.dataset.deleteUrl : element.dataset.addUrl;
-  };
-  window.setRequestUrl = setRequestUrl;
 
   // Remove the blur after clicking the footer links that are opening mostly in the new tab
   // Keeping focus on those items is what keeps the tooltip as well

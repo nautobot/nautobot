@@ -38,6 +38,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileStatusChoices,
     SoftwareVersionStatusChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
@@ -125,5 +126,6 @@ __all__ = (
     "SoftwareVersionStatusChoices",
     "SubdeviceRoleChoices",
     "WebhookHttpMethodChoices",
+    "WeightUnitChoices",
     "unpack_grouped_choices",
 )

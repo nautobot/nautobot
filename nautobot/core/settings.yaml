@@ -1598,7 +1598,37 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
-  NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE:
+  NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
+    type: "array"
+    items:
+      type: "string"
+    default: []
+    description: >-
+      A list of dotted import paths to additional OpenTelemetry instrumentor classes for Nautobot to
+      install at startup, for example
+      `opentelemetry.instrumentation.botocore.BotocoreInstrumentor`. Nautobot core installs each one
+      against its own tracer provider, so apps do not need to call `.instrument()` from their
+      `AppConfig.ready()` method (which conflicts when multiple apps enable the same instrumentor).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
+    environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
+    version_added: "3.2.0"
+  NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION:
+    default: ""
+    description: >-
+      Dotted path (e.g. `my_package.my_module.my_function`) to a function that replaces Nautobot's
+      built-in complexity cost estimate. An empty string uses the built-in estimate.
+    details: |-
+      The function takes one argument, the `HttpRequest` being estimated, and returns an int. The returned int is what will be charged for the request.
+
+      The dotted path must be importable, so the function has to live in an installed Python
+      package, in a Nautobot App, or in `nautobot_config.py` itself (referenced as
+      `nautobot_config.<function_name>`). Nautobot does not add any directory to `sys.path`,
+      so a loose file beside `nautobot_config.py` is not importable on its own.
+    environment_variable: "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+    type: "string"
+    version_added: "3.3.0"
+  NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE:
     default: "off"
     description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
     details: |-
@@ -1617,28 +1647,13 @@ properties:
     - "off"
     - "report"
     - "enforce"
-    environment_variable: "NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+      "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
     version_added: "3.3.0"
-  NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
-    type: "array"
-    items:
-      type: "string"
-    default: []
-    description: >-
-      A list of dotted import paths to additional OpenTelemetry instrumentor classes for Nautobot to
-      install at startup, for example
-      `opentelemetry.instrumentation.botocore.BotocoreInstrumentor`. Nautobot core installs each one
-      against its own tracer provider, so apps do not need to call `.instrument()` from their
-      `AppConfig.ready()` method (which conflicts when multiple apps enable the same instrumentor).
-      (If provided as an environment variable, it should be a comma-separated string, for example
-      `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
-    environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
-    version_added: "3.2.0"
-  NAUTOBOT_REST_RATE_LIMITING_BUDGET:
+  NAUTOBOT_RATE_LIMITING_REST_BUDGET:
     default: 1000
     description: >-
       The complexity cost budget granted to each API token per window, in cost points.
@@ -1652,52 +1667,52 @@ properties:
 
       Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
       so a budget of `1000` permits roughly 250 such requests per window.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_BUDGET"
     minimum: 0
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS": "#nautobot_rest_rate_limiting_window_in_seconds"
+      "NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS": "#nautobot_rate_limiting_rest_window_in_seconds"
     type: "integer"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER:
+  NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER:
     default: 3.0
     description: >-
       Multiplier applied to a REST API request's running cost when `include=computed_fields` is
       requested.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER:
+  NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER:
     default: 3.0
     description: "Multiplier applied to a REST API request's running cost when `format=csv` is requested."
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL:
+  NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL:
     default: 1.0
     description: "Weight of each level of serializer nesting requested via the `depth` query parameter."
     details: |-
       When `depth` is non-zero, the request's running cost is multiplied by
       `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)`.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST:
+  NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST:
     default: 3.0
     description: >-
       Cost added for each REST API filter whose lookup can use an index, such as `exact`, `in`, or
       `isw` (`istartswith`).
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST": "#nautobot_rest_rate_limiting_unindexable_lookup_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST": "#nautobot_rate_limiting_rest_unindexable_lookup_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_MODE:
+  NAUTOBOT_RATE_LIMITING_REST_MODE:
     default: "off"
     description: "Cost-based rate limiting mode for token-authenticated REST API requests."
     details: |-
@@ -1716,12 +1731,12 @@ properties:
     - "off"
     - "report"
     - "enforce"
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_MODE"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_MODE"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
+  NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST:
     default: 3.0
     description: >-
       Cost added for each request a client would need to issue in order to page through the entire
@@ -1730,12 +1745,12 @@ properties:
       The number of requests is `ceil(record_count ÷ records_per_page)`, with a floor of `1`, where
       `records_per_page` is the page size the paginator will actually serve for the request. A larger
       `limit` therefore implies fewer requests and a lower cost.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_READ_COST:
+  NAUTOBOT_RATE_LIMITING_REST_READ_COST:
     default: 1.0
     description: "Base cost of a REST API `GET`, `HEAD`, or `OPTIONS` request."
     details: |-
@@ -1753,22 +1768,22 @@ properties:
       The result is rounded up to a whole number and charged against the token's budget.
 
       Write requests do not use this formula. They are charged a flat `WRITE_COST`, rounded up.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_READ_COST"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_READ_COST"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
+      "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST:
+  NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST:
     default: 3.0
     description: >-
       Cost added for each REST API filter whose lookup cannot use an index, such as `ic`
       (`icontains`) or `re` (`regex`).
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS:
+  NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS:
     default: 60
     description: >-
       The length in seconds of each API token's complexity cost budget window.
@@ -1776,19 +1791,19 @@ properties:
       A token's window opens on its first charged request and closes after the specified window time.
       Then the budget resets. Windows are per token and are not aligned to a wall clock, so
       tokens reset in different intervals. Charges made during a window do not extend it.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS"
     minimum: 1
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "integer"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
+  NAUTOBOT_RATE_LIMITING_REST_WRITE_COST:
     default: 3.0
     description: >-
       Base cost of a REST API request using any method other than `GET`, `HEAD`, or `OPTIONS`.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WRITE_COST"
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_WRITE_COST"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+      "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_ROOT:
@@ -2048,6 +2063,23 @@ properties:
       when acquiring the Redis lock.
     environment_variable: "NAUTOBOT_REDIS_LOCK_TIMEOUT"
     type: "integer"
+  REGEX_TIMEOUT:
+    default: 1.0
+    description: >-
+      Maximum number of seconds that a single evaluation of an operator-supplied regular expression
+      against user-supplied data may run before it is aborted.
+    details: |-
+      This bounds regular expressions that Nautobot did not author, such as a custom field's
+      `validation_regex` or a data validation rule, when they are evaluated against data submitted by a
+      user. Some regular expressions take exponentially longer to evaluate as the value being tested
+      grows, so without a bound a single request can consume a worker indefinitely.
+
+      When the limit is exceeded the value is rejected with a validation error and the expression is
+      logged at `ERROR` level. Raise this only if a legitimate expression is being cut short; a large
+      value re-opens the denial-of-service exposure that the limit exists to prevent.
+    environment_variable: "NAUTOBOT_REGEX_TIMEOUT"
+    type: "number"
+    version_added: "3.2.7"
   RELEASE_CHECK_TIMEOUT:
     default: 86400
     description: >-

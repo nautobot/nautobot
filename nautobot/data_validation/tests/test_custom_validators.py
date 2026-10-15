@@ -20,6 +20,10 @@ from nautobot.data_validation.tests import ValidationRuleTestCaseMixin
 from nautobot.dcim.models import Location, LocationType, Rack
 from nautobot.extras.models import Status
 
+# A pattern that backtracks catastrophically, paired with a subject that can never match it.
+REDOS_PATTERN = "(a|a|a|a|a)+$"
+REDOS_SUBJECT = "a" * 20 + "X"
+
 
 class CustomValidatorTestCases:
     class CustomValidatorTestCase(ValidationRuleTestCaseMixin, NautobotTestCaseMixin, TestCase):
@@ -134,6 +138,76 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
             ValidationError,
             "There was an error rendering the regular expression in the data validation rule 'Regex rule 1'. Either fix the validation rule or disable it in order to save this data.",
         ):
+            location.clean()
+
+    def test_catastrophic_pattern_rejects_the_value_instead_of_hanging(self):
+        RegularExpressionValidationRule.objects.create(
+            name="Regex rule 1",
+            content_type=ContentType.objects.get_for_model(Location),
+            field="description",
+            regular_expression=REDOS_PATTERN,
+        )
+
+        location = Location(
+            name="Location 1", location_type=self.location_type, status=self.status, description=REDOS_SUBJECT
+        )
+
+        with self.assertRaisesRegex(ValidationError, "catastrophic backtracking"):
+            location.clean()
+
+    def test_context_processing_escapes_interpolated_values(self):
+        """A field value of `.*` must not turn the rule into one that matches anything."""
+        RegularExpressionValidationRule.objects.create(
+            name="Regex rule 1",
+            content_type=ContentType.objects.get_for_model(Location),
+            field="description",
+            regular_expression="^{{ obj.name }}$",
+            context_processing=True,
+        )
+
+        location = Location(
+            name=".*", location_type=self.location_type, status=self.status, description="anything at all"
+        )
+        with self.assertRaisesRegex(ValidationError, "Value does not conform to regex"):
+            location.clean()
+
+        # The interpolated value is a literal, so only that literal matches.
+        location.description = ".*"
+        location.clean()
+
+    def test_context_processing_value_with_regex_metacharacters_matches_itself(self):
+        RegularExpressionValidationRule.objects.create(
+            name="Regex rule 1",
+            content_type=ContentType.objects.get_for_model(Location),
+            field="description",
+            regular_expression="^{{ obj.name }}$",
+            context_processing=True,
+        )
+
+        location = Location(
+            name="AMS-195 & Co.", location_type=self.location_type, status=self.status, description="AMS-195 & Co."
+        )
+
+        try:
+            location.clean()
+        except ValidationError as e:
+            self.fail(f"rule.clean() failed validation: {e}")
+
+    def test_context_processing_catastrophic_value_cannot_be_injected(self):
+        """A catastrophic construct in a field value is escaped to literals, so it cannot backtrack."""
+        RegularExpressionValidationRule.objects.create(
+            name="Regex rule 1",
+            content_type=ContentType.objects.get_for_model(Location),
+            field="description",
+            regular_expression="^{{ obj.name }}+$",
+            context_processing=True,
+        )
+
+        location = Location(
+            name="(a|a|a|a|a)", location_type=self.location_type, status=self.status, description=REDOS_SUBJECT
+        )
+
+        with self.assertRaisesRegex(ValidationError, "Value does not conform to regex"):
             location.clean()
 
     def test_context_processing_deprecated_object_variable_still_works_and_warns(self):

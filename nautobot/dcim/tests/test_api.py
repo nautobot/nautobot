@@ -29,8 +29,10 @@ from nautobot.dcim.choices import (
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
     PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
@@ -1439,7 +1441,7 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
     bulk_update_data = {
         "part_number": "ABC123",
     }
-    choices_fields = ["subdevice_role"]
+    choices_fields = ["depth_unit", "subdevice_role", "weight_unit"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1451,11 +1453,19 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
                 "device_family": device_family_id,
+                "depth": 600,
+                "depth_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
+                "weight": 12.5,
+                "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
                 "device_family": device_family_id,
+                "depth": 24,
+                "depth_unit": RackDimensionUnitChoices.UNIT_INCH,
+                "weight": 27.25,
+                "weight_unit": WeightUnitChoices.UNIT_POUND,
             },
             {
                 "manufacturer": manufacturer_id,
@@ -1508,6 +1518,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
         "part_number": "ABC123",
         "comments": "changed comment",
     }
+    choices_fields = ["weight_unit"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1519,10 +1530,14 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
                 "model": "Module Type 1",
                 "part_number": "123456",
                 "comments": "test comment",
+                "weight": 0.5,
+                "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Module Type 2",
+                "weight": 2.25,
+                "weight_unit": WeightUnitChoices.UNIT_POUND,
             },
             {
                 "manufacturer": manufacturer_id,

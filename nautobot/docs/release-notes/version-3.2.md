@@ -287,8 +287,73 @@ The Device detail view "Module Bays" tab now supports a hierarchical view with a
 As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
+
+## v3.2.7 (2026-10-13)
+
+### Security in v3.2.7
+
+- [GHSA-8894-x54w-hhpm](https://github.com/nautobot/nautobot/security/advisories/GHSA-8894-x54w-hhpm) - Added a timeout to regular expression evaluation in the data validation engine, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
+- [GHSA-9fgc-m542-2g84](https://github.com/nautobot/nautobot/security/advisories/GHSA-9fgc-m542-2g84) - Fixed a Jinja2 template sandbox escape that allowed a user-authored template to execute arbitrary read queries against the database.
+- [GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh) - Added a timeout to the evaluation of custom field `validation_regex` values, to protect against denial of service (REDoS) due to an overly-complex or maliciously crafted regular expression.
+- [GHSA-5q66-3x3p-rxmh](https://github.com/nautobot/nautobot/security/advisories/GHSA-5q66-3x3p-rxmh) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read sensitive fields through a queryset projection.
+- [GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-w9cw-3w8f-phq4) - Stopped the data being validated from influencing the structure of a `RegularExpressionValidationRule` regular expression that uses Jinja2 context processing, to protect against bypass of a validation rule.
+- [#9565](https://github.com/nautobot/nautobot/issues/9565) - Updated dependency `gitpython` to `>=3.2.0,<3.3` to mitigate multiple vulnerabilities.
+- [#9565](https://github.com/nautobot/nautobot/issues/9565) - Updated dependency `urllib3` to `>=2.8.0,<3.0` to mitigate multiple vulnerabilities.
+- [#9567](https://github.com/nautobot/nautobot/issues/9567) - Updated dependency `django` to `>=5.2.18,<5.3` to mitigate multiple vulnerabilities.
+- [#9568](https://github.com/nautobot/nautobot/issues/9568) - Updated development npm dependency `brace-expansion` to `1.1.21` to mitigate multiple vulnerabilities.
+- [#9596](https://github.com/nautobot/nautobot/issues/9596) - Updated development npm dependency `source-map-js` to `1.2.2` to mitigate CVE-2026-93749.
+- [#9597](https://github.com/nautobot/nautobot/issues/9597) - Updated development npm dependency `shell-quote` to `1.12.0` to mitigate CVE-2026-102422.
+- [#9598](https://github.com/nautobot/nautobot/issues/9598) - Updated development npm dependency `postcss-selector-parser` to `7.1.6` to mitigate CVE-2026-104844.
+
+### Added in v3.2.7
+
+- [GHSA-gffr-x2x7-7fgh](https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh) - Added utilities, exceptions, and model validators to the `nautobot.apps` API for App developers to use when evaluating user-supplied regular expressions.
+- [#9551](https://github.com/nautobot/nautobot/issues/9551) - Added `get_saved_views_for_user` to `nautobot.apps.views`.
+
+### Changed in v3.2.7
+
+- [GHSA-w9cw-3w8f-phq4](https://github.com/nautobot/nautobot/security/advisories/GHSA-w9cw-3w8f-phq4) - Values interpolated into a `RegularExpressionValidationRule` regular expression via Jinja2 context processing are now escaped and treated as literal text, so that the data being validated can no longer alter the structure of the pattern. Rules that deliberately drew regular expression syntax from a field value will no longer behave the same way.
+- [#9590](https://github.com/nautobot/nautobot/issues/9590) - Changed form-control styling to show placeholder text in italic to reduce the likelihood of confusing it for an entered value.
+
+### Fixed in v3.2.7
+
+- [#8616](https://github.com/nautobot/nautobot/issues/8616) - Fixed the REST API GraphQL endpoint (`/api/graphql/`) ignoring middleware configured in the `GRAPHENE["MIDDLEWARE"]` setting.
+- [#9062](https://github.com/nautobot/nautobot/issues/9062) - Fixed duplicated parent form dropdowns when an embedded "Add a new ..." modal was submitted with a validation error and then dismissed, for views based on `NautobotUIViewSet`.
+- [#9376](https://github.com/nautobot/nautobot/issues/9376) - Fixed VLAN Group detail view not allowing pagination through available and assigned VLANs.
+- [#9424](https://github.com/nautobot/nautobot/issues/9424) - Fixed `FileNotFoundError` when running Jobs with console-logging enabled on installs where `nautobot-server` is not on the Celery worker's `PATH`, by falling back to the entry point next to the running Python executable.
+- [#9461](https://github.com/nautobot/nautobot/issues/9461) - Fixed Job Results for Kubernetes Jobs staying in `PENDING` status while the Job was running.
+- [#9497](https://github.com/nautobot/nautobot/issues/9497) - Fixed issue where `nautobot-server -c` CLI argument shadowed subcommand arguments such as `nautobot-server shell -c`.
+- [#9539](https://github.com/nautobot/nautobot/issues/9539) - Fixed an exception when removing an invalid content-type from a LocationType where it had been added in error.
+- [#9539](https://github.com/nautobot/nautobot/issues/9539) - Fixed an exception when calling `ContentType.location_types.remove()` or `ContentType.location_types.clear()`.
+- [#9539](https://github.com/nautobot/nautobot/issues/9539) - Added missing validation on `LocationType.content_types.clear()`.
+- [#9539](https://github.com/nautobot/nautobot/issues/9539) - Added missing validation on `VRF.devices.clear()`, `VRF.virtual_machines.clear()`, `Device.vrfs.clear()`, and `VirtualMachine.vrfs.clear()`.
+- [#9539](https://github.com/nautobot/nautobot/issues/9539) - Added missing validation on `VirtualDeviceContext.vrfs.remove()`, `VRF.virtual_device_contexts.remove()`, `VirtualDeviceContext.vrfs.clear()`, and `VRF.virtual_device_contexts.clear()`.
+- [#9544](https://github.com/nautobot/nautobot/issues/9544) - Fixed missing banners on the Approval Dashboard and prevented dashboard info messages from leaking to subsequent pages.
+- [#9548](https://github.com/nautobot/nautobot/issues/9548) - Fixed incorrect permissions logic when rendering job-modal buttons.
+- [#9591](https://github.com/nautobot/nautobot/issues/9591) - Restored but marked as deprecated some logic for serialization and deserialization of in-memory `Model` objects to and from JSON (previously removed in v3.2.2) that turned out to be depended upon by a number of Apps.
+- [#9595](https://github.com/nautobot/nautobot/issues/9595) - Fixed warnings from `highlight.js` when rendering the browsable REST API.
+- [#9595](https://github.com/nautobot/nautobot/issues/9595) - Fixed jQuery exception when rendering the browsable REST API.
+- [#9595](https://github.com/nautobot/nautobot/issues/9595) - Fixed a CodeQL warning against the browsable REST API page template.
+- [#9609](https://github.com/nautobot/nautobot/issues/9609) - Fixed an HTTP 500 when deleting an object while a concurrent request deleted a dynamic group that had cached it.
+
+### Dependencies in v3.2.7
+
+- [#9567](https://github.com/nautobot/nautobot/issues/9567) - Updated dependency `regex` to `>=2026.9.29`.
+- [#9619](https://github.com/nautobot/nautobot/issues/9619) - Pinned dependency `drf-spectacular-sidecar` to `>=2026.9.1,<2026.10.1`.
+
+### Documentation in v3.2.7
+
+- [#9570](https://github.com/nautobot/nautobot/issues/9570) - Updated developer documentation about changelog fragment best practices.
+- [#9582](https://github.com/nautobot/nautobot/issues/9582) - Updated `SECURITY.md` to remove outdated instructions for sending security reports.
+- [#9593](https://github.com/nautobot/nautobot/issues/9593) - Added security considerations to the Kubernetes Job Support documentation describing the risk of Job pods having Kubernetes API access and recommending least-privilege service accounts and RBAC.
+
+### Housekeeping in v3.2.7
+
+- [#9555](https://github.com/nautobot/nautobot/issues/9555) - Fixed the upstream app testing workflow failing to lock apps against the `develop` and `next` branches, caused by the `--python` flag on `poetry add` triggering a poetry solver error.
+- [#9567](https://github.com/nautobot/nautobot/issues/9567) - Updated development dependency `ruff` to `~0.16.10`.
+- [#9570](https://github.com/nautobot/nautobot/issues/9570) - Updated `invoke markdownlint` to also include changelog fragments not yet added to the docs.
+- [#9575](https://github.com/nautobot/nautobot/issues/9575) - Changed various imports to use internal API vs `nautobot.apps` public API.
 
 ## v3.2.6 (2026-09-28)
 

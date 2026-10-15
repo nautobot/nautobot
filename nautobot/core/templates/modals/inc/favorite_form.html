@@ -1,0 +1,19 @@
+{% load form_helpers %}
+
+{% include "inc/modal_header.html" with title="Add to Favorites" %}
+<form
+    hx-post="{% url 'user:navbar_favorites_add' %}"
+    hx-select="#sidenav-flyout-favorites"
+    hx-swap="outerHTML"
+    hx-target="#sidenav-flyout-favorites"
+>
+    <div class="modal-body">
+        {% render_field navbar_favorites_add_form.name %}
+        {% render_field navbar_favorites_add_form.link %}
+        {# Deliberately skip `tab_name` field to keep the form simple. #}
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary"><span aria-hidden="true" class="mdi mdi-plus me-4"></span>Add</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel</button>
+    </div>
+</form>

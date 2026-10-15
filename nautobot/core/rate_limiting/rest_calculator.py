@@ -2,6 +2,7 @@ import dataclasses
 import math
 
 from django.conf import settings
+from django.utils.module_loading import import_string
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils.config import get_settings_or_config
@@ -67,6 +68,15 @@ INDEXABLE_LOOKUPS = frozenset(
 
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 WRITE_METHODS = frozenset({"DELETE", "PATCH", "POST", "PUT"})
+
+
+def get_custom_rate_limiting_complexity_cost_estimation_function():
+    dotted_import_path = settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION
+
+    if not dotted_import_path:
+        return None
+
+    return import_string(dotted_import_path)
 
 
 def calculate_records_per_page(requested_records_per_page):
@@ -158,36 +168,36 @@ def estimate_rest_read_request_cost(rest_read_request_features):
     """
     total_request_cost = 0
 
-    total_request_cost += settings.NAUTOBOT_REST_RATE_LIMITING_READ_COST
+    total_request_cost += settings.NAUTOBOT_RATE_LIMITING_REST_READ_COST
 
     # TODO: discuss this numerator anchoring
     placeholder_record_count = 20
     nautobot_allowed_records_per_page = calculate_records_per_page(rest_read_request_features.records_per_page)
     # Floored at one: no result set, however small, is retrievable in fewer than one request
     pages_required_for_full_read = max(1, math.ceil(placeholder_record_count / nautobot_allowed_records_per_page))
-    pagination_cost = pages_required_for_full_read * settings.NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST
+    pagination_cost = pages_required_for_full_read * settings.NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST
     total_request_cost += pagination_cost
 
     if rest_read_request_features.depth != 0:
         depth_cost = (
-            1 + rest_read_request_features.depth * settings.NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL
+            1 + rest_read_request_features.depth * settings.NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL
         )
         total_request_cost *= depth_cost
 
     indexable_lookups_cost = (
-        rest_read_request_features.indexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST
+        rest_read_request_features.indexable_lookups * settings.NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST
     )
     total_request_cost += indexable_lookups_cost
 
     unindexable_lookups_cost = (
-        rest_read_request_features.unindexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST
+        rest_read_request_features.unindexable_lookups * settings.NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST
     )
     total_request_cost += unindexable_lookups_cost
 
     if rest_read_request_features.do_computed_fields_exist():
-        total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER
+        total_request_cost *= settings.NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER
 
     if rest_read_request_features.is_response_format_csv():
-        total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER
+        total_request_cost *= settings.NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER
 
     return math.ceil(total_request_cost)

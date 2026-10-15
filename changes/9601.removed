@@ -1,0 +1,1 @@
+Removed the `Webhook.check_for_conflicts()` and `JobHook.check_for_conflicts()` class methods.

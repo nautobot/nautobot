@@ -145,7 +145,6 @@ The Nautobot test method `assertQuerysetEqualAndNotEmpty()` has been deprecated 
 Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. Nautobot has been updated accordingly, but Apps and third-party dependencies may need to update to newer versions for compatibility with Django 5.2.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.1.8 (2026-07-17)
