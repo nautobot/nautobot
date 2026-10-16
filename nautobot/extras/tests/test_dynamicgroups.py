@@ -276,6 +276,19 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
                     instance.validated_save()
                 self.assertIn("filter", context.exception.message_dict)
 
+    def test_full_clean_filter_list_for_json_custom_field(self):
+        """Test that a list given to a JSON custom field filter saves, because a list is one JSON value."""
+        custom_field = CustomField.objects.create(
+            label="JSON list filter",
+            key="json_list_filter",
+            type=CustomFieldTypeChoices.TYPE_JSON,
+            filter_logic=CustomFieldFilterLogicChoices.FILTER_EXACT,
+        )
+        custom_field.content_types.set([self.device_ct])
+        instance = self.first_child
+        instance.filter = {"cf_json_list_filter": ["x", "y"]}
+        instance.validated_save()
+
     def test_clean_fields_exclude_filter(self):
         """Test that filter validation is skipped when an appropriate `exclude` parameter is provided."""
         instance = self.groups[0]

@@ -589,14 +589,18 @@ class DynamicGroup(PrimaryModel):
             if self.filter:
                 raise ValidationError({"filter": "Filter can only be set for groups of type `dynamic-filter`."})
         else:
+            from nautobot.extras.filter_mixins_customfields import CustomFieldJSONFilter  # avoid circular import
+
             # `is_valid()` does not reject a list given to a filter that takes one value. A boolean filter
-            # raises TypeError, and any other filter treats the list as text.
+            # raises TypeError, and any other filter treats the list as text. A JSON custom field is skipped
+            # because a list is one JSON value.
             empty_filterset = self.filterset_class()  # pylint: disable=not-callable
             listed = sorted(
                 name
                 for name, value in self.filter.items()
                 if isinstance(value, (list, tuple))
                 and name in empty_filterset.filters
+                and not isinstance(empty_filterset.filters[name], CustomFieldJSONFilter)
                 and is_single_choice_field(empty_filterset, name)
             )
             if listed:
