@@ -2317,6 +2317,18 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
             response.data["detail"],
         )
 
+    def test_create_available_vlans_with_unviewable_vlan_group(self):
+        """A requested VLAN Group the user may not view is reported as nonexistent, revealing nothing about it."""
+        url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
+        self.add_permissions("ipam.view_vlan", "ipam.add_vlan")
+        self.add_permissions("ipam.view_vlangroup", constraints={"pk": self.vlan_group.pk})
+        hidden_vlan_group = VLANGroup.objects.create(name="Hidden VLAN Group", range="100-200")
+        data = [{"name": "VLAN_7", "status": self.default_status.pk, "vlan_group": hidden_vlan_group.pk}]
+
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(f"VLAN Group with pk {hidden_vlan_group.pk} does not exist.", response.data["detail"])
+
     def test_create_available_vlans_with_permissions_constraint(self):
         url = reverse("ipam-api:vlangroup-available-vlans", kwargs={"pk": self.vlan_group.pk})
         self.add_permissions(
