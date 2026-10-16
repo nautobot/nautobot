@@ -1,10 +1,11 @@
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.models import Role, Status
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -110,6 +111,37 @@ class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
         vm1.primary_ip4 = vm_interface.ip_addresses.all().filter(ip_version=4).first()
         vm1.primary_ip6 = vm_interface.ip_addresses.all().filter(ip_version=6).first()
         vm1.validated_save()
+
+    def test_primary_ip_not_assigned_to_this_virtual_machine(self):
+        """An IP address not assigned to any interface is a valid primary IP only if the configuration permits it."""
+        namespace = Namespace.objects.create(name="Primary IP Test Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        unassigned_ip = IPAddress.objects.create(address="198.51.100.1/24", namespace=namespace, status=ip_status)
+        other_vm_ip = IPAddress.objects.create(address="198.51.100.2/24", namespace=namespace, status=ip_status)
+        other_vm = VirtualMachine.objects.create(cluster=self.cluster, name="Other VM", status=self.status)
+        VMInterface.objects.create(
+            name="Int1", virtual_machine=other_vm, status=self.int_status, role=self.int_role
+        ).add_ip_addresses(other_vm_ip)
+
+        vm = VirtualMachine(cluster=self.cluster, name="Test VM 1", status=self.status, primary_ip4=unassigned_ip)
+        with self.assertRaisesMessage(
+            ValidationError, f"The specified IP address ({unassigned_ip}) is not assigned to this virtual machine."
+        ):
+            vm.validated_save()
+
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            vm.validated_save()
+
+            vm.primary_ip4 = other_vm_ip
+            with self.assertRaisesMessage(
+                ValidationError,
+                f"The specified IP address ({other_vm_ip}) is assigned to an interface that does not belong to this "
+                "virtual machine.",
+            ):
+                vm.validated_save()
 
 
 class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase

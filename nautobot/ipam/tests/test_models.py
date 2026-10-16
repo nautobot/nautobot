@@ -1,6 +1,7 @@
 from unittest import skipIf
 from unittest.mock import patch
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError, transaction
@@ -80,7 +81,7 @@ class IPAddressToInterfaceTest(TestCase):
             name="vm1",
             cluster=cluster,
             status=Status.objects.get_for_model(VirtualMachine).first(),
-            role=vmint_role,
+            role=Role.objects.get_for_model(VirtualMachine).first(),
         )
         cls.test_vmint1 = VMInterface.objects.create(
             name="vmint1",
@@ -724,6 +725,152 @@ class IPAddressToInterfaceTest(TestCase):
 
                 # Assert save was not called since IP is still assigned to test_vmint2
                 mock_save.assert_not_called()
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_retained_when_last_assignment_removed_if_not_required(self):
+        """A primary IP left unassigned to any interface remains valid, so it isn't cleared."""
+        for host, interface in ((self.test_device, self.test_int1), (self.test_vm, self.test_vmint1)):
+            with self.subTest(host=host):
+                ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+                interface.add_ip_addresses(ip_addr)
+                host.primary_ip4 = ip_addr
+                host.validated_save()
+
+                interface.remove_ip_addresses(ip_addr)
+                host.refresh_from_db()
+                self.assertEqual(host.primary_ip4, ip_addr)
+                ip_addr.delete()
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_cleared_when_only_assigned_to_another_host(self):
+        """A primary IP left assigned only to another device's interface is no longer valid, so it is cleared."""
+        other_device = Device.objects.create(
+            name="device2",
+            role=self.test_device.role,
+            device_type=self.test_device.device_type,
+            location=self.test_device.location,
+            status=self.test_device.status,
+        )
+        other_interface = Interface.objects.create(
+            device=other_device,
+            name="int1",
+            status=self.test_int1.status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_int1.add_ip_addresses(ip_addr)
+        other_interface.add_ip_addresses(ip_addr)
+        self.test_device.primary_ip4 = ip_addr
+        self.test_device.validated_save()
+
+        self.test_int1.remove_ip_addresses(ip_addr)
+        self.test_device.refresh_from_db()
+        self.assertIsNone(self.test_device.primary_ip4)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_unassigned_primary_ip_cannot_be_assigned_to_another_host_interface(self):
+        """An IP address that is a host's primary IP without an interface can only be assigned to that host's interfaces."""
+        other_device = Device.objects.create(
+            name="device2",
+            role=self.test_device.role,
+            device_type=self.test_device.device_type,
+            location=self.test_device.location,
+            status=self.test_device.status,
+        )
+        other_interface = Interface.objects.create(
+            device=other_device,
+            name="int1",
+            status=self.test_int1.status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_device.primary_ip4 = ip_addr
+        self.test_device.validated_save()
+
+        with self.assertRaisesMessage(ValidationError, f"{ip_addr} is the primary IP of {self.test_device}"):
+            # m2m add() doesn't use a savepoint, so give it one to keep the test transaction usable afterward
+            with transaction.atomic():
+                other_interface.add_ip_addresses(ip_addr)
+        self.assertFalse(ip_addr.interface_assignments.exists())
+
+        self.test_int1.add_ip_addresses(ip_addr)
+        self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
+
+    def test_assignment_foreign_keys_cannot_be_changed(self):
+        ip_addr, other_ip_addr = (
+            IPAddress.objects.create(address=address, status=self.status, namespace=self.namespace)
+            for address in ("192.0.2.1/24", "192.0.2.2/24")
+        )
+        other_interface = Interface.objects.create(
+            device=self.test_device,
+            name="other_int",
+            status=self.test_int1.status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        assignment = IPAddressToInterface.objects.create(ip_address=ip_addr, interface=self.test_int1)
+
+        for field, value in (("ip_address", other_ip_addr), ("interface", other_interface)):
+            with self.subTest(field=field):
+                assignment.refresh_from_db()
+                setattr(assignment, field, value)
+                with self.assertRaisesMessage(ValidationError, "Cannot be changed once created"):
+                    assignment.validated_save()
+
+        assignment.refresh_from_db()
+        assignment.is_default = True
+        assignment.validated_save()
+
+    def test_vdc_primary_ip_cleared_when_removed_from_vdc_interface(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_int1.add_ip_addresses(ip_addr)
+        vdc = VirtualDeviceContext.objects.create(
+            device=self.test_device,
+            name="vdc1",
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+            primary_ip4=ip_addr,
+        )
+        vdc.interfaces.add(self.test_int1)
+
+        self.test_int1.remove_ip_addresses(ip_addr)
+        vdc.refresh_from_db()
+        self.assertIsNone(vdc.primary_ip4)
+
+    def test_vdc_primary_ip_cleared_when_interface_removed_from_vdc(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_int1.add_ip_addresses(ip_addr)
+        vdc = VirtualDeviceContext.objects.create(
+            device=self.test_device,
+            name="vdc1",
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+        vdc.interfaces.add(self.test_int1)
+        vdc.primary_ip4 = ip_addr
+        vdc.validated_save()
+
+        vdc.interfaces.remove(self.test_int1)
+        vdc.refresh_from_db()
+        self.assertIsNone(vdc.primary_ip4)
+        self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
+
+    def test_ip_address_removed_from_uninstalled_module_interface(self):
+        """Removing an IP address from an interface on a module not installed in any device succeeds."""
+        module = Module.objects.create(
+            module_type=ModuleType.objects.first(),
+            status=Status.objects.get_for_model(Module).first(),
+            location=Location.objects.get_for_model(Module).first(),
+        )
+        module_interface = Interface.objects.create(
+            name="eth0_module",
+            module=module,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=self.test_int1.status,
+        )
+        self.assertIsNone(module_interface.device)
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        module_interface.add_ip_addresses(ip_addr)
+
+        module_interface.remove_ip_addresses(ip_addr)
+        self.assertFalse(ip_addr.interface_assignments.exists())
 
 
 class TestVarbinaryIPField(TestCase):

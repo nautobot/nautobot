@@ -1,0 +1,1 @@
+It is no longer possible to change the `ip_address`, `interface`, or `vm_interface` of an existing IP Address Assignment (`IPAddressToInterface`), including via the REST API; delete the assignment and create a new one instead.

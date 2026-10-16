@@ -1,0 +1,6 @@
+Added `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` configuration setting; when disabled, an IP address that is not assigned to any interface can be designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
+Added "Unassigned primary IPv4" and "Unassigned primary IPv6" fields to the Device, Virtual Machine, and Virtual Device Context create/edit forms when `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled, allowing a primary IP to be set at creation time.
+Added `primary_ip4_for_virtual_machines` and `primary_ip6_for_virtual_machines` reverse relations from IP Address to Virtual Machine, including in GraphQL.
+Added `assigned` filter to IP Addresses, matching IP addresses that are assigned to an interface or designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
+Added optional "Primary IP For" column to the IP Address list view.
+Added display of the Devices, Virtual Machines, and Virtual Device Contexts using an IP address as their primary IP to the "Assignment" row of the IP Address detail view, when the IP address is not assigned to any interface.
