@@ -796,6 +796,30 @@ class IPAddressToInterfaceTest(TestCase):
         self.test_int1.add_ip_addresses(ip_addr)
         self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
 
+    def test_assignment_foreign_keys_cannot_be_changed(self):
+        ip_addr, other_ip_addr = (
+            IPAddress.objects.create(address=address, status=self.status, namespace=self.namespace)
+            for address in ("192.0.2.1/24", "192.0.2.2/24")
+        )
+        other_interface = Interface.objects.create(
+            device=self.test_device,
+            name="other_int",
+            status=self.test_int1.status,
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        assignment = IPAddressToInterface.objects.create(ip_address=ip_addr, interface=self.test_int1)
+
+        for field, value in (("ip_address", other_ip_addr), ("interface", other_interface)):
+            with self.subTest(field=field):
+                assignment.refresh_from_db()
+                setattr(assignment, field, value)
+                with self.assertRaisesMessage(ValidationError, "Cannot be changed once created"):
+                    assignment.validated_save()
+
+        assignment.refresh_from_db()
+        assignment.is_default = True
+        assignment.validated_save()
+
     def test_vdc_primary_ip_cleared_when_removed_from_vdc_interface(self):
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
         self.test_int1.add_ip_addresses(ip_addr)

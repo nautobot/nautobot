@@ -1961,6 +1961,17 @@ class IPAddressToInterface(BaseModel):
         if self.interface is None and self.vm_interface is None:
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
 
+        if self.present_in_database:
+            saved = IPAddressToInterface.objects.values("ip_address", "interface", "vm_interface").get(pk=self.pk)
+            changed_fields = [field for field, value in saved.items() if getattr(self, f"{field}_id") != value]
+            if changed_fields:
+                raise ValidationError(
+                    {
+                        field: "Cannot be changed once created; delete this assignment and create a new one instead."
+                        for field in changed_fields
+                    }
+                )
+
         self._validate_primary_ip_hosts()
 
     def _validate_primary_ip_hosts(self):
