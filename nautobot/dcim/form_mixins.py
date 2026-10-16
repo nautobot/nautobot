@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.core.forms import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Location
+from nautobot.dcim.utils import is_host_interface_ip
 from nautobot.ipam.models import IPAddress
 
 
@@ -81,7 +82,7 @@ class UnassignedPrimaryIPFormMixin(forms.Form):
         require_assignment = get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT")
         for field_name in ["primary_ip4", "primary_ip6"]:
             current_ip = getattr(self.instance, field_name)
-            if current_ip is not None and not self._is_interface_primary_ip(current_ip):
+            if current_ip is not None and not is_host_interface_ip(self.instance, current_ip):
                 # Present the current unassigned primary IP here, so that it isn't lost when the form is resubmitted
                 self.initial[f"unassigned_{field_name}"] = current_ip.pk
                 self.initial[field_name] = None
@@ -96,13 +97,6 @@ class UnassignedPrimaryIPFormMixin(forms.Form):
                     )
             elif require_assignment:
                 del self.fields[f"unassigned_{field_name}"]
-
-    def _is_interface_primary_ip(self, ip):
-        """Whether `ip` is a primary IP choice by way of this object's interfaces, directly or as a NAT outside IP."""
-        host_assignments = self.instance.get_interface_assignments_filter()
-        if ip.interface_assignments.filter(host_assignments).exists():
-            return True
-        return ip.nat_inside is not None and ip.nat_inside.interface_assignments.filter(host_assignments).exists()
 
     def clean(self):
         super().clean()

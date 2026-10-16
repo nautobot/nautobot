@@ -1887,11 +1887,12 @@ class IPAddressMergeTestCase(ModelViewTestCase):
     def test_merging_ip_addresses_success(self):
         self.add_permissions(*self.MERGE_PERMISSIONS)
         vdc = VirtualDeviceContext.objects.create(
-            device=self.devices[0],
+            device=self.interfaces[0].device,
             name="Merge IP VDC",
             status=Status.objects.get_for_model(VirtualDeviceContext).first(),
             primary_ip4=self.dup_ip_1,
         )
+        vdc.interfaces.add(self.interfaces[0])
         num_ips_before = IPAddress.objects.all().count()
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         request = {

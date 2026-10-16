@@ -20,6 +20,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface, VirtualDeviceContext
+from nautobot.dcim.utils import is_host_interface_ip
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
@@ -1980,28 +1981,22 @@ class IPAddressToInterface(BaseModel):
         devices = Device.objects.filter(is_primary_ip)
         vdcs = VirtualDeviceContext.objects.filter(is_primary_ip)
         virtual_machines = VirtualMachine.objects.filter(is_primary_ip)
-        if self.interface is not None and self.interface.device_id is not None:
-            devices = devices.exclude(pk=self.interface.device_id)
-            vdcs = vdcs.exclude(device_id=self.interface.device_id)
+        if self.interface is not None:
+            vdcs = vdcs.exclude(interfaces=self.interface)
+            if self.interface.device_id is not None:
+                devices = devices.exclude(pk=self.interface.device_id)
         if self.vm_interface is not None:
             virtual_machines = virtual_machines.exclude(pk=self.vm_interface.virtual_machine_id)
 
-        nat_inside_assignments = (
-            ip_address.nat_inside.interface_assignments.all()
-            if ip_address.nat_inside is not None
-            else IPAddressToInterface.objects.none()
-        )
         affected_hosts = [
-            host
-            for host in (*devices, *vdcs, *virtual_machines)
-            if not nat_inside_assignments.filter(host.get_interface_assignments_filter()).exists()
+            host for host in (*devices, *vdcs, *virtual_machines) if not is_host_interface_ip(host, ip_address)
         ]
         if affected_hosts:
             raise ValidationError(
                 {
                     "ip_address": f"{ip_address} is the primary IP of {', '.join(str(host) for host in affected_hosts)} "
                     "without being assigned to any of its interfaces, "
-                    "so it cannot be assigned to an interface belonging to a different device or virtual machine."
+                    "so it cannot be assigned to an interface that does not belong to it."
                 }
             )
 

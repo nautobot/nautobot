@@ -162,14 +162,12 @@ def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
         return
 
     if instance.interface is not None:
-        device = instance.interface.device
-        # An interface on a module that isn't installed in a device has no host to update
-        if device is None:
-            return
-        hosts = [
-            device,
-            *device.virtual_device_contexts.filter(Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address)),
-        ]
+        hosts = list(
+            instance.interface.virtual_device_contexts.filter(Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address))
+        )
+        # An interface on a module that isn't installed in a device has no device to update
+        if instance.interface.device is not None:
+            hosts.append(instance.interface.device)
     else:
         hosts = [instance.vm_interface.virtual_machine]
 

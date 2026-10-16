@@ -796,7 +796,7 @@ class IPAddressToInterfaceTest(TestCase):
         self.test_int1.add_ip_addresses(ip_addr)
         self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
 
-    def test_vdc_primary_ip_cleared_when_removed_from_device_interface(self):
+    def test_vdc_primary_ip_cleared_when_removed_from_vdc_interface(self):
         ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
         self.test_int1.add_ip_addresses(ip_addr)
         vdc = VirtualDeviceContext.objects.create(
@@ -805,10 +805,28 @@ class IPAddressToInterfaceTest(TestCase):
             status=Status.objects.get_for_model(VirtualDeviceContext).first(),
             primary_ip4=ip_addr,
         )
+        vdc.interfaces.add(self.test_int1)
 
         self.test_int1.remove_ip_addresses(ip_addr)
         vdc.refresh_from_db()
         self.assertIsNone(vdc.primary_ip4)
+
+    def test_vdc_primary_ip_cleared_when_interface_removed_from_vdc(self):
+        ip_addr = IPAddress.objects.create(address="192.0.2.1/24", status=self.status, namespace=self.namespace)
+        self.test_int1.add_ip_addresses(ip_addr)
+        vdc = VirtualDeviceContext.objects.create(
+            device=self.test_device,
+            name="vdc1",
+            status=Status.objects.get_for_model(VirtualDeviceContext).first(),
+        )
+        vdc.interfaces.add(self.test_int1)
+        vdc.primary_ip4 = ip_addr
+        vdc.validated_save()
+
+        vdc.interfaces.remove(self.test_int1)
+        vdc.refresh_from_db()
+        self.assertIsNone(vdc.primary_ip4)
+        self.assertTrue(ip_addr.interface_assignments.filter(interface=self.test_int1).exists())
 
     def test_ip_address_removed_from_uninstalled_module_interface(self):
         """Removing an IP address from an interface on a module not installed in any device succeeds."""

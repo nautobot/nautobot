@@ -30,6 +30,12 @@
             {% if "unassigned_primary_ip6" in form.fields %}
                 {% render_field form.unassigned_primary_ip6 %}
             {% endif %}
+            {% if not editing %}
+                <div class="alert alert-info" role="alert">
+                    An IP address assigned to one of this virtual device context's interfaces can be selected as its
+                    primary IP after creating this virtual device context.
+                </div>
+            {% endif %}
         </div>
     </div>
     <div class="card">

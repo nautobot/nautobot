@@ -44,4 +44,6 @@ A VDC's primary IPv4 and IPv6 addresses must be assigned to an interface assigne
 +++ 3.3.0
     NAT outside addresses are now permitted.
 
+    This requirement is now enforced against the interfaces assigned to the VDC; previously, an IP address assigned to any interface of the VDC's parent device was accepted. A VDC's primary IP is cleared if the IP address is removed from the VDC's interfaces, or if its interface is removed from the VDC.
+
     If the [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../../administration/configuration/settings.md#primary_ip_requires_interface_assignment) setting is disabled, an IP address that isn't assigned to any interface can also be designated as a VDC's primary IP, including when creating the VDC. Such a primary IP is retained if it is later assigned to and then removed from the VDC's interfaces. An IP address assigned to another interface -- but _not_ to any interface in the VDC -- still can't be used as the VDC's primary IP.

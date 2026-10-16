@@ -163,13 +163,28 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
         )
 
 
+def is_host_interface_ip(host, ip):
+    """
+    Whether `ip` is assigned to one of `host`'s interfaces, either directly or as the NAT outside address of such an IP.
+
+    Args:
+        host (Model): A Device, VirtualMachine, or VirtualDeviceContext.
+        ip (IPAddress): The IP address to check.
+    """
+    host_assignments = host.get_interface_assignments_filter()
+    if ip.interface_assignments.filter(host_assignments).exists():
+        return True
+    return ip.nat_inside is not None and ip.nat_inside.interface_assignments.filter(host_assignments).exists()
+
+
 def validate_primary_ips(instance):
     """
     Validate the `primary_ip4` and `primary_ip6` fields of a Device, VirtualMachine, or VirtualDeviceContext.
 
     A primary IP must be of the matching IP version, and must be assigned to one of the host's interfaces
     (or be the NAT outside address of such an IP). If `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled,
-    an IP that isn't assigned to any interface at all is also permitted.
+    an IP that isn't assigned to any interface at all, and isn't the NAT outside address of an IP that is, is also
+    permitted.
 
     A primary IP that isn't assigned to any interface, and is unchanged from its saved value, is permitted
     regardless, so that enabling `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` doesn't render existing records uneditable.
@@ -178,7 +193,6 @@ def validate_primary_ips(instance):
         instance (Model): The Device, VirtualMachine, or VirtualDeviceContext being validated.
     """
     require_assignment = get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT")
-    host_assignments = instance.get_interface_assignments_filter()
     verbose_name = instance._meta.verbose_name
     errors = {}
     for field, ip_version in (("primary_ip4", 4), ("primary_ip6", 6)):
@@ -188,14 +202,18 @@ def validate_primary_ips(instance):
         if ip.ip_version != ip_version:
             errors[field] = f"{ip} is not an IPv{ip_version} address."
             continue
-        if ip.interface_assignments.filter(host_assignments).exists():
-            continue
-        if ip.nat_inside is not None and ip.nat_inside.interface_assignments.filter(host_assignments).exists():
+        if is_host_interface_ip(instance, ip):
             continue
         if ip.interface_assignments.exists():
             errors[field] = (
                 f"The specified IP address ({ip}) is assigned to an interface that does not belong to this "
                 f"{verbose_name}."
+            )
+            continue
+        if ip.nat_inside is not None and ip.nat_inside.interface_assignments.exists():
+            errors[field] = (
+                f"The specified IP address ({ip}) is the NAT outside address of {ip.nat_inside}, which is assigned to "
+                f"an interface that does not belong to this {verbose_name}."
             )
             continue
         if not require_assignment:

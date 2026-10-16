@@ -2384,18 +2384,12 @@ class VirtualDeviceContext(PrimaryModel):
             return None
 
     def get_interface_assignments_filter(self):
-        """Return a `Q` matching the `IPAddressToInterface` records for this VDC's parent device's interfaces."""
-        if self.device_id is None:
-            return Q(pk=None)
-        return self.device.get_interface_assignments_filter()
-
-    def _validate_primary_ips(self):
-        if self.device_id is not None:
-            validate_primary_ips(self)
+        """Return a `Q` matching the `IPAddressToInterface` records for the interfaces assigned to this VDC."""
+        return Q(interface__virtual_device_contexts=self.pk)
 
     def clean(self):
         super().clean()
-        self._validate_primary_ips()
+        validate_primary_ips(self)
 
         # Validate that device is not being modified
         if self.present_in_database:
@@ -2406,7 +2400,7 @@ class VirtualDeviceContext(PrimaryModel):
     @method_deprecated_in_favor_of(clean)
     def validate_primary_ips(self):
         """Deprecated - primary IP validation is performed by `clean()`."""
-        self._validate_primary_ips()
+        validate_primary_ips(self)
 
 
 @extras_features(
