@@ -278,7 +278,7 @@ class StoredRowTest(RowFormTestCase):
                 0: {
                     "field": [
                         "Parameter `field` names `unknown_field`, "
-                        "which is not a field that can be referenced in a condition for chosen content types."
+                        "which is not a field that can be referenced in a condition for the chosen content types."
                     ]
                 }
             },

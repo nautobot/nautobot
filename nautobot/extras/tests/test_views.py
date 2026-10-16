@@ -7268,7 +7268,7 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
         self.assertHttpStatus(response, 200)
         self.assertIn(
             "Condition 1: Preset `field_changed`. Parameter `field` names `unknown_field`, "
-            "which is not a field that can be referenced in a condition for chosen content types.",
+            "which is not a field that can be referenced in a condition for the chosen content types.",
             extract_page_body(response.content.decode(response.charset)),
         )
         self.assertFalse(self._get_queryset().filter(name="jobhook-4").exists())
@@ -8087,7 +8087,7 @@ class WebhookTestCase(
         self.assertHttpStatus(response, 200)
         self.assertIn(
             "Condition 1: Preset `field_changed`. Parameter `field` names `unknown_field`, "
-            "which is not a field that can be referenced in a condition for chosen content types.",
+            "which is not a field that can be referenced in a condition for the chosen content types.",
             extract_page_body(response.content.decode(response.charset)),
         )
         self.assertFalse(self._get_queryset().filter(name="webhook-4").exists())

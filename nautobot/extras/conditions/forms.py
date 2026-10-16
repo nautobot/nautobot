@@ -334,10 +334,10 @@ def _without_stale_values(data, prefix, triggered_by):
 def _stored_row_as_initial(row, addressable):
     """A stored row as a form's initial values.
 
-    A field path becomes the field select and the sub-field select that edit it only when `addressable`
-    offers both halves, as it does `status` and its `name`. Any other path stays whole: one that is a field
-    of its own, as `custom_fields.site_code` is, and one the two selects cannot show exactly, which the
-    field select then shows as nothing rather than as some other field.
+    A field path is split into the field select and the sub-field select only when `addressable` offers
+    both parts, as it does `status` and `name`. Otherwise the path stays whole. A whole path such as
+    `custom_fields.site_code` is a field of its own. Any other whole path cannot be shown, so the field
+    select shows `—` for it.
     """
     if not row:
         return {}
@@ -404,7 +404,7 @@ def errors_by_row_and_control(rows, addressable=()):
             errors[index] = {
                 name: [
                     f"Parameter `{name}` names `{path}`, "
-                    "which is not a field that can be referenced in a condition for chosen content types."
+                    "which is not a field that can be referenced in a condition for the chosen content types."
                 ]
             }
     return errors

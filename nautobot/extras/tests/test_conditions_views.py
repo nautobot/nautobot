@@ -126,7 +126,7 @@ class ConditionsViewTest(NautobotTestCase):
         )
         self.assertInHTML(
             "<li class='text-danger'>Parameter `field` names `unknown_field`, "
-            "which is not a field that can be referenced in a condition for chosen content types.</li>",
+            "which is not a field that can be referenced in a condition for the chosen content types.</li>",
             body,
         )
 

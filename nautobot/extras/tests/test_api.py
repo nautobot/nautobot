@@ -6711,7 +6711,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             [
                 "Condition 1: Preset `field_changed`. "
                 "Parameter `field` names `mtu`, "
-                "which is not a field that can be referenced in a condition for chosen content types."
+                "which is not a field that can be referenced in a condition for the chosen content types."
             ],
         )
 
@@ -6729,7 +6729,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn(
-            "names `model`, which is not a field that can be referenced in a condition for chosen content types",
+            "names `model`, which is not a field that can be referenced in a condition for the chosen content types",
             str(response.data["conditions"]),
         )
 
