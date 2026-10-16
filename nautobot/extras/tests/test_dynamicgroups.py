@@ -267,7 +267,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             instance.validated_save()
 
     def test_full_clean_filter_list_for_single_value_filter(self):
-        """Test that a list on a single-value filter raises a ValidationError, not a TypeError."""
+        """Test that a list given to a filter that takes one value raises a ValidationError, not a TypeError."""
         instance = self.first_child
         for filter_dict in ({"has_primary_ip": ["True"]}, {"q": ["location-1"]}):
             with self.subTest(filter=filter_dict):
