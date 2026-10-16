@@ -1,0 +1,1 @@
+Replaced the Dynamic Group create and edit Selenium test with Playwright tests that verify the group's member count after refreshing its members.
