@@ -111,12 +111,19 @@ class ListPage(BasePage):
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
 
-    def expect_column_shown(self, header_name, shown=True):
-        """Assert (auto-retrying) that a column headed *header_name* is, or is not, in the table."""
+    def _column_header(self, label):
+        """Locator for the column header whose text is *label*."""
         # Sortable headers add a visually-hidden sort instruction after the label.
-        label = re.compile(rf"^\s*{re.escape(header_name)}\s*(activate to .*)?$", re.DOTALL)
-        header = self.page.locator("table thead th").filter(has_text=label)
-        expect(header).to_have_count(1 if shown else 0)
+        text = re.compile(rf"^\s*{re.escape(label)}\s*(activate to .*)?$", re.DOTALL)
+        return self.page.locator("table thead th").filter(has_text=text)
+
+    def expect_column(self, label):
+        """Assert (auto-retrying) that exactly one column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(1)
+
+    def expect_no_column(self, label):
+        """Assert (auto-retrying) that no column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(0)
 
     # -------------------------------------------------------------------------
     # Table configuration drawer

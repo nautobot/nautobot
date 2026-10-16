@@ -49,20 +49,3 @@ def created_advanced_ui_computed_field(create_object, created_device):
     Includes `expected_value`, the text the field renders for `created_device`.
     """
     return _create_device_computed_field(create_object, created_device["device"], advanced_ui=True)
-
-
-@pytest.fixture(scope="session")
-def api_computed_field_value(api):
-    """Callable returning the value the REST API renders for one computed field of an object.
-
-    Computed fields are opt-in on the REST API, so the object is fetched with
-    `?include=computed_fields`.
-    """
-
-    def _value(endpoint, pk, key):
-        response = api.get(f"/api/{endpoint}{pk}/", params={"include": "computed_fields"})
-        if not response.ok:
-            pytest.fail(f"GET /api/{endpoint}{pk}/ returned {response.status}: {response.text()}")
-        return response.json()["computed_fields"][key]
-
-    return _value

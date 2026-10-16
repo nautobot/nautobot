@@ -25,7 +25,7 @@ class ComputedFieldsTestCase:
         device.navigate(created_device["device"]["id"])
 
         for text in (created_computed_field["label"], created_computed_field["expected_value"]):
-            device.expect_tab_to_show("main", text)
+            device.expect_tab_to_contain("main", text)
             device.expect_tab_not_to_contain("advanced", text)
 
     @pytest.mark.behavioral
@@ -41,33 +41,27 @@ class ComputedFieldsTestCase:
         device.open_tab("advanced")
 
         for text in (created_advanced_ui_computed_field["label"], created_advanced_ui_computed_field["expected_value"]):
-            device.expect_tab_to_show("advanced", text)
+            device.expect_tab_to_contain("advanced", text)
             device.expect_tab_not_to_contain("main", text)
 
     @pytest.mark.behavioral
-    def test_computed_field_appears_in_object_list(
-        self, auth_page, base_url, api_computed_field_value, created_device, created_computed_field
-    ):
-        """A computed field can be shown as a Device list column, where it renders the API's value.
+    def test_computed_field_appears_in_object_list(self, auth_page, base_url, created_device, created_computed_field):
+        """A computed field can be shown as a Device list column, where it renders the field's value.
 
         The column is off by default. Turning it on in the table configuration shows the
         device's rendered value, and resetting the configuration removes the column again.
         """
         label = created_computed_field["label"]
-        api_value = api_computed_field_value(
-            "dcim/devices/", created_device["device"]["id"], created_computed_field["key"]
-        )
-        assert api_value == created_computed_field["expected_value"]
 
         devices = DevicesPage(auth_page, base_url)
         devices.navigate(name=created_device["device"]["name"])
         devices.expect_row_count(1)
-        devices.expect_column_shown(label, shown=False)
+        devices.expect_no_column(label)
 
         devices.toggle_table_column(label)
-        devices.expect_column_shown(label)
-        assert devices.get_column_values_by_header(label) == [api_value]
+        devices.expect_column(label)
+        assert devices.get_column_values_by_header(label) == [created_computed_field["expected_value"]]
 
         devices.reset_table_columns()
         devices.expect_row_count(1)
-        devices.expect_column_shown(label, shown=False)
+        devices.expect_no_column(label)

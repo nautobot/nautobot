@@ -73,8 +73,8 @@ class DetailPage(BasePage):
         self.page.locator(self._TAB_LINK.format(tab_id=tab_id)).click()
         expect(self._tab_pane(tab_id)).to_be_visible()
 
-    def expect_tab_to_show(self, tab_id, text):
-        """Assert (auto-retrying) that the tab *tab_id* visibly renders *text*."""
+    def expect_tab_to_contain(self, tab_id, text):
+        """Assert (auto-retrying) that the tab *tab_id* contains *text*, and that the text is visible."""
         expect(self._tab_pane(tab_id).get_by_text(text, exact=True)).to_be_visible()
 
     def expect_tab_not_to_contain(self, tab_id, text):
