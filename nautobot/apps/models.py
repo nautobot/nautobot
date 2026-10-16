@@ -40,7 +40,12 @@ from nautobot.core.models.utils import (
     serialize_object,
     serialize_object_v2,
 )
-from nautobot.core.models.validators import EnhancedURLValidator, ExclusionValidator, ValidRegexValidator
+from nautobot.core.models.validators import (
+    EnhancedURLValidator,
+    ExclusionValidator,
+    TimeLimitedRegexValidator,
+    ValidRegexValidator,
+)
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContextModel,
@@ -101,6 +106,7 @@ __all__ = (
     "StatusModel",
     "TagsField",
     "TagsManager",
+    "TimeLimitedRegexValidator",
     "TreeManager",
     "TreeModel",
     "TreeQuerySet",

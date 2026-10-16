@@ -27,6 +27,13 @@ from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
+# A pattern that backtracks catastrophically, paired with a subject that can never match it. Wide
+# alternation rather than a nested quantifier, because the `regex` module optimizes the classic
+# `((((a*)*)*)*)*` form away. Short enough to satisfy the 500-character `validation_regex` limit and
+# to compile under stdlib `re`, so the custom field saves normally and only matching is affected.
+REDOS_PATTERN = "(a|a|a|a|a)+$"
+REDOS_SUBJECT = "a" * 20 + "X"
+
 
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
 #       (due to the test_multi_select_field_value_after_bulk_update() test).
@@ -362,6 +369,53 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
             # Delete the custom field
             cf.delete()
+
+    def test_regex_validation_is_time_bounded(self):
+        """A `validation_regex` that backtracks catastrophically must reject the value, not hang."""
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="cf_test_redos",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location = Location.objects.first()
+        location.cf[cf.key] = REDOS_SUBJECT
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            location.validated_save()
+
+    def test_json_regex_validation_is_time_bounded(self):
+        """The JSON branch serializes the value before matching, and must be bounded too."""
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_JSON,
+            label="cf_test_redos_json",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location = Location.objects.first()
+        location.cf[cf.key] = REDOS_SUBJECT
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            location.validated_save()
+
+    def test_form_field_regex_validation_is_time_bounded(self):
+        """The generated form field validates with the same pattern, via its own validator."""
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="cf_test_redos_form",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            cf.to_form_field().clean(REDOS_SUBJECT)
 
     def test_to_filter_field(self):
         with self.subTest("Assert CustomField Select Type renders the correct filter form field and widget"):
@@ -2123,6 +2177,21 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
 
             # Delete the custom field
             cf.delete()
+
+    def test_regex_validation_is_time_bounded(self):
+        """A `validation_regex` that backtracks catastrophically must reject the choice, not hang."""
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="cf_test_redos_choice",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([ContentType.objects.get_for_model(Location)])
+
+        cfc = CustomFieldChoice(custom_field=cf, value=REDOS_SUBJECT)
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            cfc.validated_save()
 
 
 class CustomFieldBackgroundTasks(TransactionTestCase):

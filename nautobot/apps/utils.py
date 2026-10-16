@@ -11,6 +11,7 @@ from nautobot.core.utils.data import (
     is_uuid,
     merge_dicts_without_collision,
     render_jinja2,
+    render_jinja2_for_regex,
     shallow_compare_dict,
     to_meters,
     validate_jinja2,
@@ -49,6 +50,7 @@ from nautobot.core.utils.permissions import (
     resolve_permission,
     resolve_permission_ct,
 )
+from nautobot.core.utils.regex import regex_match, regex_search
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
     ensure_content_type_and_field_name_in_query_params,
@@ -138,8 +140,11 @@ __all__ = (
     "permission_is_exempt",
     "populate_model_features_registry",
     "refresh_job_model_from_job_class",
+    "regex_match",
+    "regex_search",
     "remove_prefix_from_cf_key",
     "render_jinja2",
+    "render_jinja2_for_regex",
     "resolve_permission",
     "resolve_permission_ct",
     "rgb_to_hex",

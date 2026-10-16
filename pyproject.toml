@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.43"
+version = "2.4.44"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -91,7 +91,10 @@ django-webserver = "~1.2.0"
 djangorestframework = "~3.16.1"
 # OpenAPI 3.0 schema generation for the REST API
 # Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
-drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
+drf-spectacular = "~0.28.0"
+# Swagger/Redoc API UI (TODO: add swagger-ui-dist and redoc as proper NPM dependencies instead)
+# 2026.10.1 has test-impacting behavior changes (https://github.com/swagger-api/swagger-ui/issues/11056)
+drf-spectacular-sidecar = "~2026.9.1"
 # Emoji terminal output for Python.
 emoji = "~2.15.0"
 # Git integrations for Python
@@ -205,9 +208,12 @@ mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.10"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~0.30.1"
+mkdocstrings = "~1.0.6"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~1.19.0"
+# Indirect dependency of several of the above - pinned because 12.2 has breaking API changes that impact
+# mkdocstrings, but the fixed version of mkdocstrings requires Python 3.11 or later
+pymdown-extensions = {version = "<12.2", python = "<3.11"}
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter

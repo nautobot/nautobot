@@ -1,5 +1,6 @@
 from collections import namedtuple, OrderedDict
 from decimal import Decimal
+import re
 import uuid
 
 from django.core import validators
@@ -116,6 +117,47 @@ def render_jinja2(template_code, context):
     # a user-provided template and don't want to open ourselves up to script injection or similar issues.
     # There's no `mark_unsafe()` function, but concatenating a SafeString to an ordinary string (even "") suffices.
     return "" + template.render(context=context)
+
+
+def _escape_regex_metacharacters(value):
+    """Jinja2 `finalize` hook that renders an interpolated value as a regex literal."""
+    # Jinja passes the raw value, which may be an int, None or Undefined, so coerce before escaping.
+    return re.escape(str(value))
+
+
+def _get_regex_jinja2_environment():
+    """Jinja2 environment used to render a user-authored template into a regular expression.
+
+    An overlay of the standard environment, so the sandbox, filters and globals are all preserved,
+    differing in three ways:
+
+    - `finalize` passes every `{{ ... }}` interpolation through `re.escape()`, so an interpolated
+      value can only ever contribute literal characters to the pattern. Literal template text is not
+      finalized, so the template author's own regex syntax survives untouched.
+    - `autoescape` is off, because HTML escaping is meaningless in a regular expression and would
+      otherwise interpolate a value containing `&` as `&amp;`.
+    - `loader` is unset, as including a Nautobot HTML template cannot produce a useful pattern.
+    """
+    parent = engines["jinja"].env
+    # Cached on the parent environment so that reconfiguring the template engine, as
+    # `override_settings` does in tests, yields a fresh overlay rather than a stale one.
+    overlay = getattr(parent, "_nautobot_regex_overlay", None)
+    if overlay is None:
+        overlay = parent.overlay(autoescape=False, finalize=_escape_regex_metacharacters, loader=None)
+        parent._nautobot_regex_overlay = overlay
+    return overlay
+
+
+def render_jinja2_for_regex(template_code, context):
+    """
+    Render a Jinja2 template whose result is to be used as a regular expression. Return the rendered content.
+
+    Values interpolated from `context` are regex-escaped and treated as literal text, so that data
+    being validated cannot alter the structure of the resulting pattern. There is no opt-out.
+    """
+    # The raw jinja2 Template is used here rather than django_jinja's wrapper, so the context must be
+    # passed positionally; `render(context=context)` would bind a variable literally named "context".
+    return _get_regex_jinja2_environment().from_string(template_code).render(context)
 
 
 def shallow_compare_dict(source_dict, destination_dict, exclude=None):

@@ -3,13 +3,21 @@ import types
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
-from django.db.models import Count
+from django.db.models import Case, Count, IntegerField, Max, Min, Subquery, Sum, Value, When
+from django.db.models.expressions import RawSQL
+from django.db.models.functions import Coalesce
 from django.test import override_settings, TestCase
 from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
+import regex
 
 from nautobot.core.exceptions import SensitiveFieldError
-from nautobot.core.templating import NautobotSandboxedContext, NautobotSandboxedEnvironment
+from nautobot.core.templating import (
+    deny_caller_supplied_sql,
+    NautobotSandboxedContext,
+    NautobotSandboxedEnvironment,
+)
+from nautobot.core.testing.utils import temporarily_sensitive_fields
 from nautobot.core.utils import data
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
@@ -324,6 +332,107 @@ class NautobotJinjaFilterTest(TestCase):
                         with self.assertRaises((SecurityError, SensitiveFieldError)):
                             data.render_jinja2(template_code=template_code, context=context)
 
+    def test_render_checks_a_named_projection_against_the_querysets_model(self):
+        """Assert the projection check resolves the model from the queryset, not the manager's attribute.
+
+        django-taggit's manager sets its `model` attribute to the model the tags are attached to, while
+        its queryset yields `Tag`. Reading the attribute would check `Location.sensitive_fields` for a
+        projection that actually selects `Tag` columns, and `Location` has a `description` field of its
+        own, so the mismatch would go unnoticed rather than erroring.
+        """
+        location = dcim_models.Location.objects.first()
+        location.tags.add(
+            extras_models.Tag.objects.create(name="jinja-projection-model-tag", description="withheld-value")
+        )
+        context = {"obj": location}
+        for template_code in [
+            "{{ obj.tags.values('description') | list }}",
+            "{{ obj.tags.values_list('description') | list }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                with temporarily_sensitive_fields(extras_models.Tag, "description"):
+                    with self.assertRaises((SecurityError, SensitiveFieldError)):
+                        data.render_jinja2(template_code=template_code, context=context)
+
+    def test_render_narrows_a_bare_projection_to_non_sensitive_fields(self):
+        """Assert a projection naming no fields returns the model's non-sensitive fields and nothing more.
+
+        `values()`/`values_list()` with no field names select every concrete column, so there is no
+        argument for the lookup-path check to inspect, and each row comes back as a plain dict or tuple
+        rather than a model instance, which is what the attribute check is keyed on.
+        """
+        location = dcim_models.Location.objects.first()
+        tag = extras_models.Tag.objects.create(name="jinja-bare-projection-tag", description="withheld-value")
+        location.tags.add(tag)
+        context = {"obj": location}
+        for strict in (True, False):
+            for template_code in [
+                "{{ obj.tags.values() | list }}",
+                "{{ obj.tags.values_list() | list }}",
+                "{{ obj.tags.all().values() | list }}",
+                "{{ obj.tags.all().values_list() | list }}",
+                # A Nautobot-defined (non-stock) wrapper, so the Manager/QuerySet allowlist passes it through.
+                "{{ obj.tags.all().distinct_values_list() | list }}",
+            ]:
+                with self.subTest(strict=strict, template_code=template_code):
+                    with override_settings(STRICT_SENSITIVE_FIELDS=strict):
+                        with temporarily_sensitive_fields(extras_models.Tag, "description"):
+                            rendered = data.render_jinja2(template_code=template_code, context=context)
+                    self.assertNotIn("withheld-value", rendered)
+                    # Narrowed, not emptied: the rest of the row is still projected.
+                    self.assertIn(tag.name, rendered)
+
+    def test_render_cannot_retrieve_a_credential_via_a_bare_projection(self):
+        """Assert an argument-less projection cannot be used to read an API token or a password hash.
+
+        The same denial as the tests above, stated against the fields that actually hold a credential,
+        since those are what a regression here would disclose.
+        """
+        user = users_models.User.objects.create_user(
+            username="jinja-bare-projection-testuser",
+            password="probe-password-value",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
+        token = users_models.Token.objects.create(user=user, description="bare projection regression")
+        permission = users_models.ObjectPermission.objects.create(
+            name="jinja-bare-projection-permission", actions=["view"]
+        )
+        permission.users.add(user)
+        context = {"obj": user}
+        for strict in (True, False):
+            for template_code in [
+                "{{ obj.tokens.values() | list }}",
+                "{{ obj.tokens.values_list() | list }}",
+                "{{ obj.tokens.all().values() | list }}",
+                "{{ obj.tokens.all().values_list() | list }}",
+                "{{ obj.tokens.all().distinct_values_list() | list }}",
+                # A User queryset, reached by traversing a shared object permission.
+                "{{ obj.object_permissions.first().users.values() | list }}",
+            ]:
+                with self.subTest(strict=strict, template_code=template_code):
+                    with override_settings(STRICT_SENSITIVE_FIELDS=strict):
+                        rendered = data.render_jinja2(template_code=template_code, context=context)
+                    self.assertNotIn(token.key, rendered)
+                    self.assertNotIn(user.password, rendered)
+                    self.assertNotEqual(rendered.strip(), "")
+
+    def test_render_allows_a_bare_projection_on_a_model_without_sensitive_fields(self):
+        """Assert the narrowing is scoped to models that actually declare sensitive fields.
+
+        Almost no model declares any, and bare projections are used routinely by App-authored templates,
+        so the overwhelmingly common case has to pass through to Django untouched.
+        """
+        location = dcim_models.Location.objects.first()
+        tag = extras_models.Tag.objects.create(name="jinja-bare-projection-allowed-tag", description="visible-value")
+        location.tags.add(tag)
+        context = {"obj": location}
+        for template_code in [
+            "{{ obj.tags.values() | list }}",
+            "{{ obj.tags.values_list() | list }}",
+            "{{ obj.tags.all().distinct_values_list() | list }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                self.assertIn("visible-value", data.render_jinja2(template_code=template_code, context=context))
+
     def test_render_allows_filtering_on_a_sensitive_model_field(self):
         """Assert the sensitive-field denial does not over-block: filtering by the field is still allowed.
 
@@ -358,6 +467,54 @@ class NautobotJinjaFilterTest(TestCase):
         # The object is untouched and ordinary safe callables still work.
         self.assertTrue(dcim_models.Location.objects.filter(pk=location.pk).exists())
         self.assertEqual(context.call(str, location.name), str(location.name))
+
+    def test_expression_guard_ignores_a_class_given_where_an_instance_belongs(self):
+        """Assert the expression check passes over a class rather than inspecting it as an instance.
+
+        Only an instance can carry SQL, so a class handed to a queryset method is Django's to reject.
+        Inspecting one here would call `get_source_expressions()` unbound and surface a `TypeError` from
+        the sandbox for a template that is merely wrong.
+        """
+        queryset = dcim_models.Location.objects.all()
+        # Neither call may raise here. What Django then makes of the class is Django's business; these
+        # assert only that the sandbox hands it over rather than failing on it.
+        deny_caller_supplied_sql(queryset.order_by, (Count,), {})
+        deny_caller_supplied_sql(queryset.annotate, (), {"x": RawSQL})
+
+    def test_render_allows_tree_model_navigation(self):
+        """Assert tree models stay usable in templates, including the parts that use raw SQL internally.
+
+        `TreeQuerySet` methods are not stock `QuerySet` attributes, so the Manager/QuerySet allowlist
+        passes them through. `max_tree_depth()` matters most here: it calls `extra()` itself
+        (`nautobot/core/models/tree_queries.py`), which shows that denying `extra` to templates does not
+        reach into Nautobot's own queries.
+        """
+        location = dcim_models.Location.objects.filter(parent__isnull=False).first()
+        context = {"obj": location, "qs": dcim_models.Location.objects.all()}
+        for template_code in [
+            "{{ obj.ancestors() | list | length }}",
+            "{{ obj.descendants() | list | length }}",
+            "{{ obj.parent.name }}",
+            "{{ obj.children.all() | list | length }}",
+            "{{ qs.with_tree_fields() | list | length }}",
+            "{{ qs.ancestors(obj) | list | length }}",
+            "{{ qs.max_tree_depth() }}",
+            "{% for o in qs.with_tree_fields()[:3] %}{{ o.tree_depth }}{% endfor %}",
+        ]:
+            with self.subTest(template_code=template_code):
+                try:
+                    data.render_jinja2(template_code=template_code, context=context)
+                except SecurityError:
+                    self.fail(f"SecurityError raised on safe tree model render: {template_code}")
+
+        # Reaching for raw SQL stays denied, on a tree queryset as on any other.
+        for template_code in [
+            "{{ qs.extra(order_by=['-id']) | list }}",
+            "{{ qs.with_tree_fields().extra(order_by=['-id']) | list }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code=template_code, context=context)
 
     def test_render_allows_safe_template_helpers(self):
         """Assert the Context.call guard does not break ordinary template helpers such as translation."""
@@ -442,8 +599,12 @@ class NautobotJinjaFilterTest(TestCase):
         """Assert the read/analytics queryset surface real apps render through the sandbox is not over-blocked."""
         location = dcim_models.Location.objects.first()
         # `Count` mirrors how analytics apps inject expression helpers into their own render context.
-        context = {"obj": location, "Count": Count}
+        context = {"obj": location, "Count": Count, "Max": Max, "Min": Min}
         for template_code in [
+            # Expressions composed from a field reference disclose nothing on their own and stay allowed,
+            # unlike one carrying a caller-supplied SQL string.
+            "{{ obj.tags.all().annotate(n=Max('name')).values('n') | list }}",
+            "{{ obj.tags.all().aggregate(n=Min('name')) }}",
             "{{ obj.tags.all().values('name') | list }}",
             "{{ obj.tags.all().values_list('name', flat=True) | list }}",
             "{{ obj.tags.all().distinct().count() }}",
@@ -594,3 +755,147 @@ class NautobotJinjaFilterTest(TestCase):
         template_code = "{{ (obj | meta('managers_map'))['objects'].values_list('name', flat=True)|list }}"
         with self.assertRaises(SecurityError):
             data.render_jinja2(template_code=template_code, context=context)
+
+    def test_render_blocks_module_and_app_config_traversal(self):
+        """Assert a template cannot reach a Python module or an application config object.
+
+        An `AppConfig` is a live handle on an installed app, exposing module objects, a dict of model
+        classes and `get_model()`; a module object in turn reaches arbitrary importable code. `_meta`
+        exposes an `AppConfig`, and the `meta` filter reads `_meta` in Python rather than through
+        `is_safe_attribute`, so both types have to be refused on their own account.
+        """
+        location = dcim_models.Location.objects.first()
+        # Injected directly so each denial is exercised on its own, rather than only through whichever
+        # route happens to reach it today.
+        context = {
+            "obj": location,
+            "module": dcim_models,
+            "app_config": location._meta.app_config,
+        }
+        # The `meta` filter raises directly, and traversing or subscripting a blocked value raises too.
+        for template_code in [
+            "{{ obj | meta('app_config') }}",
+            "{{ (obj | meta('app_config')).verbose_name }}",
+            "{{ (obj | meta('app_config')).module }}",
+            "{{ (obj | meta('app_config')).models_module }}",
+            "{{ app_config.models['location'] }}",
+            # Traversing onward through a blocked module, which is how the escape reached `django.db.models`.
+            "{{ module.devices.models }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code=template_code, context=context)
+
+        # Terminal access to a blocked attribute yields empty output; the object never escapes into the
+        # template. These render a module or AppConfig repr (non-empty) before the fix.
+        for template_code in [
+            "{{ app_config.module }}",
+            "{{ app_config.models_module }}",
+            # Module-to-module traversal, which no other guard covers: a submodule is not a model class.
+            "{{ module.devices }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                self.assertEqual(data.render_jinja2(template_code=template_code, context=context), "")
+
+    def test_render_blocks_caller_supplied_sql_expressions(self):
+        """Assert a query expression carrying SQL the template author wrote is refused (GHSA-9fgc-m542-2g84).
+
+        `annotate()` and friends are allowed in templates for composed aggregates, and the argument
+        check covers positional field names only, so an expression passed by keyword is otherwise
+        evaluated with the application database connection's authority.
+
+        The refusal is on the expression's shape, not its class: Django lets a caller supply the SQL
+        format string on many expressions through unrecognized constructor keywords, which `Func` and
+        its subclasses, `Case` and `Subquery` all interpolate when generating SQL.
+        """
+        location = dcim_models.Location.objects.first()
+        # Injected directly, for the same reason as the traversal test above: the sink must refuse
+        # regardless of whether the attribute policy currently lets a template reach the class.
+        context = {
+            "obj": location,
+            "RawSQL": RawSQL,
+            "Coalesce": Coalesce,
+            "IntegerField": IntegerField,
+            "Count": Count,
+            "Sum": Sum,
+            "Case": Case,
+            "When": When,
+            "Value": Value,
+            "Subquery": Subquery,
+        }
+        for template_code in [
+            # An expression built from a SQL string outright, constructed at all.
+            "{{ RawSQL('(SELECT 1)', []) }}",
+            # Passed by keyword, which the positional-argument check does not see.
+            "{{ obj.tags.all().annotate(x=RawSQL('(SELECT 1)', [])).values('x') | list }}",
+            "{{ obj.tags.all().alias(x=RawSQL('(SELECT 1)', [])) | list }}",
+            "{{ obj.tags.all().order_by(RawSQL('(SELECT 1)', [])) | list }}",
+            # Nested one level inside another expression, to pin the recursive walk.
+            "{{ obj.tags.all().annotate(x=Coalesce(RawSQL('(SELECT 1)', [], output_field=IntegerField()), 1)).values('x') | list }}",
+            # An otherwise-permitted aggregate handed the SQL format string it generates.
+            "{{ Count('pk', template='(SELECT 1)') }}",
+            "{{ obj.tags.all().annotate(x=Count('pk', template='(SELECT 1)')).values('x') | list }}",
+            "{{ obj.tags.all().annotate(x=Sum('pk', function='(SELECT 1) -- ')).values('x') | list }}",
+            "{{ obj.tags.all().annotate(x=Count('pk', arg_joiner='), (')).values('x') | list }}",
+            # The same keyword on the other expression families that interpolate it.
+            "{{ obj.tags.all().annotate(x=Case(When(name='zz', then=Value(1)), default=Value(2), template='(SELECT 1)')).values('x') | list }}",
+            "{{ obj.tags.all().annotate(x=Subquery(obj.tags.all().values('pk')[:1], template='(SELECT 1)')).values('x') | list }}",
+            # Carried in as a filter value rather than a projection.
+            "{{ obj.tags.all().filter(pk__in=obj.tags.all().annotate(y=Count('pk', template='(SELECT 1)')).values('y')) | list }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code=template_code, context=context)
+
+
+class RenderJinja2ForRegexTest(TestCase):
+    """Tests for rendering a Jinja2 template whose output is used as a regular expression."""
+
+    def test_interpolated_metacharacters_are_escaped(self):
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": "a.b"})
+        self.assertEqual(rendered, r"^a\.b$")
+
+    def test_literal_template_text_is_not_escaped(self):
+        """The template author keeps full control of the pattern's own syntax."""
+        self.assertEqual(data.render_jinja2_for_regex("^[a-z]+$", {}), "^[a-z]+$")
+
+    def test_interpolated_value_cannot_change_the_pattern_structure(self):
+        """A value of `.*` must become a literal, not a wildcard that defeats the rule."""
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": ".*"})
+        self.assertEqual(rendered, r"^\.\*$")
+        self.assertIsNone(regex.match(rendered, "anything else"))
+
+    def test_interpolated_value_is_not_html_escaped(self):
+        rendered = data.render_jinja2_for_regex("^{{ v }}$", {"v": "a&b"})
+        self.assertIsNotNone(regex.match(rendered, "a&b"))
+
+    def test_escaping_applies_through_filters_and_safe(self):
+        for template_code, expected in [
+            ("{{ v|safe }}", r"a\.b"),
+            ("{{ v|upper }}", r"A\.B"),
+            ("{% set x = v %}{{ x }}", r"a\.b"),
+        ]:
+            with self.subTest(template_code=template_code):
+                self.assertEqual(data.render_jinja2_for_regex(template_code, {"v": "a.b"}), expected)
+
+    def test_non_string_values_are_coerced(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ v }}", {"v": 42}), "42")
+
+    def test_undefined_variables_render_empty(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ nope }}", {}), "")
+
+    def test_context_is_passed_through_to_the_template(self):
+        """Regression guard: a mis-wired context would silently render every variable empty."""
+        location = dcim_models.Location.objects.first()
+        self.assertEqual(data.render_jinja2_for_regex("{{ obj.name }}", {"obj": location}), regex.escape(location.name))
+
+    def test_rendering_is_still_sandboxed(self):
+        with self.assertRaises(SecurityError):
+            data.render_jinja2_for_regex("{{ ''.__class__.__name__ }}", {})
+
+    def test_registered_filters_are_still_available(self):
+        self.assertEqual(data.render_jinja2_for_regex("{{ v|upper }}", {"v": "abc"}), "ABC")
+
+    def test_standard_rendering_is_unaffected(self):
+        """The regex environment is an overlay; it must not change `render_jinja2()`."""
+        self.assertEqual(data.render_jinja2("{{ v }}", {"v": "a&b"}), "a&amp;b")
