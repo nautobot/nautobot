@@ -1,0 +1,82 @@
+"""Page object for the Config Context Schema detail view (/extras/config-context-schemas/<pk>/) and its Validation tab."""
+
+from playwright.sync_api import expect
+
+from nautobot.playwright.detail_page import DetailPage
+
+
+class ConfigContextSchemaDetailPage(DetailPage):
+    """The Config Context Schema detail view. Adds the success toast and the Validation tab to DetailPage.
+
+    The Validation tab renders one panel per kind of object bound to the schema: "Config
+    Contexts", "Devices" and "Virtual Machines". Each is an object table with a "Validation
+    state" column added by the view.
+    """
+
+    DETAIL_PATH = "/extras/config-context-schemas/{pk}/"
+    VERBOSE_NAME = "Config Context Schema"
+
+    _SUCCESS_TOAST = ".toast.nb-toast-success"
+    # An empty panel renders a single placeholder row with one colspan cell.
+    _PANEL_DATA_ROWS = "tbody tr:not(:has(td[colspan]))"
+    _VALIDATION_STATE_HEADER = "Validation state"
+    _CHECK_ICON = "i.mdi-check-bold"
+    _CROSS_ICON = "i.mdi-close-thick"
+
+    def navigate_to_validation_tab(self, pk):
+        """Go to the Validation tab of the schema with primary key *pk*.
+
+        The tab is a separate view with its own URL, so it is opened by URL rather than by clicking the tab.
+        """
+        self._goto(f"{self.DETAIL_PATH.format(pk=pk)}validation/")
+
+    def expect_success_message(self, text):
+        """Assert (auto-retrying) that a success toast shows *text*."""
+        expect(self.page.locator(self._SUCCESS_TOAST).filter(has_text=text)).to_have_count(1)
+
+    # -------------------------------------------------------------------------
+    # Validation tab
+    # -------------------------------------------------------------------------
+
+    def _validation_row(self, panel_title, row_name):
+        """Locator for the row of panel *panel_title* whose link text is exactly *row_name*."""
+        return (
+            self.panel(panel_title)
+            .locator(self._PANEL_DATA_ROWS)
+            .filter(has=self.page.get_by_role("link", name=row_name, exact=True))
+        )
+
+    def _validation_cell(self, panel_title, row_name):
+        """Locator for the "Validation state" cell of *row_name* in panel *panel_title*.
+
+        The column is found by its header in that panel's own table: the three tables have
+        different columns, and the Config Contexts table renders "Active" with the same check
+        icon as a pass, so neither a fixed position nor a row-wide icon check is reliable.
+        """
+        panel = self.panel(panel_title)
+        expect(panel).to_have_count(1)
+        headers = [text.split("\n")[0].strip() for text in panel.locator("table thead th").all_inner_texts()]
+        if self._VALIDATION_STATE_HEADER not in headers:
+            raise AssertionError(f"The {panel_title} panel has no {self._VALIDATION_STATE_HEADER!r} column: {headers}")
+        position = headers.index(self._VALIDATION_STATE_HEADER) + 1
+        return self._validation_row(panel_title, row_name).locator(f"td:nth-child({position})")
+
+    def expect_validation_rows(self, panel_title, row_names):
+        """Assert (auto-retrying) that panel *panel_title* lists exactly the objects named in *row_names*."""
+        expect(self.panel(panel_title).locator(self._PANEL_DATA_ROWS)).to_have_count(len(row_names))
+        for row_name in row_names:
+            expect(self._validation_row(panel_title, row_name)).to_have_count(1)
+
+    def expect_validation_passed(self, panel_title, row_name):
+        """Assert (auto-retrying) that *row_name* in panel *panel_title* shows a pass and no error."""
+        cell = self._validation_cell(panel_title, row_name)
+        expect(cell.locator(self._CHECK_ICON)).to_have_count(1)
+        expect(cell.locator(self._CROSS_ICON)).to_have_count(0)
+        expect(cell).to_have_text("")
+
+    def expect_validation_failed(self, panel_title, row_name, message):
+        """Assert (auto-retrying) that *row_name* in panel *panel_title* shows a failure with *message*."""
+        cell = self._validation_cell(panel_title, row_name)
+        expect(cell.locator(self._CROSS_ICON)).to_have_count(1)
+        expect(cell.locator(self._CHECK_ICON)).to_have_count(0)
+        expect(cell).to_contain_text(message)
