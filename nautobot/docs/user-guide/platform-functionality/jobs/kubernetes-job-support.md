@@ -12,6 +12,29 @@ Kubernetes job support was added in Nautobot v2.4.0 to provide an alternative fo
 
 So if you have any concerns with running Celery workers in your Kubernetes deployment, executing jobs with Kubernetes might be for you.
 
+## Security Considerations
+
+!!! warning "Job pods can use their own Kubernetes credentials"
+    Jobs are arbitrary Python code, and a Job pod runs that code with whatever Kubernetes API access its service account has. If the Job pod's service account can create Kubernetes Jobs or Pods, then anyone who can author or modify Job code can use that access to launch workloads of their own choosing (for example, privileged pods, pods that mount the host filesystem, or pods that run as a more powerful service account), escalating beyond the access you intended Job execution to have.
+
+As with any other deployment method, only install Jobs that you trust, and treat the ability to author or install Job code as equivalent to granting code execution on your infrastructure (see [Git Repositories: Security Considerations](../gitrepository.md#security-considerations) and [Permissions: Jobs](../../administration/guides/permissions.md#jobs)). Kubernetes-based execution adds the cluster's own access controls to that picture, so the identity used by Job pods deserves careful attention.
+
+Nautobot needs permission to create and read Kubernetes Jobs only in the components that _launch_ Job pods, such as the Nautobot web server and the Celery Beat scheduler. A Job pod does not need that permission simply to run its own Job; it only needs it if that Job causes another Job to be enqueued on a Kubernetes job queue (for example, a [Job Hook](./jobhook.md) triggered by changes the Job makes). If you can avoid that pattern, Job pods can run with no Kubernetes API access at all. Securing your cluster is ultimately the responsibility of your Kubernetes administrators, but at a high level, consider the following:
+
+- **Use a separate, least-privilege service account for Job pods.** Avoid sharing the service account used by the Nautobot web server or scheduler with Job pods. You can set `spec.template.spec.serviceAccountName` in your Job manifest (or in a [per-queue manifest](#configuration)) to a dedicated account that has no more Kubernetes API access than your Jobs actually require.
+- **Don't mount a service account token in Job pods that don't need one.** Setting `automountServiceAccountToken: false` in the Job manifest's pod spec prevents the token from being available to Job code at all.
+- **Scope RBAC permissions narrowly.** Grant the permission to create Jobs only to the service accounts that launch Job pods, and limit it to the namespace where Job pods run.
+- **Enforce Pod Security Standards in the namespace.** Admission controls such as Pod Security Admission can reject privileged pods or host mounts in the namespace even if a workload is created with unexpected credentials.
+- **Review your deployment tooling's defaults.** Helm charts and other deployment tools may use a single service account for all Nautobot components. If you deploy with the Nautobot Helm chart, review its [Kubernetes Jobs Support](https://docs.nautobot.com/projects/helm-charts/en/stable/advanced-features/kubernetes-jobs-support/) and [RBAC Roles and RoleBindings](https://docs.nautobot.com/projects/helm-charts/en/stable/advanced-features/rbac-roles/) documentation to understand how service accounts, RBAC bindings, and token mounting are configured for Job pods before enabling Kubernetes Job execution.
+
+For guidance on these topics, refer to the official Kubernetes documentation:
+
+- [Service Accounts](https://kubernetes.io/docs/concepts/security/service-accounts/)
+- [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
+- [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+- [Role Based Access Control Good Practices](https://kubernetes.io/docs/concepts/security/rbac-good-practices/)
+- [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) and [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/)
+
 ## Configuration
 
 === "Single Kubernetes Job Queue"
