@@ -41,7 +41,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface, VirtualDeviceContext
-from nautobot.dcim.utils import validate_primary_ips
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
 from nautobot.ipam.choices import PrefixTypeChoices
@@ -1411,7 +1410,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             # Devices, VMs, and VDCs using this IP as their primary IP, displayed if it isn't assigned to any interface
             primary_ip_hosts = []
             if not instance.interface_assignments.exists():
-                for relation in tables.IPAddressDetailTable.primary_ip_for_relations:
+                for relation in IPAddress.primary_ip_for_relations:
                     primary_ip_hosts.extend(getattr(instance, relation).restrict(request.user, "view"))
 
             paginate = {

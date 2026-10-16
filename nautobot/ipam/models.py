@@ -1850,6 +1850,16 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
 
     clean.alters_data = True
 
+    # Reverse relations from IPAddress to the Devices, VirtualMachines, and VirtualDeviceContexts using it as primary IP
+    primary_ip_for_relations = (
+        "primary_ip4_for",
+        "primary_ip6_for",
+        "primary_ip4_for_virtual_machines",
+        "primary_ip6_for_virtual_machines",
+        "ip4_vdcs",
+        "ip6_vdcs",
+    )
+
     @property
     def address(self):
         if self.host is not None and self.mask_length is not None:

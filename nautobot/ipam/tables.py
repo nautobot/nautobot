@@ -705,21 +705,11 @@ class IPAddressDetailTable(IPAddressTable):
     assigned = BooleanColumn(accessor="is_assigned")
     primary_ip_for = tables.Column(empty_values=(), orderable=False, verbose_name="Primary IP For")
 
-    # Reverse relations from IPAddress to the Devices, VirtualMachines, and VirtualDeviceContexts using it as primary IP
-    primary_ip_for_relations = (
-        "primary_ip4_for",
-        "primary_ip6_for",
-        "primary_ip4_for_virtual_machines",
-        "primary_ip6_for_virtual_machines",
-        "ip4_vdcs",
-        "ip6_vdcs",
-    )
-
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, user=user, **kwargs)
         if user is None:
             return
-        for relation in self.primary_ip_for_relations:
+        for relation in IPAddress.primary_ip_for_relations:
             queryset = IPAddress._meta.get_field(relation).related_model.objects.restrict(user, "view")
             self.add_conditional_prefetch("primary_ip_for", prefetch=Prefetch(relation, queryset=queryset))
 
@@ -727,10 +717,10 @@ class IPAddressDetailTable(IPAddressTable):
         # Only render from the permission-restricted prefetch added in __init__, never from unrestricted queries
         prefetched = getattr(record, "_prefetched_objects_cache", {})
         if not isinstance(record, IPAddress) or not all(
-            relation in prefetched for relation in self.primary_ip_for_relations
+            relation in prefetched for relation in IPAddress.primary_ip_for_relations
         ):
             return ""
-        hosts = [host for relation in self.primary_ip_for_relations for host in prefetched[relation]]
+        hosts = [host for relation in IPAddress.primary_ip_for_relations for host in prefetched[relation]]
         if not hosts:
             return placeholder(None)
         return format_html_join(mark_safe("<br>"), "{}", ((hyperlinked_object(host),) for host in hosts))

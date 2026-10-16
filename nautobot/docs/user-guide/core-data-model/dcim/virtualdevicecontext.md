@@ -39,9 +39,9 @@ Some vendor examples of VDCs include:
 
 ## Primary IP Addresses
 
-A VDC's primary IPv4 and IPv6 addresses must be assigned to an interface on the VDC's parent device (or be the NAT outside address of such an IP address). Removing the IP address from the last such interface will clear the VDC's corresponding primary IP value.
+A VDC's primary IPv4 and IPv6 addresses must be assigned to an interface assigned to the VDC (or be the NAT outside address of such an IP address).
 
 +++ 3.3.0
-    NAT outside addresses are now permitted. Previously, a VDC's primary IP was not cleared when the IP address was removed from the parent device's interfaces.
+    NAT outside addresses are now permitted.
 
-    If the [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../../administration/configuration/settings.md#primary_ip_requires_interface_assignment) setting is disabled, an IP address that isn't assigned to any interface can also be designated as a VDC's primary IP, including when creating the VDC. Such a primary IP is retained if it is later assigned to and then removed from the parent device's interfaces. An IP address assigned to another device's interface -- but _not_ to any interface on the parent device -- still can't be used as the VDC's primary IP.
+    If the [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../../administration/configuration/settings.md#primary_ip_requires_interface_assignment) setting is disabled, an IP address that isn't assigned to any interface can also be designated as a VDC's primary IP, including when creating the VDC. Such a primary IP is retained if it is later assigned to and then removed from the VDC's interfaces. An IP address assigned to another interface -- but _not_ to any interface in the VDC -- still can't be used as the VDC's primary IP.
