@@ -1,0 +1,1 @@
+Changed DistinctViewTabs to not render at all, if user lacks permission to view their content.

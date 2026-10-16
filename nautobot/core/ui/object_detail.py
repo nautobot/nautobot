@@ -22,7 +22,7 @@ from django.template import Context
 from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
@@ -718,26 +718,51 @@ class DistinctViewTab(Tab):
             return False
 
         self.related_object_count = None
-        if not self.related_object_attribute:
-            return True
-
         obj = get_obj_from_context(context)
-        if not hasattr(obj, self.related_object_attribute):
+        if not self.related_object_attribute:
+            pass
+        elif not hasattr(obj, self.related_object_attribute):
             logger.warning(
                 f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
             )
-            return True
-
-        try:
-            self.related_object_count = getattr(obj, self.related_object_attribute).count()
-        except AttributeError:
-            # Not a warning log, as there are cases where this is expected.
-            logger.debug(
-                f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
-            )
-
-        if self.hide_if_empty and not self.related_object_count:
-            return False
+        else:
+            try:
+                self.related_object_count = getattr(obj, self.related_object_attribute).count()
+            except AttributeError:
+                # Not a warning log, as there are cases where this is expected.
+                logger.debug(
+                    f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
+                )
+            if self.hide_if_empty and not self.related_object_count:
+                return False
+        if not self.required_permissions:  # only check if permissions werent specified explicitly
+            try:
+                url_match = resolve(self.get_extra_context(context)["url"])
+            except Exception:  # Getting extra context might not work
+                url_match = None
+            extra_permissions = None
+            if url_match:
+                url_name = url_match.url_name
+                view_func = url_match.func
+                # Check via view_class if available
+                if callable(getattr(view_func, "view_class", None)):
+                    view_class = view_func.view_class()
+                    if callable(getattr(view_class, "get_required_permission", None)):
+                        extra_permissions = view_class.get_required_permission()
+                # If nothing was found using the view class, and url name is available, check using @action methods
+                if not extra_permissions and url_name:
+                    local_url_name = url_name.split("_", maxsplit=1)[-1]
+                    potential_actions = []
+                    for action in view_func.cls.get_extra_actions():
+                        if hasattr(action, "kwargs") and (getattr(action, "url_name", None) == local_url_name):
+                            potential_actions.append(action)
+                    if len(potential_actions) == 1:
+                        extra_permissions = potential_actions[0].kwargs.get("custom_view_additional_permissions", [])
+            if extra_permissions:
+                if isinstance(extra_permissions, str):  # get_required_permission() can return a str
+                    extra_permissions = [extra_permissions]
+                if not context["request"].user.has_perms(extra_permissions):
+                    return False
         return True
 
     def should_render_content(self, context: Context):
