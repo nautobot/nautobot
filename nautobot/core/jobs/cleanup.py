@@ -90,6 +90,19 @@ class LogsCleanup(Job):
             if cascade_queryset.exists():
                 self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
 
+        # _raw_delete() bypasses the Collector, so rows in auto-created M2M through tables must be removed explicitly.
+        # Custom through models are already handled above via their CASCADE foreign keys.
+        for m2m_field in queryset.model._meta.many_to_many:
+            through = m2m_field.remote_field.through
+            if through._meta.auto_created:
+                through.objects.filter(**{f"{m2m_field.m2m_field_name()}__in": queryset})._raw_delete(using="default")
+        for related_object in related_objects:
+            if related_object.many_to_many:
+                through = related_object.field.remote_field.through
+                if through._meta.auto_created:
+                    reverse_field_name = related_object.field.m2m_reverse_field_name()
+                    through.objects.filter(**{f"{reverse_field_name}__in": queryset})._raw_delete(using="default")
+
         deleted_count = queryset._raw_delete(using="default")
         if deleted_count:
             deletion_summary.update({queryset.model._meta.label: deleted_count})
