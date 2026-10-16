@@ -938,15 +938,31 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
   > tbody > tr {
     /* By default Bootstrap 5 defines only `:hover` and we need to slightly extend it to improve end user experience. */
     &:hover,
-    &:focus-within,
+    &:has( :focus-visible),
     &:has( .dropdown-toggle.show) { /* Leading space inside `has` is intentional and stands for descendant nodes. */
       > * {
         --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
         --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
 
-        &.nb-actions .dropdown-toggle {
+        &.nb-actions .dropdown-toggle,
+        .nb-overview-toggle {
           opacity: 1;
         }
+      }
+    }
+
+    /* Set expanded object overview table row background color. */
+    &.nb-overview-row > td {
+      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
+    }
+
+    &:has(.nb-overview-toggle[aria-expanded="true"]) {
+      .nb-overview-toggle {
+        opacity: 1;
+      }
+
+      > td {
+        border-bottom-color: var(--#{$prefix}tertiary-bg);
       }
     }
   }
@@ -954,21 +970,10 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
   > tbody > tr > * {
     transition: $btn-transition; /* Use `$btn-transition` but in fact it is just for `background-color`. */
 
-    &.nb-actions .dropdown-toggle {
+    &.nb-actions .dropdown-toggle,
+    .nb-overview-toggle {
       @include transition($btn-transition, $transition-fade);
       opacity: 0;
-    }
-  }
-
-  /* Set expanded object overview table row background color. */
-  > tbody > tr {
-    &.nb-overview-row > td {
-      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
-    }
-
-    &:has(.nb-overview-toggle[aria-expanded="true"]) > td {
-      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
-      border-bottom-color: var(--#{$prefix}table-bg-state);
     }
   }
 }
@@ -1107,8 +1112,10 @@ $nb-overview-fields-columns-min-width: 40rem;
 
 @include color-mode(dark, true) {
   .nb-subtree {
+    /* `$white-0` → `$gray-3-dark` */
+    --subtree-chevron-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(284%) contrast(100%);
     /* `$white-0` → `$gray-2-dark` */
-    --subtree-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(204%) contrast(100%);
+    --subtree-sibling-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(204%) contrast(100%);
   }
 }
 
@@ -1120,10 +1127,12 @@ $nb-overview-fields-columns-min-width: 40rem;
   $subtree-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
   $subtree-no-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
 
-  /* `$white-0`	→ `$gray-2` */
-  --subtree-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
+  /* `$white-0` → `$gray-3` */
+  --subtree-chevron-icon-color-filter: invert(38%) sepia(10%) saturate(731%) hue-rotate(166deg) brightness(54%) contrast(91%);
+  /* `$white-0` → `$gray-2` */
+  --subtree-sibling-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
 
-  @mixin subtree-icon-color-filter() {
+  @mixin subtree-icon-color-filter($type) {
     /*
      * See other color filter mixins for context and explanation.
      * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
@@ -1142,7 +1151,7 @@ $nb-overview-fields-columns-min-width: 40rem;
      * - $gray-3-dark: #b5b5b5;
      *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(284%) contrast(100%);
      */
-    filter: var(--subtree-icon-color-filter);
+    filter: var(--subtree-#{$type}-icon-color-filter);
   }
 
   td:has(> &) {
@@ -1171,7 +1180,7 @@ $nb-overview-fields-columns-min-width: 40rem;
     padding-inline-start: map.get($spacers, 4);
 
     &::before {
-      @include subtree-icon-color-filter;
+      @include subtree-icon-color-filter("chevron");
       @include transition($accordion-icon-transition);
       background: no-repeat center/1rem #{escape-svg(url("data:image/svg+xml,#{$subtree-chevron-svg}"))};
       content: "";
@@ -1189,7 +1198,7 @@ $nb-overview-fields-columns-min-width: 40rem;
   }
 
   &.nb-subtree-ancestor-next-sibling::before {
-    @include subtree-icon-color-filter;
+    @include subtree-icon-color-filter("sibling");
     background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-ancestor-next-sibling-icon-svg}"))};
   }
 
@@ -1198,12 +1207,12 @@ $nb-overview-fields-columns-min-width: 40rem;
   }
 
   &.nb-subtree-next-sibling::before {
-    @include subtree-icon-color-filter;
+    @include subtree-icon-color-filter("sibling");
     background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-next-sibling-icon-svg}"))};
   }
 
   &.nb-subtree-no-next-sibling::before {
-    @include subtree-icon-color-filter;
+    @include subtree-icon-color-filter("sibling");
     background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-no-next-sibling-icon-svg}"))};
   }
 }
@@ -2026,16 +2035,16 @@ $star-icon-svg-filled: "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/s
  */
 @mixin filter($color) {
   @if $color == $black-0 {
-    /* `$white-0`	→ `$black-0`. */
+    /* `$white-0` → `$black-0`. */
     filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(41%) contrast(100%);
   } @else if $color == $orange-0 {
-    /* `$white-0`	→ `$orange-0`, gives `#e07808`, not the exact `#e07807`. */
+    /* `$white-0` → `$orange-0`, gives `#e07808`, not the exact `#e07807`. */
     filter: invert(50%) sepia(12%) saturate(7497%) hue-rotate(7deg) brightness(97%) contrast(94%);
   } @else if $color == $gray-3-dark {
-    /* `$white-0`	→ `gray-3-dark`. */
+    /* `$white-0` → `gray-3-dark`. */
     filter: invert(69%) sepia(15%) saturate(1%) hue-rotate(311deg) brightness(223%) contrast(98%);
   } @else if $color == $orange-0-dark {
-    /* `$white-0`	→ `$orange-0-dark`, gives `#ff9938`, not the exact `#ff9933`. */
+    /* `$white-0` → `$orange-0-dark`, gives `#ff9938`, not the exact `#ff9933`. */
     filter: invert(57%) sepia(100%) saturate(478%) hue-rotate(336deg) brightness(141%) contrast(101%);
   } @else {
     filter: none;

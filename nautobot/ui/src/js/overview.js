@@ -1,5 +1,5 @@
-const ICON_COLLAPSED_CLASS = 'mdi-window-maximize';
-const ICON_EXPANDED_CLASS = 'mdi-window-minimize';
+const ICON_COLLAPSED_CLASS = 'mdi-unfold-more-horizontal';
+const ICON_EXPANDED_CLASS = 'mdi-unfold-less-horizontal';
 const OVERVIEW_ROW_ID_DATA_ATTRIBUTE = 'data-nb-overview-row-id';
 const OVERVIEW_TOGGLE_BUTTON_CLASS = 'nb-overview-toggle';
 
