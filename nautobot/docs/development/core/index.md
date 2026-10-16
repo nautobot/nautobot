@@ -321,7 +321,7 @@ Feature requests will follow our published workflow from inbound triage to ultim
 
 #### Creating Changelog Fragments
 
-All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory. To create a fragment, use your GitHub issue number (or the number of the pull request, if no issue was opened beforehand) and fragment type as the filename. For example, `changes/2362.added`. Valid fragment types are:
+All pull requests to `next` or `develop` must include a changelog fragment file in the `./changes` directory, explaining the impact of the pull request to users. To create a fragment, use your GitHub issue number (or the number of the pull request, if no issue was opened beforehand) and fragment type as the filename. For example, `changes/2362.added.md`. Valid fragment types are:
 
 * `added` -- net-new features and functionality
 * `breaking` -- breaking changes to existing features and functionality
@@ -334,30 +334,33 @@ All pull requests to `next` or `develop` must include a changelog fragment file 
 * `removed` -- removal of existing features and functionality (may be `breaking` in many cases, even if previously `deprecated`)
 * `security` -- security fixes, usually corresponding to a CVE or other security disclosure against either Nautobot or one of its dependencies
 
-The change summary is added to the file in plain text. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple release notes in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
+!!! tip
+    You can use `towncrier create` (or `poetry run towncrier create`) to interactively create the changelog fragment file, or use your preferred text editor.
+
+The change summary is added to the file in Markdown format. Change summaries should be complete sentences, starting with a capital letter and ending with a period, and be in past tense. Remember that these change summaries will appear in the Nautobot release notes, so keep them concise and targeted to the relevant audience (end users, App developers, maintainers, etc.). Each line of the change fragment will generate a single change entry in the release notes. Use multiple lines in the same file if your change needs to generate multiple entries in the same category. If the change needs to create multiple entries in separate categories, create multiple files.
 
 !!! example
 
     **Wrong**
-    ```plaintext title="changes/1234.fixed"
-    fix critical bug in feature xyz
+    ```markdown title="changes/1234.fixed.md"
+    fix exception in DeviceListView
     ```
 
     **Right**
-    ```plaintext title="changes/1234.fixed"
-    Fixed a bug in feature XYZ in which... (details about the impact to users go here).
+    ```markdown title="changes/1234.fixed.md"
+    Fixed an `IntegrityError` exception when listing Devices while a device with an IPv6 primary address is present.
     ```
 
 !!! example "Multiple Entry Example"
 
-    This will generate 2 entries in the `fixed` category and one entry in the `changed` category.
+    This will generate 2 entries in the `fixed` category and one entry in the `housekeeping` category.
 
-    ```plaintext title="changes/1234.fixed"
+    ```markdown title="changes/1234.fixed.md"
     Fixed critical bug in feature XYZ in which ....
-    Fixed a failure in release notes generation.
+    Fixed an unhandled `RuntimeError` exception when ...
     ```
 
-    ```plaintext title="changes/1234.changed"
+    ```markdown title="changes/1234.housekeeping.md"
     Changed release notes generation to more robustly handle ....
     ```
 
