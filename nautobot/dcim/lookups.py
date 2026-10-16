@@ -27,6 +27,8 @@ class PathContains(Lookup):
         sql_map = {
             "postgresql": "%s::jsonb ? '%s'",
             "mysql": "JSON_CONTAINS(%s, '\"%s\"','$')",
+            # Nautobot's SQLite backend registers a JSON_CONTAINS function with MySQL semantics.
+            "sqlite": "JSON_CONTAINS(%s, '\"%s\"','$')",
         }
 
         if vendor not in sql_map:

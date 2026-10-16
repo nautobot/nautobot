@@ -745,6 +745,7 @@ class TestVarbinaryIPField(TestCase):
         db_types = {
             "postgresql": "bytea",
             "mysql": "varbinary(16)",
+            "sqlite": "varbinary(16)",
         }
 
         expected = db_types[connection.vendor]

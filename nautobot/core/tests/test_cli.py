@@ -81,9 +81,13 @@ class TestPreprocessSettings(TestCase):
         self.assertTrue(os.path.isdir(os.path.join(settings_module.MEDIA_ROOT, "image-attachments")))
         self.assertTrue(os.path.isdir(settings_module.STATIC_ROOT))
 
-        # databases should be using the prometheus backends
+        # databases should be using the prometheus backends (SQLite goes through Nautobot's own backend, which wraps it)
         self.assertTrue(settings_module.METRICS_ENABLED)
-        self.assertIn("django_prometheus.db.backends", settings_module.DATABASES["default"]["ENGINE"])
+        engine = settings_module.DATABASES["default"]["ENGINE"]
+        if "sqlite" in engine:
+            self.assertEqual(engine, "nautobot.core.db.backends.sqlite3")
+        else:
+            self.assertIn("django_prometheus.db.backends", engine)
 
         # job_logs database connection should exist
         self.assertIn("job_logs", settings_module.DATABASES)
