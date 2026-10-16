@@ -6733,6 +6733,21 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             str(response.data["conditions"]),
         )
 
+    def test_patching_any_field_checks_the_stored_conditions(self):
+        """A partial update without the conditions is still refused while they cannot be referenced, as in the form."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = [
+            {"type": "preset", "preset": "field_changed", "values": {"field": "mtu"}, "negate": False}
+        ]
+        webhook.save()
+
+        response = self.client.patch(self._get_detail_url(webhook), {"enabled": False}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("names `mtu`", str(response.data["conditions"]))
+        webhook.refresh_from_db()
+        self.assertTrue(webhook.enabled)
+
     def test_patching_another_field_leaves_conditions_alone(self):
         """A PATCH that never mentions `conditions` must not clear what is already stored."""
         self.add_permissions("extras.change_webhook")
