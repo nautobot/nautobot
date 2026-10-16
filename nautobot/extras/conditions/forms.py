@@ -357,12 +357,16 @@ def _stored_row_as_initial(row, addressable):
     values = row.get("values")
     if not isinstance(values, dict):
         values = {}
-    subfield_names = {entry["name"]: {sub["name"] for sub in entry.get("subfields", ())} for entry in addressable}
+    subfield_names_by_field = {
+        entry["name"]: {sub["name"] for sub in entry.get("subfields", ())} for entry in addressable
+    }
     for parameter in preset.parameters:
         value = values.get(parameter.name)
         field, _, subfield = value.partition(".") if isinstance(value, str) else ("", "", "")
         splits_into_field_and_subfield = (
-            isinstance(value, str) and value not in subfield_names and subfield in subfield_names.get(field, ())
+            isinstance(value, str)
+            and value not in subfield_names_by_field
+            and subfield in subfield_names_by_field.get(field, ())
         )
         if parameter.kind == PARAM_KIND_FIELD and splits_into_field_and_subfield:
             initial[parameter.name], initial[_subfield_name(parameter.name)] = field, subfield
@@ -375,7 +379,8 @@ def errors_by_row_and_control(rows, addressable=()):
     """What a save would refuse about the stored condition rows, keyed by row and then by the control.
 
     The complaints `validate_conditions` reports, so the editor cannot reach a different verdict. With
-    `addressable`, also a field the chosen content types do not offer, for a row with no other complaint.
+    `addressable`, also a field that cannot be referenced in a condition for the chosen content types, for a row
+    with no other complaint.
     A complaint naming no parameter is the row's own, and is keyed by `NON_FIELD_ERRORS`.
 
     Args:
@@ -393,22 +398,23 @@ def errors_by_row_and_control(rows, addressable=()):
     for index, row in enumerate(rows if addressable else ()):
         if index in errors:
             continue
-        hidden = ConditionRowForm(index=index, addressable=addressable, row=row).field_path_not_offered
-        if hidden is not None:
-            name, path = hidden
-            errors[index] = {name: [f"Parameter `{name}` names `{path}`, which the chosen content types do not offer."]}
+        not_offered = ConditionRowForm(index=index, addressable=addressable, row=row).field_path_not_offered
+        if not_offered is not None:
+            name, path = not_offered
+            errors[index] = {
+                name: [
+                    f"Parameter `{name}` names `{path}`, "
+                    "which is not a field that can be referenced in a condition for chosen content types."
+                ]
+            }
     return errors
 
 
 def messages_for_fields_not_offered(conditions, content_types):
-    """A complaint for each condition whose field `content_types` do not offer, which the editor shows as `—`.
+    """The message for each condition whose field cannot be referenced for `content_types`, shown as `—`.
 
-    The content types are passed in rather than read from the webhook or job hook, because a save assigns them
-    only after the object is saved, so its validation would see none on create and the old ones on edit. The
-    forms and the REST API serializers both call this before saving.
-
-    Conditions with a fault of their own are left to `validate_conditions`, which says what is wrong in its own
-    words, so this returns nothing for them.
+    The content types are passed in, because a save assigns them only after the object is saved. Conditions
+    with a fault of their own get nothing here, since `validate_conditions` reports them in its own words.
     """
     if not isinstance(conditions, list) or not conditions or not content_types or row_errors(conditions):
         return []
@@ -426,7 +432,10 @@ def messages_for_fields_not_offered(conditions, content_types):
 
 
 def reject_fields_not_offered(form):
-    """Add to the webhook or job hook `form` a complaint about each condition whose field it does not offer."""
+    """Add to the webhook or job hook `form` a complaint about each condition whose field cannot be referenced.
+
+    The content types are the form's own.
+    """
     conditions = form.cleaned_data.get("conditions")
     for message in messages_for_fields_not_offered(conditions, form.cleaned_data.get("content_types")):
         form.add_error("conditions", message)

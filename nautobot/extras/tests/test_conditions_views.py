@@ -119,13 +119,14 @@ class ConditionsViewTest(NautobotTestCase):
         self.assertInHTML("<li class='text-danger'>Parameter `operator` is required.</li>", body)
         self.assertIn("has-error", body)
 
-    def test_asking_also_says_which_field_the_content_types_do_not_offer(self):
+    def test_asking_also_says_which_field_is_not_offered(self):
         """The field select shows `—` for it, so the complaint is the only place that names it."""
         body = self.rows(
             [{"type": "preset", "preset": "field_changed", "values": {"field": "unknown_field"}}], validate=True
         )
         self.assertInHTML(
-            "<li class='text-danger'>Parameter `field` names `unknown_field`, which the chosen content types do not offer.</li>",
+            "<li class='text-danger'>Parameter `field` names `unknown_field`, "
+            "which is not a field that can be referenced in a condition for chosen content types.</li>",
             body,
         )
 

@@ -927,7 +927,10 @@ class JobClassDetailSerializer(JobClassSerializer):
 
 
 def _reject_fields_not_offered(serializer, attrs):
-    """Reject a condition whose field the content types do not offer. On a `PATCH` either may come from the object."""
+    """Reject a condition whose field cannot be referenced in a condition for the content types.
+
+    On a `PATCH`, the conditions or the content types the request leaves out come from the object.
+    """
     conditions = attrs.get("conditions", getattr(serializer.instance, "conditions", None))
     if "content_types" in attrs:
         content_types = attrs["content_types"]

@@ -6695,7 +6695,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("no_such_preset", str(response.data["conditions"][0]))
         self.assertFalse(Webhook.objects.filter(name="api-test-bad-condition").exists())
 
-    def test_create_with_a_field_its_content_types_do_not_offer_is_refused(self):
+    def test_create_with_a_field_not_offered_is_refused(self):
         """The editor would show that field as `—`, so the API refuses it as the form does."""
         self.add_permissions("extras.add_webhook")
         conditions = [{"type": "preset", "preset": "field_changed", "values": {"field": "mtu"}, "negate": False}]
@@ -6710,7 +6710,8 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             [str(message) for message in response.data["conditions"]],
             [
                 "Condition 1: Preset `field_changed`. "
-                "Parameter `field` names `mtu`, which the chosen content types do not offer."
+                "Parameter `field` names `mtu`, "
+                "which is not a field that can be referenced in a condition for chosen content types."
             ],
         )
 
@@ -6727,7 +6728,10 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             self._get_detail_url(webhook), {"content_types": ["dcim.consoleport"]}, format="json", **self.header
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("names `model`, which the chosen content types do not offer", str(response.data["conditions"]))
+        self.assertIn(
+            "names `model`, which is not a field that can be referenced in a condition for chosen content types",
+            str(response.data["conditions"]),
+        )
 
     def test_patching_another_field_leaves_conditions_alone(self):
         """A PATCH that never mentions `conditions` must not clear what is already stored."""

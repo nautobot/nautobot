@@ -1,1 +1,1 @@
-Fixed webhooks and job hooks accepting a condition on a field path their content types do not offer, such as `location.parent.name` or a deleted custom field or unknown field.
+Fixed webhooks and job hooks accepting a condition on a field path that cannot be referenced in a condition for their content types, such as `location.parent.name` or a deleted custom field or unknown field.

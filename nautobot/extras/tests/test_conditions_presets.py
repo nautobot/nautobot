@@ -113,16 +113,9 @@ class PresetParameterCleanTest(TestCase):
         with self.assertRaisesRegex(ConditionPresetError, re.escape("takes a single value, not a list")):
             PresetParameter(name="field", label="Field").clean(["a"])
 
-    def test_a_field_path_names_at_most_one_sub_field(self):
-        """The editor would write a deeper path back cut short on the next save, changing what it compares."""
-        parameter = PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD)
-        for value in ("status", "status.name", "custom_fields.site_code"):
-            with self.subTest(value=value):
-                parameter.clean(value)
-        with self.assertRaisesRegex(
-            ConditionPresetError, re.escape("names `location.parent.name`, which goes deeper than `field.sub-field`.")
-        ):
-            parameter.clean("location.parent.name")
+    def test_a_related_objects_custom_field_path_is_accepted(self):
+        """Its sub-field has a dot of its own, so a path is not judged by how many dots it holds."""
+        PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD).clean("location.custom_fields.region_code")
 
     def test_required_rejects_empty_list(self):
         with self.assertRaisesRegex(ConditionPresetError, re.escape("`value` is required")):

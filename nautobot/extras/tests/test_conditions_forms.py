@@ -274,7 +274,14 @@ class StoredRowTest(RowFormTestCase):
         rows = [{"type": "preset", "preset": "field_changed", "values": {"field": "unknown_field"}}]
         self.assertEqual(
             errors_by_row_and_control(rows, self.addressable),
-            {0: {"field": ["Parameter `field` names `unknown_field`, which the chosen content types do not offer."]}},
+            {
+                0: {
+                    "field": [
+                        "Parameter `field` names `unknown_field`, "
+                        "which is not a field that can be referenced in a condition for chosen content types."
+                    ]
+                }
+            },
         )
 
     def test_a_path_the_two_selects_cannot_show_exactly_stays_whole(self):
