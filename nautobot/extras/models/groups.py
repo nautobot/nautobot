@@ -589,8 +589,8 @@ class DynamicGroup(PrimaryModel):
             if self.filter:
                 raise ValidationError({"filter": "Filter can only be set for groups of type `dynamic-filter`."})
         else:
-            # `is_valid()` turns a list on a single-value filter into its string form (`'["foo"]'`), or raises
-            # TypeError for a boolean filter, so reject a list on any single-value filter first.
+            # `is_valid()` does not catch a list on a single-value filter. A boolean filter raises TypeError,
+            # and any other filter accepts the list as text.
             empty_filterset = self.filterset_class()  # pylint: disable=not-callable
             listed = sorted(
                 name

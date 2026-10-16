@@ -1,1 +1,1 @@
-Fixed a dynamic group with a list on a single-value filter, such as `{"has_primary_ip": ["True"]}`, returning HTTP 500 or saving an unusable filter instead of reporting a validation error.
+Fixed dynamic group validation to reject a list on a single-value filter, such as `{"has_primary_ip": ["True"]}`, which returned HTTP 500.
