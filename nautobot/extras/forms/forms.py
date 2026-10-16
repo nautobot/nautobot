@@ -62,6 +62,7 @@ from nautobot.extras.choices import (
     ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
+from nautobot.extras.conditions.forms import reject_fields_not_offered
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -1774,6 +1775,11 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
             "conditions",
         )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        reject_fields_not_offered(self)
+        return cleaned_data
+
 
 class JobHookFilterForm(BootstrapMixin, forms.Form):
     model = JobHook
@@ -2884,6 +2890,11 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             "ssl_verification",
             "ca_file_path",
         )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        reject_fields_not_offered(self)
+        return cleaned_data
 
 
 class WebhookFilterForm(BootstrapMixin, forms.Form):
