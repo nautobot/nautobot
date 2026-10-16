@@ -6,8 +6,6 @@ from unittest import TestCase
 from django.core.exceptions import ValidationError
 from django.test import tag
 
-from nautobot.core.testing import TestCase as NautobotTestCase
-from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.conditions.presets import (
     BUILTIN_CONDITION_PRESETS,
     ConditionPreset,
@@ -25,7 +23,6 @@ from nautobot.extras.conditions.presets import (
     USER_IS,
 )
 from nautobot.extras.conditions.rows import ConditionRow
-from nautobot.extras.models import CustomField
 from nautobot.extras.registry import registry
 
 
@@ -119,7 +116,7 @@ class PresetParameterCleanTest(TestCase):
     def test_a_field_path_names_at_most_one_sub_field(self):
         """The editor would write a deeper path back cut short on the next save, changing what it compares."""
         parameter = PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD)
-        for value in ("status", "status.name"):
+        for value in ("status", "status.name", "custom_fields.site_code"):
             with self.subTest(value=value):
                 parameter.clean(value)
         with self.assertRaisesRegex(
@@ -136,27 +133,6 @@ class PresetParameterCleanTest(TestCase):
 
 
 @tag("unit")
-class CustomFieldPathTest(NautobotTestCase):
-    """A field parameter naming a custom field, which a save checks against the custom fields that exist.
-
-    The check reads the custom fields from the database, so these tests need one.
-    """
-
-    def setUp(self):
-        self.parameter = PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD)
-
-    def test_a_custom_field_that_exists_is_accepted(self):
-        CustomField.objects.create(key="site_code", label="Site code", type=CustomFieldTypeChoices.TYPE_TEXT)
-        self.parameter.clean("custom_fields.site_code")
-
-    def test_a_custom_field_that_does_not_exist_is_refused_with_the_way_out(self):
-        """The editor shows such a field as an empty select, so the message has to say what to do."""
-        with self.assertRaisesRegex(
-            ConditionPresetError, re.escape("custom field `site_code`, which does not exist. Remove this condition.")
-        ):
-            self.parameter.clean("custom_fields.site_code")
-
-
 class CleanValuesTest(TestCase):
     """The preset checks what only it can know; errors carry preset and parameter as structured data."""
 

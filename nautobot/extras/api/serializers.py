@@ -46,6 +46,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ScheduledJobStateChoices,
 )
+from nautobot.extras.conditions.forms import messages_for_fields_not_offered
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -925,6 +926,18 @@ class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
+def _reject_fields_not_offered(serializer, attrs):
+    """Reject a condition whose field the content types do not offer. On a `PATCH` either may come from the object."""
+    conditions = attrs.get("conditions", getattr(serializer.instance, "conditions", None))
+    if "content_types" in attrs:
+        content_types = attrs["content_types"]
+    else:
+        content_types = serializer.instance.content_types.all() if serializer.instance is not None else None
+    messages = messages_for_fields_not_offered(conditions, content_types)
+    if messages:
+        raise serializers.ValidationError({"conditions": messages})
+
+
 class JobHookSerializer(NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(),
@@ -935,6 +948,11 @@ class JobHookSerializer(NautobotModelSerializer):
     class Meta:
         model = JobHook
         fields = "__all__"
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        _reject_fields_not_offered(self, attrs)
+        return attrs
 
 
 class JobCreationSerializer(BaseModelSerializer):
@@ -1365,6 +1383,11 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = Webhook
         fields = "__all__"
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        _reject_fields_not_offered(self, attrs)
+        return attrs
 
 
 #

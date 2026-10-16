@@ -3701,7 +3701,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 job=jhr_log,
                 type_create=True,
                 type_delete=True,
-                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "model"}}],
             ),
             JobHook(
                 name="JobHook2",
@@ -6610,7 +6610,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
-                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "model"}}],
             ),
             Webhook(
                 name="api-test-2",
@@ -6640,7 +6640,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         {
             "type": "preset",
             "preset": "field_compare",
-            "values": {"field": "mtu", "operator": "gt", "value": 9000},
+            "values": {"field": "display", "operator": "contains", "value": "console"},
             "negate": False,
         },
         {"type": "expression", "source": "data.name", "negate": True},
@@ -6694,6 +6694,40 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("Condition 2: ", str(response.data["conditions"][0]))
         self.assertIn("no_such_preset", str(response.data["conditions"][0]))
         self.assertFalse(Webhook.objects.filter(name="api-test-bad-condition").exists())
+
+    def test_create_with_a_field_its_content_types_do_not_offer_is_refused(self):
+        """The editor would show that field as `—`, so the API refuses it as the form does."""
+        self.add_permissions("extras.add_webhook")
+        conditions = [{"type": "preset", "preset": "field_changed", "values": {"field": "mtu"}, "negate": False}]
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-field-not-offered", conditions=conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            [str(message) for message in response.data["conditions"]],
+            [
+                "Condition 1: Preset `field_changed`. "
+                "Parameter `field` names `mtu`, which the chosen content types do not offer."
+            ],
+        )
+
+    def test_patching_content_types_alone_checks_the_stored_conditions(self):
+        """Without `conditions` in the request, the stored ones are checked against the new content types."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = [
+            {"type": "preset", "preset": "field_changed", "values": {"field": "model"}, "negate": False}
+        ]
+        webhook.save()
+
+        response = self.client.patch(
+            self._get_detail_url(webhook), {"content_types": ["dcim.consoleport"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("names `model`, which the chosen content types do not offer", str(response.data["conditions"]))
 
     def test_patching_another_field_leaves_conditions_alone(self):
         """A PATCH that never mentions `conditions` must not clear what is already stored."""

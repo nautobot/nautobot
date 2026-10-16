@@ -17,6 +17,7 @@ from django.core.exceptions import NON_FIELD_ERRORS
 from django.forms.utils import ErrorDict
 from django.urls import reverse
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.utils import add_blank_choice
 from nautobot.core.forms.widgets import (
@@ -29,6 +30,7 @@ from nautobot.core.forms.widgets import (
     StaticSelect2,
 )
 from nautobot.extras.choices import ConditionTypeChoices
+from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.conditions.operators import (
     DISPLAY_KEY,
     KIND_BOOLEAN,
@@ -369,14 +371,16 @@ def _stored_row_as_initial(row, addressable):
     return initial
 
 
-def errors_by_row_and_control(rows):
+def errors_by_row_and_control(rows, addressable=()):
     """What a save would refuse about the stored condition rows, keyed by row and then by the control.
 
-    The same complaints `validate_conditions` reports, so the editor cannot reach a different verdict.
+    The complaints `validate_conditions` reports, so the editor cannot reach a different verdict. With
+    `addressable`, also a field the chosen content types do not offer, for a row with no other complaint.
     A complaint naming no parameter is the row's own, and is keyed by `NON_FIELD_ERRORS`.
 
     Args:
         rows (list): The `conditions` field as stored, a list of condition row mappings.
+        addressable (list): `addressable_fields` for the content types a save would watch.
     """
     errors = {}
     for index, error in row_errors(rows).items():
@@ -386,7 +390,46 @@ def errors_by_row_and_control(rows):
             control = params.get("parameter") or params.get("key") or NON_FIELD_ERRORS
             by_control.setdefault(control, []).extend(message.messages)
         errors[index] = by_control
+    for index, row in enumerate(rows if addressable else ()):
+        if index in errors:
+            continue
+        hidden = ConditionRowForm(index=index, addressable=addressable, row=row).field_path_not_offered
+        if hidden is not None:
+            name, path = hidden
+            errors[index] = {name: [f"Parameter `{name}` names `{path}`, which the chosen content types do not offer."]}
     return errors
+
+
+def messages_for_fields_not_offered(conditions, content_types):
+    """A complaint for each condition whose field `content_types` do not offer, which the editor shows as `—`.
+
+    The content types are passed in rather than read from the webhook or job hook, because a save assigns them
+    only after the object is saved, so its validation would see none on create and the old ones on edit. The
+    forms and the REST API serializers both call this before saving.
+
+    Conditions with a fault of their own are left to `validate_conditions`, which says what is wrong in its own
+    words, so this returns nothing for them.
+    """
+    if not isinstance(conditions, list) or not conditions or not content_types or row_errors(conditions):
+        return []
+    models = [content_type.model_class() for content_type in content_types]
+    try:
+        addressable = addressable_fields(*[model for model in models if model is not None])
+    except SerializerNotFound:
+        return []
+    return [
+        f"Condition {index + 1}: Preset `{conditions[index].get('preset')}`. {message}"
+        for index, by_control in errors_by_row_and_control(conditions, addressable).items()
+        for messages in by_control.values()
+        for message in messages
+    ]
+
+
+def reject_fields_not_offered(form):
+    """Add to the webhook or job hook `form` a complaint about each condition whose field it does not offer."""
+    conditions = form.cleaned_data.get("conditions")
+    for message in messages_for_fields_not_offered(conditions, form.cleaned_data.get("content_types")):
+        form.add_error("conditions", message)
 
 
 class ConditionRowForm(forms.Form):
@@ -435,6 +478,18 @@ class ConditionRowForm(forms.Form):
             # Only a parameter control carries its own complaint. One about the type, or about a control
             # the row no longer brings, has nowhere to sit, so the row says it on their behalf.
             self.add_error(name if name in chosen else NON_FIELD_ERRORS, messages)
+
+    @property
+    def field_path_not_offered(self):
+        """The field parameter and the path it holds when its select can only show `—` for that path, else None."""
+        preset = get_condition_preset(self._current_value("type"))
+        named = _parameter_of_kind(preset, PARAM_KIND_FIELD) if preset is not None else None
+        if named is None or named.name not in self.fields or not self.addressable:
+            return None
+        path = self._current_value(named.name)
+        if not isinstance(path, str) or not path or path in dict(self.fields[named.name].widget.choices):
+            return None
+        return named.name, path
 
     @property
     def parameter_controls(self):

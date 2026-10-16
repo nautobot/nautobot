@@ -7260,6 +7260,19 @@ class JobHookTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCa
             "remove_content_types": [device_ct.pk],
         }
 
+    def test_a_job_hook_naming_a_field_its_content_types_do_not_offer_is_refused(self):
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
+        refused = {"type": "preset", "preset": "field_changed", "values": {"field": "unknown_field"}, "negate": False}
+        data = {**post_data(self.form_data), "conditions": json.dumps([refused])}
+        response = self.client.post(self._get_url("add"), data=data)
+        self.assertHttpStatus(response, 200)
+        self.assertIn(
+            "Condition 1: Preset `field_changed`. Parameter `field` names `unknown_field`, "
+            "which the chosen content types do not offer.",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+        self.assertFalse(self._get_queryset().filter(name="jobhook-4").exists())
+
 
 # TODO: Convert to StandardTestCases.Views
 class ObjectChangeTestCase(TestCase):
@@ -8062,6 +8075,18 @@ class WebhookTestCase(
         self.assertHttpStatus(response, 200)
         self.assertIn(
             "Condition 1: Unknown condition preset `no_such_preset`.",
+            extract_page_body(response.content.decode(response.charset)),
+        )
+        self.assertFalse(self._get_queryset().filter(name="webhook-4").exists())
+
+    def test_a_webhook_naming_a_field_its_content_types_do_not_offer_is_refused(self):
+        """The editor shows such a field as `—`, so the save says why rather than storing what no row can show."""
+        self.add_permissions("extras.add_webhook")
+        refused = {"type": "preset", "preset": "field_changed", "values": {"field": "unknown_field"}, "negate": False}
+        response = self.client.post(self._get_url("add"), data=self.form_data_with([refused]))
+        self.assertHttpStatus(response, 200)
+        self.assertIn(
+            "Condition 1: Preset `field_changed`. Parameter `field` names `unknown_field`, which the chosen content types do not offer.",
             extract_page_body(response.content.decode(response.charset)),
         )
         self.assertFalse(self._get_queryset().filter(name="webhook-4").exists())
