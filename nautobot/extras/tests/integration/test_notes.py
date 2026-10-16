@@ -21,7 +21,7 @@ class NoteTestCase:
 
         notes.expect_flash_message("Created note")
         notes.expect_note(text)
-        saved = api.get("/api/extras/notes/", params={"assigned_object_id": created_location["id"]}).json()["results"]
+        saved = api.get(f"/api/dcim/locations/{created_location['id']}/notes/").json()["results"]
         assert text in [note["note"] for note in saved]
 
     @pytest.mark.behavioral
