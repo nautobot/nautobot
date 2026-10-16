@@ -266,6 +266,16 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             instance.filter = {"location": -42}
             instance.validated_save()
 
+    def test_full_clean_filter_list_for_single_value_filter(self):
+        """Test that a list on a single-value filter raises a ValidationError, not a TypeError."""
+        instance = self.first_child
+        for filter_dict in ({"has_primary_ip": ["True"]}, {"q": ["location-1"]}):
+            with self.subTest(filter=filter_dict):
+                instance.filter = filter_dict
+                with self.assertRaises(ValidationError) as context:
+                    instance.validated_save()
+                self.assertIn("filter", context.exception.message_dict)
+
     def test_clean_fields_exclude_filter(self):
         """Test that filter validation is skipped when an appropriate `exclude` parameter is provided."""
         instance = self.groups[0]
