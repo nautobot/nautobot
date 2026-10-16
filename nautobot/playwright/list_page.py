@@ -43,6 +43,12 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
+    # The table-configuration drawer and its toolbar button. The drawer's id is derived
+    # from the table class name, so it is addressed by the form it contains instead.
+    _TABLE_CONFIG_TOGGLE = "button[title='Configure table']"
+    _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
+    _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
+    _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
     # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
@@ -104,6 +110,54 @@ class ListPage(BasePage):
         column_position = headers.index(header_name) + 1
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
+
+    def _column_header(self, label):
+        """Locator for the column header whose text is *label*."""
+        # Sortable headers add a visually-hidden sort instruction after the label.
+        text = re.compile(rf"^\s*{re.escape(label)}\s*(activate to .*)?$", re.DOTALL)
+        return self.page.locator("table thead th").filter(has_text=text)
+
+    def expect_column(self, label):
+        """Assert (auto-retrying) that exactly one column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(1)
+
+    def expect_no_column(self, label):
+        """Assert (auto-retrying) that no column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(0)
+
+    # -------------------------------------------------------------------------
+    # Table configuration drawer
+    # -------------------------------------------------------------------------
+
+    def open_table_config(self):
+        """Open the table-configuration drawer, if it is not already open.
+
+        Saving or resetting reloads the page with the drawer kept open, and clicking
+        the toolbar button again would close it, so the open state is checked first.
+        """
+        drawer = self.page.locator(f"{self._TABLE_CONFIG_DRAWER}.nb-drawer-open")
+        if drawer.count() == 0:
+            self.page.locator(self._TABLE_CONFIG_TOGGLE).click()
+        expect(drawer).to_have_count(1)
+
+    def toggle_table_column(self, column_label):
+        """Flip the checkbox for the column labeled *column_label* and save the table config.
+
+        Saving stores the choice in the user's config and reloads the page, keeping the
+        current query string, so a filtered list stays filtered.
+        """
+        self.open_table_config()
+        self.page.locator(self._TABLE_CONFIG_DRAWER).get_by_label(column_label, exact=True).click()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_SAVE)
+
+    def reset_table_columns(self):
+        """Restore the table's default columns with the drawer's Reset button.
+
+        Reset saves an empty column list, which the table treats as the defaults, and
+        reloads the page.
+        """
+        self.open_table_config()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_RESET)
 
     # -------------------------------------------------------------------------
     # Row selection and bulk edit
