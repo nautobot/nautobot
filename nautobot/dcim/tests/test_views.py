@@ -4059,6 +4059,38 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertEqual(interface.device, device)
         self.assertEqual(list(interface.tagged_vlans.all()), [vlan])
 
+    def test_create_interface_on_module_from_device_add_url_keeps_module(self):
+        """The module chosen on an add form opened with `?device=<pk>` is saved on the new interface."""
+        self.add_permissions("dcim.add_interface", "dcim.view_device", "dcim.view_module", "extras.view_status")
+        device = Device.objects.first()
+        module_bay = ModuleBay.objects.create(parent_device=device, name="Device Add URL Bay", position="1")
+        module = Module.objects.create(
+            module_type=ModuleType.objects.create(
+                manufacturer=Manufacturer.objects.first(), model="Device Add URL Module Type"
+            ),
+            parent_module_bay=module_bay,
+            status=Status.objects.get_for_model(Module).first(),
+        )
+
+        request = {
+            "path": f"{self._get_url('add')}?device={device.pk}",
+            "data": post_data(
+                {
+                    "device": device.pk,
+                    "module": module.pk,
+                    "name_pattern": "Device Add URL Interface [1-2]",
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                }
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interfaces = Interface.objects.filter(name__startswith="Device Add URL Interface")
+        self.assertEqual(interfaces.count(), 2)
+        for interface in interfaces:
+            self.assertEqual(interface.module, module)
+            self.assertEqual(interface.device, device)
+
     def test_create_interface_without_device_or_module_reports_error(self):
         """An interface belonging to neither a device nor a module is rejected rather than raising an exception."""
         self.add_permissions("dcim.add_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
