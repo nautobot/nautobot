@@ -17,6 +17,10 @@ def load_tests(loader, tests, pattern):  # pylint: disable=unused-argument
 
         from nautobot.playwright import load_tests  # noqa: F401
 
+    Without it, where the playwright group is not installed, `nautobot-server test` fails with
+    `ImportError: Failed to import test module: nautobot.<app>.tests.integration.test_<name>`
+    and `ModuleNotFoundError: No module named 'playwright'` (or `'pytest'`).
+
     This is unittest's `load_tests` protocol. When a package defines it, discovery
     calls it instead of recursing into the package, so the pytest-only test modules
     (which import Playwright and pytest) are never imported by the unittest runner and
