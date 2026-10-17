@@ -92,6 +92,7 @@ class LogsCleanup(Job):
 
         # _raw_delete() bypasses the Collector, so rows in auto-created M2M through tables must be removed explicitly.
         # Custom through models are already handled above via their CASCADE foreign keys.
+        # This runs after the related_objects loop because PROTECT handling there can still narrow `queryset`.
         for m2m_field in queryset.model._meta.many_to_many:
             through = m2m_field.remote_field.through
             if through._meta.auto_created:
