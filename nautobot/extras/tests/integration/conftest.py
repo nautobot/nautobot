@@ -10,13 +10,6 @@ Fixtures here decide which objects an Extras test starts from.
 # deliberately shadows it; pylint reads that as redefinition.
 # pylint: disable=redefined-outer-name
 
-"""Extras Playwright fixtures.
-
-Shared fixtures, including creation and teardown (create_object, auth_page, ...) are
-provided by nautobot.playwright.fixtures, registered in the repo-root conftest. Run
-`pytest --fixtures` to list them.
-"""
-
 import pytest
 
 from nautobot.playwright.helpers import unique_name
@@ -56,6 +49,8 @@ def created_advanced_ui_computed_field(create_object, created_device):
     The returned dict includes `expected_value`, the text the field renders for `created_device`.
     """
     return _create_device_computed_field(create_object, created_device["device"], advanced_ui=True)
+
+
 # Everything a created webhook has besides its name and conditions. Disabled, so it never sends.
 DISABLED_DEVICE_UPDATE_WEBHOOK = {
     "content_types": ["dcim.device"],
