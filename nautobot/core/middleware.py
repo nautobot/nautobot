@@ -451,13 +451,13 @@ class GraphQLOpenTelemetryMiddleware:
         return None
 
 
-class BaseRequestMetric(ABC):
-    """An abstract class used to track metrics for a request.
+class BaseRequestPerformanceMeasurement(ABC):
+    """An abstract class used to track a performance measurement for a request.
 
     Attributes:
-        name                          - The name of the metric
-        duration_in_milliseconds      - The duration detected for this metric
-        description                   - The description of the metric
+        name                          - The name of the performance measurement
+        duration_in_milliseconds      - The duration detected for this performance measurement
+        description                   - The description of the performance measurement
 
     This follows a general contract established by
     https://www.w3.org/TR/server-timing/
@@ -468,12 +468,12 @@ class BaseRequestMetric(ABC):
     @property
     @abstractmethod
     def name(self):
-        """The metric name."""
+        """The performance measurement name."""
 
     @property
     @abstractmethod
     def description(self):
-        """A description of the metric."""
+        """A description of the performance measurement."""
 
     @abstractmethod
     def __enter__(self):
@@ -484,7 +484,7 @@ class BaseRequestMetric(ABC):
         pass
 
 
-class TotalDurationRequestMetric(BaseRequestMetric):
+class TotalDurationRequestPerformanceMeasurement(BaseRequestPerformanceMeasurement):
     """Wall-clock duration of the entire request."""
 
     @property
@@ -504,7 +504,7 @@ class TotalDurationRequestMetric(BaseRequestMetric):
         return False
 
 
-class DatabaseDurationRequestMetric(BaseRequestMetric):
+class DatabaseDurationRequestPerformanceMeasurement(BaseRequestPerformanceMeasurement):
     """Time spent executing database queries, measured via Django's `execute_wrapper` hook."""
 
     @property
@@ -542,11 +542,12 @@ class DatabaseDurationRequestMetric(BaseRequestMetric):
             self.duration_in_milliseconds += (time.perf_counter_ns() - self.start_time) / 1_000_000
 
 
-class RequestMetricMiddleware:
-    """A middleware to generate opt-in metric detection for each request
+class RequestPerformanceMeasurementsMiddleware:
+    """A middleware to generate opt-in performance measurement detection for each request
 
-    The `Server-Timing` header property is added. Its value is a comma-delimited(,) list of metrics.
-    Each metric is a semi-colon(;) delimited set of attributes that adhere to the `BaseRequestMetric` standards
+    The `Server-Timing` header property is added. Its value is a comma-delimited(,) list of
+    performance measurements. Each performance measurement is a semi-colon(;) delimited set of
+    attributes that adhere to the `BaseRequestPerformanceMeasurement` standards
 
     Example:
     < Server-Timing: total;dur=42.71;desc="Total request duration", db;dur=9.59;desc="5 database queries"
@@ -558,64 +559,67 @@ class RequestMetricMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        enabled_metrics = self.get_enabled_metrics()
-        if not enabled_metrics:
+        enabled_performance_measurements = self.get_enabled_performance_measurements()
+        if not enabled_performance_measurements:
             return self.get_response(request)
 
         user_token = request.META.get("HTTP_AUTHORIZATION", None)
         hashed_user_token = hash_user_identifier(user_token) if user_token else "Anonymous"
 
         # ----------------------------------------------------------------------
-        # Wrap Request Logic With Metrics
+        # Wrap Request Logic With Performance Measurements
         # ----------------------------------------------------------------------
         with ExitStack() as exit_stack:
-            for metric in enabled_metrics:
-                exit_stack.enter_context(metric)
+            for performance_measurement in enabled_performance_measurements:
+                exit_stack.enter_context(performance_measurement)
             response = self.get_response(request)
 
         # ----------------------------------------------------------------------
-        # Process Metrics
+        # Process Performance Measurements
         # ----------------------------------------------------------------------
         server_timing_header_name = "Server-Timing"
         server_timing_millisecond_precision = 2
 
-        header_metrics = []
-        for enabled_metric in enabled_metrics:
+        header_performance_measurements = []
+        for enabled_performance_measurement in enabled_performance_measurements:
             rounded_duration_in_milliseconds = round(
-                enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision
+                enabled_performance_measurement.duration_in_milliseconds, server_timing_millisecond_precision
             )
-            enabled_metric_string = (
-                f'{enabled_metric.name};dur={rounded_duration_in_milliseconds};desc="{enabled_metric.description}"'
+            enabled_performance_measurement_string = (
+                f"{enabled_performance_measurement.name};dur={rounded_duration_in_milliseconds};"
+                f'desc="{enabled_performance_measurement.description}"'
             )
-            header_metrics.append(enabled_metric_string)
-            # Add Metric Data To Prometheus
-            if isinstance(enabled_metric, DatabaseDurationRequestMetric):
-                record_request_db_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
-            elif isinstance(enabled_metric, TotalDurationRequestMetric):
-                record_request_total_duration(hashed_user_token, enabled_metric.duration_in_milliseconds)
+            header_performance_measurements.append(enabled_performance_measurement_string)
+            # Record This Performance Measurement In Prometheus
+            if isinstance(enabled_performance_measurement, DatabaseDurationRequestPerformanceMeasurement):
+                record_request_db_duration(hashed_user_token, enabled_performance_measurement.duration_in_milliseconds)
+            elif isinstance(enabled_performance_measurement, TotalDurationRequestPerformanceMeasurement):
+                record_request_total_duration(
+                    hashed_user_token, enabled_performance_measurement.duration_in_milliseconds
+                )
 
         # ----------------------------------------------------------------------
-        # Add Metrics To Response Header
+        # Add Performance Measurements To Response Header
         # ----------------------------------------------------------------------
-        # We make sure to grab existing header metrics just in case they were
-        # previously generated, and then add our new ones to the header
-        existing_metrics = response.headers.get(server_timing_header_name, "")
-        if existing_metrics:
-            header_metrics.insert(0, existing_metrics)
+        # We make sure to grab existing header performance measurements just in case they
+        # were previously generated, and then add our new ones to the header
+        existing_performance_measurements = response.headers.get(server_timing_header_name, "")
+        if existing_performance_measurements:
+            header_performance_measurements.insert(0, existing_performance_measurements)
 
-        server_timing_header_string = ", ".join(header_metrics)
+        server_timing_header_string = ", ".join(header_performance_measurements)
         response.headers[server_timing_header_name] = server_timing_header_string
 
         return response
 
-    def get_enabled_metrics(self):
-        """Retrieves all enabled metrics"""
-        enabled_metrics = []
+    def get_enabled_performance_measurements(self):
+        """Retrieves all enabled performance measurements"""
+        enabled_performance_measurements = []
         if settings.REQUEST_TOTAL_DURATION_HEADER_ENABLED:
-            enabled_metrics.append(TotalDurationRequestMetric())
+            enabled_performance_measurements.append(TotalDurationRequestPerformanceMeasurement())
         if settings.REQUEST_DB_DURATION_HEADER_ENABLED:
-            enabled_metrics.append(DatabaseDurationRequestMetric())
-        return enabled_metrics
+            enabled_performance_measurements.append(DatabaseDurationRequestPerformanceMeasurement())
+        return enabled_performance_measurements
 
 
 class ComplexityCostRateLimitingMiddleware:
