@@ -1649,6 +1649,7 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE"
     see_also:
+      "Guide to Nautobot rate limiting": "./rate-limiting.md"
       "NAUTOBOT_RATE_LIMITING_REST_MODE": "#nautobot_rate_limiting_rest_mode"
       "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
@@ -1670,7 +1671,21 @@ properties:
     environment_variable: "NAUTOBOT_RATE_LIMITING_REST_BUDGET"
     minimum: 0
     see_also:
-      "NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS": "#nautobot_rate_limiting_rest_window_in_seconds"
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS": "#nautobot_rate_limiting_rest_budget_window_in_seconds"
+    type: "integer"
+    version_added: "3.3.0"
+  NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS:
+    default: 60
+    description: >-
+      The length in seconds of each API token's complexity cost budget window.
+    details: |-
+      A token's window opens on its first charged request and closes after the specified window time.
+      Then the budget resets. Windows are per token and are not aligned to a wall clock, so
+      tokens reset in different intervals. Charges made during a window do not extend it.
+    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS"
+    minimum: 1
+    see_also:
+      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER:
@@ -1733,6 +1748,7 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_RATE_LIMITING_REST_MODE"
     see_also:
+      "Guide to Nautobot rate limiting": "./rate-limiting.md"
       "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
     type: "string"
     version_added: "3.3.0"
@@ -1782,20 +1798,6 @@ properties:
     see_also:
       "NAUTOBOT_RATE_LIMITING_REST_READ_COST": "#nautobot_rate_limiting_rest_read_cost"
     type: "number"
-    version_added: "3.3.0"
-  NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS:
-    default: 60
-    description: >-
-      The length in seconds of each API token's complexity cost budget window.
-    details: |-
-      A token's window opens on its first charged request and closes after the specified window time.
-      Then the budget resets. Windows are per token and are not aligned to a wall clock, so
-      tokens reset in different intervals. Charges made during a window do not extend it.
-    environment_variable: "NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS"
-    minimum: 1
-    see_also:
-      "NAUTOBOT_RATE_LIMITING_REST_BUDGET": "#nautobot_rate_limiting_rest_budget"
-    type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_REST_WRITE_COST:
     default: 3.0
@@ -2132,6 +2134,7 @@ properties:
       Measures request SQL time.
     environment_variable: "NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED"
     see_also:
+      "Guide to Nautobot request performance measurements": "./request-performance-measurements.md"
       "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
     type: "boolean"
     version_added: "3.3.0"
@@ -2145,6 +2148,7 @@ properties:
       Measures total request processing time.
     environment_variable: "NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED"
     see_also:
+      "Guide to Nautobot request performance measurements": "./request-performance-measurements.md"
       "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
     type: "boolean"
     version_added: "3.3.0"

@@ -1,6 +1,6 @@
 from billiard.einfo import ExceptionInfo, ExceptionWithTraceback
 from celery import states, Task
-from celery.exceptions import Retry
+from celery.exceptions import Ignore, Retry
 from celery.result import EagerResult
 from celery.utils.functional import maybe_list
 from celery.utils.nodenames import gethostname
@@ -9,7 +9,8 @@ from django.contrib.auth import get_user_model
 from kombu.utils.uuid import uuid
 
 from nautobot.core.branching import BranchContext
-from nautobot.extras.models.jobs import JOB_LOGS
+from nautobot.extras.choices import LogLevelChoices
+from nautobot.extras.models.jobs import JOB_LOGS, JobResult
 
 
 class NautobotTask(Task):
@@ -17,6 +18,17 @@ class NautobotTask(Task):
 
     def before_start(self, task_id, args, kwargs):
         super().before_start(task_id, args, kwargs)
+        # A worker only skips a canceled task if the revoke broadcast reached it; the database is the source of truth.
+        # Celery has already overwritten `status` with STARTED at this point, so `date_canceled` is what records the cancel.
+        canceled_job_result = JobResult.objects.filter(pk=task_id, date_canceled__isnull=False).first()
+        if canceled_job_result is not None:
+            canceled_job_result.log(
+                "Job was canceled before it started, skipping execution",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="canceling",
+            )
+            self.backend.mark_as_revoked(task_id, reason="canceled", request=self.request)
+            raise Ignore()
         User = get_user_model()
         user_id = self.request.properties.get("nautobot_job_user_id", None)
         ctx = BranchContext(
