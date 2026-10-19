@@ -24,8 +24,8 @@ Context data not specifically assigned to one or more of the above groups is by 
 
 Configuration contexts may be managed within Nautobot via the UI and/or API; they may also be managed externally to Nautobot in a Git repository if desired.
 
-!!! warning "Assignment keys are the plural field names"
-    When assigning a config context through the REST API or a Git repository, the assignment key must be the field name shown in parentheses above (for example `locations`, not `location`). An unrecognized key is silently ignored, so the config context is still created or synced successfully but is not filtered to that group.
+!!! warning "Assignment keys are the config context field names"
+    When assigning a config context through the REST API or a Git repository, the assignment key must be the name of the `ConfigContext` field shown in parentheses above. These are many-to-many fields, and by convention they are named in the plural, so the key ends up plural (for example `locations`, not `location`). An unrecognized key is silently ignored, so the config context is still created or synced successfully but is not filtered to that group.
 
     For example, a Git-managed config context assigned to a location uses the `locations` key in its `_metadata`:
 
