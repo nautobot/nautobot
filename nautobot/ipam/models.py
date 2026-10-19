@@ -20,6 +20,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.models import Device, Interface, VirtualDeviceContext
+from nautobot.dcim.utils import is_host_interface_ip
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
@@ -1850,6 +1851,16 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
 
     clean.alters_data = True
 
+    # Reverse relations from IPAddress to the Devices, VirtualMachines, and VirtualDeviceContexts using it as primary IP
+    primary_ip_for_relations = (
+        "primary_ip4_for",
+        "primary_ip6_for",
+        "primary_ip4_for_virtual_machines",
+        "primary_ip6_for_virtual_machines",
+        "ip4_vdcs",
+        "ip6_vdcs",
+    )
+
     @property
     def address(self):
         if self.host is not None and self.mask_length is not None:
@@ -1949,6 +1960,56 @@ class IPAddressToInterface(BaseModel):
 
         if self.interface is None and self.vm_interface is None:
             raise ValidationError({"interface": "Must associate to either an Interface or a VMInterface."})
+
+        if self.present_in_database:
+            saved = IPAddressToInterface.objects.values("ip_address", "interface", "vm_interface").get(pk=self.pk)
+            changed_fields = [field for field, value in saved.items() if getattr(self, f"{field}_id") != value]
+            if changed_fields:
+                raise ValidationError(
+                    {
+                        field: "Cannot be changed once created; delete this assignment and create a new one instead."
+                        for field in changed_fields
+                    }
+                )
+
+        self._validate_primary_ip_hosts()
+
+    def _validate_primary_ip_hosts(self):
+        """
+        Prevent invalidating a primary IP designation that relies on the IP address not being assigned to any interface.
+
+        Such a designation (permitted when `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled) would be rendered
+        invalid by assigning the IP address to an interface belonging to a different host.
+        """
+        if self.ip_address_id is None:
+            return
+        ip_address = self.ip_address
+        if ip_address.interface_assignments.exclude(pk=self.pk).exists():
+            # Any host using an already-assigned IP address as its primary IP doesn't rely on it being unassigned
+            return
+
+        is_primary_ip = Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address)
+        devices = Device.objects.filter(is_primary_ip)
+        vdcs = VirtualDeviceContext.objects.filter(is_primary_ip)
+        virtual_machines = VirtualMachine.objects.filter(is_primary_ip)
+        if self.interface is not None:
+            vdcs = vdcs.exclude(interfaces=self.interface)
+            if self.interface.device_id is not None:
+                devices = devices.exclude(pk=self.interface.device_id)
+        if self.vm_interface is not None:
+            virtual_machines = virtual_machines.exclude(pk=self.vm_interface.virtual_machine_id)
+
+        affected_hosts = [
+            host for host in (*devices, *vdcs, *virtual_machines) if not is_host_interface_ip(host, ip_address)
+        ]
+        if affected_hosts:
+            raise ValidationError(
+                {
+                    "ip_address": f"{ip_address} is the primary IP of {', '.join(str(host) for host in affected_hosts)} "
+                    "without being assigned to any of its interfaces, "
+                    "so it cannot be assigned to an interface that does not belong to it."
+                }
+            )
 
     def __str__(self):
         if self.interface:

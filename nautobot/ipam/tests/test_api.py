@@ -1727,6 +1727,18 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_changing_interface_is_rejected(self):
+        assignment = IPAddressToInterface.objects.filter(interface__isnull=False).first()
+        other_interface = Interface.objects.exclude(pk=assignment.interface_id).filter(device__name="Device 1").first()
+        self.add_permissions("ipam.change_ipaddresstointerface", "dcim.view_interface")
+        url = reverse("ipam-api:ipaddresstointerface-detail", kwargs={"pk": assignment.pk})
+
+        response = self.client.patch(url, {"interface": other_interface.pk}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("interface", response.data)
+        assignment.refresh_from_db()
+        self.assertNotEqual(assignment.interface, other_interface)
+
 
 class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
     model = IPAddressRange

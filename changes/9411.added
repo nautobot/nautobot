@@ -1,4 +1,4 @@
-Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS`
+Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`
 Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_BUDGET`
 Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_MODE`
 Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_READ_COST`
