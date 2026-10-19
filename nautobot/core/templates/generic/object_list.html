@@ -320,11 +320,6 @@
             const selected_or_all = button.data("objects");
             const pks_target = document.getElementById("dynamic_group_assignment_pks");
             pks_target.replaceChildren();
-            // With "all", the server re-applies the list view's filters, which can change via HTMX after page load.
-            const form = document.getElementById("dynamic_group_assignment_form");
-            const action = new URL(form.action);
-            action.search = selected_or_all == "all" ? window.location.search : "";
-            form.action = action.toString();
             if (selected_or_all == "all") {
                 document.getElementById("dynamic_group_assignment_all").value = true;
             } else {
