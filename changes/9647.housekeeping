@@ -1,0 +1,1 @@
+Changed the `playwright` dependency group back to optional, so that a plain `poetry install` works on platforms that Playwright does not publish a wheel for, such as Alpine.

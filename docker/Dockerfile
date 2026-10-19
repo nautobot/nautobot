@@ -151,7 +151,7 @@ FROM python-dependencies AS python-dev-dependencies
 
 # Add development-specific dependencies of Nautobot to the installation
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-root --no-ansi --extras all && \
+    poetry install --no-root --no-ansi --extras all --with playwright && \
     rm -rf /tmp/tmp*
 
 ################################ Stage: build-nautobot (intermediate build target)
@@ -193,7 +193,7 @@ RUN fnm install && \
 WORKDIR /source
 
 RUN --mount=type=cache,target="/root/.cache",sharing=locked \
-    poetry install --no-ansi --extras all && \
+    poetry install --no-ansi --extras all --with playwright && \
     rm -rf /tmp/tmp*
 
 ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
