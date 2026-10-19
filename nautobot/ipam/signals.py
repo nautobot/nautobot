@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.models import Device, VirtualDeviceContext
 from nautobot.ipam.models import (
     interfaces_assigned_to_vrf,
@@ -148,38 +149,37 @@ def vrf_device_disassociated(sender, instance, action, reverse, model, pk_set, *
 
 @receiver(pre_delete, sender=IPAddressToInterface)
 def ip_address_to_interface_pre_delete(instance, raw=False, **kwargs):
+    """
+    Clear any primary IP designations that the removal of this IPAddressToInterface would render invalid.
+    """
     if raw:
         return
 
-    # Check if the removed IPAddressToInterface instance contains an IPAddress
-    # that is the primary_v{version} of the host machine.
+    ip_address = instance.ip_address
+    other_assignments = ip_address.interface_assignments.exclude(id=instance.id)
+    # An IP address with no interface assignments at all is a valid primary IP when this setting is disabled
+    if not get_settings_or_config("PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT") and not other_assignments.exists():
+        return
 
-    if getattr(instance, "interface"):
-        host = instance.interface.parent
-        other_assignments_exist = (
-            IPAddressToInterface.objects.filter(interface__in=host.all_interfaces, ip_address=instance.ip_address)
-            .exclude(id=instance.id)
-            .exists()
+    if instance.interface is not None:
+        hosts = list(
+            instance.interface.virtual_device_contexts.filter(Q(primary_ip4=ip_address) | Q(primary_ip6=ip_address))
         )
+        # An interface on a module that isn't installed in a device has no device to update
+        if instance.interface.device is not None:
+            hosts.append(instance.interface.device)
     else:
-        host = instance.vm_interface.virtual_machine
-        other_assignments_exist = (
-            IPAddressToInterface.objects.filter(vm_interface__virtual_machine=host, ip_address=instance.ip_address)
-            .exclude(id=instance.id)
-            .exists()
-        )
+        hosts = [instance.vm_interface.virtual_machine]
 
-    # Only nullify the primary_ip field if no other interfaces/vm_interfaces have the ip_address
-    host_needs_save = False
-    if not other_assignments_exist and instance.ip_address == host.primary_ip4:
-        host.primary_ip4 = None
-        host_needs_save = True
-    elif not other_assignments_exist and instance.ip_address == host.primary_ip6:
-        host.primary_ip6 = None
-        host_needs_save = True
-
-    if host_needs_save:
-        host.save()
+    for host in hosts:
+        if other_assignments.filter(host.get_interface_assignments_filter()).exists():
+            continue
+        if host.primary_ip4 == ip_address:
+            host.primary_ip4 = None
+            host.save()
+        elif host.primary_ip6 == ip_address:
+            host.primary_ip6 = None
+            host.save()
 
 
 @receiver(pre_save, sender=IPAddressToInterface)

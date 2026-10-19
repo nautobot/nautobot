@@ -23,6 +23,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
+    UnassignedPrimaryIPFormMixin,
 )
 from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
 from nautobot.dcim.models import Device, Platform, SoftwareImageFile, SoftwareVersion
@@ -194,7 +195,7 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
 #
 
 
-class VirtualMachineForm(NautobotModelForm, TenancyForm, LocalContextModelForm):
+class VirtualMachineForm(UnassignedPrimaryIPFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
     cluster_group = DynamicModelChoiceField(
         queryset=ClusterGroup.objects.all(),
         required=False,

@@ -88,11 +88,20 @@
         <div class="card-body">
             {% if editing %}
                 {% render_field form.primary_ip4 %}
+            {% endif %}
+            {% if "unassigned_primary_ip4" in form.fields %}
+                {% render_field form.unassigned_primary_ip4 %}
+            {% endif %}
+            {% if editing %}
                 {% render_field form.primary_ip6 %}
-            {% else %}
+            {% endif %}
+            {% if "unassigned_primary_ip6" in form.fields %}
+                {% render_field form.unassigned_primary_ip6 %}
+            {% endif %}
+            {% if not editing %}
                 <div class="alert alert-info" role="alert">
-                    A management IP address can be selected after creating this device
-                    and assigning an IP address to at least one of its interfaces.
+                    An IP address assigned to one of this device's interfaces can be selected as its primary IP
+                    after creating this device.
                 </div>
             {% endif %}
         </div>

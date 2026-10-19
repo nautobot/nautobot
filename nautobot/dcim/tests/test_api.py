@@ -2245,6 +2245,38 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         dev.refresh_from_db()
         self.assertEqual(dev.primary_ip4, dev_ip_addr)
 
+    def test_creating_device_with_unassigned_primary_ip4(self):
+        """
+        Validate we can create a device with a primary_ip4 not assigned to any interface, only if the config permits.
+        """
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.view_devicetype",
+            "dcim.view_location",
+            "extras.view_role",
+            "extras.view_status",
+            "ipam.view_ipaddress",
+        )
+
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(
+            prefix="192.0.2.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_addr = IPAddress.objects.create(
+            address="192.0.2.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        post_data = {key: self.create_data[0][key] for key in ("name", "device_type", "role", "status", "location")}
+        post_data["primary_ip4"] = ip_addr.pk
+
+        response = self.client.post(self._get_list_url(), post_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("primary_ip4", response.data)
+
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            response = self.client.post(self._get_list_url(), post_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(Device.objects.get(pk=response.data["id"]).primary_ip4, ip_addr)
+
     def test_patching_device_redundancy_group(self):
         """
         Validate we can set device redundancy group on a device using a PATCH.
