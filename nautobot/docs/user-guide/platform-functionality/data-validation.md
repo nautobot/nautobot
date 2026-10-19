@@ -55,7 +55,7 @@ Each rule is defined with these fields:
 - content type - The Nautobot model to which the rule should apply (e.g. device, location, etc.).
 - field - The name of the character based field on the model to which the regular expression is validated.
 - regular expression - The body of the regular expression used for validation.
-- context processing - A boolean to toggle Jinja2 context processing of the regular expression prior to evaluation
+- context processing - A boolean to toggle Jinja2 context processing of the regular expression prior to evaluation. See the warnings below for how interpolated values are treated.
 - error message - An optional error message to display to the use when validation fails. By default, a message indicating validation against the defined regular expression has failed is shown.
 
 ![Regex Rules Edit](../../media/data-validation-engine/ss_regex-rules-edit_light.png#only-light){ .on-glb }
@@ -81,6 +81,16 @@ In this example the name of a device must start with the first three characters 
 
 !!! warning
     If there is an exception while rendering the Jinja2 template or the resulting regular expression string is invalid, data validation against the rule will fail and users will be instructed to either fix the rule or disable it before the data may be saved.
+
++/- 3.2.7 "Interpolated values are now treated as literal text"
+    Values interpolated with `{{ ... }}` are escaped before the pattern is compiled, so any regular expression metacharacter they contain matches literally. This keeps the structure of the pattern entirely under the rule author's control, so that the data being validated cannot change what the rule means. Literal text written in the rule itself is untouched, so the author's own regular expression syntax works as normal.
+
+    There are two important effects to keep in mind. First, an expression like `[{{ obj.name }}]` no longer lets the field value supply character-class syntax such as a range. The brackets you wrote are still a character class, but every metacharacter in the interpolated value is escaped, so it contributes only literal members. For example, if the object's name is `A-Z` and the rule is `[{{ obj.name }}]`, the rendered expression will be `[A\-Z]` (matching only `A`, `-`, or `Z`) rather than `[A-Z]` (matching any character from `A` through `Z`). Second, if a field value is itself a piece of regular expression syntax, it will be treated as plain text and not as part of the regex pattern. This behavior is always enforced and cannot be disabled. Additionally, do not use `{% set %}...{% endset %}` capture blocks, as their contents will be escaped twice; instead, use simple assignments such as `{% set x = obj.name %}`.
+
++/- 3.2.7 "Regular expression evaluation is now time-bounded"
+    Each rule is evaluated every time an object of the targeted type is saved, so an expensive expression slows down every such save. Evaluation is bounded to one second per rule per object, configurable via [`REGEX_TIMEOUT`](../administration/configuration/settings.md#regex_timeout); if that limit is exceeded the save is rejected with a validation error and the responsible rule is named in the server log at `ERROR` level.
+
+    Some regular expressions take exponentially longer to evaluate as the value being tested grows, which means an expression that looks harmless can be made to consume that full second by a sufficiently long value. The usual causes are a quantifier applied to a group that itself contains a quantifier, and alternations whose branches can match the same input. Note that the data compliance audit job evaluates disabled rules as well as enabled ones, so a costly rule still has a cost after being disabled.
 
 ### Required Rules
 

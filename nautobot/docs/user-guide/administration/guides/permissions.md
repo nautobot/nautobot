@@ -232,6 +232,7 @@ Constraints are enforced on every action. A user whose `change` or `delete` perm
 
 - **Running**: requires the `run` action on the Job model (`extras.run_job`). Constraints can limit which specific jobs a user may run (see the [Export Job recipe](#export-job) below).
 - **Database access**: the permission check (and the `enabled` flag on an individual Job record) gate only whether the job may be _launched_. Once running, job code accesses the database **without any per-user restriction** by default — a job can read and write objects its submitter has no permission on, unless the job's own code enforces otherwise. Enable a job only if you trust what that job does with full database access.
+- **Kubernetes execution**: Nautobot permissions do not limit what job code can do with the Kubernetes API access of the pod it runs in. If you run jobs on a [Kubernetes job queue](../../platform-functionality/jobs/kubernetes-job-support.md), restrict the service account used by job pods as described in [Kubernetes Job Support: Security Considerations](../../platform-functionality/jobs/kubernetes-job-support.md#security-considerations).
 - **Canceling**: a user can always cancel a job **they submitted**, with no additional permission. Canceling another user's job requires the `cancel` action (`extras.cancel_job`), which is object-level and can be constrained to specific jobs.
 - **Re-running**: re-running a previous job result is gated by the same `run` permission as a fresh run.
 - **Scheduled jobs**: visibility of scheduled jobs follows the standard `extras.view_scheduledjob` permission — it is _not_ limited to your own schedules. Taking ownership of another user's schedule requires `extras.change_scheduledjob` plus `run` on the underlying job.
@@ -248,6 +249,23 @@ Other notable behaviors:
 
 - Only the **submitter** (or a superuser) can cancel an in-flight approval workflow.
 - Any authenticated user with view access can **comment** on a workflow — commenting is not limited to approvers.
+
+### IP Address Merge Tool
+
+The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place. Object-level constraints on these permissions are enforced: IP addresses outside the user's `change` or `delete` constraints are left out of the merge, and the merge is rolled back if the new IP address does not satisfy the user's `add` constraints.
+
++/- 3.2.8
+    `ipam.add_ipaddress` and `ipam.delete_ipaddress` are now required, and object-level constraints on all three permissions are now enforced. Previously only `ipam.change_ipaddress` was required, and its constraints only limited which IP addresses the merge page listed.
+
+Since the tool exists to consolidate duplicate records, a merge intentionally makes changes that may go beyond the user's other permissions:
+
+- Existing references to the merged IP addresses are moved to the new IP address **without** checking the user's permissions on the referencing objects, so the new IP address may end up assigned to objects the user cannot `view` or `change` directly. This includes `Device` and `VirtualMachine` primary IPs (`primary_ip4`/`primary_ip6`), interface and VM interface assignments, `Service` assignments, and the objects on the other side of relationship associations.
+- The `Namespace`, `Status`, `Tenant`, `Role`, `Tags`, and `NAT inside` values selected for the new IP address are assigned **without** checking `view` permission on these related objects, so the new IP address may reference related objects the user cannot view directly.
+
+These changes are not silent: the deleted and created IP addresses, and every updated device, virtual machine, interface, VM interface, and service, are recorded in the [change log](../../platform-functionality/change-logging.md) under the merging user's request.
+
+!!! warning
+    Treat the combination of `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` as granting access to the merge tool, and grant all three together only to users you trust to perform merges. Even when these permissions are constrained, a merge can update devices, virtual machines, and other related objects outside the user's permitted scope.
 
 ## Limitations and Edge Cases
 
@@ -355,6 +373,7 @@ Some other permissions, while not posing the same inherent security risks as tho
 - [Computed Fields](../../platform-functionality/computedfield.md) - poorly defined (expensive to calculate/render) custom field Jinja2 templates can significantly reduce performance of list views and object detail views.
 - [Custom Fields](../../platform-functionality/customfield.md) - the background task (job) started when a new custom field is defined or an existing custom field is deleted can consume significant resources in updating a large number of records. Large numbers of custom fields can clutter the UI and reduce performance.
 - [Relationships](../../platform-functionality/relationship.md) - large numbers of relationships can clutter the UI and reduce performance.
+- `ipam.add_ipaddress` + `ipam.change_ipaddress` + `ipam.delete_ipaddress` - together these grant access to the [IP Address Merge Tool](#ip-address-merge-tool), which updates related devices, virtual machines, and other objects without checking the user's permissions on them.
 - [Saved Views](../../platform-functionality/user-interface/savedview.md) - no `extras.*_savedview` or `extras.*_usersavedviewassociation` permission is needed for a user to make use of the feature. Any authenticated user can already create saved views, use their own and any shared view, and pin their own default view. Grant these permissions only to users who should control saved views for **other** users:
     - `extras.view_savedview` grants visibility into every user's saved views, including those that are not shared, and access to the dedicated saved views list page.
     - `extras.change_savedview` grants the ability to edit saved views belonging to other users, and to set the global default view that every user without a default of their own is redirected to.

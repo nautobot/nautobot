@@ -14,7 +14,9 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models.deletion import Collector
 from django.db.utils import IntegrityError
 from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
@@ -42,6 +44,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -61,6 +64,7 @@ from nautobot.extras.constants import (
     JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES,
     JOB_RUNTIME_STATISTICS_SAMPLE_SIZE,
 )
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -105,6 +109,7 @@ from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProv
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import Token
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -1694,6 +1699,23 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
                 )
                 with self.assertRaises(SecurityError):
                     gadget_template.render(Device.objects.all())
+
+    def test_render_narrows_a_bare_projection_on_a_model_with_sensitive_fields(self):
+        """Integration regression for GHSA-5q66-3x3p-rxmh via the ExportTemplate.render() path.
+
+        A projection naming no fields selects every concrete column, so the sandbox narrows it to the
+        model's non-sensitive fields rather than letting the declared sensitive ones through.
+        """
+        user = User.objects.create_user(username="export-template-bare-projection")
+        token = Token.objects.create(user=user, description="export template regression")
+        export_template = ExportTemplate(
+            content_type=ContentType.objects.get_for_model(Token),
+            name="Bare Projection Export Template",
+            template_code="{{ queryset.values() | list }}",
+        )
+        rendered = export_template.render(Token.objects.filter(user=user))
+        self.assertNotIn(token.key, rendered)
+        self.assertIn(token.description, rendered)
 
     def test_name_contenttype_uniqueness(self):
         """
@@ -4399,6 +4421,41 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    def test_cascade_delete_survives_concurrent_group_delete(self):
+        """Deleting a member object succeeds when another request deletes its group mid-cascade."""
+        device_type = DeviceType.objects.create(manufacturer=Manufacturer.objects.first(), model="Device Type 1")
+        device = Device.objects.create(
+            name="Device 1",
+            device_type=device_type,
+            role=Role.objects.get_for_model(Device).first(),
+            location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        # An empty filter matches every device, so saving the group caches a row for this device.
+        group = DynamicGroup.objects.create(
+            name="Dynamic Group 1",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={},
+        )
+        self.assertTrue(
+            StaticGroupAssociation.all_objects.filter(dynamic_group=group, associated_object_id=device.pk).exists()
+        )
+
+        user = get_user_model().objects.create_user(username="staticgroupassociationuser")
+        with web_request_context(user):
+            # What `DELETE /api/dcim/devices/<pk>/` does first: collect the cascade, including the cached row.
+            collector = Collector(using="default")
+            collector.collect([device])
+            # A second request, with its own change_id, deletes the group before the first one reaches `pre_delete`.
+            with web_request_context(user, change_id=uuid.uuid4()):
+                group.delete()
+            # Own savepoint, so a failure here does not also break the context manager's exit query.
+            with transaction.atomic():
+                collector.delete()
+
+        self.assertFalse(Device.objects.filter(pk=device.pk).exists())
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):
