@@ -14,7 +14,7 @@ import pytest
 
 from nautobot.playwright.helpers import unique_name
 
-# The template every computed field below renders; `expected_value` is its output for the device.
+# Every computed field below renders this template. `expected_value` is the output for the device.
 COMPUTED_FIELD_TEMPLATE = "{{ obj.name }} is awesome!"
 
 
@@ -37,7 +37,7 @@ def _create_device_computed_field(create_object, device, advanced_ui):
 def created_computed_field(create_object, created_device):
     """A Device computed field with `advanced_ui` off, so it renders on the device's main tab.
 
-    Includes `expected_value`, the text the field renders for `created_device`.
+    The returned dict includes `expected_value`, the text the field renders for `created_device`.
     """
     return _create_device_computed_field(create_object, created_device["device"], advanced_ui=False)
 
@@ -46,6 +46,6 @@ def created_computed_field(create_object, created_device):
 def created_advanced_ui_computed_field(create_object, created_device):
     """A Device computed field with `advanced_ui` on, so it renders only on the device's Advanced tab.
 
-    Includes `expected_value`, the text the field renders for `created_device`.
+    The returned dict includes `expected_value`, the text the field renders for `created_device`.
     """
     return _create_device_computed_field(create_object, created_device["device"], advanced_ui=True)

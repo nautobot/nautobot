@@ -78,7 +78,7 @@ class DetailPage(BasePage):
         expect(self._tab_pane(tab_id).get_by_text(text, exact=True)).to_be_visible()
 
     def expect_tab_not_to_contain(self, tab_id, text):
-        """Assert (auto-retrying) that the tab *tab_id* exists and does not contain *text*, shown or hidden."""
+        """Assert (auto-retrying) that the tab *tab_id* exists and does not contain *text*, even as hidden text."""
         pane = self._tab_pane(tab_id)
         expect(pane).to_have_count(1)
         expect(pane).not_to_contain_text(text)

@@ -44,7 +44,7 @@ class ListPage(BasePage):
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
     # The table-configuration drawer and its toolbar button. The drawer's id is derived
-    # from the table class name, so it is addressed by the form it contains instead.
+    # from the table class name, so the selector finds the drawer by the form inside it.
     _TABLE_CONFIG_TOGGLE = "button[title='Configure table']"
     _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
     _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
