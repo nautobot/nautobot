@@ -22,6 +22,13 @@ UNREADABLE_JSON = '[{"negate": false, "preset": "user_is",'
 
 PAYLOAD_URL = "https://example.com/webhook"
 
+UNKNOWN_FIELD_CHANGED = {
+    "negate": False,
+    "preset": "field_changed",
+    "type": "preset",
+    "values": {"field": "unknown_field"},
+}
+
 
 def _fill_planned_to_active(webhook_form):
     webhook_form.pick_content_type("DCIM | device")
@@ -200,3 +207,26 @@ class ConditionsEditorTestCase:
         assert values["field"] == "status.created"
         # The calendar opens on the current month, so only the day is known.
         assert re.fullmatch(r"\d{4}-\d{2}-15", values["value"]), f"Picked {values['value']!r}, not the 15th"
+
+    @pytest.mark.behavioral
+    def test_a_field_that_cannot_be_referenced_shows_as_empty_and_its_save_is_refused(
+        self, auth_page, base_url, webhook_name
+    ):
+        """The row is drawn from the JSON field in the browser, and HTMX brings the message under its select."""
+        webhook_form = WebhookCreateUpdatePage(auth_page, base_url)
+        webhook_form.navigate()
+        webhook_form.fill_disabled_update_webhook(webhook_name, PAYLOAD_URL)
+        webhook_form.pick_content_type("DCIM | device")
+        webhook_form.show_json_tab()
+        webhook_form.fill_conditions([UNKNOWN_FIELD_CHANGED])
+        webhook_form.show_form_tab()
+        webhook_form.expect_condition_row_to_show_nothing_in(0, "field")
+
+        webhook_form.save_expecting_refusal()
+
+        webhook_form.expect_condition_error(
+            0,
+            "field",
+            "Parameter `field` names `unknown_field`, "
+            "which is not a field that can be referenced in a condition for the chosen content types.",
+        )
