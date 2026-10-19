@@ -16,11 +16,7 @@ class ObjectNotesPage(BasePage):
     # Opening a table's actions dropdown moves its menu to <body>, out of the row.
     _EDIT_LINK = ".dropdown-menu.show a.dropdown-item[href*='/edit/']"
 
-    def navigate_to_object(self, list_path, pk):
-        """Go to the detail view of the object at `<list_path><pk>/`, e.g. `("/dcim/locations/", pk)`."""
-        self._goto(f"{list_path}{pk}/")
-
-    def navigate_to_notes(self, list_path, pk):
+    def navigate_to_notes_tab(self, list_path, pk):
         """Go to the Notes tab of the object at `<list_path><pk>/`, e.g. `("/dcim/locations/", pk)`."""
         self._goto(f"{list_path}{pk}/notes/")
 
