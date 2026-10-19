@@ -1123,3 +1123,29 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertEqual(jobhook_changed_objects, expected_changed_objects)
         event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
         self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})
+
+    def test_cable_deletion_logs_terminations(self):
+        """Deleting a cable records update ObjectChange for both connected interfaces (#9643)."""
+        from nautobot.dcim.models import Cable
+
+        int_status = Status.objects.get_for_model(Interface).first()
+        interface2 = Interface.objects.create(
+            device=self.device, name="eth1", status=int_status, type=InterfaceTypeChoices.TYPE_1GE_FIXED
+        )
+        cable_status = Status.objects.get_for_model(Cable).first()
+        cable = Cable.objects.create(
+            status=cable_status,
+            termination_a=self.interface,
+            termination_b=interface2,
+        )
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            cable.delete()
+
+        cable_changes = ObjectChange.objects.filter(changed_object_id=cable.pk, request_id=change_id)
+        self.assertEqual(cable_changes.count(), 1)
+        self.assertEqual(cable_changes.first().action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assert_single_update_change(self.interface, change_id)
+        self.assert_single_update_change(interface2, change_id)
+

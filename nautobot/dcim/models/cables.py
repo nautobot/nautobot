@@ -1197,6 +1197,10 @@ class CableToCableTermination(BaseModel):
     row, enforced via a CheckConstraint.
     """
 
+    # When a Cable is deleted, changes must still be recorded for the surviving terminating
+    # objects (e.g. Interface, FrontPort, etc.) that were disconnected.
+    allow_cascade_delete_fields = ("cable",)
+
     cable = models.ForeignKey(
         to="dcim.Cable",
         on_delete=models.CASCADE,
