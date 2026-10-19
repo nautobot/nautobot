@@ -24,6 +24,7 @@ class DetailPage(BasePage):
     # The span inside the h1. Reading the h1 appends the copy button's label to the name.
     _HEADING = "#page-title #copy_title"
     _EDIT_BUTTON = "#edit-button"
+    _TAB_LINKS = "[data-nb-tests-id='object-details-header-tabs-ul']"
     # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0,
     # which Playwright still counts as visible, so assert the count.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
@@ -53,6 +54,19 @@ class DetailPage(BasePage):
     def expect_edit_button(self):
         """Assert (auto-retrying) that this model's Edit button is rendered."""
         expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
+
+    # -------------------------------------------------------------------------
+    # Tabs
+    # -------------------------------------------------------------------------
+
+    def tab_pane(self, tab_id):
+        """Locator for the content pane of the tab with id *tab_id* ("main", "advanced", ...)."""
+        return self.page.locator(f"div.tab-pane#{tab_id}")
+
+    def open_tab(self, tab_id):
+        """Click the tab link for *tab_id* and wait for its pane to show."""
+        self.page.locator(f"{self._TAB_LINKS} a[aria-controls='{tab_id}']").first.click()
+        expect(self.tab_pane(tab_id)).to_be_visible()
 
     # -------------------------------------------------------------------------
     # Deferred components
