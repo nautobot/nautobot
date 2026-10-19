@@ -26,7 +26,7 @@ class CreateDeviceTestCase:
         )
         form.submit()
         detail = DeviceDetailPage(auth_page, base_url)
-        detail.expect_message(f"Created device {name}")
+        detail.expect_flash_message(f"Created device {name}")
 
         response = api.get("/api/dcim/devices/", params={"name": name})
         assert response.ok, f"GET /api/dcim/devices/ returned {response.status}: {response.text()[:200]}"
