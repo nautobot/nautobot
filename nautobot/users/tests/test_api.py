@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import HTTP_HEADER_ENCODING, status
 
+from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.testing import APITestCase, APIViewTestCases, get_deletable_objects
 from nautobot.core.utils.data import deepmerge
 from nautobot.users.filters import GroupFilterSet
@@ -453,6 +454,35 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             actions=["view", "add", "change", "delete"],
             constraints={"name": "TEST100"},
         )
+
+    def test_create_object_with_group_by_name(self):
+        """A group may be referenced by its name, which is its natural key, as well as by its ID."""
+        group = Group.objects.create(name="Group By Name")
+        self.add_permissions("users.add_objectpermission", "auth.view_group")
+        data = {
+            "name": "Permission By Group Name",
+            "object_types": ["dcim.location"],
+            "actions": ["view"],
+            "groups": [group.name],
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertQuerySetEqual(ObjectPermission.objects.get(name="Permission By Group Name").groups.all(), [group])
+
+    @skip("Composite keys aren't being supported at this time")
+    def test_create_object_with_group_by_invalid_composite_key(self):
+        """A composite key of more than one value can't be a group's name."""
+        group = Group.objects.create(name="Group By Name")
+        self.add_permissions("users.add_objectpermission", "auth.view_group")
+        data = {
+            "name": "Permission By Invalid Group Key",
+            "object_types": ["dcim.location"],
+            "actions": ["view"],
+            "groups": [f"{group.name}{COMPOSITE_KEY_SEPARATOR}extra"],
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(ObjectPermission.objects.filter(name="Permission By Invalid Group Key").exists())
 
     # TODO: Unskip after resolving #2908, #2909
     @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
