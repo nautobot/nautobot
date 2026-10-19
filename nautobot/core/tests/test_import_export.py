@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from unittest import mock
 import uuid
 
+from constance.test import override_config
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -3508,6 +3509,70 @@ class ImportAdapterTests(ImportExportJobTestCase):
         csv_file = FileProxy.objects.create(name="latin1.csv", file=ContentFile(content, name="latin1.csv"))
         job_result = self.run_import(csv_file=csv_file.id, expected_status=JobResultStatusChoices.STATUS_FAILURE)
         self.assertJobLogEntry(job_result, "Unable to decode", level=LogLevelChoices.LOG_ERROR)
+
+
+class ImportPrimaryIPTests(ImportExportJobTestCase):
+    """Importing a Device whose primary IP isn't assigned to any interface."""
+
+    def setUp(self):
+        super().setUp()
+        manufacturer = Manufacturer.objects.create(name="Primary IP Mfr")
+        self.device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Primary IP DT", u_height=1)
+        location_type = LocationType.objects.create(name="Primary IP Location Type")
+        location_type.content_types.set([ContentType.objects.get_for_model(Device)])
+        self.location = Location.objects.create(
+            name="Primary IP Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        self.role = Role.objects.create(name="Primary IP Device Role")
+        self.role.content_types.set([ContentType.objects.get_for_model(Device)])
+        self.status = Status.objects.get_for_model(Device).first()
+        namespace = Namespace.objects.create(name="Primary IP Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        self.ips = [
+            IPAddress.objects.create(address=f"198.51.100.{i}/24", namespace=namespace, status=ip_status)
+            for i in range(1, 4)
+        ]
+
+    def _import_data(self, import_format, name, ip):
+        record = {
+            "name": name,
+            "device_type": str(self.device_type.pk),
+            "location": str(self.location.pk),
+            "role": str(self.role.pk),
+            "status": str(self.status.pk),
+            "primary_ip4": str(ip.pk),
+        }
+        if import_format == "csv":
+            return "\n".join([",".join(record.keys()), ",".join(record.values())])
+        if import_format == "json":
+            return json.dumps([record])
+        return yaml.safe_dump([record])
+
+    def test_import__unassigned_primary_ip_when_not_required(self):
+        for import_format, ip in zip(("csv", "json", "yaml"), self.ips):
+            with self.subTest(import_format=import_format):
+                name = f"Primary IP Device {import_format}"
+                with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+                    job_result = self.run_import(
+                        self._import_data(import_format, name, ip), model=Device, import_format=import_format
+                    )
+                self.assertNoIssues(job_result)
+                self.assertEqual(Device.objects.get(name=name).primary_ip4, ip)
+
+    def test_import__unassigned_primary_ip_rejected_by_default(self):
+        job_result = self.run_import(
+            self._import_data("csv", "Primary IP Device", self.ips[0]),
+            model=Device,
+            import_format="csv",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "is not assigned to this device", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Device.objects.filter(name="Primary IP Device").exists())
 
 
 class ImportDocumentRoundTripTests(ImportExportJobTestCase):

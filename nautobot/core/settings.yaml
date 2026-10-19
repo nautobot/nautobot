@@ -2024,6 +2024,25 @@ properties:
     is_constance_config: true
     type: "integer"
     version_added: "3.1"
+  PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT:
+    default: true
+    description: >-
+      By default, an IP address can only be designated as the primary IPv4 or IPv6 address of a device,
+      virtual machine, or virtual device context if it is assigned to one of that object's interfaces
+      (or is the NAT outside address of such an IP address).
+
+      Set this to False to additionally permit IP addresses that are not assigned to any interface,
+      for example to set a device's management IP address at the time of its creation.
+
+      Note that an IP address assigned to another object's interface, but not to any of this object's interfaces,
+      is never permitted.
+
+      Note also that changing this back from False to True will not automatically invalidate any existing
+      primary IP designations, but will disallow designating new primary IPs from unassigned IP addresses.
+    environment_variable: "NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"
+    is_constance_config: true
+    type: "boolean"
+    version_added: "3.3"
   PUBLISH_ROBOTS_TXT:
     default: true
     description: >-

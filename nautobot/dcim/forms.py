@@ -126,6 +126,7 @@ from .form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
     LocatableModelFormMixin,
+    UnassignedPrimaryIPFormMixin,
 )
 from .models import (
     Cable,
@@ -2234,7 +2235,9 @@ class PlatformFilterForm(NautobotFilterForm):
 #
 
 
-class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm):
+class DeviceForm(
+    UnassignedPrimaryIPFormMixin, LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalContextModelForm
+):
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -6236,7 +6239,7 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
 #
 
 
-class VirtualDeviceContextForm(NautobotModelForm):
+class VirtualDeviceContextForm(UnassignedPrimaryIPFormMixin, NautobotModelForm):
     device = DynamicModelChoiceField(
         queryset=Device.objects.all(),
     )

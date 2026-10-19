@@ -258,6 +258,40 @@ class StoredRowTest(RowFormTestCase):
         self.assertEqual(initial["field"], "status")
         self.assertEqual(initial[_subfield_name("field")], "name")
 
+    def test_a_path_the_two_selects_cannot_show_exactly_is_not_offered(self):
+        for path in ("unknown_field", "custom_fields.gone", "status.name.extra", "status.no_such_key"):
+            with self.subTest(path=path):
+                form = self.form({"type": "preset", "preset": "field_changed", "values": {"field": path}})
+                self.assertEqual(form.field_path_not_offered, ("field", path))
+
+    def test_a_path_the_two_selects_show_is_offered(self):
+        for path in ("mtu", "status", "status.name"):
+            with self.subTest(path=path):
+                form = self.form({"type": "preset", "preset": "field_changed", "values": {"field": path}})
+                self.assertIsNone(form.field_path_not_offered)
+
+    def test_a_field_not_offered_is_blamed_on_the_field_control(self):
+        rows = [{"type": "preset", "preset": "field_changed", "values": {"field": "unknown_field"}}]
+        self.assertEqual(
+            errors_by_row_and_control(rows, self.addressable),
+            {
+                0: {
+                    "field": [
+                        "Parameter `field` names `unknown_field`, "
+                        "which is not a field that can be referenced in a condition for the chosen content types."
+                    ]
+                }
+            },
+        )
+
+    def test_a_path_the_two_selects_cannot_show_exactly_stays_whole(self):
+        """Split, it would show as some other field, and be written back as that on the next change."""
+        for path in ("custom_fields.gone", "status.name.extra", "status.no_such_key", "status.", "tags.name"):
+            with self.subTest(path=path):
+                form = self.form({"type": "preset", "preset": "field_changed", "values": {"field": path}})
+                self.assertEqual(form["field"].value(), path)
+                self.assertNotIn(_subfield_name("field"), form.fields)
+
     def test_negation_becomes_the_word_the_row_opens_with(self):
         for stored, word in ((True, "not"), (False, "when")):
             with self.subTest(stored):

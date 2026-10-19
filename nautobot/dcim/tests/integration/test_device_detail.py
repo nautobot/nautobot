@@ -82,3 +82,13 @@ class DeviceDetailTestCase:
         detail.expect_deferred_placeholder_count(0)
         detail.expect_panel("Power Utilization")
         detail.expect_panel_to_contain("Power Utilization", created_pdu["power_port"]["name"])
+
+    @pytest.mark.behavioral
+    def test_no_power_utilization_panel_without_power_components(self, auth_page, base_url, created_device):
+        """A device without a power port and power outlet has no Power Utilization panel."""
+        detail = DeviceDetailPage(auth_page, base_url)
+
+        # Wait for every deferred component to load, so a deferred Power Utilization panel would be on the page.
+        detail.navigate(created_device["device"]["id"])
+        detail.expect_deferred_placeholder_count(0)
+        detail.expect_no_panel("Power Utilization")

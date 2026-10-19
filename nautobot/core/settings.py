@@ -254,6 +254,15 @@ PLUGINS_CONFIG = {}
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Must a device or virtual machine's primary IP address be assigned to one of its interfaces? Default True
+if (
+    "NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT" in os.environ
+    and os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"] != ""
+):
+    PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT = is_truthy(
+        os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"]
+    )
+
 # Default filters for Prefix list view
 if (
     "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
@@ -1022,6 +1031,12 @@ CONSTANCE_CONFIG = {
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
         field_type=bool,
     ),
+    "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT": ConstanceConfigItem(
+        default=True,
+        help_text="Whether a primary IP address for a device, virtual machine, or virtual device context must be "
+        "assigned to one of its interfaces. If disabled, IP addresses not assigned to any interface may also be used.",
+        field_type=bool,
+    ),
     "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
         default=42,
         help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
@@ -1064,7 +1079,7 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],

@@ -428,6 +428,28 @@ def validate_vdcs_interface_relationships(sender, instance, action, **kwargs):
             )
 
 
+@receiver(pre_delete, sender=InterfaceVDCAssignment)
+def interface_vdc_assignment_pre_delete(instance, **kwargs):
+    """
+    Clear any VDC primary IP designations that the removal of this InterfaceVDCAssignment would render invalid.
+    """
+    vdc = instance.virtual_device_context
+    changed = False
+    for field in ("primary_ip4", "primary_ip6"):
+        ip_address = getattr(vdc, field)
+        if ip_address is None:
+            continue
+        assignments = ip_address.interface_assignments.all()
+        if not assignments.filter(interface=instance.interface_id).exists():
+            continue
+        if assignments.filter(interface__in=vdc.interfaces.exclude(pk=instance.interface_id)).exists():
+            continue
+        setattr(vdc, field, None)
+        changed = True
+    if changed:
+        vdc.save()
+
+
 #
 # ControllerManagedDeviceGroup
 #

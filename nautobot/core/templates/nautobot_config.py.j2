@@ -531,6 +531,15 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
 #     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Must a device or virtual machine's primary IP address be assigned to one of its interfaces? Default True
+# if (
+#     "NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT" in os.environ
+#     and os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"] != ""
+# ):
+#     PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT = is_truthy(
+#         os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"]
+#     )
+
 # Default filters for Prefix list view
 #
 # if (
