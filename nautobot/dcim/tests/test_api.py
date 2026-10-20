@@ -1526,6 +1526,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 module_type.refresh_from_db()
                 self.assertTrue(bool(module_type.front_image))
+
     bulk_update_data = {
         "part_number": "ABC123",
         "comments": "changed comment",
