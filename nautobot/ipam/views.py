@@ -855,6 +855,8 @@ class IPAddressAssignView(view_mixins.GetReturnURLMixin, generic.ObjectView):
 class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermissionRequiredMixin, View):
     queryset = IPAddress.objects.all()
     template_name = "ipam/ipaddress_merge.html"
+    # A merge deletes the collapsed IPs and creates the merged one, so it needs add and delete as well as change.
+    additional_permissions = ["ipam.add_ipaddress", "ipam.delete_ipaddress"]
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "change")
@@ -864,9 +866,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         Present IP Addresses with the same host values.
         If not found, return to IPAddressListView with a helpful message.
         """
+        # Only offer IPs that post() would actually merge: within both the "change" and "delete" constraints.
+        mergeable_ips = self.queryset.restrict(request.user, "delete")
         if merged_attributes:
             host_values = (
-                self.queryset.filter(host__gt=merged_attributes.get("host"))
+                mergeable_ips.filter(host__gt=merged_attributes.get("host"))
                 .values("host")
                 .order_by("host")
                 .annotate(count=models.Count("host"))
@@ -874,11 +878,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
             )
         else:
             host_values = (
-                self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+                mergeable_ips.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
             )
         if host_values:
             item = host_values[0]
-            queryset = self.queryset.filter(host__in=[item["host"]])
+            queryset = mergeable_ips.filter(host__in=[item["host"]])
             return render(
                 request=request,
                 template_name=self.template_name,
@@ -896,7 +900,9 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         return self.find_duplicate_ips(request)
 
     def post(self, request):
-        collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
+        # Use the view's restricted queryset ("change"), further restricted to "delete", so a crafted POST
+        # cannot merge/delete IPAddresses the user has no object-level permission for.
+        collapsed_ips = self.queryset.restrict(request.user, "delete").filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         operation_invalid = len(collapsed_ips) < 2
         # Check if there are at least two IP addresses for us to merge
@@ -942,11 +948,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                         nat_inside=nat_inside,
                         _custom_field_data=ip_in_the_same_namespace._custom_field_data,
                     )
-                    merged_ip.tags.set(tags)
-                    # Update custom_field_data
+                    # Update custom_field_data. Source values only from collapsed_ips (the restricted
+                    # merge set) so a crafted POST cannot pull custom-field data from an arbitrary IP.
                     for key in merged_ip._custom_field_data.keys():
                         ip_pk = merged_attributes.get("cf_" + key)
-                        merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
+                        merged_ip._custom_field_data[key] = collapsed_ips.get(pk=ip_pk)._custom_field_data[key]
                     # Update relationship data
                     handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
                     # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
@@ -994,15 +1000,38 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     )
                     logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
                     merged_ip.validated_save()
+                    # Tags are set only after the save, so the change log records the merged IP as created.
+                    merged_ip.tags.set(tags)
+                    # Enforce object-level "add" constraints on the merged IP, rolling back the whole merge if violated.
+                    if not IPAddress.objects.restrict(request.user, "add").filter(pk=merged_ip.pk).exists():
+                        transaction.set_rollback(True)
+                        messages.error(request, "Merge failed due to object-level permissions violation")
+                        return redirect(self.get_return_url(request))
                     # After some testing
                     # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
                     for assignment in ip_to_interface_assignments:
                         IPAddressToInterface.objects.create(**assignment)
-                    # Update Device primary_ip fields of the Collapsed IPs
-                    Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
-                    Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
+                    # Update Device/VM primary_ip fields of the Collapsed IPs. Save each object individually
+                    # (rather than queryset.update()) so that every change is recorded in the change log.
+                    for model, pk_list, field_name in (
+                        (Device, device_ip4, "primary_ip4"),
+                        (Device, device_ip6, "primary_ip6"),
+                        (VirtualMachine, vm_ip4, "primary_ip4"),
+                        (VirtualMachine, vm_ip6, "primary_ip6"),
+                    ):
+                        for obj in model.objects.filter(pk__in=pk_list):
+                            setattr(obj, field_name, merged_ip)
+                            try:
+                                obj.validated_save()
+                            except ValidationError as e:
+                                # e.g. a NAT-outside primary IP whose merged copy has a different `nat_inside`, so it
+                                # is no longer reachable from the object's interfaces. Roll back the whole merge.
+                                transaction.set_rollback(True)
+                                messages.error(
+                                    request,
+                                    f"Unable to merge: could not update the primary IP of {obj}: {'; '.join(e.messages)}",
+                                )
+                                return redirect(self.get_return_url(request))
                     for service in services:
                         Service.objects.get(pk=service).ip_addresses.add(merged_ip)
                     logger.info(logger_msg)
