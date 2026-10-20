@@ -235,7 +235,7 @@ Constraints are enforced on every action. A user whose `change` or `delete` perm
 
 ### IP Address Merge Tool
 
-The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place. Object-level constraints on these permissions are enforced: IP addresses outside the user's `change` or `delete` constraints are left out of the merge, and the merge is rolled back if the new IP address does not satisfy the user's `add` constraints.
+The [IP Address Merge Tool](../../feature-guides/ip-address-merge-tool.md) requires the `ipam.add_ipaddress`, `ipam.change_ipaddress`, and `ipam.delete_ipaddress` permissions, because a merge deletes the selected IP addresses and creates a new one in their place. Object-level constraints on these permissions are enforced: IP addresses outside the user's `change` or `delete` constraints are neither listed on the merge page nor included in the merge, and the merge is rolled back if the new IP address does not satisfy the user's `add` constraints.
 
 +/- 2.4.45
     `ipam.add_ipaddress` and `ipam.delete_ipaddress` are now required, and object-level constraints on all three permissions are now enforced. Previously only `ipam.change_ipaddress` was required, and its constraints only limited which IP addresses the merge page listed.

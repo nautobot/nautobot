@@ -866,9 +866,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
         Present IP Addresses with the same host values.
         If not found, return to IPAddressListView with a helpful message.
         """
+        # Only offer IPs that post() would actually merge: within both the "change" and "delete" constraints.
+        mergeable_ips = self.queryset.restrict(request.user, "delete")
         if merged_attributes:
             host_values = (
-                self.queryset.filter(host__gt=merged_attributes.get("host"))
+                mergeable_ips.filter(host__gt=merged_attributes.get("host"))
                 .values("host")
                 .order_by("host")
                 .annotate(count=models.Count("host"))
@@ -876,11 +878,11 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
             )
         else:
             host_values = (
-                self.queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+                mergeable_ips.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
             )
         if host_values:
             item = host_values[0]
-            queryset = self.queryset.filter(host__in=[item["host"]])
+            queryset = mergeable_ips.filter(host__in=[item["host"]])
             return render(
                 request=request,
                 template_name=self.template_name,
@@ -1019,7 +1021,17 @@ class IPAddressMergeView(view_mixins.GetReturnURLMixin, view_mixins.ObjectPermis
                     ):
                         for obj in model.objects.filter(pk__in=pk_list):
                             setattr(obj, field_name, merged_ip)
-                            obj.validated_save()
+                            try:
+                                obj.validated_save()
+                            except ValidationError as e:
+                                # e.g. a NAT-outside primary IP whose merged copy has a different `nat_inside`, so it
+                                # is no longer reachable from the object's interfaces. Roll back the whole merge.
+                                transaction.set_rollback(True)
+                                messages.error(
+                                    request,
+                                    f"Unable to merge: could not update the primary IP of {obj}: {'; '.join(e.messages)}",
+                                )
+                                return redirect(self.get_return_url(request))
                     for service in services:
                         Service.objects.get(pk=service).ip_addresses.add(merged_ip)
                     logger.info(logger_msg)
