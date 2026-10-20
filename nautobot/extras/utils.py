@@ -223,7 +223,9 @@ def get_change_logged_m2m_side_field_names(through):
     Starts from `get_change_logged_m2m_through_side_field_names` and removes any sides excluded by the
     `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` configuration, which maps `app_label.modelname` of a through model to a
     list of side field names to exclude. Only explicitly listed sides are excluded, so an empty list excludes
-    nothing. This is deliberately not cached, as the configuration may be changed at runtime via Constance.
+    nothing. Unlike the functions above, this is not memoized: the configuration may be changed at runtime via
+    Constance, and a per-process cache would go stale in every other process. Constance already caches its values
+    in the shared Django cache.
 
     Args:
         through (Model): Any model class; models that are not change-logged M2M through models yield no sides.
