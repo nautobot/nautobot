@@ -972,6 +972,7 @@ class ModuleTypeViewSet(NautobotModelViewSet):
     queryset = ModuleType.objects.all()
     serializer_class = serializers.ModuleTypeSerializer
     filterset_class = filters.ModuleTypeFilterSet
+    parser_classes = [JSONParser, NautobotCSVParser, NautobotMultiPartParser]
 
 
 class VirtualDeviceContextViewSet(NautobotModelViewSet):
