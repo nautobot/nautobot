@@ -22,6 +22,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
+    JobConsoleEntryOutputTypeChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
@@ -32,10 +33,15 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
 from nautobot.extras.models import (
+    ArchivedJobConsoleEntry,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     Contact,
     DynamicGroup,
     ExternalIntegration,
     Job,
+    JobConsoleEntry,
     JobLogEntry,
     JobQueue,
     JobQueueAssignment,
@@ -61,6 +67,256 @@ from nautobot.extras.utils import (
 from nautobot.tenancy.models import Tenant
 
 User = get_user_model()
+
+# Change and job history is generated within fixed date ranges, not relative to the current date, so a given seed
+# always produces the same data. Archived history ends where warm history begins, so no archived record is newer
+# than a warm one, as rotation would leave them. `WARM_HISTORY_END` must stay in the past, as tests compare
+# factory-generated history against the current time.
+ARCHIVED_HISTORY_START = datetime(2022, 7, 1, tzinfo=timezone.utc)
+WARM_HISTORY_START = datetime(2025, 7, 1, tzinfo=timezone.utc)
+WARM_HISTORY_END = datetime(2026, 7, 1, tzinfo=timezone.utc)
+
+
+def random_datetime(start, end):
+    """
+    A random datetime between `start` and `end` inclusive, drawn from factory_boy's seeded random generator.
+
+    Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+    """
+    seconds_range = int((end - start).total_seconds())
+    return start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
+
+
+def random_time_during(job_result):
+    """A random time while `job_result` was running, or when it started or was created if it has no end time."""
+    if job_result.date_started and job_result.date_done:
+        return random_datetime(job_result.date_started, job_result.date_done)
+    return job_result.date_started or job_result.date_created
+
+
+# The following derive a job result's remaining fields from its status, job model and user. They are shared by
+# `JobResultFactory` and `ArchivedJobResultFactory`, which both declare `job_model` and `user` (as parameters, on the
+# latter) to support them.
+
+
+def _job_result_result(obj):
+    if obj.status != JobResultStatusChoices.STATUS_SUCCESS:
+        return None
+    return faker.Faker().pyobject(faker.Faker().random_element([bool, str, float, int, list, dict]))
+
+
+def _job_result_traceback(obj):
+    if obj.status == JobResultStatusChoices.STATUS_FAILURE:
+        return faker.Faker().paragraph()
+    return None
+
+
+def _job_result_celery_kwargs(obj):
+    if not obj.has_celery_kwargs:
+        return {}
+
+    fake = faker.Faker()
+    kwargs = {
+        "nautobot_job_profile": fake.boolean(),
+        "nautobot_job_ignore_singleton_lock": fake.boolean(),
+        "nautobot_job_console_log": fake.boolean(),
+        "nautobot_job_queue_type": "celery",
+        "queue": fake.word(),
+    }
+    if obj.job_model is not None:
+        kwargs["nautobot_job_job_model_id"] = str(obj.job_model.id)
+    if obj.user is not None:
+        kwargs["nautobot_job_user_id"] = str(obj.user.id)
+    return kwargs
+
+
+# More updates than creates or deletes.
+OBJECT_CHANGE_ACTIONS = [
+    ObjectChangeActionChoices.ACTION_CREATE,
+    ObjectChangeActionChoices.ACTION_CREATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_UPDATE,
+    ObjectChangeActionChoices.ACTION_DELETE,
+]
+
+# The following are shared by `ObjectChangeFactory` and `ArchivedObjectChangeFactory`, which both declare `user`,
+# `changed_object_type` and `related_object_type` (as parameters, on the latter) to support them, along with
+# `request_sibling`, an earlier change whose request this one joins, if any.
+
+
+def _object_change_user_name(obj):
+    if obj.request_sibling:
+        return obj.request_sibling.user_name
+    if obj.user:
+        return obj.user.username
+    return faker.Faker().user_name()
+
+
+def _object_change_changed_object_id(obj):
+    if obj.has_changed_object:
+        queryset = obj.changed_object_type.model_class().objects.all()
+        if queryset.exists():
+            return factory.random.randgen.choice(queryset).pk
+    return faker.Faker().uuid4()
+
+
+def _object_change_related_object_id(obj):
+    if obj.has_related_object_type:
+        if obj.has_related_object:
+            queryset = obj.related_object_type.model_class().objects.all()
+            if queryset.exists():
+                return factory.random.randgen.choice(queryset).pk
+        return faker.Faker().uuid4()
+    return None
+
+
+class ArchivedJobConsoleEntryFactory(BaseModelFactory):
+    """ArchivedJobConsoleEntry model factory."""
+
+    class Meta:
+        model = ArchivedJobConsoleEntry
+
+    class Params:
+        job_result = random_instance(ArchivedJobResult, allow_null=False)
+
+    job_result_id = factory.SelfAttribute("job_result.pk")
+    timestamp = factory.LazyAttribute(lambda obj: random_time_during(obj.job_result))
+    output_type = factory.Iterator(JobConsoleEntryOutputTypeChoices.CHOICES, getter=lambda choice: choice[0])
+    text = factory.Faker("sentence")
+
+
+class ArchivedJobLogEntryFactory(BaseModelFactory):
+    """ArchivedJobLogEntry model factory."""
+
+    class Meta:
+        model = ArchivedJobLogEntry
+
+    class Params:
+        has_message = NautobotBoolIterator(chance_of_getting_true=90)
+        has_log_object = NautobotBoolIterator()
+        has_absolute_url = NautobotBoolIterator()
+        job_result = random_instance(ArchivedJobResult, allow_null=False)
+
+    job_result_id = factory.SelfAttribute("job_result.pk")
+    log_level = factory.Iterator(LogLevelChoices.CHOICES, getter=lambda choice: choice[0])
+    grouping = factory.Faker("word")
+    message = factory.Maybe("has_message", factory.Faker("sentence"), "")
+    created = factory.LazyAttribute(lambda obj: random_time_during(obj.job_result))
+    log_object = factory.Maybe("has_log_object", factory.Faker("word"), "")
+    absolute_url = factory.Maybe("has_absolute_url", factory.Faker("uri_path"), "")
+
+
+class ArchivedJobResultFactory(BaseModelFactory):
+    """ArchivedJobResult model factory, for job history older than any that `JobResultFactory` creates."""
+
+    class Meta:
+        model = ArchivedJobResult
+
+    class Params:
+        has_job_model = NautobotBoolIterator(chance_of_getting_true=90)
+        has_user = NautobotBoolIterator(chance_of_getting_true=80)
+        has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
+        has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        has_celery_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        job_model = factory.Maybe("has_job_model", random_instance(Job), None)
+        user = factory.Maybe("has_user", random_instance(get_user_model()), None)
+        dates = factory.LazyFunction(
+            lambda: sorted(random_datetime(ARCHIVED_HISTORY_START, WARM_HISTORY_START) for _ in range(3))
+        )
+
+    job_model_id = factory.LazyAttribute(lambda obj: obj.job_model.pk if obj.job_model else None)
+    name = factory.Faker("word")
+    task_name = factory.Faker("word")
+    date_created = factory.LazyAttribute(lambda obj: obj.dates[0])
+    date_started = factory.LazyAttribute(lambda obj: obj.dates[1])
+    date_done = factory.LazyAttribute(lambda obj: obj.dates[2])
+    user_id = factory.LazyAttribute(lambda obj: obj.user.pk if obj.user else None)
+    user_name = factory.LazyAttribute(lambda obj: obj.user.username if obj.user else "")
+    status = factory.Iterator(
+        [
+            JobResultStatusChoices.STATUS_FAILURE,
+            JobResultStatusChoices.STATUS_SUCCESS,
+        ],
+    )
+    worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
+    task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
+    task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
+    result = factory.LazyAttribute(_job_result_result)
+    traceback = factory.LazyAttribute(_job_result_traceback)
+    celery_kwargs = factory.LazyAttribute(_job_result_celery_kwargs)
+
+
+class ArchivedObjectChangeFactory(BaseModelFactory):
+    """ArchivedObjectChange model factory, for change history older than any that `ObjectChangeFactory` creates."""
+
+    class Meta:
+        model = ArchivedObjectChange
+
+    class Params:
+        has_user = NautobotBoolIterator(chance_of_getting_true=80)
+        has_changed_object = NautobotBoolIterator(chance_of_getting_true=91)
+        has_change_context_detail = NautobotBoolIterator()
+        has_related_object_type = NautobotBoolIterator(chance_of_getting_true=11)
+        has_related_object = NautobotBoolIterator()  # conditional on has_related_object_type
+        shares_request = NautobotBoolIterator(chance_of_getting_true=25)
+        request_sibling = factory.Maybe("shares_request", random_instance(ArchivedObjectChange), None)
+        user = factory.Maybe("has_user", random_instance(get_user_model()), None)
+        changed_object_type = random_instance(change_logged_models_queryset, allow_null=False)
+        related_object_type = factory.Maybe(
+            "has_related_object_type",
+            random_instance(change_logged_models_queryset, allow_null=False),
+            None,
+        )
+
+    request_id = factory.Maybe(
+        "request_sibling", factory.SelfAttribute("request_sibling.request_id"), factory.Faker("uuid4")
+    )
+    action = factory.Iterator(OBJECT_CHANGE_ACTIONS)
+    changed_object_type_id = factory.SelfAttribute("changed_object_type.pk")
+    change_context = factory.Maybe(
+        "request_sibling",
+        factory.SelfAttribute("request_sibling.change_context"),
+        factory.Iterator(ObjectChangeEventContextChoices.CHOICES, getter=lambda choice: choice[0]),
+    )
+    change_context_detail = factory.Maybe(
+        "has_change_context_detail", factory.Faker("text", max_nb_chars=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL), ""
+    )
+    related_object_type_id = factory.LazyAttribute(
+        lambda obj: obj.related_object_type.pk if obj.related_object_type else None
+    )
+    object_data = factory.Faker("pydict")
+    object_data_v2 = factory.Faker("pydict")
+    user_name = factory.LazyAttribute(_object_change_user_name)
+    changed_object_id = factory.LazyAttribute(_object_change_changed_object_id)
+    related_object_id = factory.LazyAttribute(_object_change_related_object_id)
+
+    @factory.lazy_attribute
+    def user_id(self):
+        if self.request_sibling:
+            return self.request_sibling.user_id
+        return self.user.pk if self.user else None
+
+    @factory.lazy_attribute
+    def object_repr(self):
+        changed_object = self.changed_object_type.model_class().objects.filter(pk=self.changed_object_id).first()
+        if changed_object is not None:
+            return str(changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
+        return faker.Faker().sentence()[:CHANGELOG_MAX_OBJECT_REPR]
+
+    @factory.lazy_attribute
+    def time(self):
+        if self.request_sibling:
+            earliest_in_request = (
+                ArchivedObjectChange.objects.filter(request_id=self.request_id).order_by("time").first()
+            )
+            # Just before the rest of the request, which also keeps it within archived history.
+            return earliest_in_request.time - timedelta(seconds=factory.random.randgen.randint(1, 5))
+        return random_datetime(ARCHIVED_HISTORY_START, WARM_HISTORY_START)
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -117,6 +373,23 @@ class ExternalIntegrationFactory(PrimaryModelFactory):
         factory.LazyAttributeSequence(lambda o, n: f"{o.name}/file/path/{n + 1}"),
         "",
     )
+
+
+class JobConsoleEntryFactory(BaseModelFactory):
+    """JobConsoleEntry model factory."""
+
+    class Meta:
+        model = JobConsoleEntry
+
+    job_result = random_instance(JobResult, allow_null=False)
+    output_type = factory.Iterator(JobConsoleEntryOutputTypeChoices.CHOICES, getter=lambda choice: choice[0])
+    text = factory.Faker("sentence")
+
+    @factory.post_generation
+    def timestamp(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        # `timestamp` is set automatically when the entry is created, so it can only be backdated afterward.
+        if created:
+            self.timestamp = extracted or random_time_during(self.job_result)
 
 
 class JobLogEntryFactory(BaseModelFactory):
@@ -207,18 +480,9 @@ class JobResultFactory(BaseModelFactory):
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
     # TODO meta?
-
-    @factory.lazy_attribute
-    def result(self):
-        if self.status != JobResultStatusChoices.STATUS_SUCCESS:
-            return None
-        return faker.Faker().pyobject(faker.Faker().random_element([bool, str, float, int, list, dict]))
-
-    @factory.lazy_attribute
-    def traceback(self):
-        if self.status == JobResultStatusChoices.STATUS_FAILURE:
-            return faker.Faker().paragraph()
-        return None
+    result = factory.LazyAttribute(_job_result_result)
+    traceback = factory.LazyAttribute(_job_result_traceback)
+    celery_kwargs = factory.LazyAttribute(_job_result_celery_kwargs)
 
     @factory.post_generation
     def dates(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
@@ -226,34 +490,8 @@ class JobResultFactory(BaseModelFactory):
             return
         if extracted:
             return
-        # Fixed absolute dates with factory_boy's seeded random for full determinism.
-        # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
-        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        seconds_range = int((end - start).total_seconds())
-        timestamps = sorted(
-            start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
-        )
+        timestamps = sorted(random_datetime(WARM_HISTORY_START, WARM_HISTORY_END) for _ in range(3))
         self.date_created, self.date_started, self.date_done = timestamps
-
-    @factory.lazy_attribute
-    def celery_kwargs(self):
-        if not self.has_celery_kwargs:
-            return {}
-
-        fake = faker.Faker()
-        kwargs = {
-            "nautobot_job_profile": fake.boolean(),
-            "nautobot_job_ignore_singleton_lock": fake.boolean(),
-            "nautobot_job_console_log": fake.boolean(),
-            "nautobot_job_queue_type": "celery",
-            "queue": fake.word(),
-        }
-        if self.job_model is not None:
-            kwargs["nautobot_job_job_model_id"] = str(self.job_model.id)
-        if self.user is not None:
-            kwargs["nautobot_job_user_id"] = str(self.user.id)
-        return kwargs
 
 
 class MetadataChoiceFactory(BaseModelFactory):
@@ -431,26 +669,24 @@ class ObjectChangeFactory(BaseModelFactory):
         has_change_context_detail = NautobotBoolIterator()
         has_related_object_type = NautobotBoolIterator(chance_of_getting_true=11)
         has_related_object = NautobotBoolIterator()  # conditional on has_related_object_type
+        shares_request = NautobotBoolIterator(chance_of_getting_true=25)
+        request_sibling = factory.Maybe("shares_request", random_instance(ObjectChange), None)
 
-    user = factory.Maybe("has_user", random_instance(get_user_model()), None)
-    request_id = factory.Faker("uuid4")
-    # more updates than creates or deletes
-    action = factory.Iterator(
-        [
-            ObjectChangeActionChoices.ACTION_CREATE,
-            ObjectChangeActionChoices.ACTION_CREATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_UPDATE,
-            ObjectChangeActionChoices.ACTION_DELETE,
-        ]
+    user = factory.Maybe(
+        "request_sibling",
+        factory.SelfAttribute("request_sibling.user"),
+        factory.Maybe("has_user", random_instance(get_user_model()), None),
     )
+    request_id = factory.Maybe(
+        "request_sibling", factory.SelfAttribute("request_sibling.request_id"), factory.Faker("uuid4")
+    )
+    action = factory.Iterator(OBJECT_CHANGE_ACTIONS)
     changed_object_type = random_instance(change_logged_models_queryset, allow_null=False)
-    change_context = factory.Iterator(ObjectChangeEventContextChoices.CHOICES, getter=lambda choice: choice[0])
+    change_context = factory.Maybe(
+        "request_sibling",
+        factory.SelfAttribute("request_sibling.change_context"),
+        factory.Iterator(ObjectChangeEventContextChoices.CHOICES, getter=lambda choice: choice[0]),
+    )
     change_context_detail = factory.Maybe(
         "has_change_context_detail", factory.Faker("text", max_nb_chars=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL), ""
     )
@@ -461,30 +697,9 @@ class ObjectChangeFactory(BaseModelFactory):
     )
     object_data = factory.Faker("pydict")
     object_data_v2 = factory.Faker("pydict")
-
-    @factory.lazy_attribute
-    def user_name(self):
-        if self.user:
-            return self.user.username
-        return faker.Faker().user_name()
-
-    @factory.lazy_attribute
-    def changed_object_id(self):
-        if self.has_changed_object:
-            queryset = self.changed_object_type.model_class().objects.all()
-            if queryset.exists():
-                return factory.random.randgen.choice(queryset).pk
-        return faker.Faker().uuid4()
-
-    @factory.lazy_attribute
-    def related_object_id(self):
-        if self.has_related_object_type:
-            if self.has_related_object:
-                queryset = self.related_object_type.model_class().objects.all()
-                if queryset.exists():
-                    return factory.random.randgen.choice(queryset).pk
-            return faker.Faker().uuid4()
-        return None
+    user_name = factory.LazyAttribute(_object_change_user_name)
+    changed_object_id = factory.LazyAttribute(_object_change_changed_object_id)
+    related_object_id = factory.LazyAttribute(_object_change_related_object_id)
 
     @factory.post_generation
     def object_repr(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
@@ -501,12 +716,17 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                # Fixed absolute dates with factory_boy's seeded random for full determinism.
-                # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
-                start = datetime(2024, 1, 1, tzinfo=timezone.utc)
-                end = datetime(2025, 1, 1, tzinfo=timezone.utc)
-                seconds_range = int((end - start).total_seconds())
-                self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
+                latest_in_request = (
+                    ObjectChange.objects.filter(request_id=self.request_id)
+                    .exclude(pk=self.pk)
+                    .order_by("-time")
+                    .first()
+                )
+                if latest_in_request is not None:
+                    # Just after the rest of the request, which also keeps it within warm history.
+                    self.time = latest_in_request.time + timedelta(seconds=factory.random.randgen.randint(1, 5))
+                else:
+                    self.time = random_datetime(WARM_HISTORY_START, WARM_HISTORY_END)
 
 
 class RoleFactory(OrganizationalModelFactory):
