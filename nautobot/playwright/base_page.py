@@ -57,6 +57,8 @@ class BasePage:
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # One element per message. A toast stays in the DOM after it hides, so check visibility, not presence.
+    _FLASH_MESSAGES = "#header_messages .alert, #toast-messages .toast"
     # The page title star marks itself as the button tracking the current URL, so it needs no structural scoping.
     _FAVORITE_STAR = "[data-nb-favorite-current]"
     # One anchor per entry in the sidenav favorites flyout, whose `href` is the favorited link.
@@ -104,6 +106,10 @@ class BasePage:
     def expect_url_lacks(self, fragment):
         """Assert (auto-retrying) that the URL does not contain *fragment*."""
         expect(self.page).not_to_have_url(re.compile(re.escape(fragment)))
+
+    def expect_flash_message(self, text):
+        """Assert (auto-retrying) that a visible flash message contains *text*."""
+        expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_be_visible()
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""
