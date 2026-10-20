@@ -636,7 +636,8 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = FrontPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
-        *FrontPort.connection_prefetch_related_fields()
+        *FrontPort.connection_prefetch_related_fields(),
+        *FrontPort.cable_peer_prefetch_related_fields(),
     )
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
@@ -644,7 +645,8 @@ class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = RearPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
-        *RearPort.connection_prefetch_related_fields()
+        *RearPort.connection_prefetch_related_fields(),
+        *RearPort.cable_peer_prefetch_related_fields(),
     )
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet
