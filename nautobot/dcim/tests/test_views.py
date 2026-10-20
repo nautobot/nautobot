@@ -2812,6 +2812,24 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(len(ctx.captured_queries), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_list_does_not_query_an_ip_address_per_row(self):
+        """Rendering the device list's `primary_ip` column should not issue one query per row."""
+        ip = IPAddress.objects.filter(ip_version=4).first()
+        self.assertIsNotNone(ip)
+        Device.objects.update(primary_ip4=ip)
+        self.assertGreater(Device.objects.count(), 0)
+
+        url = self._get_url("list")
+        self.client.get(url, headers={"HX-Request": "true"})
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+
+        per_row = [q["sql"] for q in ctx.captured_queries if 'FROM "ipam_ipaddress"' in q["sql"]]
+        self.assertEqual(per_row, [], f"{len(per_row)} per-row ipam_ipaddress queries")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_modulebays_expand_all(self):
         device = Device.objects.filter(module_bays__isnull=True).first()
         mtype = ModuleType.objects.create(manufacturer=device.device_type.manufacturer, model="EXPAND VENDOR")

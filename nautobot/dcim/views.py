@@ -2827,6 +2827,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.action == "list":
+            # DeviceTable's primary_ip column renders a property, which BaseTable can't select_related.
+            queryset = queryset.select_related("primary_ip4", "primary_ip6")
         if self.action == "retrieve":
             queryset = queryset.select_related(
                 "controller_managed_device_group__controller",
