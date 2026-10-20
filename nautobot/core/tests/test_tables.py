@@ -37,8 +37,8 @@ from nautobot.dcim.tables import (
     LocationTypeTable,
     RackGroupTable,
 )
-from nautobot.extras.choices import ComputedFieldTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry, Role
+from nautobot.extras.choices import ComputedFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.models import ComputedField, JobLogEntry, Relationship, RelationshipAssociation, Role
 from nautobot.extras.tables import JobLogEntryTable, RoleTable
 from nautobot.ipam.models import RIR
 from nautobot.ipam.tables import RIRTable
@@ -321,6 +321,27 @@ class BaseTablePrefetchTestCase(TestCase):
         table = InterfaceRedundancyGroupAssociationTable(InterfaceRedundancyGroupAssociation.objects.all(), user=user)
 
         self.assertIn("interface__ip_addresses", table.data.data._prefetch_related_lookups)
+
+    def test_relationship_column_uses_the_prefetch(self):
+        location_type = ContentType.objects.get_for_model(Location)
+        relationship = Relationship.objects.create(
+            label="Prefetch Test",
+            key="prefetch_test",
+            source_type=location_type,
+            destination_type=location_type,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        destination, *sources = Location.objects.all()[:13]
+        self.assertEqual(len(sources), 12)
+        for source in sources:
+            RelationshipAssociation.objects.create(relationship=relationship, source=source, destination=destination)
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config("tables.LocationTable.columns", ["name", "cr_prefetch_test_src"], commit=True)
+
+        with AssertNoRepeatedQueries(self):
+            table = LocationTable(Location.objects.filter(pk__in=[source.pk for source in sources]), user=user)
+            for row in table.rows:
+                row.get_cell("cr_prefetch_test_src")
 
 
 class ButtonsColumnTestCase(TestCase):

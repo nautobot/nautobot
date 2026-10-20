@@ -4,8 +4,9 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -226,6 +227,7 @@ class BaseTable(django_tables2.Table):
             select_fields = []
             prefetch_fields = []
             count_fields = []
+            relationship_peer_lookups = None
             for column in self.columns:
                 if not column.visible:
                     continue
@@ -262,6 +264,33 @@ class BaseTable(django_tables2.Table):
                         prefetch_fields.append(
                             Prefetch(first_relation, related_qs[:1], to_attr=_linked_count_to_attr(lookup))
                         )
+                    continue
+
+                if isinstance(column.column, RelationshipColumn):
+                    # Prefetch the associations and their peers once for every relationship column. A peer
+                    # prefetch raises on a stale ContentType (an uninstalled App), so then prefetch only the
+                    # associations and let those peers resolve per row.
+                    if relationship_peer_lookups is None:
+                        model_ct = ContentType.objects.get_for_model(model)
+                        relationship_peer_lookups = (
+                            (
+                                "source_for_associations__source",
+                                "source_for_associations__destination",
+                                "destination_for_associations__source",
+                                "destination_for_associations__destination",
+                            )
+                            if all(
+                                ContentType.objects.get_for_id(ct_id).model_class() is not None
+                                for relationship in models.Relationship.objects.filter(
+                                    Q(source_type=model_ct) | Q(destination_type=model_ct)
+                                )
+                                for ct_id in (relationship.source_type_id, relationship.destination_type_id)
+                            )
+                            else ("source_for_associations", "destination_for_associations")
+                        )
+                    for lookup in relationship_peer_lookups:
+                        if lookup not in prefetch_fields:
+                            prefetch_fields.append(lookup)
                     continue
 
                 column_model = model
@@ -905,7 +934,8 @@ class RelationshipColumn(django_tables2.Column):
     def render(self, *, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
-        value = [v for v in value if v.relationship == self.relationship]
+        # Compare by id, since `v.relationship` would fetch the Relationship for each association.
+        value = [v for v in value if v.relationship_id == self.relationship.pk]
         if not self.relationship.symmetric:
             if self.side == choices.RelationshipSideChoices.SIDE_SOURCE:
                 value = [v for v in value if v.source_id == record.id]
