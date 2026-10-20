@@ -35,7 +35,8 @@ class NoteTestCase:
         notes.edit_note(created_note["note"], new_text)
 
         notes.expect_flash_message("Modified note")
-        # The edit link's return_url is the object's main tab, so the update lands there.
+        # NOTE: The edit link returns to the object's main tab, not to Notes (NAUTOBOT-1656).
+        # Remove this open_notes_tab() call when that bug is fixed.
         notes.open_notes_tab()
         notes.expect_note(new_text)
         notes.expect_note(created_note["note"], present=False)
