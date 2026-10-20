@@ -1,5 +1,8 @@
+import json
+
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import extend_schema_field
+from rest_framework.exceptions import ValidationError
 from rest_framework.fields import Field
 
 from nautobot.extras.models import CustomField
@@ -58,6 +61,17 @@ class CustomFieldsDataField(Field):
 
     def to_internal_value(self, data):
         """Support updates to individual fields on an existing instance without needing to provide the entire dict."""
+
+        if isinstance(data, str):
+            if not data.strip():
+                data = {}
+            else:
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError as exc:
+                    raise ValidationError("Value must be valid JSON encoding an object.") from exc
+        if data is not None and not isinstance(data, dict):
+            raise ValidationError("Expected a dictionary of custom field values.")
 
         # Discard any entries in data that do not align with actual CustomFields - this matches the REST API behavior
         # for top-level serializer fields that do not exist or are not writable
