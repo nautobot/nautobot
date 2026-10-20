@@ -4,6 +4,7 @@ import pkgutil
 from types import SimpleNamespace
 import warnings
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
@@ -20,8 +21,22 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import AssertNoRepeatedQueries
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
-from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
+from nautobot.dcim.models import (
+    Device,
+    InterfaceRedundancyGroupAssociation,
+    InventoryItem,
+    Location,
+    LocationType,
+    Rack,
+    RackGroup,
+)
+from nautobot.dcim.tables import (
+    InterfaceRedundancyGroupAssociationTable,
+    InventoryItemTable,
+    LocationTable,
+    LocationTypeTable,
+    RackGroupTable,
+)
 from nautobot.extras.choices import ComputedFieldTypeChoices
 from nautobot.extras.models import ComputedField, JobLogEntry, Role
 from nautobot.extras.tables import JobLogEntryTable, RoleTable
@@ -294,6 +309,18 @@ class BaseTablePrefetchTestCase(TestCase):
             table = RoleTable(Role.objects.filter(name__startswith="Prefetch Test Role"))
             for row in table.rows:
                 row.get_cell("content_types")
+
+    def test_to_many_accessor_after_a_foreign_key_is_prefetched(self):
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config(
+            "tables.InterfaceRedundancyGroupAssociationTable.columns",
+            ["interface", "interface__ip_addresses"],
+            commit=True,
+        )
+
+        table = InterfaceRedundancyGroupAssociationTable(InterfaceRedundancyGroupAssociation.objects.all(), user=user)
+
+        self.assertIn("interface__ip_addresses", table.data.data._prefetch_related_lookups)
 
 
 class ButtonsColumnTestCase(TestCase):
