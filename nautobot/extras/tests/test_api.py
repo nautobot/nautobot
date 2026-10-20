@@ -19,7 +19,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -2674,6 +2674,15 @@ class JobTest(
         self.client.delete(url, **self.header)
         # assert Job still exists
         self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+    def test_list_jobs_avoids_job_queues_n_plus_one(self):
+        """Serializing the jobs list must not query each Job's queues separately."""
+        self.add_permissions("extras.view_job")
+        self.assertGreater(Job.objects.count(), 10)
+        url = reverse("extras-api:job-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
