@@ -73,21 +73,21 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.pre_tag([], format_empty_value=False), helpers.HTML_NONE)
         self.assertEqual(helpers.pre_tag("something", format_empty_value=False), "<pre>something</pre>")
 
-    def test_linebreaksbr_outside_pre(self):
+    def test_linebreaksbr_exclude_pre(self):
         """Newlines become `<br>` everywhere except inside `<pre>` blocks, and unsafe input is escaped."""
         self.assertEqual(
-            helpers.linebreaksbr_outside_pre(
+            helpers.linebreaksbr_exclude_pre(
                 mark_safe('Example:\n<pre><code class="language-json">{\n    "a": 1\n}</code></pre>\nDone.')
             ),
             'Example:<br><pre><code class="language-json">{\n    "a": 1\n}</code></pre><br>Done.',
         )
         self.assertEqual(
-            helpers.linebreaksbr_outside_pre("<b>one</b>\ntwo"),
+            helpers.linebreaksbr_exclude_pre("<b>one</b>\ntwo"),
             "&lt;b&gt;one&lt;/b&gt;<br>two",
         )
         # Constance passes help text through gettext, yielding a lazy proxy of the original safe string
         self.assertEqual(
-            helpers.linebreaksbr_outside_pre(gettext_lazy(mark_safe('<a href="#">one</a>\ntwo'))),
+            helpers.linebreaksbr_exclude_pre(gettext_lazy(mark_safe('<a href="#">one</a>\ntwo'))),
             '<a href="#">one</a><br>two',
         )
 

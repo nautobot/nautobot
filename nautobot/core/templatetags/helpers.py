@@ -160,14 +160,14 @@ def pre_tag(value, format_empty_value=True):
 
 @register.filter(is_safe=True, needs_autoescape=True)
 @stringfilter
-def linebreaksbr_outside_pre(value, autoescape=True):
-    """Convert newlines to `<br>` like Django's `linebreaksbr`, except inside `<pre>` blocks.
+def linebreaksbr_exclude_pre(value, autoescape=True):
+    """Convert newlines to `<br>` like Django's `linebreaksbr`, excluding newlines inside `<pre>` blocks.
 
     Syntax highlighting of a `<pre><code>` block reads only its text content, so a `<br>` there is discarded
     and the block collapses onto one line. Newlines inside `<pre>` already render as line breaks.
 
     Example:
-        >>> linebreaksbr_outside_pre(mark_safe("a\\nb<pre>{\\n}</pre>"))
+        >>> linebreaksbr_exclude_pre(mark_safe("a\\nb<pre>{\\n}</pre>"))
         'a<br>b<pre>{\\n}</pre>'
     """
     autoescape = autoescape and not isinstance(value, SafeData)
