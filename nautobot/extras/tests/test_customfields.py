@@ -1577,7 +1577,7 @@ class CustomFieldMultipartAPITest(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "dcim.change_devicetype")
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "dcim.change_devicetype", "dcim.view_manufacturer")
         self.manufacturer, _ = Manufacturer.objects.get_or_create(name="Multipart Test Manufacturer")
 
     def _unique_model_name(self):
