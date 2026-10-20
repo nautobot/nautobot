@@ -6,10 +6,10 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import connection, IntegrityError, transaction
 from django.db.models import Model
 from django.test import TestCase
-from django.test.utils import override_settings
+from django.test.utils import CaptureQueriesContext, override_settings
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core import settings
@@ -1695,6 +1695,12 @@ class PlatformTestCase(TestCase):
         self.assertEqual(self.custom_platform.network_driver_mappings["supercoolnewtool"], "secret_xyz")
 
 
+def count_bulk_inserts(captured_queries, model):
+    """Return the number of INSERT statements against the table of `model` in `captured_queries`."""
+    insert_prefix = f"INSERT INTO {connection.ops.quote_name(model._meta.db_table)}"
+    return sum(1 for query in captured_queries if query["sql"].startswith(insert_prefix))
+
+
 class DeviceTestCase(ModelTestCases.BaseModelTestCase):
     model = Device
 
@@ -1917,6 +1923,31 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
         DeviceBay.objects.get(device=self.device, name="Device Bay 1")
         ModuleBay.objects.get(parent_device=self.device, position="1111")
+
+    def test_create_components_in_batches(self):
+        """
+        Ensure that components are created from the DeviceType in batches rather than in a single INSERT query.
+        """
+        device_type = DeviceType.objects.create(
+            manufacturer=self.device_type.manufacturer,
+            model="Test Device Type with many components",
+        )
+        # One more than the batch size used by `Device.create_components()`
+        ConsolePortTemplate.objects.bulk_create(
+            ConsolePortTemplate(device_type=device_type, name=f"Console Port {i}") for i in range(1001)
+        )
+
+        with CaptureQueriesContext(connection) as queries:
+            device = Device.objects.create(
+                location=self.location_3,
+                device_type=device_type,
+                role=self.device_role,
+                status=self.device_status,
+                name="Test Device with many components",
+            )
+
+        self.assertEqual(device.console_ports.count(), 1001)
+        self.assertEqual(count_bulk_inserts(queries.captured_queries, ConsolePort), 2)
 
     def test_multiple_unnamed_devices(self):
         device1 = Device(
@@ -5911,6 +5942,25 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         ModuleBay.objects.get(parent_module=module, position="1111")
+
+    def test_create_components_in_batches(self):
+        """
+        Ensure that components are created from the ModuleType in batches rather than in a single INSERT query.
+        """
+        module_type = ModuleType.objects.create(
+            manufacturer=self.module_type.manufacturer,
+            model="module model with many components",
+        )
+        # One more than the batch size used by `Module.create_components()`
+        ConsolePortTemplate.objects.bulk_create(
+            ConsolePortTemplate(module_type=module_type, name=f"Console Port {i}") for i in range(1001)
+        )
+
+        with CaptureQueriesContext(connection) as queries:
+            module = Module.objects.create(module_type=module_type, location=self.location, status=self.status)
+
+        self.assertEqual(module.console_ports.count(), 1001)
+        self.assertEqual(count_bulk_inserts(queries.captured_queries, ConsolePort), 2)
 
     def test_module_infinite_recursion_self_parent(self):
         """Assert that a module cannot be its own parent."""
