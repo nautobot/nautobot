@@ -1,6 +1,7 @@
 from unittest import mock
 import uuid
 
+from constance.test import override_config
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, tag
@@ -1039,6 +1040,110 @@ class ChangeLogM2MThroughTest(APITestCase):
         changes = ObjectChange.objects.filter(changed_object_id=self.ip_addresses[2].pk, request_id=change_id)
         self.assertEqual(changes.count(), 1)
         self.assertIsNone(changes.first().user)
+
+    def assert_no_change(self, instance, request_id):
+        """Assert that no ObjectChange was recorded for `instance` in the given request."""
+        self.assertFalse(
+            ObjectChange.objects.filter(
+                changed_object_type=ContentType.objects.get_for_model(instance),
+                changed_object_id=instance.pk,
+                request_id=request_id,
+            ).exists()
+        )
+
+    @override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"ipam.prefixlocationassignment": ["location"]})
+    def test_excluded_side_not_logged_on_api_create_and_delete(self):
+        self.add_permissions(
+            "ipam.add_prefixlocationassignment",
+            "ipam.delete_prefixlocationassignment",
+            "ipam.view_prefix",
+            "dcim.view_location",
+        )
+        location = self.locations[0]
+
+        with self.subTest("create"):
+            url = reverse("ipam-api:prefixlocationassignment-list")
+            response = self.client.post(
+                url, {"prefix": self.prefix.pk, "location": location.pk}, format="json", **self.header
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            prefix_change = get_changes_for_model(self.prefix).first()
+            self.assertIsNotNone(prefix_change)
+            self.assert_no_change(location, prefix_change.request_id)
+
+        with self.subTest("delete"):
+            url = reverse("ipam-api:prefixlocationassignment-detail", kwargs={"pk": response.data["id"]})
+            response = self.client.delete(url, **self.header)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            delete_request_id = get_changes_for_model(self.prefix).first().request_id
+            self.assertNotEqual(delete_request_id, prefix_change.request_id)
+            self.assert_no_change(location, delete_request_id)
+
+    @override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"ipam.prefixlocationassignment": ["location"]})
+    def test_excluded_side_not_logged_on_orm_add(self):
+        locations = list(self.locations[:2])
+
+        with self.subTest("the excluded side is not logged when added to the other side"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                self.prefix.locations.add(locations[0])
+            self.assert_single_update_change(self.prefix, change_id)
+            self.assert_no_change(locations[0], change_id)
+
+        with self.subTest("the excluded side is still logged when it is the object being edited"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                locations[1].prefixes.add(self.prefix)
+            self.assert_single_update_change(locations[1], change_id)
+            self.assert_single_update_change(self.prefix, change_id)
+
+    @override_settings(
+        CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"ipam.ipaddresstointerface": ["interface", "ip_address", "vm_interface"]}
+    )
+    def test_all_listed_sides_excluded(self):
+        ip_address = self.ip_addresses[0]
+
+        with self.subTest("create"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+            self.assert_no_change(ip_address, change_id)
+            self.assert_no_change(self.interface, change_id)
+
+        with self.subTest("delete"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                assignment.delete()
+            self.assert_no_change(ip_address, change_id)
+            self.assert_no_change(self.interface, change_id)
+
+    @override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"ipam.ipaddresstointerface": []})
+    def test_empty_exclusion_list_excludes_nothing(self):
+        ip_address = self.ip_addresses[0]
+
+        with self.subTest("create"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+            self.assert_single_update_change(ip_address, change_id)
+            self.assert_single_update_change(self.interface, change_id)
+
+        with self.subTest("delete"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                assignment.delete()
+            self.assert_single_update_change(ip_address, change_id)
+            self.assert_single_update_change(self.interface, change_id)
+
+    @override_config(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"ipam.prefixlocationassignment": ["location"]})
+    def test_exclusion_configurable_via_constance(self):
+        location = self.locations[0]
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            PrefixLocationAssignment.objects.create(prefix=self.prefix, location=location)
+
+        self.assert_single_update_change(self.prefix, change_id)
+        self.assert_no_change(location, change_id)
 
     def test_self_referential_through_model_logs_both_sides(self):
         device_ct = ContentType.objects.get_for_model(Device)

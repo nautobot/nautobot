@@ -49,3 +49,16 @@ Please note the following behavioral details:
 - Updating additional fields on an association record itself (for example, `VRFDeviceAssignment.rd`) does not record a change against the associated objects, as their own data is unaffected.
 - Because the serialized data of the associated objects may not include the association itself, the "difference" display of such a change record may be empty even though the change record is meaningful and still drives webhooks, job hooks, and events.
 - App-defined models automatically receive the same behavior for any many-to-many relationship declared with an explicit `through` model. An App can opt an association model out of this behavior by setting the class attribute `is_m2m_change_logged = False` on the through model, as Nautobot itself does for user-specific preference data such as `UserSavedViewAssociation`.
+
+### Excluding Associations from Change Logging
+
+Recording a change against an object requires serializing it, which can be slow for an object with very many associations (for example, a VRF assigned to thousands of Prefixes and Devices). Administrators can exclude specific association models, or specific sides of them, from this behavior with the [`CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS`](../administration/configuration/settings.md#changelog_m2m_excluded_associations) setting. This setting can be configured either in your `nautobot_config.py` or, if it is not defined there, dynamically via the Nautobot Admin UI (see [Administratively Configurable Settings](../administration/configuration/settings.md#administratively-configurable-settings)). Only the sides that are explicitly listed are excluded; an empty list excludes nothing. Excluded objects receive no change record for association changes, and their webhooks, job hooks, and events do not fire.
+
+![Excluding Associations from Change Logging](../../media/user-guide/platform-functionality/ss_changelog_m2m_excluded_light.png#only-light){ .on-glb }
+![Excluding Associations from Change Logging](../../media/user-guide/platform-functionality/ss_changelog_m2m_excluded_dark.png#only-dark){ .on-glb }
+
+!!! note
+    `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` only affects the change records that are recorded automatically against the associated objects. An object whose many-to-many relationship is modified directly (for example, `vrf.prefixes.add(...)`) is still recorded as changed, even if its side is excluded.
+
+!!! note
+    Because both sides of a self-referential association model (such as `DynamicGroupMembership`) relate to the same model, `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` only excludes objects added through its many-to-many manager when all of its sides are excluded.

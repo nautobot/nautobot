@@ -525,6 +525,43 @@ properties:
     environment_variable: "NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL"
     type: "string"
     version_added: "2.0.0"
+  CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS:
+    additionalProperties:
+      items:
+        type: "string"
+      type: "array"
+    default: {}
+    description: >-
+      Many-to-many association models whose associated objects should not receive an automatic "update" change
+      record when an association is created or deleted.
+    details: |-
+      By default, creating or deleting a record of a many-to-many association model (such as a `VRFPrefixAssignment`)
+      records an "update" change against _both_ of the objects it associates, as described in
+      [Change Logging](../../platform-functionality/change-logging.md#many-to-many-association-changes).
+      See [Excluding Associations from Change Logging](../../platform-functionality/change-logging.md#excluding-associations-from-change-logging)
+      for the caveats of this setting.
+      When one side of an association may have thousands of related objects, such as a VRF assigned to thousands of
+      Prefixes and Devices, serializing that object for every association change can be very slow.
+
+      Each key is the `app_label.modelname` of an association model, and each value is a list of the names of its
+      foreign key fields whose related objects should be excluded. Only the sides that are explicitly listed are
+      excluded, so an empty list is equivalent to omitting the association model entirely. For example, to keep
+      recording VRF assignments against each Prefix and Device, but not against the VRF itself, and to stop
+      recording Cloud Network to Prefix assignments against either side:
+
+      ```python
+      CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = {
+          "ipam.vrfprefixassignment": ["prefix"],
+          "ipam.vrfdeviceassignment": ["device"],
+          "cloud.cloudnetworkprefixassignment": ["cloud_network", "prefix"],
+      }
+      ```
+
+      !!! warning
+          Excluded objects receive no change record for association changes, so no [webhooks](../../platform-functionality/webhook.md), [job hooks](../../platform-functionality/jobs/jobhook.md), or [events](../../platform-functionality/events.md) fire for them either.
+    is_constance_config: true
+    type: "object"
+    version_added: "3.2.8"
   CHANGELOG_RETENTION:
     default: 90
     description: >-

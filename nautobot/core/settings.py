@@ -878,6 +878,20 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
+    "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS": ConstanceConfigItem(
+        default={},
+        help_text=mark_safe(
+            "Many-to-many association models whose associated objects should not receive an automatic change "
+            "record when an association is created or deleted. Map each association model to a list of the "
+            "sides to exclude. Only the listed sides are excluded; an empty list excludes nothing. "
+            "Enter a dictionary in JSON format, for example:\n"
+            '<pre><code class="language-json">{\n'
+            '    "ipam.vrfprefixassignment": ["prefix"],\n'
+            '    "cloud.cloudnetworkprefixassignment": ["cloud_network", "prefix"]\n'
+            "}</code></pre>",
+        ),
+        field_type="optional_json_field",
+    ),
     "DEVICE_UNIQUENESS": ConstanceConfigItem(
         default="location_tenant_name",
         help_text=(
@@ -1017,7 +1031,7 @@ CONSTANCE_CONFIG = {
 
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
-    "Change Logging": ["CHANGELOG_RETENTION"],
+    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
