@@ -11,7 +11,7 @@ from django.test import override_settings
 
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Cable, Device, PowerPort
+from nautobot.dcim.models import Cable, CableToCableTermination, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, SavedView, TaggedItem
@@ -58,6 +58,23 @@ class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
 
         with self.subTest("self-referential M2M with through_fields"):
             self.assertEqual(mapping[DynamicGroupMembership], ("group", "parent_group"))
+
+        with self.subTest("OneToOneField sides are included"):
+            self.assertEqual(
+                mapping[CableToCableTermination],
+                (
+                    "cable",
+                    "circuit_termination",
+                    "console_port",
+                    "console_server_port",
+                    "front_port",
+                    "interface",
+                    "power_feed",
+                    "power_outlet",
+                    "power_port",
+                    "rear_port",
+                ),
+            )
 
     def test_excluded_models(self):
         mapping = get_explicit_m2m_through_side_field_names()

@@ -16,6 +16,8 @@ from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Cable,
+    CableToCableTermination,
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -1144,6 +1146,37 @@ class ChangeLogM2MThroughTest(APITestCase):
 
         self.assert_single_update_change(self.prefix, change_id)
         self.assert_no_change(location, change_id)
+
+    def test_cable_termination_excluded_side_not_logged(self):
+        int_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=self.device, name=f"eth{i}", status=int_status, type=InterfaceTypeChoices.TYPE_1GE_FIXED
+            )
+            for i in range(1, 4)
+        ]
+        cable = Cable.objects.create(
+            termination_a=self.interface,
+            termination_b=interfaces[0],
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        with self.subTest("both sides are logged by default"):
+            CableToCableTermination.objects.filter(cable=cable, cable_end="B").delete()
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                cable.add_termination(interfaces[1], cable_end="B")
+            self.assert_single_update_change(cable, change_id)
+            self.assert_single_update_change(interfaces[1], change_id)
+
+        with self.subTest("an excluded cable side is not logged"):
+            CableToCableTermination.objects.filter(cable=cable, cable_end="B").delete()
+            change_id = uuid.uuid4()
+            with override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS={"dcim.cabletocabletermination": ["cable"]}):
+                with context_managers.web_request_context(self.user, change_id=change_id):
+                    cable.add_termination(interfaces[2], cable_end="B")
+            self.assert_no_change(cable, change_id)
+            self.assert_single_update_change(interfaces[2], change_id)
 
     def test_self_referential_through_model_logs_both_sides(self):
         device_ct = ContentType.objects.get_for_model(Device)
