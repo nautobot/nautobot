@@ -405,6 +405,8 @@ def populate_model_features_registry(refresh=False):
         {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+            # Models with `_custom_field_data` can opt out via `is_custom_field_model = False`.
+            "additional_constraints": {"is_custom_field_model": True},
         },
         {
             "feature_name": "metadata",

@@ -131,6 +131,11 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "approvalworkflowstage",
     "approvalworkflowstagedefinition",
     "approvalworkflowstageresponse",
+    # Retained history is excluded, like the warm models it mirrors.
+    "archivedjobconsoleentry",
+    "archivedjoblogentry",
+    "archivedjobresult",
+    "archivedobjectchange",
     "cablepath",
     "cabletocabletermination",
     "circuittermination",
