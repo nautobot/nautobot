@@ -58,6 +58,7 @@ export default [
                         'swagger-ui-bundle.js.LICENSE.txt',
                         'swagger-ui-bundle.js.map',
                         'swagger-ui-standalone-preset.js',
+                        'swagger-ui-standalone-preset.js.LICENSE.txt',
                         'swagger-ui-standalone-preset.js.map',
                     ].map((filename) => ({
                         from: path.resolve(__dirname, 'node_modules', 'swagger-ui-dist', filename),

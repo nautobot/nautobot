@@ -519,6 +519,7 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "displayOperationId": True,
+        "filter": True,
     },
     # Do not list all possible enum values in the description of filter fields and the like
     # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re

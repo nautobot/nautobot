@@ -1,1 +1,2 @@
 Replaced dependency `drf-spectacular-sidecar` with the `swagger-ui-dist` and `redoc` NPM packages, bundled into Nautobot's static files, for the Swagger UI and Redoc REST API documentation pages. Static files under `drf_spectacular_sidecar/` are no longer available to apps or custom templates.
+Updated Swagger UI to version 5.34.0.
