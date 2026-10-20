@@ -34,40 +34,6 @@ AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
 AXE_DISABLED_RULES = ("color-contrast",)
 
 
-def _get_axe_core_metadata():
-    try:
-        package_lock = json.loads(PACKAGE_LOCK_PATH.read_text(encoding="utf-8"))
-        metadata = package_lock["packages"]["node_modules/axe-core"]
-        entry = metadata["version"], metadata["resolved"], metadata["integrity"]
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        raise RuntimeError(f"{PACKAGE_LOCK_PATH} has no readable axe-core entry: {error}") from error
-
-    if not all(isinstance(value, str) and value for value in entry):
-        raise RuntimeError(f"{PACKAGE_LOCK_PATH} has an incomplete axe-core entry: {entry}.")
-    return entry
-
-
-def _read_installed_axe_core(version):
-    try:
-        package = json.loads((AXE_CORE_PATH.parent / "package.json").read_text(encoding="utf-8"))
-        if package["version"] != version:
-            return None
-        return AXE_CORE_PATH.read_text(encoding="utf-8")
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-
-
-def _verify_axe_core_integrity(tarball, integrity, origin):
-    digests = dict(entry.split("-", 1) for entry in integrity.split() if "-" in entry)
-    expected_digest = digests.get("sha512")
-    if expected_digest is None:
-        raise RuntimeError(f"axe-core integrity in {PACKAGE_LOCK_PATH} carries no sha512: {integrity!r}.")
-
-    digest = base64.b64encode(hashlib.sha512(tarball).digest()).decode("ascii")
-    if digest != expected_digest:
-        raise RuntimeError(f"axe-core from {origin} does not match the digest pinned in {PACKAGE_LOCK_PATH}.")
-
-
 def _extract_axe_core(tarball, origin):
     with tarfile.open(fileobj=io.BytesIO(tarball), mode="r:gz") as archive:
         try:
@@ -75,15 +41,6 @@ def _extract_axe_core(tarball, origin):
         except KeyError as error:
             raise RuntimeError(f"axe-core from {origin} contains no package/axe.min.js.") from error
         return file.read()
-
-
-def _read_axe_core_cache(cache_path, integrity):
-    try:
-        tarball = cache_path.read_bytes()
-        _verify_axe_core_integrity(tarball, integrity, cache_path)
-    except (OSError, RuntimeError):
-        return None
-    return tarball
 
 
 def _write_axe_core_cache(tarball, cache_path):
@@ -100,6 +57,17 @@ def _write_axe_core_cache(tarball, cache_path):
         Path(partial_path).unlink(missing_ok=True)
 
 
+def _verify_axe_core_integrity(tarball, integrity, origin):
+    digests = dict(entry.split("-", 1) for entry in integrity.split() if "-" in entry)
+    expected_digest = digests.get("sha512")
+    if expected_digest is None:
+        raise RuntimeError(f"axe-core integrity in {PACKAGE_LOCK_PATH} carries no sha512: {integrity!r}.")
+
+    digest = base64.b64encode(hashlib.sha512(tarball).digest()).decode("ascii")
+    if digest != expected_digest:
+        raise RuntimeError(f"axe-core from {origin} does not match the digest pinned in {PACKAGE_LOCK_PATH}.")
+
+
 def _download_axe_core(url, integrity):
     try:
         response = requests.get(url, proxies=settings.HTTP_PROXIES, timeout=AXE_CORE_DOWNLOAD_TIMEOUT)
@@ -109,6 +77,38 @@ def _download_axe_core(url, integrity):
 
     _verify_axe_core_integrity(response.content, integrity, url)
     return response.content
+
+
+def _read_axe_core_cache(cache_path, integrity):
+    try:
+        tarball = cache_path.read_bytes()
+        _verify_axe_core_integrity(tarball, integrity, cache_path)
+    except (OSError, RuntimeError):
+        return None
+    return tarball
+
+
+def _read_installed_axe_core(version):
+    try:
+        package = json.loads((AXE_CORE_PATH.parent / "package.json").read_text(encoding="utf-8"))
+        if package["version"] != version:
+            return None
+        return AXE_CORE_PATH.read_text(encoding="utf-8")
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _get_axe_core_metadata():
+    try:
+        package_lock = json.loads(PACKAGE_LOCK_PATH.read_text(encoding="utf-8"))
+        metadata = package_lock["packages"]["node_modules/axe-core"]
+        entry = metadata["version"], metadata["resolved"], metadata["integrity"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise RuntimeError(f"{PACKAGE_LOCK_PATH} has no readable axe-core entry: {error}") from error
+
+    if not all(isinstance(value, str) and value for value in entry):
+        raise RuntimeError(f"{PACKAGE_LOCK_PATH} has an incomplete axe-core entry: {entry}.")
+    return entry
 
 
 @functools.cache
