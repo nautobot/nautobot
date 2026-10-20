@@ -2976,6 +2976,19 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 response = self.client.get(f"{url}?limit=0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_interface_list_depth_1_joins_the_device_parent_bay(self):
+        """Serializing the interfaces list at depth 1 must not issue one dcim_devicebay query per interface."""
+        self.add_permissions("dcim.view_interface", "dcim.view_device")
+        url = reverse("dcim-api:interface-list")
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in (result["device"] or {})]), 1
+        )
+        bay_table = connection.ops.quote_name(DeviceBay._meta.db_table)
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if f"FROM {bay_table}" in q["sql"]], [])
+
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
