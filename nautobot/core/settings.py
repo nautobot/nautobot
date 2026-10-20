@@ -882,8 +882,12 @@ CONSTANCE_CONFIG = {
         default={},
         help_text=mark_safe(
             "Many-to-many association models whose associated objects should not receive an automatic change "
-            "record when an association is created or deleted. Map each association model to a list of the "
-            "sides to exclude. Only the listed sides are excluded; an empty list excludes nothing. "
+            "record when an association is created or deleted. Map each association model "
+            "(<code>app_label.modelname</code>) to a list of the sides to exclude. Each side is the name of a "
+            "foreign key field on the association model itself (for example <code>vrf</code> on "
+            "<code>VRFPrefixAssignment</code>), not the name of the related model. "
+            "Only the listed sides are excluded; an empty list excludes nothing. "
+            "Excluded objects also do not trigger webhooks, job hooks, or events for association changes. "
             "Enter a dictionary in JSON format, for example:\n"
             '<pre><code class="language-json">{\n'
             '    "ipam.vrfprefixassignment": ["prefix"],\n'
