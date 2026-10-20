@@ -1572,12 +1572,13 @@ class CustomFieldMultipartAPITest(APITestCase):
         cls.cf_text.validated_save()
         cls.cf_text.content_types.set([device_type_ct])
 
-        cls.manufacturer = Manufacturer.objects.first()
+        cls.manufacturer, _ = Manufacturer.objects.get_or_create(name="Multipart Test Manufacturer")
         cls.list_url = reverse("dcim-api:devicetype-list")
 
     def setUp(self):
         super().setUp()
         self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "dcim.change_devicetype")
+        self.manufacturer, _ = Manufacturer.objects.get_or_create(name="Multipart Test Manufacturer")
 
     def _unique_model_name(self):
         return f"Multipart CF {uuid.uuid4()}"
