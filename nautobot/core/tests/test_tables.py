@@ -19,11 +19,12 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.testing import AssertNoRepeatedQueries
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
 from nautobot.extras.choices import ComputedFieldTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry
-from nautobot.extras.tables import JobLogEntryTable
+from nautobot.extras.models import ComputedField, JobLogEntry, Role
+from nautobot.extras.tables import JobLogEntryTable, RoleTable
 from nautobot.ipam.models import RIR
 from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
@@ -281,6 +282,18 @@ class LinkedCountColumnRenderTestCase(TestCase):
         )
         rendered = column.render(bound_column=None, record=record, value=1)
         self.assertIn("badge", rendered)
+
+
+class BaseTablePrefetchTestCase(TestCase):
+    def test_content_types_column_uses_the_prefetch(self):
+        content_type = ContentType.objects.get_for_model(Device)
+        for i in range(12):
+            Role.objects.create(name=f"Prefetch Test Role {i}").content_types.add(content_type)
+
+        with AssertNoRepeatedQueries(self):
+            table = RoleTable(Role.objects.filter(name__startswith="Prefetch Test Role"))
+            for row in table.rows:
+                row.get_cell("content_types")
 
 
 class ButtonsColumnTestCase(TestCase):

@@ -797,10 +797,6 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
     """
     Display a list of `content_types` m2m assigned to an object.
 
-    Default sorting of content-types is by pk. This sorting comes at a per-row
-    performance hit to querysets for table views. If this becomes an issue,
-    set `sort_items=False`.
-
     Args:
         sort_items (bool): Whether to sort by `(app_label, name)`.
         truncate_words (Optional[int]): Number of words at which to truncate, or `None` to disable.
@@ -812,9 +808,12 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
         self.truncate_words = truncate_words
 
     def filter(self, qs):
-        """Overload filter to optionally sort items."""
+        """Overload filter to optionally sort items.
+
+        Sorts in Python, since `qs.order_by()` would discard the prefetched content types and query once per row.
+        """
         if self.sort_items:
-            qs = qs.order_by("app_label", "model")
+            return sorted(qs.all(), key=lambda content_type: (content_type.app_label, content_type.model))
         return qs.all()
 
     def render(self, value):
