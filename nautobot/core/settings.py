@@ -304,7 +304,7 @@ if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEA
 if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
-# Request Metric Generation
+# Request Performance Measurements
 # Header contract defined here: https://www.w3.org/TR/server-timing/
 # Report the total server-side duration of each request in a W3C `Server-Timing` response header.
 REQUEST_TOTAL_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED", "False"))
@@ -749,7 +749,7 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
-    "nautobot.core.middleware.RequestMetricMiddleware",
+    "nautobot.core.middleware.RequestPerformanceMeasurementsMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "nautobot.core.middleware.ComplexityCostRateLimitingMiddleware",
