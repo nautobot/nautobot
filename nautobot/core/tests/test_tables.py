@@ -331,6 +331,10 @@ class BaseTablePrefetchTestCase(TestCase):
             destination_type=location_type,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
         )
+        # BaseTable adds relationship columns to the class's base_columns, and the rollback skips the cache invalidation.
+        self.addCleanup(relationship.delete)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_src", None)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_dst", None)
         destination, *sources = Location.objects.all()[:13]
         self.assertEqual(len(sources), 12)
         for source in sources:
