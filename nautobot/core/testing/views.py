@@ -1,9 +1,11 @@
 import contextlib
+import html
 import re
 import signal
 import traceback
 from typing import Optional, Sequence
 from unittest import mock, skipIf
+from urllib.parse import parse_qs, urlsplit
 import uuid
 
 from django import forms as django_forms
@@ -18,7 +20,7 @@ from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
@@ -361,6 +363,38 @@ class ViewTestCases:
                 else:
                     # If it wasn't for the legacy button template check above, this would be the only thing needed here.
                     self.assertBodyContains(response, button, html=True)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_get_object_action_links_have_valid_return_url(self):
+            """Links on the detail view and its tabs that carry a `return_url` must point back to a path."""
+            # As a superuser, every permission-gated button on every related-object table is rendered
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            detail_url = instance.get_absolute_url()
+
+            urls = [detail_url]
+            match = resolve(detail_url)
+            view_class = getattr(match.func, "cls", None)
+            if view_class is not None and hasattr(view_class, "get_extra_actions"):
+                route_prefix = f"{match.namespace}:{match.url_name}"
+                for extra_action in view_class.get_extra_actions():
+                    if extra_action.detail and "get" in extra_action.mapping:
+                        urls.append(reverse(f"{route_prefix}_{extra_action.url_name}", kwargs=match.kwargs))
+
+            for url in urls:
+                with self.subTest(url=url):
+                    response = self.client.get(url)
+                    if url == detail_url:
+                        self.assertHttpStatus(response, 200)
+                    elif response.status_code != 200:
+                        continue
+                    invalid_links = []
+                    for href in re.findall(r'href="([^"]*)"', response.content.decode(response.charset)):
+                        query = parse_qs(urlsplit(html.unescape(href)).query, keep_blank_values=True)
+                        if any(not return_url.startswith("/") for return_url in query.get("return_url", [])):
+                            invalid_links.append(href)
+                    self.assertEqual(invalid_links, [], f"Links on {url} have a return_url without a path")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
