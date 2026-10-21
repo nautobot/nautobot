@@ -1,0 +1,1 @@
+Changed webhooks and job hooks to allow more than one hook with the same content type, the same target (payload URL or Job) and a common action. Previously the second such hook was refused with "A webhook already exists" or "A job hook already exists".

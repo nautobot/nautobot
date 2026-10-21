@@ -85,7 +85,7 @@ class ConfigContextSchemaTestCase:
         form.submit()
 
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
-        detail.expect_success_message(f"Created config context schema {name}")
+        detail.expect_flash_message(f"Created config context schema {name}")
         detail.expect_heading(name)
         detail.expect_edit_button()
 

@@ -9,6 +9,7 @@ from django.db.models.signals import m2m_changed, post_delete, post_save, pre_de
 from django.dispatch import receiver
 
 from nautobot.core.signals import disable_for_loaddata
+from nautobot.extras.registry import registry
 
 from .models import (
     Cable,
@@ -427,6 +428,28 @@ def validate_vdcs_interface_relationships(sender, instance, action, **kwargs):
             )
 
 
+@receiver(pre_delete, sender=InterfaceVDCAssignment)
+def interface_vdc_assignment_pre_delete(instance, **kwargs):
+    """
+    Clear any VDC primary IP designations that the removal of this InterfaceVDCAssignment would render invalid.
+    """
+    vdc = instance.virtual_device_context
+    changed = False
+    for field in ("primary_ip4", "primary_ip6"):
+        ip_address = getattr(vdc, field)
+        if ip_address is None:
+            continue
+        assignments = ip_address.interface_assignments.all()
+        if not assignments.filter(interface=instance.interface_id).exists():
+            continue
+        if assignments.filter(interface__in=vdc.interfaces.exclude(pk=instance.interface_id)).exists():
+            continue
+        setattr(vdc, field, None)
+        changed = True
+    if changed:
+        vdc.save()
+
+
 #
 # ControllerManagedDeviceGroup
 #
@@ -458,22 +481,53 @@ def content_type_changed(instance, action, **kwargs):
     associated with the locations.
     """
 
-    if action != "pre_remove":
+    if action == "pre_remove":
+        if isinstance(instance, LocationType):
+            pairs = [(instance, ct) for ct in ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))]
+        else:
+            pairs = [(lt, instance) for lt in LocationType.objects.filter(pk__in=kwargs.get("pk_set", []))]
+    elif action == "pre_clear":
+        if isinstance(instance, LocationType):
+            pairs = [(instance, ct) for ct in instance.content_types.all()]
+        else:
+            pairs = [(lt, instance) for lt in instance.location_types.all()]
+    else:
         return
 
-    removed_content_types = ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))
+    logger = logging.getLogger(__name__ + ".LocationType")
 
-    for content_type in removed_content_types:
+    for location_type, content_type in pairs:
         model_class = content_type.model_class()
 
-        if model_class.objects.filter(location__location_type=instance).exists():
-            raise ValidationError(
-                {
-                    "content_types": (
-                        f"Cannot remove the content type {content_type} as currently at least one {model_class._meta.verbose_name} is associated to a location of this location type. "
-                    )
-                }
+        if model_class is None:
+            logger.warning(
+                "Removing inactive ContentType %s from LocationType %s - unable to validate the removal",
+                content_type,
+                location_type,
             )
+            continue
+
+        if content_type.model not in registry["model_features"]["locations"].get(content_type.app_label, []):
+            # not a locatable model - must have been added in error, okay to remove
+            continue
+
+        if model_class.objects.filter(location__location_type=location_type).exists():
+            if isinstance(instance, LocationType):
+                raise ValidationError(
+                    {
+                        "content_types": (
+                            f"Cannot remove the content type {content_type} as currently at least one {model_class._meta.verbose_name} is associated to a location of this location type."
+                        )
+                    }
+                )
+            else:
+                raise ValidationError(
+                    {
+                        "location_types": (
+                            f"Cannot remove the location type {location_type} as currently at least one {model_class._meta.verbose_name} is associated to a location of this location type."
+                        )
+                    }
+                )
 
 
 #

@@ -534,7 +534,7 @@ class OverviewColumn(django_tables2.TemplateColumn):
         type="button"
     >
         <span class="visually-hidden">Show details for {{ record }}</span>
-        <span aria-hidden="true" class="mdi mdi-window-maximize"></span>
+        <span aria-hidden="true" class="mdi mdi-unfold-more-horizontal"></span>
     </button>
     """
 

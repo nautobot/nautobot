@@ -6,7 +6,7 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class ConfigContextSchemaDetailPage(DetailPage):
-    """The Config Context Schema detail view. Adds the success toast and the Validation tab to DetailPage.
+    """The Config Context Schema detail view. Adds the Validation tab to DetailPage.
 
     The Validation tab renders one panel per kind of object bound to the schema: "Config
     Contexts", "Devices" and "Virtual Machines". Each is an object table with a "Validation
@@ -16,7 +16,6 @@ class ConfigContextSchemaDetailPage(DetailPage):
     DETAIL_PATH = "/extras/config-context-schemas/{pk}/"
     VERBOSE_NAME = "Config Context Schema"
 
-    _SUCCESS_TOAST = ".toast.nb-toast-success"
     # An empty panel renders a single placeholder row with one colspan cell.
     _PANEL_DATA_ROWS = "tbody tr:not(:has(td[colspan]))"
     _VALIDATION_STATE_HEADER = "Validation state"
@@ -29,10 +28,6 @@ class ConfigContextSchemaDetailPage(DetailPage):
         The tab is a separate view with its own URL, so it is opened by URL rather than by clicking the tab.
         """
         self._goto(f"{self.DETAIL_PATH.format(pk=pk)}validation/")
-
-    def expect_success_message(self, text):
-        """Assert (auto-retrying) that a success toast shows *text*."""
-        expect(self.page.locator(self._SUCCESS_TOAST).filter(has_text=text)).to_have_count(1)
 
     # -------------------------------------------------------------------------
     # Validation tab

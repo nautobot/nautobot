@@ -6,10 +6,11 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
+import yaml
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core import settings
@@ -33,7 +34,9 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
@@ -1429,12 +1432,32 @@ class LocationTypeTestCase(TestCase):
         location_type = LocationType.objects.get(name="Campus")
         device_ct = ContentType.objects.get_for_model(Device)
 
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
             location_type.content_types.remove(device_ct)
-        self.assertIn(
-            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
-            str(cm.exception),
-        )
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
+            device_ct.location_types.remove(location_type)
+
+    def test_clearing_content_type(self):
+        """Validation check to prevent clearing in-use content types from a LocationType."""
+        location_type = LocationType.objects.get(name="Campus")
+
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the content type"), transaction.atomic():
+            location_type.content_types.clear()
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the location type"), transaction.atomic():
+            ContentType.objects.get_for_model(Device).location_types.clear()
+
+    def test_clearing_content_type_handles_invalid_types(self):
+        location_type = LocationType.objects.create(name="wrong content types")
+
+        # Not a locatable model
+        location_type.content_types.add(ContentType.objects.get_for_model(Status))
+        # Not a resolvable model
+        location_type.content_types.add(ContentType.objects.create(app_label="dcim", model="nosuchmodel"))
+        # Locatable but lacking an actual `location` database field (it uses LocationToLocationsQuerySetMixin)
+        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+
+        # Should succeed despite the above
+        location_type.content_types.clear()
 
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
@@ -1949,19 +1972,20 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
-        self.location_type_2.content_types.clear()
+        location_type = LocationType.objects.create(name="Sub-floor", parent=self.location_type_2)
+        location = Location.objects.create(
+            name="Sub-floor Leaf", status=self.device_status, location_type=location_type, parent=self.location_2
+        )
         device = Device(
             name="Device 3",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_2,
+            location=location,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
-        self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
-        )
+        self.assertIn(f'Devices may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_device_cluster_location_mismatch(self):
         with self.subTest("Invalid cluster assignment at creation time"):
@@ -2089,6 +2113,114 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIsNotNone(device.primary_ip6)
 
         device.validated_save()
+
+    def _create_unassigned_ipv4_addresses(self, count):
+        namespace = Namespace.objects.create(name="Primary IP Test Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        return [
+            IPAddress.objects.create(address=f"198.51.100.{i}/24", namespace=namespace, status=ip_status)
+            for i in range(1, count + 1)
+        ]
+
+    def test_primary_ip_not_assigned_to_any_interface(self):
+        """An IP address not assigned to any interface is a valid primary IP only if the configuration permits it."""
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError, f"The specified IP address ({ip}) is not assigned to this device."
+        ):
+            device.validated_save()
+
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            device.validated_save()
+        device.refresh_from_db()
+        self.assertEqual(device.primary_ip4, ip)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_assigned_to_another_device_interface(self):
+        """An IP address assigned to another device's interface is never a valid primary IP."""
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        other_interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=self.intf_role,
+        )
+        other_interface.add_ip_addresses(ip)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError,
+            f"The specified IP address ({ip}) is assigned to an interface that does not belong to this device.",
+        ):
+            device.validated_save()
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_nat_outside_of_another_device_interface_ip(self):
+        """The NAT outside address of an IP address assigned to another device's interface is never a valid primary IP."""
+        inside_ip, outside_ip = self._create_unassigned_ipv4_addresses(2)
+        outside_ip.nat_inside = inside_ip
+        outside_ip.validated_save()
+        other_interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=self.intf_role,
+        )
+        other_interface.add_ip_addresses(inside_ip)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=outside_ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError,
+            f"The specified IP address ({outside_ip}) is the NAT outside address of {inside_ip}, which is assigned to "
+            "an interface that does not belong to this device.",
+        ):
+            device.validated_save()
+
+    def test_unchanged_primary_ip_not_revalidated(self):
+        """A device whose primary IP isn't assigned to an interface remains editable after the configuration changes."""
+        ip_1, ip_2 = self._create_unassigned_ipv4_addresses(2)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip_1,
+        )
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            device.validated_save()
+
+        device.serial = "abc123"
+        device.validated_save()
+
+        device.primary_ip4 = ip_2
+        with self.assertRaisesMessage(
+            ValidationError, f"The specified IP address ({ip_2}) is not assigned to this device."
+        ):
+            device.validated_save()
 
     def test_software_version_device_type_validation(self):
         """
@@ -2966,6 +3098,70 @@ class DeviceBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
                 )
                 template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template OK")
                 template.full_clean()
+
+
+class DeviceTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceType
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.manufacturer = Manufacturer.objects.first()
+
+    def test_depth_and_weight_require_unit(self):
+        """A depth or weight set without a unit is rejected."""
+        for field, value in (("depth", 600), ("weight", Decimal("12.50"))):
+            with self.subTest(field=field):
+                device_type = DeviceType(manufacturer=self.manufacturer, model=f"No {field} unit", **{field: value})
+                with self.assertRaises(ValidationError) as cm:
+                    device_type.full_clean()
+                self.assertIn(f"{field}_unit", cm.exception.message_dict)
+
+    def test_unit_without_value_is_cleared(self):
+        """A depth or weight unit set without a value is discarded."""
+        device_type = DeviceType(
+            manufacturer=self.manufacturer,
+            model="Units only",
+            depth_unit=RackDimensionUnitChoices.UNIT_INCH,
+            weight_unit=WeightUnitChoices.UNIT_POUND,
+        )
+        device_type.validated_save()
+        self.assertEqual(device_type.depth_unit, "")
+        self.assertEqual(device_type.weight_unit, "")
+
+    def test_float_weight_is_accepted(self):
+        """A weight assigned as a float, as when loaded from YAML or JSON, is stored as the equivalent decimal."""
+        device_type = DeviceType(
+            manufacturer=self.manufacturer,
+            model="Float weight",
+            weight=33.33,
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        device_type.validated_save()
+        device_type.refresh_from_db()
+        self.assertEqual(device_type.weight, Decimal("33.33"))
+
+    def test_to_yaml_depth_and_weight(self):
+        """The devicetype-library YAML export includes the depth and weight with their units when they are set."""
+        device_type = DeviceType.objects.create(
+            manufacturer=self.manufacturer,
+            model="Weighed",
+            depth=600,
+            depth_unit=RackDimensionUnitChoices.UNIT_MILLIMETER,
+            weight=Decimal("12.50"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        data = yaml.safe_load(device_type.to_yaml())
+        self.assertEqual(data["depth"], 600)
+        self.assertEqual(data["depth_unit"], RackDimensionUnitChoices.UNIT_MILLIMETER)
+        self.assertEqual(data["weight"], 12.5)
+        self.assertEqual(data["weight_unit"], WeightUnitChoices.UNIT_KILOGRAM)
+
+        device_type.depth = None
+        device_type.weight = None
+        device_type.validated_save()
+        data = yaml.safe_load(device_type.to_yaml())
+        for key in ("depth", "depth_unit", "weight", "weight_unit"):
+            self.assertNotIn(key, data)
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
@@ -6178,6 +6374,55 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
             mock_front.delete.assert_called_once_with(save=False)
             mock_rear.delete.assert_called_once_with(save=False)
 
+    def test_weight_requires_unit(self):
+        """A weight set without a unit is rejected."""
+        module_type = ModuleType(
+            manufacturer=Manufacturer.objects.first(), model="No weight unit", weight=Decimal("1.50")
+        )
+        with self.assertRaises(ValidationError) as cm:
+            module_type.full_clean()
+        self.assertIn("weight_unit", cm.exception.message_dict)
+
+    def test_weight_unit_without_weight_is_cleared(self):
+        """A weight unit set without a weight is discarded."""
+        module_type = ModuleType(
+            manufacturer=Manufacturer.objects.first(),
+            model="Weight unit only",
+            weight_unit=WeightUnitChoices.UNIT_GRAM,
+        )
+        module_type.validated_save()
+        self.assertEqual(module_type.weight_unit, "")
+
+    def test_float_weight_is_accepted(self):
+        """A weight assigned as a float, as when loaded from YAML or JSON, is stored as the equivalent decimal."""
+        module_type = ModuleType(
+            manufacturer=Manufacturer.objects.first(),
+            model="Float weight",
+            weight=33.33,
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        module_type.validated_save()
+        module_type.refresh_from_db()
+        self.assertEqual(module_type.weight, Decimal("33.33"))
+
+    def test_to_yaml_weight(self):
+        """The devicetype-library YAML export includes the weight with its unit when it is set."""
+        module_type = ModuleType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="Weighed module",
+            weight=Decimal("0.45"),
+            weight_unit=WeightUnitChoices.UNIT_KILOGRAM,
+        )
+        data = yaml.safe_load(module_type.to_yaml())
+        self.assertEqual(data["weight"], 0.45)
+        self.assertEqual(data["weight_unit"], WeightUnitChoices.UNIT_KILOGRAM)
+
+        module_type.weight = None
+        module_type.validated_save()
+        data = yaml.safe_load(module_type.to_yaml())
+        self.assertNotIn("weight", data)
+        self.assertNotIn("weight_unit", data)
+
 
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
     model = VirtualDeviceContext
@@ -6217,31 +6462,41 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
         )
+        vdc.primary_ip6 = None
         vdc.primary_ip4 = IPAddress.objects.create(
             address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
         )
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
+            f"The specified IP address ({vdc.primary_ip4}) is not assigned to this virtual device context.",
             str(err.exception),
         )
 
-        # TODO: Uncomment test case when VDC primary_ip interface validation is active
-        # interface = Interface.objects.create(
-        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
-        # )
-        # intf_status = Status.objects.get_for_model(Interface).first()
-        # intf_role = Role.objects.get_for_model(Interface).first()
-        # vdc.primary_ip6 = ip_v6
-        # with self.assertRaises(ValidationError) as err:
-        #     vdc.validated_save()
-        # self.assertIn(
-        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
-        #     str(err.exception),
-        # )
-        # interface.virtual_device_contexts.add(vdc)
-        # interface.add_ip_addresses([ip_v4, ip_v6])
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            vdc.validated_save()
+
+        # An IP address on one of the parent device's interfaces is only valid once that interface is in the VDC
+        interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.2/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        interface.add_ip_addresses(vdc.primary_ip4)
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            with self.assertRaisesMessage(
+                ValidationError,
+                f"The specified IP address ({vdc.primary_ip4}) is assigned to an interface that does not belong to "
+                "this virtual device context.",
+            ):
+                vdc.validated_save()
+
+        vdc.interfaces.add(interface)
+        vdc.validated_save()
 
     def test_interfaces_validation_logic(self):
         """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""

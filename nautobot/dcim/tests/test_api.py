@@ -29,8 +29,10 @@ from nautobot.dcim.choices import (
     PowerOutletTypeChoices,
     PowerPanelTypeChoices,
     PowerPortTypeChoices,
+    RackDimensionUnitChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
@@ -1439,7 +1441,7 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
     bulk_update_data = {
         "part_number": "ABC123",
     }
-    choices_fields = ["subdevice_role"]
+    choices_fields = ["depth_unit", "subdevice_role", "weight_unit"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1451,11 +1453,19 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
                 "device_family": device_family_id,
+                "depth": 600,
+                "depth_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
+                "weight": 12.5,
+                "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 5",
                 "device_family": device_family_id,
+                "depth": 24,
+                "depth_unit": RackDimensionUnitChoices.UNIT_INCH,
+                "weight": 27.25,
+                "weight_unit": WeightUnitChoices.UNIT_POUND,
             },
             {
                 "manufacturer": manufacturer_id,
@@ -1508,6 +1518,7 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
         "part_number": "ABC123",
         "comments": "changed comment",
     }
+    choices_fields = ["weight_unit"]
 
     @classmethod
     def setUpTestData(cls):
@@ -1519,10 +1530,14 @@ class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
                 "model": "Module Type 1",
                 "part_number": "123456",
                 "comments": "test comment",
+                "weight": 0.5,
+                "weight_unit": WeightUnitChoices.UNIT_KILOGRAM,
             },
             {
                 "manufacturer": manufacturer_id,
                 "model": "Module Type 2",
+                "weight": 2.25,
+                "weight_unit": WeightUnitChoices.UNIT_POUND,
             },
             {
                 "manufacturer": manufacturer_id,
@@ -2229,6 +2244,38 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         dev.refresh_from_db()
         self.assertEqual(dev.primary_ip4, dev_ip_addr)
+
+    def test_creating_device_with_unassigned_primary_ip4(self):
+        """
+        Validate we can create a device with a primary_ip4 not assigned to any interface, only if the config permits.
+        """
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.view_devicetype",
+            "dcim.view_location",
+            "extras.view_role",
+            "extras.view_status",
+            "ipam.view_ipaddress",
+        )
+
+        namespace = Namespace.objects.first()
+        Prefix.objects.create(
+            prefix="192.0.2.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_addr = IPAddress.objects.create(
+            address="192.0.2.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        post_data = {key: self.create_data[0][key] for key in ("name", "device_type", "role", "status", "location")}
+        post_data["primary_ip4"] = ip_addr.pk
+
+        response = self.client.post(self._get_list_url(), post_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("primary_ip4", response.data)
+
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            response = self.client.post(self._get_list_url(), post_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(Device.objects.get(pk=response.data["id"]).primary_ip4, ip_addr)
 
     def test_patching_device_redundancy_group(self):
         """

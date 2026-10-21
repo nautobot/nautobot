@@ -49,3 +49,37 @@ export const saveState = (state) => {
     window.sessionStorage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(stateToSave));
   }
 };
+
+/**
+ * A wrapper around the `pushState()` method of the `History` interface. In addition to `history.pushState()` call,
+ * dispatch a custom `nb-history:push-state` event on the global `window` object for listeners to hook onto.
+ * For more information refer to: https://developer.mozilla.org/en-US/docs/Web/API/History/pushState
+ * @param {object|null} state
+ * @param {string} unused
+ * @param {string|URL|null} [url]
+ * @returns {void} Do not return any value, pass the call to `history.pushState()` function and dispatch a custom
+ *   `nb-history:push-state` on the global `window` object.
+ */
+export const pushState = (state, unused, url) => {
+  window.history?.pushState(state, unused, url);
+  window.dispatchEvent(
+    new CustomEvent('nb-history:push-state', { bubbles: true, cancelable: true, detail: { state, url } }),
+  );
+};
+
+/**
+ * A wrapper around the `replaceState()` method of the `History` interface. In addition to `history.replaceState()`
+ * call, dispatch a custom `nb-history:replace-state` event on the global `window` object for listeners to hook onto.
+ * For more information refer to: https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState
+ * @param {object|null} state
+ * @param {string} unused
+ * @param {string|URL|null} [url]
+ * @returns {void} Do not return any value, pass the call to `history.replaceState()` function and dispatch a custom
+ *   `nb-history:replace-state` on the global `window` object.
+ */
+export const replaceState = (state, unused, url) => {
+  window.history?.replaceState(state, unused, url);
+  window.dispatchEvent(
+    new CustomEvent('nb-history:replace-state', { bubbles: true, cancelable: true, detail: { state, url } }),
+  );
+};

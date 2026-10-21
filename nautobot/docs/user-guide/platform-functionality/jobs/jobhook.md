@@ -11,6 +11,8 @@ A Job Hook is a mechanism for automatically starting a [job](./index.md) when an
 * **Events** - A job hook may trigger on any combination of create, update, and delete events. At least one event type must be selected.
 * **Conditions** - Rules that narrow which of those changes start the job. With no conditions the job hook runs for every change to the selected object types. Every condition must pass for the job to start. See [Conditions](../../feature-guides/conditions.md).
 
+Two job hooks may have the same content types, events and Job. If both run for the same change, the Job runs twice. Give each job hook conditions that the other does not match to avoid this.
+
 For any Job that is loaded into Nautobot, the Job must be enabled to run. See [Enabling Jobs for Running](./managing-jobs.md#enabling-and-disabling-jobs) for more details.
 
 A condition that cannot be checked, for example an operator given a value of the wrong type, stops the Job Hook from running for that change, and is written to the Nautobot log at `ERROR` level with the name of the hook and the number of the row at fault.

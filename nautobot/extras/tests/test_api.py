@@ -3701,7 +3701,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 job=jhr_log,
                 type_create=True,
                 type_delete=True,
-                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "model"}}],
             ),
             JobHook(
                 name="JobHook2",
@@ -3723,41 +3723,36 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             job_hook.save()
             job_hook.content_types.set([obj_type])
 
-    def test_validate_post(self):
-        """POST a job hook with values that duplicate another job hook"""
+    def test_job_hooks_like_an_existing_job_hook_are_saved(self):
+        """`JobHook1` is on DCIM | device type, create and delete, `TestJobHookReceiverLog`."""
+        self.add_permissions("extras.add_jobhook", "extras.change_jobhook", "extras.view_job")
+        job_hook_receiver_log = Job.objects.get(job_class_name="TestJobHookReceiverLog")
+        cases = [
+            (
+                "different content type",
+                {"name": "JobHook7", "content_types": ["dcim.consoleport"], "type_create": True},
+            ),
+            (
+                "different action",
+                {"name": "JobHook8", "content_types": ["dcim.devicetype"], "type_update": True},
+            ),
+            (
+                "same content type, same job and a common action",
+                {"name": "JobHook9", "content_types": ["dcim.devicetype"], "type_delete": True},
+            ),
+        ]
+        for label, data in cases:
+            with self.subTest(label):
+                response = self.client.post(
+                    self._get_list_url(), {**data, "job": job_hook_receiver_log.pk}, format="json", **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-        data = {
-            "name": "JobHook4",
-            "content_types": ["dcim.devicetype"],
-            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
-            "type_create": False,
-            "type_delete": True,
-        }
-
-        self.add_permissions("extras.add_jobhook", "extras.view_job")
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-        self.assertContains(
-            response,
-            "A job hook already exists for delete on DCIM | device type to job TestJobHookReceiverLog",
-            status_code=400,
-        )
-
-    def test_validate_patch(self):
-        """PATCH an existing job hook with values that duplicate another job hook"""
-
-        data = {
-            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
-            "type_delete": True,
-        }
-
-        self.add_permissions("extras.change_jobhook", "extras.view_job")
-        job_hook2 = JobHook.objects.get(name="JobHook2")
-        response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
-        self.assertContains(
-            response,
-            "A job hook already exists for delete on DCIM | device type to job TestJobHookReceiverLog",
-            status_code=400,
-        )
+        with self.subTest("PATCH to the same job and a common action"):
+            job_hook2 = JobHook.objects.get(name="JobHook2")
+            data = {"job": job_hook_receiver_log.pk}
+            response = self.client.patch(self._get_detail_url(job_hook2), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class JobButtonTest(APIViewTestCases.APIViewTestCase):
@@ -6615,7 +6610,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
-                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "model"}}],
             ),
             Webhook(
                 name="api-test-2",
@@ -6645,18 +6640,14 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         {
             "type": "preset",
             "preset": "field_compare",
-            "values": {"field": "mtu", "operator": "gt", "value": 9000},
+            "values": {"field": "display", "operator": "contains", "value": "console"},
             "negate": False,
         },
         {"type": "expression", "source": "data.name", "negate": True},
     ]
 
     def _webhook_data(self, name, **kwargs):
-        """A creation payload shaped like `create_data`, with a name and URL of its own.
-
-        `check_for_conflicts()` keys on content type, URL and action, so two webhooks built here would
-        otherwise refuse each other over something that has nothing to do with conditions.
-        """
+        """A creation payload shaped like `create_data`, with a name and URL of its own."""
         return {
             **self.create_data[0],
             "name": name,
@@ -6704,6 +6695,59 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("no_such_preset", str(response.data["conditions"][0]))
         self.assertFalse(Webhook.objects.filter(name="api-test-bad-condition").exists())
 
+    def test_create_with_a_field_not_offered_is_refused(self):
+        """The editor would show that field as `—`, so the API refuses it as the form does."""
+        self.add_permissions("extras.add_webhook")
+        conditions = [{"type": "preset", "preset": "field_changed", "values": {"field": "mtu"}, "negate": False}]
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-field-not-offered", conditions=conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            [str(message) for message in response.data["conditions"]],
+            [
+                "Condition 1: Preset `field_changed`. "
+                "Parameter `field` names `mtu`, "
+                "which is not a field that can be referenced in a condition for the chosen content types."
+            ],
+        )
+
+    def test_patching_content_types_alone_checks_the_stored_conditions(self):
+        """Without `conditions` in the request, the stored ones are checked against the new content types."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = [
+            {"type": "preset", "preset": "field_changed", "values": {"field": "model"}, "negate": False}
+        ]
+        webhook.save()
+
+        response = self.client.patch(
+            self._get_detail_url(webhook), {"content_types": ["dcim.consoleport"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "names `model`, which is not a field that can be referenced in a condition for the chosen content types",
+            str(response.data["conditions"]),
+        )
+
+    def test_patching_any_field_checks_the_stored_conditions(self):
+        """A partial update without the conditions is still refused while they cannot be referenced, as in the form."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = [
+            {"type": "preset", "preset": "field_changed", "values": {"field": "mtu"}, "negate": False}
+        ]
+        webhook.save()
+
+        response = self.client.patch(self._get_detail_url(webhook), {"enabled": False}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("names `mtu`", str(response.data["conditions"]))
+        webhook.refresh_from_db()
+        self.assertTrue(webhook.enabled)
+
     def test_patching_another_field_leaves_conditions_alone(self):
         """A PATCH that never mentions `conditions` must not clear what is already stored."""
         self.add_permissions("extras.change_webhook")
@@ -6716,100 +6760,41 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         webhook.refresh_from_db()
         self.assertEqual(webhook.conditions, self.conditions)
 
-    def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
-        """
-        Create a new webhook with diffrent content_types, same url and same action with a webhook that exists
+    def test_webhooks_like_an_existing_webhook_are_saved(self):
+        """`api-test-1` is on DCIM | device type, create, http://example.com/test1."""
+        self.add_permissions("extras.add_webhook", "extras.change_webhook")
+        existing_webhook = self.webhooks[0]
+        request_settings = {
+            "payload_url": existing_webhook.payload_url,
+            "http_method": existing_webhook.http_method,
+            "http_content_type": existing_webhook.http_content_type,
+            "ssl_verification": existing_webhook.ssl_verification,
+        }
+        cases = [
+            (
+                "different content type",
+                {"name": "api-test-7", "content_types": ["dcim.consoleport"], "type_create": True},
+            ),
+            (
+                "different action",
+                {"name": "api-test-8", "content_types": ["dcim.devicetype"], "type_update": True},
+            ),
+            (
+                "same content type, same URL and a common action",
+                {"name": "api-test-9", "content_types": ["dcim.devicetype"], "type_create": True, "type_update": True},
+            ),
+        ]
+        for label, data in cases:
+            with self.subTest(label):
+                response = self.client.post(
+                    self._get_list_url(), {**request_settings, **data}, format="json", **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-        Example:
-            Webhook 1: DCIM | device type, create, http://localhost
-            Webhook 2: DCIM | console port, create, http://localhost
-        """
-        self.add_permissions("extras.add_webhook")
-
-        data = (
-            {
-                "content_types": ["dcim.consoleport"],
-                "name": "api-test-7",
-                "type_create": self.webhooks[0].type_create,
-                "payload_url": self.webhooks[0].payload_url,
-                "http_method": self.webhooks[0].http_method,
-                "http_content_type": self.webhooks[0].http_content_type,
-                "ssl_verification": self.webhooks[0].ssl_verification,
-            },
-        )
-
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_201_CREATED)
-
-    def test_create_webhooks_with_same_content_type_same_url_diff_action(self):
-        """
-        Create a new webhook with same content_types, same url and diff action with a webhook that exists
-
-        Example:
-            Webhook 1: DCIM | device type, create, http://localhost
-            Webhook 2: DCIM | device type, delete, http://localhost
-        """
-        self.add_permissions("extras.add_webhook")
-
-        data = (
-            {
-                "content_types": ["dcim.devicetype"],
-                "name": "api-test-7",
-                "type_update": True,
-                "payload_url": self.webhooks[0].payload_url,
-                "http_method": self.webhooks[0].http_method,
-                "http_content_type": self.webhooks[0].http_content_type,
-                "ssl_verification": self.webhooks[0].ssl_verification,
-            },
-        )
-
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_201_CREATED)
-
-    def test_create_webhooks_with_same_content_type_same_url_common_action(self):
-        """
-        Create a new webhook with same content_types, same url and common action with a webhook that exists
-
-        Example:
-            Webhook 1: DCIM | device type, create, http://localhost
-            Webhook 2: DCIM | device type, create, update, http://localhost
-        """
-        self.add_permissions("extras.add_webhook")
-
-        data = (
-            {
-                "content_types": ["dcim.devicetype"],
-                "name": "api-test-7",
-                "type_create": self.webhooks[0].type_create,
-                "type_update": True,
-                "payload_url": self.webhooks[0].payload_url,
-                "http_method": self.webhooks[0].http_method,
-                "http_content_type": self.webhooks[0].http_content_type,
-                "ssl_verification": self.webhooks[0].ssl_verification,
-            },
-        )
-
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data[0]["type_create"][0],
-            "A webhook already exists for create on DCIM | device type to URL http://example.com/test1",
-        )
-
-    def test_patch_webhooks_with_same_content_type_same_url_common_action(self):
-        self.add_permissions("extras.change_webhook")
-
-        self.webhooks[2].payload_url = self.webhooks[1].payload_url
-        self.webhooks[2].save()
-
-        data = {"type_update": True}
-
-        response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["type_update"][0],
-            f"A webhook already exists for update on DCIM | device type to URL {self.webhooks[1].payload_url}",
-        )
+        with self.subTest("PATCH to the same URL and a common action"):
+            data = {"payload_url": existing_webhook.payload_url, "type_create": True}
+            response = self.client.patch(self._get_detail_url(self.webhooks[1]), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
 
     def test_patch_webhooks(self):
         self.add_permissions("extras.change_webhook")
@@ -6835,45 +6820,6 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         data = {"payload_url": "http://example.com/test4"}
         response = self.client.patch(self._get_detail_url(self.webhooks[2]), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    def test_invalid_webhooks_patch(self):
-        self.add_permissions("extras.change_webhook")
-
-        # Test patch payload_url with conflicts
-        instance_1 = Webhook.objects.create(
-            name="api-test-4",
-            type_update=True,
-            payload_url="http://example.com/test4",
-            http_method="POST",
-            http_content_type="application/json",
-            ssl_verification=True,
-        )
-        instance_1.content_types.set([ContentType.objects.get_for_model(DeviceType)])
-
-        data = {"payload_url": "http://example.com/test2"}
-        response = self.client.patch(self._get_detail_url(instance_1), data, format="json", **self.header)
-        self.assertEqual(
-            response.data["type_update"][0],
-            "A webhook already exists for update on DCIM | device type to URL http://example.com/test2",
-        )
-
-        # Test patch content_types with conflicts
-        instance_2 = Webhook.objects.create(
-            name="api-test-5",
-            type_create=True,
-            payload_url="http://example.com/test1",
-            http_method="POST",
-            http_content_type="application/json",
-            ssl_verification=True,
-        )
-        instance_2.content_types.set([ContentType.objects.get_for_model(Device)])
-
-        data = {"content_types": ["dcim.devicetype"]}
-        response = self.client.patch(self._get_detail_url(instance_2), data, format="json", **self.header)
-        self.assertEqual(
-            response.data["type_create"][0],
-            "A webhook already exists for create on DCIM | device type to URL http://example.com/test1",
-        )
 
 
 class RoleTest(APIViewTestCases.APIViewTestCase):

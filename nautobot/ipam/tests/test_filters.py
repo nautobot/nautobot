@@ -1013,6 +1013,30 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             self.queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)),
         )
 
+    def test_assigned(self):
+        unassigned_primary_ip = IPAddress.objects.create(
+            address="10.250.0.1/8", namespace=self.namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        device = Device.objects.first()
+        device.primary_ip4 = unassigned_primary_ip
+        device.save()
+
+        assigned = self.queryset.filter(
+            Q(interfaces__isnull=False)
+            | Q(vm_interfaces__isnull=False)
+            | Q(primary_ip4_for__isnull=False)
+            | Q(primary_ip6_for__isnull=False)
+            | Q(primary_ip4_for_virtual_machines__isnull=False)
+            | Q(primary_ip6_for_virtual_machines__isnull=False)
+            | Q(ip4_vdcs__isnull=False)
+            | Q(ip6_vdcs__isnull=False)
+        ).distinct()
+        self.assertIn(unassigned_primary_ip, self.filterset({"assigned": True}, self.queryset).qs)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset({"assigned": True}, self.queryset).qs, assigned)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"assigned": False}, self.queryset).qs, self.queryset.exclude(pk__in=assigned)
+        )
+
     def test_present_in_vrf(self):
         # clear out all the randomly generated route targets and vrfs before running this custom test
         test_ip_addresses = self.queryset.filter(parent__namespace=self.namespace)

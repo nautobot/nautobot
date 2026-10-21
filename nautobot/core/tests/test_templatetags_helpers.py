@@ -100,7 +100,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertIn("nautobot_chevron.svg", helpers.toast("Message", status="primary")["icon"])
         self.assertEqual(helpers.toast("Message", icon=format_html("<i></i>"))["icon"], "<i></i>")
 
-        self.assertEqual(helpers.toast("Message")["delay"], 10000)
+        self.assertEqual(helpers.toast("Message")["delay"], 5000)
 
         self.assertTrue(helpers.toast("Message")["html_id"].startswith("toast_"))
         self.assertEqual(helpers.toast("Message", html_id="my-toast")["html_id"], "my-toast")

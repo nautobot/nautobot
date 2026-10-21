@@ -21,18 +21,25 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
     DeviceUniquenessChoices,
+    RackDimensionUnitChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
+    WeightUnitChoices,
 )
 from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
 from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
-from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.dcim.utils import (
+    get_all_network_driver_mappings,
+    get_network_driver_mapping_tool_names,
+    validate_primary_ips,
+)
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.models import (
@@ -181,6 +188,17 @@ class DeviceType(PrimaryModel):
         verbose_name="Is full depth",
         help_text="Device consumes both front and rear rack faces",
     )
+    depth = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Physical depth of the device")
+    depth_unit = models.CharField(max_length=50, choices=RackDimensionUnitChoices, blank=True)
+    weight = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Physical weight of the device",
+    )
+    weight_unit = models.CharField(max_length=50, choices=WeightUnitChoices, blank=True)
     # todoindex:
     subdevice_role = models.CharField(
         max_length=50,
@@ -205,6 +223,10 @@ class DeviceType(PrimaryModel):
         "manufacturer",
         "u_height",
         "is_full_depth",
+        "depth",
+        "depth_unit",
+        "weight",
+        "weight_unit",
         "subdevice_role",
     ]
 
@@ -240,6 +262,12 @@ class DeviceType(PrimaryModel):
                 ("comments", self.comments),
             )
         )
+        if self.depth is not None:
+            data["depth"] = self.depth
+            data["depth_unit"] = self.depth_unit
+        if self.weight is not None:
+            data["weight"] = float(self.weight)
+            data["weight_unit"] = self.weight_unit
 
         # Component templates
         if self.console_port_templates.exists():
@@ -371,6 +399,23 @@ class DeviceType(PrimaryModel):
 
         if self.u_height and self.is_child_device:
             raise ValidationError({"u_height": "Child device types must be 0U."})
+
+        # Validate depth/weight and their units
+        if self.depth is not None and not self.depth_unit:
+            raise ValidationError({"depth_unit": "Must specify a unit when setting a depth."})
+        elif self.depth is None:
+            self.depth_unit = ""
+        if self.weight is not None and not self.weight_unit:
+            raise ValidationError({"weight_unit": "Must specify a unit when setting a weight."})
+        elif self.weight is None:
+            self.weight_unit = ""
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert a float weight to a string to avoid floating-point precision errors."""
+        if isinstance(self.weight, float):
+            decimal_places = self._meta.get_field("weight").decimal_places
+            self.weight = f"{self.weight:.{decimal_places}f}"
+        super().clean_fields(exclude)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -731,8 +776,6 @@ class Device(PrimaryModel, ConfigContextModel):
             self.clusters.set([cluster])
 
     def clean(self):
-        from nautobot.ipam import models as ipam_models  # circular import workaround
-
         super().clean()
 
         # Validate location
@@ -821,32 +864,7 @@ class Device(PrimaryModel, ConfigContextModel):
             except DeviceType.DoesNotExist:
                 pass
 
-        # Validate primary IP addresses
-        all_interfaces = self.all_interfaces.all()
-        for field in ["primary_ip4", "primary_ip6"]:
-            ip = getattr(self, field)
-            if ip is not None:
-                if field == "primary_ip4":
-                    if ip.ip_version != 4:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                else:
-                    if ip.ip_version != 6:
-                        raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if ipam_models.IPAddressToInterface.objects.filter(
-                    ip_address=ip, interface__in=all_interfaces
-                ).exists():
-                    pass
-                elif (
-                    ip.nat_inside is not None
-                    and ipam_models.IPAddressToInterface.objects.filter(
-                        ip_address=ip.nat_inside, interface__in=all_interfaces
-                    ).exists()
-                ):
-                    pass
-                else:
-                    raise ValidationError(
-                        {f"{field}": f"The specified IP address ({ip}) is not assigned to this device."}
-                    )
+        validate_primary_ips(self)
 
         # Validate manufacturer/platform
         if hasattr(self, "device_type") and self.platform:
@@ -1148,6 +1166,10 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
         return Interface.objects.filter(device=self)
+
+    def get_interface_assignments_filter(self):
+        """Return a `Q` matching the `IPAddressToInterface` records for this device's interfaces."""
+        return Q(interface__in=self.all_interfaces)
 
     @property
     def all_module_bays(self):
@@ -1789,6 +1811,15 @@ class ModuleType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    weight = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+        help_text="Physical weight of the module",
+    )
+    weight_unit = models.CharField(max_length=50, choices=WeightUnitChoices, blank=True)
     front_image = models.ImageField(upload_to="moduletype-images", blank=True)
     rear_image = models.ImageField(upload_to="moduletype-images", blank=True)
     comments = models.TextField(blank=True)
@@ -1796,6 +1827,8 @@ class ModuleType(PrimaryModel):
     clone_fields = [
         "manufacturer",
         "module_family",
+        "weight",
+        "weight_unit",
     ]
 
     class Meta:
@@ -1856,6 +1889,22 @@ class ModuleType(PrimaryModel):
         self._original_front_image = self.front_image
         self._original_rear_image = self.rear_image
 
+    def clean(self):
+        super().clean()
+
+        # Validate weight and its unit
+        if self.weight is not None and not self.weight_unit:
+            raise ValidationError({"weight_unit": "Must specify a unit when setting a weight."})
+        elif self.weight is None:
+            self.weight_unit = ""
+
+    def clean_fields(self, exclude=None):
+        """Explicitly convert a float weight to a string to avoid floating-point precision errors."""
+        if isinstance(self.weight, float):
+            decimal_places = self._meta.get_field("weight").decimal_places
+            self.weight = f"{self.weight:.{decimal_places}f}"
+        super().clean_fields(exclude)
+
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
 
@@ -1875,6 +1924,9 @@ class ModuleType(PrimaryModel):
                 ("comments", self.comments),
             )
         )
+        if self.weight is not None:
+            data["weight"] = float(self.weight)
+            data["weight_unit"] = self.weight_unit
 
         # Component templates
         if self.console_port_templates.exists():
@@ -2331,28 +2383,24 @@ class VirtualDeviceContext(PrimaryModel):
         else:
             return None
 
-    def validate_primary_ips(self):
-        for field in ["primary_ip4", "primary_ip6"]:
-            ip = getattr(self, field)
-            if ip is not None:
-                if field == "primary_ip4" and ip.ip_version != 4:
-                    raise ValidationError({f"{field}": f"{ip} is not an IPv4 address."})
-                if field == "primary_ip6" and ip.ip_version != 6:
-                    raise ValidationError({f"{field}": f"{ip} is not an IPv6 address."})
-                if not ip.interfaces.filter(device=self.device).exists():
-                    raise ValidationError(
-                        {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
-                    )
+    def get_interface_assignments_filter(self):
+        """Return a `Q` matching the `IPAddressToInterface` records for the interfaces assigned to this VDC."""
+        return Q(interface__virtual_device_contexts=self.pk)
 
     def clean(self):
         super().clean()
-        self.validate_primary_ips()
+        validate_primary_ips(self)
 
         # Validate that device is not being modified
         if self.present_in_database:
             vdc = VirtualDeviceContext.objects.get(id=self.id)
             if vdc.device != self.device:
                 raise ValidationError({"device": "Virtual Device Context's device cannot be changed once created"})
+
+    @method_deprecated_in_favor_of(clean)
+    def validate_primary_ips(self):
+        """Deprecated - primary IP validation is performed by `clean()`."""
+        validate_primary_ips(self)
 
 
 @extras_features(

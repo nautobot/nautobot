@@ -62,6 +62,7 @@ from nautobot.extras.choices import (
     ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
+from nautobot.extras.conditions.forms import reject_fields_not_offered
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -1775,21 +1776,9 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
         )
 
     def clean(self):
-        data = super().clean()
-
-        conflicts = JobHook.check_for_conflicts(
-            instance=self.instance,
-            content_types=self.cleaned_data.get("content_types"),
-            job=self.cleaned_data.get("job"),
-            type_create=self.cleaned_data.get("type_create"),
-            type_update=self.cleaned_data.get("type_update"),
-            type_delete=self.cleaned_data.get("type_delete"),
-        )
-
-        if conflicts:
-            raise ValidationError(conflicts)
-
-        return data
+        cleaned_data = super().clean()
+        reject_fields_not_offered(self)
+        return cleaned_data
 
 
 class JobHookFilterForm(BootstrapMixin, forms.Form):
@@ -2903,21 +2892,9 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
         )
 
     def clean(self):
-        data = super().clean()
-
-        conflicts = Webhook.check_for_conflicts(
-            instance=self.instance,
-            content_types=self.cleaned_data.get("content_types"),
-            payload_url=self.cleaned_data.get("payload_url"),
-            type_create=self.cleaned_data.get("type_create"),
-            type_update=self.cleaned_data.get("type_update"),
-            type_delete=self.cleaned_data.get("type_delete"),
-        )
-
-        if conflicts:
-            raise ValidationError(conflicts)
-
-        return data
+        cleaned_data = super().clean()
+        reject_fields_not_offered(self)
+        return cleaned_data
 
 
 class WebhookFilterForm(BootstrapMixin, forms.Form):
