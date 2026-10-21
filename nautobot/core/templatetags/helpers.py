@@ -1386,7 +1386,7 @@ def toast(
     content,
     autohide=None,
     buttons=None,
-    delay=10000,
+    delay=5000,
     dismissible=True,
     html_id=None,
     icon=None,
@@ -1409,7 +1409,7 @@ def toast(
             when `buttons` are given, so toasts requiring a response are not dismissed before they can be acted on.
         buttons (Optional[str]): Markup for the toast footer, typically call-to-action buttons. Escaped unless it
             is a `SafeString`.
-        delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `10000`.
+        delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `5000`.
         dismissible (bool): Whether to render a close button. Defaults to `True`.
         html_id (Optional[str]): HTML `id` of the toast. Generated if not given.
         icon (Optional[str]): Markup for the toast header icon. Escaped unless it is a `SafeString`.

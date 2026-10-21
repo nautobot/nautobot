@@ -38,28 +38,28 @@ def record_request_db_duration(hashed_token, request_db_duration_in_milliseconds
 # Nautobot Cost
 # ------------------------------------------------------------------------------
 # TODO: Revisit this when tokens store username and add to labels
-rest_request_complexity_cost_counter = Counter(
-    name="nautobot_rest_request_complexity_cost",
+rate_limiting_rest_complexity_cost_counter = Counter(
+    name="nautobot_rate_limiting_rest_complexity_cost",
     documentation="The cumulative cost of every complexity cost charge for rate limiting.",
     labelnames=("hashed_token",),
 )
 
 
-def record_rest_request_complexity_cost(hashed_token, current_charge):
-    rest_request_complexity_cost_counter.labels(hashed_token).inc(current_charge)
+def record_rate_limiting_rest_complexity_cost(hashed_token, current_charge):
+    rate_limiting_rest_complexity_cost_counter.labels(hashed_token).inc(current_charge)
 
 
 # TODO: Revisit this when tokens store username and add to labels
-rest_rate_limiting_backend_errors_counter = Counter(
-    name="nautobot_rest_rate_limiting_backend_errors",
+rate_limiting_rest_backend_errors_counter = Counter(
+    name="nautobot_rate_limiting_rest_backend_errors",
     documentation="Budget charge attempts that could not be completed against the Redis backend",
     labelnames=("hashed_token", "exception_type"),
 )
 
 
-def record_rest_request_rate_limiting_backend_exception(hashed_token, exception):
+def record_rate_limiting_rest_request_backend_exception(hashed_token, exception):
     exception_type = type(exception).__name__
-    rest_rate_limiting_backend_errors_counter.labels(
+    rate_limiting_rest_backend_errors_counter.labels(
         hashed_token,
         exception_type,
     ).inc()

@@ -16,6 +16,7 @@ from nautobot.extras.conditions.presets import (
     get_condition_preset,
     get_condition_presets,
     PARAM_CONTEXT_PREFIX,
+    PARAM_KIND_FIELD,
     PresetParameter,
     register_builtin_condition_presets,
     register_condition_preset,
@@ -111,6 +112,10 @@ class PresetParameterCleanTest(TestCase):
         """A list left over from a set-valued operator must fail loudly, not silently never match."""
         with self.assertRaisesRegex(ConditionPresetError, re.escape("takes a single value, not a list")):
             PresetParameter(name="field", label="Field").clean(["a"])
+
+    def test_a_related_objects_custom_field_path_is_accepted(self):
+        """Its sub-field has a dot of its own, so a path is not judged by how many dots it holds."""
+        PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD).clean("location.custom_fields.region_code")
 
     def test_required_rejects_empty_list(self):
         with self.assertRaisesRegex(ConditionPresetError, re.escape("`value` is required")):

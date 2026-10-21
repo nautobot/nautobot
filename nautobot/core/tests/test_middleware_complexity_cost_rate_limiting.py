@@ -173,11 +173,13 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
         self.assertIn("budget", rate_limit_policy)
         self.assertEqual(rate_limit_policy["budget"], settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET)
         self.assertIn("window_in_seconds", rate_limit_policy)
-        self.assertEqual(rate_limit_policy["window_in_seconds"], settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS)
+        self.assertEqual(
+            rate_limit_policy["window_in_seconds"], settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS
+        )
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="report",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
     )
     def test_rate_limit_header_matches_expected_format(self):
         response = self.call_api()
@@ -193,7 +195,7 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
         self.assertEqual(rate_limit["remaining_budget"], settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET)
         self.assertIn("remaining_window_in_seconds", rate_limit)
         self.assertEqual(
-            rate_limit["remaining_window_in_seconds"], settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS
+            rate_limit["remaining_window_in_seconds"], settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS
         )
 
     @override_settings(NAUTOBOT_RATE_LIMITING_REST_MODE="enforce")
@@ -261,7 +263,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
     # --------------------------------------------------------------------------
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=10,
     )
     def test_unauthenticated_request_returns_a_full_budget_when_enforcement_enabled(self):
@@ -278,7 +280,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=10,
     )
     def test_consumed_budget_accumulates_across_requests_until_the_budget_is_exhausted(self):
@@ -297,7 +299,8 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
         self.assertEqual(throttled_response_rate_limit_policy_name, "rest-complexity-cost")
         self.assertEqual(throttled_response_rate_limit_policy_budget, settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET)
         self.assertEqual(
-            throttled_response_rate_limiting_window_in_seconds, settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS
+            throttled_response_rate_limiting_window_in_seconds,
+            settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS,
         )
 
         # The RateLimit header reports what is left, which is floored at zero once overspent.
@@ -341,7 +344,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=10,
     )
     def test_throttled_response_advertises_when_to_retry(self):
@@ -373,7 +376,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=10,
     )
     def test_remaining_budget_is_never_advertised_as_negative(self):
@@ -388,7 +391,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=10,
     )
     def test_budget_is_tracked_per_token_rather_than_per_user(self):
@@ -417,7 +420,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=3600,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=1,
     )
     def test_request_that_consumes_entire_budget_is_allowed_and_next_request_fails(self):
@@ -444,7 +447,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
         # The window has to outlast the time it takes to spend the budget, or the bucket expires
         # mid-loop and consumption resets before anything is ever throttled. At this budget the
         # third request trips the limit, and a reset window still leaves budget for one more.
-        NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS=6,
+        NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=6,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=8,
     )
     def test_budget_resets_after_window_expires(self):
@@ -454,7 +457,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
         # Sleeping the full window always outlasts whatever is left of the bucket's TTL, which was
         # set when the first request opened the window and has been counting down ever since.
-        time.sleep(settings.NAUTOBOT_RATE_LIMITING_REST_WINDOW_IN_SECONDS)
+        time.sleep(settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS)
         api_response = self.call_api()
         remaining_budget = get_rate_limit_header_remaining_budget(api_response)
 

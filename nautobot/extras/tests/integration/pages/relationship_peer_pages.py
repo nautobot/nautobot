@@ -16,7 +16,7 @@ class RelationshipPeerDetailPage(DetailPage):
         Matches on the peer rather than on the panel alone: another relationship on the
         instance can add a Relationships panel this test did not create.
         """
-        return self.panel(self._RELATIONSHIPS_PANEL, within=self.tab_pane(tab_id)).filter(has_text=peer_name)
+        return self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id)).filter(has_text=peer_name)
 
     def expect_relationship_peer(self, tab_id, peer_name):
         """Assert (auto-retrying) that a Relationships panel on tab *tab_id* shows *peer_name*."""

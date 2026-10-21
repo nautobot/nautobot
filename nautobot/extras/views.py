@@ -3582,7 +3582,7 @@ class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
         stored_rows, unreadable = self._rows_from_json(request.POST.get("conditions"))
         addressable = _addressable_fields_for(request.POST)
         # In the query string, because the body is the editor's own inputs. Only once a save was refused.
-        refused = errors_by_row_and_control(stored_rows) if request.GET.get("validate") else {}
+        refused = errors_by_row_and_control(stored_rows, addressable) if request.GET.get("validate") else {}
         # A form with nothing on it still offers one row, the way the other repeating forms here do.
         # That row stands for nothing stored, so it is added for rendering and never validated.
         return render(

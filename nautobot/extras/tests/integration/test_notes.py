@@ -2,6 +2,7 @@
 
 import pytest
 
+from nautobot.dcim.tests.integration.pages.location_detail_page import LocationDetailPage
 from nautobot.extras.tests.integration.pages.notes_page import ObjectNotesPage
 from nautobot.playwright.helpers import unique_name
 
@@ -13,8 +14,8 @@ class NoteTestCase:
     def test_create_note(self, auth_page, base_url, api, created_location):
         """A note added from the Notes tab is shown in the notes table and saved against the object."""
         text = f"{unique_name()} maintenance notice"
+        LocationDetailPage(auth_page, base_url).navigate(created_location["id"])
         notes = ObjectNotesPage(auth_page, base_url)
-        notes.navigate_to_object("/dcim/locations/", created_location["id"])
         notes.open_notes_tab()
 
         notes.add_note(text)
@@ -29,12 +30,13 @@ class NoteTestCase:
         """Editing a note replaces its body in the notes table."""
         new_text = f"{unique_name()} updated note"
         notes = ObjectNotesPage(auth_page, base_url)
-        notes.navigate_to_notes("/dcim/locations/", created_location["id"])
+        notes.navigate_to_notes_tab("/dcim/locations/", created_location["id"])
 
         notes.edit_note(created_note["note"], new_text)
 
         notes.expect_flash_message("Modified note")
-        # The edit link's return_url is the object's main tab, so the update lands there.
+        # NOTE: The edit link returns to the object's main tab, not to Notes (NAUTOBOT-1656).
+        # Remove this open_notes_tab() call when that bug is fixed.
         notes.open_notes_tab()
         notes.expect_note(new_text)
         notes.expect_note(created_note["note"], present=False)
