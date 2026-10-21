@@ -2826,7 +2826,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
 
-        per_row = [q["sql"] for q in ctx.captured_queries if 'FROM "ipam_ipaddress"' in q["sql"]]
+        ip_table = connection.ops.quote_name(IPAddress._meta.db_table)
+        per_row = [q["sql"] for q in ctx.captured_queries if f"FROM {ip_table}" in q["sql"]]
         self.assertEqual(per_row, [], f"{len(per_row)} per-row ipam_ipaddress queries")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
