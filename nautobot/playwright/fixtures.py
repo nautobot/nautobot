@@ -2,8 +2,8 @@
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
 `tests/integration/conftest.py` files build thin named fixtures on top of
-`create_object`. The `created_*` fixtures that more than one app needs (a device and its
-manufacturer) are defined here. Run `pytest --fixtures nautobot/<app>/tests/integration`
+`create_object`. The `created_*` fixtures that more than one app needs (a location tree, a
+device and its manufacturer) are defined here. Run `pytest --fixtures nautobot/<app>/tests/integration`
 to list every available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
@@ -25,6 +25,7 @@ import os
 
 import pytest
 
+from nautobot.playwright.accessibility import get_axe_core_source
 from nautobot.playwright.helpers import log_in, LoginError, unique_name
 
 PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
@@ -199,6 +200,40 @@ def api_count(api):
 
 
 @pytest.fixture
+def created_location_tree(create_object, status_for):
+    """A location family owned by this test, in a location type of its own.
+
+    Creates a parent with two children, plus a decoy parent with its own child, so a
+    parent-filter test can assert both inclusion (the children) and exclusion (the
+    decoy's child) against records this test controls, regardless of other data in the
+    instance. All records use a unique `ZZZ-test-` prefixed name and are deleted on teardown.
+    """
+    unique = unique_name()
+    status = status_for("dcim.location")["id"]
+    location_type = create_object("dcim/location-types/", name=f"{unique}-type", nestable=True)
+    parent = create_object("dcim/locations/", name=f"{unique}-parent", location_type=location_type["id"], status=status)
+    children = [
+        create_object(
+            "dcim/locations/",
+            name=f"{unique}-child-{index}",
+            location_type=location_type["id"],
+            status=status,
+            parent=parent["id"],
+        )
+        for index in (1, 2)
+    ]
+    decoy = create_object("dcim/locations/", name=f"{unique}-decoy", location_type=location_type["id"], status=status)
+    decoy_child = create_object(
+        "dcim/locations/",
+        name=f"{unique}-decoy-child",
+        location_type=location_type["id"],
+        status=status,
+        parent=decoy["id"],
+    )
+    return {"parent": parent, "children": children, "decoy": decoy, "decoy_child": decoy_child}
+
+
+@pytest.fixture
 def created_manufacturer(create_object):
     """A manufacturer owned by this test."""
     return create_object("dcim/manufacturers/", name=unique_name())
@@ -242,3 +277,14 @@ def created_device(create_object, status_for, created_manufacturer):
         "role": role,
         "status": status,
     }
+
+
+@pytest.fixture
+def axe_core_on_load(context):
+    """Load axe-core into every page that this test's browser context opens from here on.
+
+    Use it in a test that scans many pages. `run_axe` loads axe-core itself when a page lacks it, but the
+    Playwright trace (`--tracing=retain-on-failure` in CI) records the 570 KB source with every call that
+    passes it. An init script is recorded once.
+    """
+    context.add_init_script(get_axe_core_source())
