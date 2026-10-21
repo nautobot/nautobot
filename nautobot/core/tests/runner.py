@@ -1,5 +1,7 @@
 import copy
 import hashlib
+import multiprocessing
+import os
 
 try:
     from coverage import Coverage
@@ -15,7 +17,8 @@ from django.db.migrations.recorder import MigrationRecorder
 from django.test.runner import _init_worker, DiscoverRunner, ParallelTestSuite
 from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper, override_settings
 
-from nautobot.core.celery import app, setup_nautobot_job_logging
+from nautobot.core.celery import app, import_jobs, setup_nautobot_job_logging
+from nautobot.core.cli import load_settings
 from nautobot.core.settings_funcs import parse_redis_connection
 
 
@@ -26,6 +29,13 @@ def init_worker_with_unique_cache(*args, **kwargs):
 
     from django.test.runner import _worker_id
 
+    if multiprocessing.get_start_method() == "spawn":
+        # A spawned worker is a fresh process rather than a copy of the parent, so the one-time setup that the
+        # parent performed while preparing the test environment and database has to be repeated here.
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            setup_nautobot_job_logging(None, None, app.conf)
+        import_jobs()
+
     # Redis DB indices 0 and 1 are used by non-automated testing, so we want to start at index 2
     caches = copy.deepcopy(settings.CACHES)
     caches["default"]["LOCATION"] = parse_redis_connection(redis_database=_worker_id + 1)
@@ -33,8 +43,24 @@ def init_worker_with_unique_cache(*args, **kwargs):
     print(f"Set settings.CACHES['default']['LOCATION'] to use Redis index {_worker_id + 1}")
 
 
+def setup_worker_settings(config_path):
+    """
+    Load Nautobot's settings in a test worker started with the "spawn" multiprocessing method.
+
+    Such a worker is a fresh interpreter, so the `nautobot_config` pseudo-module that the parent registered in
+    `sys.modules` does not exist there, and Django's own worker setup would fail to import it.
+    """
+    os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
+    load_settings(config_path)
+
+
 class NautobotParallelTestSuite(ParallelTestSuite):
     init_worker = init_worker_with_unique_cache
+    process_setup = setup_worker_settings
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.process_setup_args = (settings.SETTINGS_PATH,)
 
     def run(self, result):
         # TODO: Remove this override once we upgrade to Django 6.0, which fixes this upstream.
@@ -65,10 +91,9 @@ class NautobotTestRunner(DiscoverRunner):
     parallel_test_suite = NautobotParallelTestSuite
 
     exclude_tags = ["integration", "migration_test"]
-    if "example_app" not in settings.PLUGINS:
-        exclude_tags.append("example_app")
-    if "example_app_with_view_override" not in settings.PLUGINS:
-        exclude_tags.append("example_app_with_view_override")
+    # Tests that require one of the example apps are excluded unless that app is enabled in settings.PLUGINS.
+    # Looked up lazily so that importing this module does not require configured settings.
+    plugin_tags = ("example_app", "example_app_with_view_override")
 
     @classmethod
     def add_arguments(cls, parser):
@@ -92,7 +117,8 @@ class NautobotTestRunner(DiscoverRunner):
         incoming_tags = kwargs.get("tags") or []
         exclude_tags = kwargs.get("exclude_tags") or []
 
-        for default_excluded_tag in self.exclude_tags:
+        default_exclude_tags = [*self.exclude_tags, *(tag for tag in self.plugin_tags if tag not in settings.PLUGINS)]
+        for default_excluded_tag in default_exclude_tags:
             if default_excluded_tag not in incoming_tags:
                 exclude_tags.append(default_excluded_tag)
                 # Can't just use self.log() here because we haven't yet called super().__init__()

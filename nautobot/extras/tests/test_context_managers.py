@@ -206,10 +206,8 @@ class WebRequestContextTestCase(TestCase):
         snapshots = oc_list[0].get_snapshots()
         self.assertIsNotNone(snapshots["prechange"])
         self.assertIsNotNone(snapshots["postchange"])
-        self.assertSequenceEqual(
-            list(snapshots["differences"]["added"].keys()),
-            ("created", "description"),
-        )
+        # Key order of a JSON document varies by database backend, so compare the set of keys.
+        self.assertEqual(set(snapshots["differences"]["added"].keys()), {"created", "description"})
         self.assertEqual(snapshots["differences"]["added"]["description"], "changed")
 
     def test_change_log_context(self):

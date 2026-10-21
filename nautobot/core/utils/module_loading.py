@@ -97,6 +97,8 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
     module_prefix = ".".join(module_path) if module_path else None
+    # Module origins are compared against this path after symlink resolution, so resolve it the same way
+    real_path = os.path.realpath(path)
 
     with _import_lock, _temporarily_add_to_sys_path(path):
         # Phase 1: discover module names without importing.
@@ -114,7 +116,7 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
                 existing_module = None
             if existing_module is not None and existing_module.origin:
                 existing_module_path = os.path.realpath(existing_module.origin)
-                if not existing_module_path.startswith(path):
+                if not existing_module_path.startswith(real_path):
                     logger.error(
                         "Unable to load module %s from %s as it conflicts with existing module %s",
                         name,
