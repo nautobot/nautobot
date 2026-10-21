@@ -159,9 +159,10 @@ class BasePage:
     # Panels
     # -------------------------------------------------------------------------
 
-    def panel(self, title):
-        """Locator for the panel card titled *title*, matched without regard to case."""
-        heading = self.page.locator(self._PANEL_TITLE).filter(
+    def panel(self, title, within=None):
+        """Locator for the panel card titled *title*, matched without regard to case, optionally only inside the *within* locator."""
+        root = within or self.page
+        heading = root.locator(self._PANEL_TITLE).filter(
             has_text=re.compile(rf"^\s*{re.escape(title)}\s*$", re.IGNORECASE)
         )
         return heading.locator(self._ENCLOSING_CARD)
