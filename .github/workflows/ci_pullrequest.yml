@@ -659,6 +659,21 @@ jobs:
           DJANGO_SUPERUSER_PASSWORD=admin poetry run nautobot-server createsuperuser \
             --noinput --username admin --email admin@example.com
           poetry run nautobot-server shell --command "from django.contrib.auth import get_user_model; from nautobot.users.models import Token; Token.objects.get_or_create(user=get_user_model().objects.get(username='admin'), key='${NAUTOBOT_PLAYWRIGHT_API_TOKEN}')"
+      - name: "Pin the Refresh Members job to the default queue"
+        # generate_test_data assigns random job queues to jobs, and a job button submits to the
+        # job's first queue. Pin this job to the default queue, which the worker below consumes.
+        # The default queue is changed first: a job's default queue is kept in its queue list.
+        run: |
+          poetry run nautobot-server shell --command "from nautobot.extras.models import Job, JobQueue; queue = JobQueue.objects.get(name='default'); job = Job.objects.get(module_name='nautobot.core.jobs.groups', job_class_name='RefreshDynamicGroupCacheJobButtonReceiver'); job.default_job_queue = queue; job.save(); job.job_queues.set([queue])"
+      - name: "Start Celery worker"
+        # Tests that click a job button (e.g. Refresh Members) need a worker to run the job.
+        run: |
+          nohup poetry run nautobot-server celery worker --loglevel INFO &> /tmp/nautobot-worker.log &
+          for _ in $(seq 1 30); do
+            poetry run nautobot-server celery inspect ping &> /dev/null && exit 0
+            sleep 2
+          done
+          echo "Celery worker did not come up"; tail -50 /tmp/nautobot-worker.log; exit 1
       - name: "Start Nautobot server"
         run: |
           nohup poetry run nautobot-server runserver 8080 --noreload --insecure &> /tmp/nautobot-server.log &
@@ -674,6 +689,9 @@ jobs:
       - name: "Server log on failure"
         if: "failure()"
         run: "tail -100 /tmp/nautobot-server.log"
+      - name: "Worker log on failure"
+        if: "failure()"
+        run: "tail -100 /tmp/nautobot-worker.log"
       - name: "Upload Playwright traces and screenshots on failure"
         if: "failure()"
         uses: "actions/upload-artifact@v4"

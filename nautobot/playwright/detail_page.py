@@ -35,6 +35,8 @@ class DetailPage(BasePage):
     # When the tab strip overflows, tabs.js clones the list and hides the original, so the
     # visible copy is the one a user clicks.
     _TAB_LINK = "ul[data-nb-tests-id='object-details-header-tabs-ul'] a[role='tab'][aria-controls='{tab_id}']:visible"
+    # Rendered on the detail view of any model that can be a dynamic group member, once it is in a group.
+    _DYNAMIC_GROUPS_TAB = "dynamic_groups"
 
     def __init__(self, page, base_url):
         """Fail fast on a subclass that forgot to set `DETAIL_PATH` or `VERBOSE_NAME`."""
@@ -82,6 +84,11 @@ class DetailPage(BasePage):
         pane = self._tab_pane(tab_id)
         expect(pane).to_have_count(1)
         expect(pane).not_to_contain_text(text)
+
+    def expect_dynamic_groups_tab_to_list(self, group_name):
+        """Open the Dynamic Groups tab and assert (auto-retrying) that it lists the group *group_name*."""
+        self.open_tab(self._DYNAMIC_GROUPS_TAB)
+        self.expect_tab_to_contain(self._DYNAMIC_GROUPS_TAB, group_name)
 
     # -------------------------------------------------------------------------
     # Deferred components

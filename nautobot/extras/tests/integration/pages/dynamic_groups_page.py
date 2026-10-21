@@ -10,31 +10,25 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class DynamicGroupPage(DetailPage):
-    """A single dynamic group: the detail view from DetailPage, plus the add form and the filter builder on the edit form.
-
-    Creating a filter-defined group is a two-step flow: the add form takes only the name
-    and content type, and the filter fields (prefixed `filter-`) render on the edit form
-    once the group exists. Saving either form does not recalculate membership; that is
-    left to the "Refresh Members" job button on the detail view.
-    """
+    """The dynamic group detail view, add form, and edit-form filter fields."""
 
     DETAIL_PATH = "/extras/dynamic-groups/{pk}/"
     VERBOSE_NAME = "Dynamic Group"
     ADD_PATH = "/extras/dynamic-groups/add/"
     EDIT_PATH = "/extras/dynamic-groups/{pk}/edit/"
-    # The cached-members endpoint, read by `wait_for_member_count`.
+    # `wait_for_member_count` reads the group's cached members from this endpoint.
     MEMBERS_API_PATH = "/api/extras/dynamic-groups/{pk}/members/?limit=1"
 
     _NAME_INPUT = "input[name='name']"
-    # A plain <select>, so the stable option value (e.g. "dcim.device") is selectable directly.
+    # The content type field is a plain <select>, so `select_option()` can pick an option by its value
+    # (e.g. "dcim.device").
     _CONTENT_TYPE_SELECT = "select[name='content_type']"
     _CREATE_BUTTON = "button[name='_create']"
     _UPDATE_BUTTON = "button[name='_update']"
-    _FILTER_FORM = "#filter-form"
-    # The Members tab label carries a count badge, rendered only when the count is non-zero.
+    # The Members tab label contains a count badge, which is rendered only when the count is not zero.
     _MEMBERS_TAB_BADGE = "a[role='tab'][aria-controls='members'] span.badge"
-    # "Refresh Members" is a confirmation JobButton: its data-bs-target names the modal
-    # (whose id embeds the JobButton pk), and the modal's submit button runs the job.
+    # "Refresh Members" is a JobButton that asks for confirmation. Its `data-bs-target` contains the id of
+    # the modal (the id includes the JobButton pk), and the modal's submit button runs the job.
     _REFRESH_MEMBERS_BUTTON = "button[data-bs-toggle='modal']:has-text('Refresh Members')"
     _MODAL_CONFIRM_BUTTON = "button[type='submit']"
     _PK_IN_URL = re.compile(r"/extras/dynamic-groups/([0-9a-f-]{36})/")
@@ -48,9 +42,8 @@ class DynamicGroupPage(DetailPage):
         self._goto(self.ADD_PATH)
 
     def navigate_edit(self, pk):
-        """Go to the edit form of the group *pk* and wait for its filter builder."""
+        """Go to the edit form of the group *pk*."""
         self._goto(self.EDIT_PATH.format(pk=pk))
-        self.page.locator(self._FILTER_FORM).wait_for(state="attached", timeout=15_000)
 
     # -------------------------------------------------------------------------
     # Add and edit forms
@@ -68,14 +61,15 @@ class DynamicGroupPage(DetailPage):
     def add_filter_value(self, field_name, value):
         """Add *value* to the edit form's multi-value filter field *field_name* (e.g. "location").
 
-        Matched as a substring: location options render their full ancestry path.
+        The option text is matched as a substring, because location options show their full ancestry path.
         """
         select2_filter_pick(self.page, f"filter-{field_name}", search=value, pick_text=value, exact=False)
         expect(self.page.locator(f"select[name='filter-{field_name}'] option:checked", has_text=value)).to_have_count(1)
 
     def save(self):
-        """Submit the edit form and wait for the redirect to the detail view."""
+        """Submit the edit form and assert that it redirected away from the form."""
         self._click_and_wait_for_navigation(self._UPDATE_BUTTON)
+        self.expect_url_lacks("/edit/")
 
     # -------------------------------------------------------------------------
     # Members
@@ -92,29 +86,24 @@ class DynamicGroupPage(DetailPage):
     def refresh_members(self):
         """Click "Refresh Members", confirm in its modal, and wait for the redirect back.
 
-        This only enqueues the refresh job; use `wait_for_member_count` before asserting
+        This only enqueues the refresh job. Call `wait_for_member_count` before asserting
         on the new membership.
         """
         button = self.page.locator(self._REFRESH_MEMBERS_BUTTON).first
-        modal = button.get_attribute("data-bs-target", timeout=10_000)
+        modal = button.get_attribute("data-bs-target")
         assert modal, "The Refresh Members button names no confirmation modal."
         button.click()
         confirm = f"{modal} {self._MODAL_CONFIRM_BUTTON}"
-        self.page.locator(confirm).wait_for(state="visible", timeout=10_000)
+        self.page.locator(confirm).wait_for(state="visible")
         self._click_and_wait_for_navigation(confirm)
 
     def wait_for_member_count(self, pk, expected, timeout=60, interval=1):
         """Poll the group's cached-members REST count until it equals *expected*.
 
-        The refresh job runs in a worker, and the detail view does not update itself when
-        it finishes, so there is nothing on the page to wait on. Instead, the members
-        endpoint is read every *interval* seconds through `page.request`, which shares the
-        browser's logged-in session, and the wait fails if the count has not reached
-        *expected* within *timeout* seconds. Reload the page afterwards to assert the
-        count in the UI.
-
-        (`page.wait_for_function` cannot do this: it does not await a predicate that
-        returns a Promise, so an async fetch predicate passes on the first poll.)
+        The detail view does not update itself when the refresh job finishes, so the wait reads
+        the members endpoint every *interval* seconds through `page.request`, which uses the
+        browser's logged-in session. It fails if the count has not reached *expected* within
+        *timeout* seconds. Reload the page afterwards to assert the count in the UI.
         """
         url = self.MEMBERS_API_PATH.format(pk=pk)
         deadline = time.monotonic() + timeout

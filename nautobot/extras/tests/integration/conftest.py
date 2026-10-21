@@ -161,28 +161,29 @@ def created_dynamic_group(create_object, created_device_set):
 
 @pytest.fixture(scope="session")
 def require_celery_worker(api):
-    """Skip the test unless a Celery worker is running to execute the jobs it starts from the UI.
+    """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.
 
-    Without a worker, a job such as Refresh Members is queued but never runs. The
-    `playwright-test` CI job starts no worker, so these tests skip there for now.
+    Without a worker, a job such as Refresh Members is queued but never runs, and the test
+    would otherwise fail only after its poll times out.
     """
     response = api.get("/api/status/")
     if not response.ok:
         pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
     if not response.json()["celery-workers-running"]:
-        pytest.skip("No Celery worker is running, so the Refresh Members job would never run.")
+        pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
 
 
 @pytest.fixture
-def dynamic_group_cleanup(api):
-    """Collect the ids of dynamic groups created through the UI and delete them on teardown.
+def dynamic_group_name(api):
+    """A unique dynamic group name. A group the test saves under it through the form is deleted after the test.
 
-    A UI-created group's id is only known after the add form redirects, so the test
-    appends it here as soon as it has it. A 404 is ignored, like `create_object`'s teardown.
+    Deleting by name rather than by the pk from the add form's redirect means the group is
+    cleaned up even if the save succeeds but the redirect does not.
     """
-    created = []
-    yield created
-    for pk in created:
-        response = api.delete(f"/api/extras/dynamic-groups/{pk}/")
-        if not response.ok and response.status != 404:
-            pytest.fail(f"DELETE /api/extras/dynamic-groups/{pk}/ returned {response.status}: {response.text()[:200]}")
+    name = unique_name()
+    yield name
+    response = api.get("/api/extras/dynamic-groups/", params={"name": name})
+    assert response.ok, f"GET dynamic groups named {name} returned {response.status}: {response.text()}"
+    for group in response.json()["results"]:
+        deleted = api.delete(f"/api/extras/dynamic-groups/{group['id']}/")
+        assert deleted.ok, f"DELETE dynamic group {group['id']} returned {deleted.status}: {deleted.text()}"
