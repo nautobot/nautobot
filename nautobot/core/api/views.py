@@ -236,10 +236,8 @@ class ModelViewSetMixin:
                 self.logger.warning("The depth parameter must be an integer")
 
             max_depth = get_settings_or_config("REST_API_MAX_DEPTH", fallback=REST_API_MAX_DEPTH_DEFAULT)
-            if max_depth < 0:
-                max_depth = 0
-            if max_depth > 10:  # DRF enforced upper limit
-                max_depth = 10
+            max_depth = max(max_depth, 0)
+            max_depth = min(max_depth, 10)  # DRF enforced upper limit
 
             if depth < 0 or depth > max_depth:
                 raise ParseError(f"The depth parameter must be an integer between 0 and {max_depth}")
