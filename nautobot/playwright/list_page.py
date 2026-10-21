@@ -24,6 +24,8 @@ class ListPage(BasePage):
 
     # The row selection checkbox; its value is the object's id.
     _PK_CHECKBOX = "input[name='pk']"
+    # Every list view that `generic/object_list.html` renders wraps its table in this form.
+    _OBJECT_LIST_FORM = "#object_list_form"
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
     # rendered when a list has no results. Reference this constant, never inline it.
     _DATA_ROWS = f"table tbody tr:has({_PK_CHECKBOX})"
@@ -71,6 +73,10 @@ class ListPage(BasePage):
     def navigate(self, **params):
         """Go to the list view, optionally with given query *params*, e.g. for pinning it to test-owned records."""
         self._goto(f"{self.LIST_PATH}?{urlencode(params)}" if params else self.LIST_PATH)
+
+    def object_list_form(self):
+        """Return the locator of the form around the object table. Absent on a page that is not an object list."""
+        return self.page.locator(self._OBJECT_LIST_FORM)
 
     def data_row(self, index=0):
         """Locator for the data row at *index*."""
