@@ -278,6 +278,8 @@ class SettingsJSONSchemaTestCase(TestCase):
                 return [int(v) for v in os.environ[env_var].split(",")]
             else:
                 return os.environ[env_var].split(",")
+        elif setting_type == "object":
+            return json.loads(os.environ[env_var])
         elif setting_type == "boolean":
             return is_truthy(os.environ[env_var])
         elif setting_type == "integer":
@@ -305,6 +307,8 @@ class SettingsJSONSchemaTestCase(TestCase):
         elif setting_type == "array":
             children_type = setting_schema.get("items", {}).get("type", "string")
             os.environ[env_var] = ",".join(self._get_fake_env_value(children_type) for _ in range(3))
+        elif setting_type == "object":
+            os.environ[env_var] = json.dumps({self._get_fake_env_value("string"): [self._get_fake_env_value("string")]})
         else:
             os.environ[env_var] = self._get_fake_env_value(setting_type)
 
