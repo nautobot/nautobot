@@ -1,1 +1,1 @@
-Replaced the Selenium accessibility tests with their Playwright equivalents.
+Replaced the Selenium accessibility tests with their Playwright equivalents, and made the `playwright-test` job a precondition of the `all-tests-passed` CI check.
