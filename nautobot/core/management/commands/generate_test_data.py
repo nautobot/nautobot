@@ -433,6 +433,9 @@ class Command(BaseCommand):
             description="with teams",
         )
 
+        # Populate member caches for non-static DynamicGroups
+        call_command("refresh_dynamic_group_member_caches", "--database", db_name)
+
     def handle(self, *args, **options):
         if options["flush"]:
             if options["interactive"]:
@@ -474,9 +477,11 @@ Type 'yes' to continue, or 'no' to cancel: """
 
                 call_command(
                     "dumpdata",
-                    indent=2,
-                    format="json",
+                    all=True,  # important, as otherwise the dynamic-group members caches will be omitted by default!
+                    database=options["database"],
                     exclude=["auth.permission"],
+                    format="json",
+                    indent=2,
                     output=options["fixture_file"],
                 )
 

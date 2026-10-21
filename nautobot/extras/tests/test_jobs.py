@@ -1289,33 +1289,31 @@ class JobFileOutputTest(TransactionTestCase):
 
     databases = ("default", "job_logs")
 
-    @override_settings(
-        MEDIA_ROOT=tempfile.gettempdir(),
-    )
     def test_output_file_to_database(self):
         module = "file_output"
         name = "FileOutputJob"
         data = {"lines": 3}
-        job_result = create_job_result_and_run_job(module, name, **data)
+        with tempfile.TemporaryDirectory(dir=settings.MEDIA_ROOT) as tempdir, override_settings(MEDIA_ROOT=tempdir):
+            job_result = create_job_result_and_run_job(module, name, **data)
 
-        self.assertJobResultStatus(job_result)
-        # JobResult should have one attached file
-        self.assertEqual(1, job_result.files.count())
-        self.assertEqual(job_result.files.first().name, "output.txt")
-        self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
-        # File shouldn't exist on filesystem
-        self.assertFalse(Path(settings.MEDIA_ROOT, "files", "output.txt").exists())
-        self.assertFalse(Path(settings.MEDIA_ROOT, "files", f"{job_result.files.first().pk}-output.txt").exists())
-        # File should exist in DB
-        # `filename` value is weird, see https://github.com/victor-o-silva/db_file_storage/issues/22
-        models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
-
-        # Make sure cleanup is successful
-        job_result.delete()
-        with self.assertRaises(models.FileProxy.DoesNotExist):
-            models.FileProxy.objects.get(name="output.txt")
-        with self.assertRaises(models.FileAttachment.DoesNotExist):
+            self.assertJobResultStatus(job_result)
+            # JobResult should have one attached file
+            self.assertEqual(1, job_result.files.count())
+            self.assertEqual(job_result.files.first().name, "output.txt")
+            self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
+            # File shouldn't exist on filesystem
+            self.assertFalse(Path(settings.MEDIA_ROOT, "files", "output.txt").exists())
+            self.assertFalse(Path(settings.MEDIA_ROOT, "files", f"{job_result.files.first().pk}-output.txt").exists())
+            # File should exist in DB
+            # `filename` value is weird, see https://github.com/victor-o-silva/db_file_storage/issues/22
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
+
+            # Make sure cleanup is successful
+            job_result.delete()
+            with self.assertRaises(models.FileProxy.DoesNotExist):
+                models.FileProxy.objects.get(name="output.txt")
+            with self.assertRaises(models.FileAttachment.DoesNotExist):
+                models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
     # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
     # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
