@@ -5,7 +5,7 @@ import uuid
 
 from django import forms as django_forms
 from django.conf import settings
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyRel, ManyToOneRel, OneToOneRel
@@ -778,6 +778,8 @@ class BaseFilterSet(django_filters.FilterSet):
     A base filterset which provides common functionality to all Nautobot filtersets.
     """
 
+    _filter_extension_form_fields = {}
+
     FILTER_DEFAULTS = deepcopy(django_filters.filterset.FILTER_FOR_DBFIELD_DEFAULTS)
     # NOTE: `distinct` is intentionally not specified for any of these; all of the filter classes used here derive
     # it from the field path automatically. See `AutoDistinctFilterMixin`.
@@ -1146,6 +1148,45 @@ class BaseFilterSet(django_filters.FilterSet):
         super().__init__(data, queryset, request=request, prefix=prefix)
         self._is_valid = None
         self._errors = None
+
+    def get_form_class(self):
+        """Validate registered FilterExtension form fields alongside the filterset's own fields."""
+        form_class = super().get_form_class()
+        extension_fields = {
+            name: deepcopy(field)
+            for name, field in self._filter_extension_form_fields.items()
+            if name in self.filters and field.validators
+        }
+        if not extension_fields:
+            return form_class
+
+        class FilterExtensionForm(form_class):
+            def clean(self):
+                cleaned_data = super().clean()
+                if cleaned_data is None:
+                    cleaned_data = self.cleaned_data
+                for name, field in extension_fields.items():
+                    key = self.add_prefix(name)
+                    if name not in cleaned_data or key not in self.data:
+                        continue
+
+                    values = self.data.getlist(key) if hasattr(self.data, "getlist") else self.data[key]
+                    if not isinstance(values, (list, tuple)):
+                        values = [values]
+                    # A scalar form widget can expose a multi-value filter. Validate every submitted value.
+                    if getattr(field.widget, "allow_multiple_selected", False):
+                        values = [values]
+                    for value in values:
+                        try:
+                            field.clean(value)
+                        except ValidationError as error:
+                            self.add_error(name, error)
+                            cleaned_data.pop(name, None)
+
+                # Keep the filterset's types and multi-value semantics, rather than the UI field's cleaned value.
+                return cleaned_data
+
+        return FilterExtensionForm
 
     def is_valid(self):
         """Extend FilterSet.is_valid() to potentially enforce settings.STRICT_FILTERING."""
