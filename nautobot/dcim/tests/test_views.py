@@ -24,6 +24,7 @@ from nautobot.core.testing import (
     extract_page_body,
     ModelViewTestCase,
     post_data,
+    TestCase,
     ViewTestCases,
 )
 from nautobot.core.testing.utils import (
@@ -3196,6 +3197,174 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
         self.assertHttpStatus(self.client.post(**request), 200)
         self.assertEqual(self._get_queryset().filter(name="Device X").count(), 0)
+
+
+class DeviceListPrimaryIPTestCase(TestCase):
+    """Exercise primary IP rendering through the device list's HTMX request."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type__name="Campus").first()
+        device_type = DeviceType.objects.create(
+            model="Primary IP query test", manufacturer=Manufacturer.objects.first()
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        namespace = Namespace.objects.create(name="Device list primary IP test")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        for prefix in ("192.0.2.0/24", "2001:db8::/64"):
+            Prefix.objects.create(prefix=prefix, namespace=namespace, status=prefix_status)
+
+        cls.devices = []
+        for index in range(1, 31):
+            device = Device.objects.create(
+                name=f"Primary IP device {index:02}",
+                device_type=device_type,
+                role=device_role,
+                status=device_status,
+                location=location,
+            )
+            interface = Interface.objects.create(
+                device=device, name="Loopback0", type=InterfaceTypeChoices.TYPE_VIRTUAL, status=interface_status
+            )
+            device.primary_ip4 = IPAddress.objects.create(
+                address=f"192.0.2.{index}/32", namespace=namespace, status=ip_status
+            )
+            device.primary_ip6 = IPAddress.objects.create(
+                address=f"2001:db8::{index:x}/128", namespace=namespace, status=ip_status
+            )
+            interface.ip_addresses.add(device.primary_ip4, device.primary_ip6)
+            device.validated_save()
+            cls.devices.append(device)
+
+    def _get_list(self, devices, **params):
+        response = self.client.get(
+            reverse("dcim:device_list"),
+            {"id": [device.pk for device in devices], "per_page": 50, **params},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/list_view_table.html")
+        return response
+
+    def test_primary_ip_queries_do_not_grow_with_device_count(self):
+        """Count rendered HTTP requests, including both IP preferences and custom columns."""
+        self.add_permissions("dcim.view_device")
+        ip_table = connection.ops.quote_name(IPAddress._meta.db_table)
+        for prefer_ipv4 in (True, False):
+            for ip_column in ("primary_ip", None, "primary_ip4", "primary_ip6"):
+                with (
+                    self.subTest(prefer_ipv4=prefer_ipv4, ip_column=ip_column),
+                    override_config(PREFER_IPV4=prefer_ipv4),
+                ):
+                    if ip_column == "primary_ip":
+                        self.user.clear_config("tables.DeviceTable.columns", commit=True)
+                    else:
+                        columns = ["name", ip_column] if ip_column else ["name"]
+                        self.user.set_config("tables.DeviceTable.columns", columns, commit=True)
+
+                    # Warm shared caches before comparing requests with different row counts.
+                    self._get_list(self.devices[:1])
+                    query_counts = []
+                    ip_query_counts = []
+                    for count in (1, 10, 30):
+                        with CaptureQueriesContext(connection) as queries:
+                            response = self._get_list(self.devices[:count])
+                        self.assertEqual(response.content.decode(response.charset).count("<tr "), count)
+                        query_counts.append(len(queries))
+                        # Standalone IPAddress reads indicate lazy FK loads; joins in the device query do not.
+                        ip_query_counts.append(sum(f"FROM {ip_table}" in query["sql"] for query in queries))
+                        if ip_column:
+                            field = (
+                                ip_column
+                                if ip_column != "primary_ip"
+                                else ("primary_ip4" if prefer_ipv4 else "primary_ip6")
+                            )
+                            address = getattr(self.devices[count - 1], field)
+                            self.assertContains(
+                                response, f'<a href="{address.get_absolute_url()}">{address}</a>', html=True
+                            )
+
+                    self.assertEqual(max(ip_query_counts), min(ip_query_counts), msg=ip_query_counts)
+                    self.assertLessEqual(max(query_counts) - min(query_counts), 2, msg=query_counts)
+
+    def test_primary_ip_links_and_empty_values(self):
+        """Render IPv4-only, IPv6-only, dual-stack and unaddressed devices correctly."""
+        self.add_permissions("dcim.view_device")
+        devices = self.devices[:4]
+        for device, fields in (
+            (devices[0], ("primary_ip6",)),
+            (devices[1], ("primary_ip4",)),
+            (devices[3], ("primary_ip4", "primary_ip6")),
+        ):
+            for field in fields:
+                setattr(device, field, None)
+            device.save()
+
+        for prefer_ipv4 in (True, False):
+            for ip_column in ("primary_ip", None, "primary_ip4", "primary_ip6"):
+                with (
+                    self.subTest(prefer_ipv4=prefer_ipv4, ip_column=ip_column),
+                    override_config(PREFER_IPV4=prefer_ipv4),
+                ):
+                    if ip_column == "primary_ip":
+                        self.user.clear_config("tables.DeviceTable.columns", commit=True)
+                    else:
+                        columns = ["name", ip_column] if ip_column else ["name"]
+                        self.user.set_config("tables.DeviceTable.columns", columns, commit=True)
+                    response = self._get_list(devices)
+                    if ip_column:
+                        for row in response.context["table"].page.object_list:
+                            if getattr(row.record, ip_column) is None:
+                                self.assertHTMLEqual(
+                                    row.get_cell(ip_column), '<span class="text-secondary">&mdash;</span>'
+                                )
+                    for device in devices:
+                        self.assertContains(response, device.name)
+                        expected = getattr(device, ip_column) if ip_column else None
+                        for address in (device.primary_ip4, device.primary_ip6):
+                            if address is None:
+                                continue
+                            if address == expected:
+                                self.assertContains(
+                                    response, f'<a href="{address.get_absolute_url()}">{address}</a>', html=True
+                                )
+                            else:
+                                self.assertNotContains(response, address.get_absolute_url())
+
+    def test_primary_ip_sorting_pagination_and_search(self):
+        self.add_permissions("dcim.view_device")
+        for sort in ("name", "primary_ip", "primary_ip4", "primary_ip6"):
+            with self.subTest(sort=sort):
+                columns = ["name"] if sort == "name" else ["name", sort]
+                self.user.set_config("tables.DeviceTable.columns", columns, commit=True)
+                response = self._get_list(self.devices, sort=f"-{sort}", per_page=10, page=2)
+                for device in self.devices[10:20]:
+                    self.assertContains(response, device.name)
+                for device in (*self.devices[:10], *self.devices[20:]):
+                    self.assertNotContains(response, device.get_absolute_url())
+                content = response.content.decode(response.charset)
+                positions = [content.index(device.get_absolute_url()) for device in reversed(self.devices[10:20])]
+                self.assertEqual(positions, sorted(positions))
+
+        response = self._get_list(self.devices, q=self.devices[0].name)
+        self.assertContains(response, self.devices[0].name)
+        self.assertNotContains(response, self.devices[1].get_absolute_url())
+
+    def test_primary_ip_list_preserves_object_permissions(self):
+        permission = ObjectPermission.objects.create(
+            name="View one device", actions=["view"], constraints={"pk": str(self.devices[0].pk)}
+        )
+        permission.object_types.add(ContentType.objects.get_for_model(Device))
+        permission.users.add(self.user)
+        response = self._get_list(self.devices[:2])
+        self.assertContains(response, self.devices[0].name)
+        self.assertContains(response, self.devices[0].primary_ip.get_absolute_url())
+        self.assertNotContains(response, self.devices[1].get_absolute_url())
+        for address in (self.devices[1].primary_ip4, self.devices[1].primary_ip6):
+            self.assertNotContains(response, address.get_absolute_url())
 
 
 class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
