@@ -2,6 +2,8 @@ from constance.test import override_config
 from django.conf import settings
 from django.templatetags.static import static
 from django.test import override_settings, TestCase
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim import models
@@ -61,6 +63,24 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.pre_tag(None), '<span class="text-muted">&mdash;</span>')
         self.assertEqual(helpers.pre_tag([]), "<pre>[]</pre>")
         self.assertEqual(helpers.pre_tag("something"), "<pre>something</pre>")
+
+    def test_linebreaksbr_exclude_pre(self):
+        """Newlines become `<br>` everywhere except inside `<pre>` blocks, and unsafe input is escaped."""
+        self.assertEqual(
+            helpers.linebreaksbr_exclude_pre(
+                mark_safe('Example:\n<pre><code class="language-json">{\n    "a": 1\n}</code></pre>\nDone.')
+            ),
+            'Example:<br><pre><code class="language-json">{\n    "a": 1\n}</code></pre><br>Done.',
+        )
+        self.assertEqual(
+            helpers.linebreaksbr_exclude_pre("<b>one</b>\ntwo"),
+            "&lt;b&gt;one&lt;/b&gt;<br>two",
+        )
+        # Constance passes help text through gettext, yielding a lazy proxy of the original safe string
+        self.assertEqual(
+            helpers.linebreaksbr_exclude_pre(gettext_lazy(mark_safe('<a href="#">one</a>\ntwo'))),
+            '<a href="#">one</a><br>two',
+        )
 
     def test_add_html_id(self):
         # Case where what we have isn't actually a HTML element but just a bare string
