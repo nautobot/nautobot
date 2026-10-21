@@ -72,7 +72,8 @@ class AccessibilityTestCase:
         not_list_views = []
         failures = []
         for path in core_list_view_paths(api):
-            # `navigate_to` follows the redirect that the tree views add (`?max_depth=`), so this is the final status.
+            # The tree views redirect to `?max_depth=`. `navigate_to` returns the response after the redirect,
+            # so their status here is 200, not 302.
             if lists.navigate_to(path).status != 200:
                 continue
             # The list form is in the first response, so no wait is needed. A 200 page without it is not an
