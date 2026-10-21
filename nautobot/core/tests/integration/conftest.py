@@ -11,8 +11,6 @@ are provided by nautobot.playwright.fixtures, registered in the repo-root confte
 
 import pytest
 
-from nautobot.playwright.helpers import unique_name
-
 
 @pytest.fixture
 def user_favorites(api):
@@ -35,27 +33,3 @@ def user_favorites(api):
     yield lambda *favorites: _patch(list(favorites))
 
     _patch(original)
-
-
-@pytest.fixture
-def created_location_with_child(create_object, status_for):
-    """Return the API record of a location that this test creates, with a child location under it.
-
-    The child is needed because the tree caret and the "filter to descendants" link on the Locations
-    list render only for a row that has children (`children_exists` in `dcim/tables/template_code.py`).
-    """
-    unique = unique_name()
-    status = status_for("dcim.location")["id"]
-    location_type = create_object("dcim/location-types/", name=f"{unique}-site")
-    child_location_type = create_object("dcim/location-types/", name=f"{unique}-building", parent=location_type["id"])
-    location = create_object(
-        "dcim/locations/", name=f"{unique}-location", location_type=location_type["id"], status=status
-    )
-    create_object(
-        "dcim/locations/",
-        name=f"{unique}-child-location",
-        location_type=child_location_type["id"],
-        parent=location["id"],
-        status=status,
-    )
-    return location

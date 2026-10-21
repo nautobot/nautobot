@@ -94,16 +94,16 @@ class AccessibilityTestCase:
         )
         assert not failures, f"{len(failures)} of {len(scanned)} list views have violations:\n" + "\n".join(failures)
 
-    def test_object_list_view(self, auth_page, base_url, created_location_with_child):
+    def test_object_list_view(self, auth_page, base_url, created_location_tree):
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
         expect(locations.object_table_wrapper()).to_be_attached()
         assert_no_accessibility_violations(auth_page)
 
-    def test_object_detail_view(self, auth_page, base_url, created_location_with_child):
+    def test_object_detail_view(self, auth_page, base_url, created_location_tree):
         detail = LocationDetailPage(auth_page, base_url)
-        detail.navigate(created_location_with_child["id"])
-        detail.expect_heading(created_location_with_child["name"])
+        detail.navigate(created_location_tree["parent"]["id"])
+        detail.expect_heading(created_location_tree["parent"]["name"])
         assert_no_accessibility_violations(auth_page)
 
     def test_object_edit_view(self, auth_page, base_url):
@@ -119,9 +119,9 @@ class AccessibilityTestCase:
         form.expect_validation_errors()
         assert_no_accessibility_violations(auth_page)
 
-    def test_search_page(self, auth_page, base_url, created_location_with_child):
+    def test_search_page(self, auth_page, base_url, created_location_tree):
         results = SearchResultsPage(auth_page, base_url)
-        results.navigate(created_location_with_child["name"])
+        results.navigate(created_location_tree["parent"]["name"])
         # The fixture guarantees a match in the location results, so that table is the one to wait for.
         results.expect_results_for("dcim.location")
         assert_no_accessibility_violations(auth_page)
