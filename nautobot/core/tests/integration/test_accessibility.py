@@ -76,9 +76,9 @@ class AccessibilityTestCase:
             # so their status here is 200, not 302.
             if lists.navigate_to(path).status != 200:
                 continue
-            # The list form is in the first response, so no wait is needed. A 200 page without it is not an
+            # The wrapper is in the first response, so no wait is needed. A 200 page without it is not an
             # object list (an endpoint whose UI page is something else) and is not what this test covers.
-            if lists.object_list_form().count() == 0:
+            if lists.object_table_wrapper().count() == 0:
                 not_list_views.append(path)
                 continue
             scanned.append(path)
@@ -90,14 +90,14 @@ class AccessibilityTestCase:
         # If the enumeration above breaks, this test would pass over a handful of paths.
         assert len(scanned) > MIN_CORE_LIST_VIEWS, (
             f"Expected more than {MIN_CORE_LIST_VIEWS} core list views, scanned {len(scanned)}. "
-            f"Pages without an object list form: {not_list_views}"
+            f"Pages without an object table: {not_list_views}"
         )
         assert not failures, f"{len(failures)} of {len(scanned)} list views have violations:\n" + "\n".join(failures)
 
     def test_object_list_view(self, auth_page, base_url, created_location_with_child):
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
-        expect(locations.object_list_form()).to_be_attached()
+        expect(locations.object_table_wrapper()).to_be_attached()
         assert_no_accessibility_violations(auth_page)
 
     def test_object_detail_view(self, auth_page, base_url, created_location_with_child):
