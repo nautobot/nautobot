@@ -24,6 +24,58 @@ APPS_API_PREFIX = "/api/plugins/"
 # Entries of the API root that are not model endpoints and have no object list behind them.
 NON_MODEL_API_ROOTS = ("apps", "graphql", "status")
 
+# Models whose UI list view is not at the API path with `/api` removed.
+UI_LIST_PATHS = {"/users/tokens/": "/users/api-tokens/"}
+
+# API endpoints of models that have no UI list view: through tables, component templates, assignment records, and
+# records that are managed from another object's page. The Selenium test skipped these with `NoReverseMatch`.
+# A model added without a list view goes here, so that a view whose path changed cannot be skipped by mistake.
+NO_UI_LIST_VIEW = (
+    "/cloud/cloud-network-prefix-assignments/",
+    "/cloud/cloud-service-network-assignments/",
+    "/dcim/cables-to-cable-terminations/",
+    "/dcim/connected-device/",
+    "/dcim/console-port-templates/",
+    "/dcim/console-server-port-templates/",
+    "/dcim/device-bay-templates/",
+    "/dcim/device-cluster-assignments/",
+    "/dcim/device-types-to-software-image-files/",
+    "/dcim/front-port-templates/",
+    "/dcim/interface-redundancy-group-associations/",
+    "/dcim/interface-templates/",
+    "/dcim/interface-vdc-assignments/",
+    "/dcim/module-bay-templates/",
+    "/dcim/power-outlet-templates/",
+    "/dcim/power-port-templates/",
+    "/dcim/rear-port-templates/",
+    "/extras/condition-presets/",
+    "/extras/contact-associations/",
+    "/extras/content-types/",
+    "/extras/custom-field-choices/",
+    "/extras/dynamic-group-memberships/",
+    "/extras/file-proxies/",
+    "/extras/image-attachments/",
+    "/extras/job-logs/",
+    "/extras/job-queue-assignments/",
+    "/extras/metadata-choices/",
+    "/extras/secrets-groups-associations/",
+    "/extras/user-saved-view-associations/",
+    "/ipam/prefix-location-assignments/",
+    "/ipam/vlan-location-assignments/",
+    "/ipam/vrf-device-assignments/",
+    "/ipam/vrf-prefix-assignments/",
+    "/load-balancers/load-balancer-pool-member-certificate-profile-assignments/",
+    "/load-balancers/virtual-server-certificate-profile-assignments/",
+    "/users/config/",
+    "/users/groups/",
+    "/users/permissions/",
+    "/users/users/",
+    "/vpn/vpn-profile-phase-1-policy-assignments/",
+    "/vpn/vpn-profile-phase-2-policy-assignments/",
+    "/wireless/controller-managed-device-group-radio-profile-assignments/",
+    "/wireless/controller-managed-device-group-wireless-network-assignments/",
+)
+
 # A sweep that finds fewer paths than this is scanning the wrong thing, whatever it reports.
 MIN_CORE_LIST_VIEWS = 100
 
@@ -33,8 +85,8 @@ def core_list_view_paths(api):
 
     The suite cannot call `apps.get_models()` (it does not import Django), so the REST API root is used
     instead. `GET /api/` lists the apps, `GET /api/<app>/` lists each model's endpoint, and the UI list
-    path is the API path without its `/api` prefix. Models without a list view (through tables,
-    component templates) return 404 in the UI, and the caller skips them.
+    path is the API path without its `/api` prefix, or its entry in `UI_LIST_PATHS`. Endpoints in
+    `NO_UI_LIST_VIEW` are left out.
     """
     paths = set()
     for app_name, app_url in api.get("/api/").json().items():
@@ -47,8 +99,9 @@ def core_list_view_paths(api):
             if not isinstance(endpoint_url, str):
                 continue
             _, _, api_path = endpoint_url.partition("/api/")
-            if api_path:
-                paths.add(f"/{api_path}")
+            if not api_path or f"/{api_path}" in NO_UI_LIST_VIEW:
+                continue
+            paths.add(UI_LIST_PATHS.get(f"/{api_path}", f"/{api_path}"))
     return sorted(paths)
 
 
@@ -69,8 +122,13 @@ class AccessibilityTestCase:
         failures = []
         for path in core_list_view_paths(api):
             # The tree views redirect to `?max_depth=`. `navigate_with_response` returns the response after the
-            # redirect, so their status here is 200, not 302. Any other status is not a page to scan.
-            if AnyListPage(auth_page, base_url, path).navigate_with_response().status != 200:
+            # redirect, so their status here is 200, not 302.
+            status = AnyListPage(auth_page, base_url, path).navigate_with_response().status
+            if status != 200:
+                failures.append(
+                    f"{path} returned {status}. If the model has no list view, add its endpoint to NO_UI_LIST_VIEW; "
+                    "if the list view is at another path, add it to UI_LIST_PATHS."
+                )
                 continue
             scanned.append(path)
             try:
@@ -82,7 +140,9 @@ class AccessibilityTestCase:
         assert len(scanned) > MIN_CORE_LIST_VIEWS, (
             f"Expected more than {MIN_CORE_LIST_VIEWS} core list views, scanned {len(scanned)}"
         )
-        assert not failures, f"{len(failures)} of {len(scanned)} list views have violations:\n" + "\n".join(failures)
+        assert not failures, f"{len(failures)} problem(s) across {len(scanned)} scanned list views:\n" + "\n".join(
+            failures
+        )
 
     def test_object_list_view(self, auth_page, base_url, created_location_tree):
         """An object list, with a row that has the tree caret and the descendants link, has no violations."""
