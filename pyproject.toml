@@ -306,6 +306,7 @@ testpaths = ["nautobot/*/tests/integration"]
 python_classes = ["Test*", "*TestCase"]
 markers = [
     "behavioral: verifies application output correctness, not just page structure",
+    "slow: takes minutes on its own (a scan of every core list view); deselect with -m 'not slow'",
 ]
 
 [tool.djlint]
