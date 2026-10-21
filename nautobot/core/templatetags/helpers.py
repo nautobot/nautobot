@@ -14,12 +14,13 @@ from django.contrib.staticfiles.finders import find
 from django.db.models import Model
 from django.db.models.manager import BaseManager
 from django.db.models.query import QuerySet
+from django.template.defaultfilters import stringfilter
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
-from django.utils.html import format_html, format_html_join, strip_tags
-from django.utils.safestring import mark_safe
-from django.utils.text import slugify as django_slugify
+from django.utils.html import escape, format_html, format_html_join, strip_tags
+from django.utils.safestring import mark_safe, SafeData
+from django.utils.text import normalize_newlines, slugify as django_slugify
 from django.utils.translation import gettext as _
 from django_jinja import library
 from jinja2.exceptions import SecurityError
@@ -146,6 +147,29 @@ def pre_tag(value):
     if value is not None:
         return format_html("<pre>{}</pre>", value)
     return HTML_NONE
+
+
+@register.filter(is_safe=True, needs_autoescape=True)
+@stringfilter
+def linebreaksbr_exclude_pre(value, autoescape=True):
+    """Convert newlines to `<br>` like Django's `linebreaksbr`, excluding newlines inside `<pre>` blocks.
+
+    Syntax highlighting of a `<pre><code>` block reads only its text content, so a `<br>` there is discarded
+    and the block collapses onto one line. Newlines inside `<pre>` already render as line breaks.
+
+    Example:
+        >>> linebreaksbr_exclude_pre(mark_safe("a\\nb<pre>{\\n}</pre>"))
+        'a<br>b<pre>{\\n}</pre>'
+    """
+    autoescape = autoescape and not isinstance(value, SafeData)
+    value = normalize_newlines(value)
+    if autoescape:
+        value = escape(value)
+    # re.split() with a capturing group puts the `<pre>` blocks at the odd indices
+    parts = re.split(r"(<pre\b.*?</pre>)", value, flags=re.DOTALL | re.IGNORECASE)
+    return mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, value was escaped above unless already safe
+        "".join(part if index % 2 else part.replace("\n", "<br>") for index, part in enumerate(parts))
+    )
 
 
 @library.filter()
