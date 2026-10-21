@@ -9,7 +9,6 @@ scan of one model, which is why `test_core_list_views` scans every core list vie
 from playwright.sync_api import expect
 import pytest
 
-from nautobot.core.tests.integration.pages.any_list_page import AnyListPage
 from nautobot.core.tests.integration.pages.home_page import HomePage
 from nautobot.core.tests.integration.pages.login_page import LoginPage
 from nautobot.core.tests.integration.pages.search_results_page import SearchResultsPage
@@ -121,9 +120,9 @@ class AccessibilityTestCase:
         scanned = []
         failures = []
         for path in core_list_view_paths(api):
-            # The tree views redirect to `?max_depth=`. `navigate_with_response` returns the response after the
-            # redirect, so their status here is 200, not 302.
-            status = AnyListPage(auth_page, base_url, path).navigate_with_response().status
+            # The tree views redirect to `?max_depth=`. `goto` returns the response after the redirect, so their
+            # status here is 200, not 302. The load event `goto` waits for is where the server-rendered table is.
+            status = auth_page.goto(path).status
             if status != 200:
                 failures.append(
                     f"{path} returned {status}. If the model has no list view, add its endpoint to NO_UI_LIST_VIEW; "
