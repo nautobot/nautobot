@@ -46,6 +46,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ScheduledJobStateChoices,
 )
+from nautobot.extras.conditions.forms import messages_for_fields_not_offered
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
     ApprovalWorkflow,
@@ -925,6 +926,21 @@ class JobClassDetailSerializer(JobClassSerializer):
     result = JobResultSerializer(required=False)
 
 
+def _reject_fields_not_offered(serializer, attrs):
+    """Reject a condition whose field cannot be referenced in a condition for the content types.
+
+    On a `PATCH`, the conditions or the content types the request leaves out come from the object.
+    """
+    conditions = attrs.get("conditions", getattr(serializer.instance, "conditions", None))
+    if "content_types" in attrs:
+        content_types = attrs["content_types"]
+    else:
+        content_types = serializer.instance.content_types.all() if serializer.instance is not None else None
+    messages = messages_for_fields_not_offered(conditions, content_types)
+    if messages:
+        raise serializers.ValidationError({"conditions": messages})
+
+
 class JobHookSerializer(NautobotModelSerializer):
     content_types = ContentTypeField(
         queryset=ChangeLoggedModelsQuery().as_queryset(),
@@ -937,21 +953,9 @@ class JobHookSerializer(NautobotModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
-        validated_attrs = super().validate(attrs)
-
-        conflicts = JobHook.check_for_conflicts(
-            instance=self.instance,
-            content_types=attrs.get("content_types"),
-            job=attrs.get("job"),
-            type_create=attrs.get("type_create"),
-            type_update=attrs.get("type_update"),
-            type_delete=attrs.get("type_delete"),
-        )
-
-        if conflicts:
-            raise serializers.ValidationError(conflicts)
-
-        return validated_attrs
+        attrs = super().validate(attrs)
+        _reject_fields_not_offered(self, attrs)
+        return attrs
 
 
 class JobCreationSerializer(BaseModelSerializer):
@@ -1384,21 +1388,9 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         fields = "__all__"
 
     def validate(self, attrs):
-        validated_attrs = super().validate(attrs)
-
-        conflicts = Webhook.check_for_conflicts(
-            instance=self.instance,
-            content_types=attrs.get("content_types"),
-            payload_url=attrs.get("payload_url"),
-            type_create=attrs.get("type_create"),
-            type_update=attrs.get("type_update"),
-            type_delete=attrs.get("type_delete"),
-        )
-
-        if conflicts:
-            raise serializers.ValidationError(conflicts)
-
-        return validated_attrs
+        attrs = super().validate(attrs)
+        _reject_fields_not_offered(self, attrs)
+        return attrs
 
 
 #

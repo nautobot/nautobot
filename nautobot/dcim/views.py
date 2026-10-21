@@ -1319,11 +1319,17 @@ class ManufacturerUIViewSet(NautobotUIViewSet):
 class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
     """
     Custom panel for DeviceType that renders front_image and rear_image
-    as image previews with links, and falls back to normal rendering for other fields.
+    as image previews with links, renders depth and weight together with their units,
+    and falls back to normal rendering for other fields.
     """
 
     def render_value(self, key, value, context):
         obj = get_obj_from_context(context, self.context_object_key)
+
+        if key in ["depth", "weight"]:
+            if value is None:
+                return helpers.HTML_NONE
+            return format_html("{} {}", value, getattr(obj, f"get_{key}_unit_display")())
 
         if key in ["front_image", "rear_image"]:
             image = getattr(obj, key, None)
@@ -1382,6 +1388,7 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
+                exclude_fields=["depth_unit", "weight_unit"],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -1845,10 +1852,14 @@ class DeviceTypeImportView(generic.ObjectImportView):
 
 
 class ModuleTypeFieldsPanel(object_detail.ObjectFieldsPanel):
-    """Custom panel for ModuleType that renders front_image and rear_image as image previews."""
+    """Custom panel for ModuleType that renders front_image and rear_image as image previews and weight with unit."""
 
     def render_value(self, key, value, context):
         obj = get_obj_from_context(context, self.context_object_key)
+        if key == "weight":
+            if value is None:
+                return helpers.HTML_NONE
+            return format_html("{} {}", value, obj.get_weight_unit_display())
         if key in ["front_image", "rear_image"]:
             image = getattr(obj, key, None)
             if image:
@@ -1927,7 +1938,7 @@ class ModuleTypeUIViewSet(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
-                exclude_fields=["front_image", "rear_image"],
+                exclude_fields=["front_image", "rear_image", "weight_unit"],
             ),
             ModuleTypeFieldsPanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -2867,6 +2878,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     label="Dynamic Groups",
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
+                    required_permissions=["extras.view_dynamicgroup"],
+                    hide_if_empty=True,
                     panels=(
                         object_detail.DynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(

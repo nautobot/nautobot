@@ -925,6 +925,10 @@ PYTHON_LINT_TARGETS = ["development/", "examples/", "nautobot/", "scripts/", "ta
 )
 def pylint(context, jobs=1, recursive=False, target=None, verbose=False):
     """Perform static analysis of Nautobot code."""
+    # The Playwright test code imports pytest and playwright, which only the optional playwright group installs.
+    if run_command(context, 'python -c "import playwright, pytest"', warn=True, hide=True).failed:
+        raise Exit("pylint needs pytest and playwright. Install them with `poetry install --with playwright`.")
+
     command = "pylint "
     if verbose:
         command += "--verbose "
@@ -1062,10 +1066,10 @@ def markdownlint(context, fix=False):
     if fix:
         # Disable md044 (proper-names) only while fixing: its fixer over-applies
         # proper-name capitalization to URLs, link/image targets, icons, etc.
-        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
+        command = "pymarkdown --disable-rules md044 fix --recurse changes examples nautobot/docs *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
-    command = "pymarkdown scan --recurse nautobot/docs examples *.md"
+    command = "pymarkdown scan --recurse changes examples nautobot/docs *.md"
     run_command(context, command)
 
 

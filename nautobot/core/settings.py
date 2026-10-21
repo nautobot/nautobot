@@ -16,6 +16,7 @@ from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+    REGEX_TIMEOUT_DEFAULT as _REGEX_TIMEOUT_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
@@ -51,31 +52,36 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #
 
 # Rate Limiting Settings
-NAUTOBOT_REST_RATE_LIMITING_BUDGET = int(os.getenv("NAUTOBOT_REST_RATE_LIMITING_BUDGET", "1000"))
-NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS = int(os.getenv("NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS", "60"))
+NAUTOBOT_RATE_LIMITING_REST_BUDGET = int(os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET", "1000"))
+NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS = int(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS", "60")
+)
 
 # REST Rate Limiting Complexity Cost Settings
-NAUTOBOT_REST_RATE_LIMITING_MODE = str(os.getenv("NAUTOBOT_REST_RATE_LIMITING_MODE", "off"))
-NAUTOBOT_REST_RATE_LIMITING_READ_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_READ_COST", "1.0"))
-NAUTOBOT_REST_RATE_LIMITING_WRITE_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_WRITE_COST", "3.0"))
-NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST = float(
-    os.getenv("NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST", "3.0")
+NAUTOBOT_RATE_LIMITING_REST_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_REST_MODE", "off"))
+NAUTOBOT_RATE_LIMITING_REST_READ_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_READ_COST", "1"))
+NAUTOBOT_RATE_LIMITING_REST_WRITE_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_WRITE_COST", "3"))
+NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST", "3")
 )
-NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST = float(
-    os.getenv("NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST", "3.0")
+NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST", "3")
 )
-NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST", "3.0"))
-NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL = float(
-    os.getenv("NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL", "1.0")
+NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST", "3"))
+NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL", "1")
 )
-NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER = float(
-    os.getenv("NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER", "3.0")
+NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER", "3")
 )
-NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER", "3.0"))
+NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER", "3"))
 
 # GraphQL Rate Limiting Complexity Cost Settings
-NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE = str(os.getenv("NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE", "off"))
+NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE", "off"))
 
+NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = os.getenv(
+    "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION", ""
+)
 
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
@@ -248,6 +254,15 @@ PLUGINS_CONFIG = {}
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Must a device or virtual machine's primary IP address be assigned to one of its interfaces? Default True
+if (
+    "NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT" in os.environ
+    and os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"] != ""
+):
+    PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT = is_truthy(
+        os.environ["NAUTOBOT_PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"]
+    )
+
 # Default filters for Prefix list view
 if (
     "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
@@ -289,7 +304,7 @@ if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEA
 if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
-# Request Metric Generation
+# Request Performance Measurements
 # Header contract defined here: https://www.w3.org/TR/server-timing/
 # Report the total server-side duration of each request in a W3C `Server-Timing` response header.
 REQUEST_TOTAL_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED", "False"))
@@ -531,6 +546,7 @@ SPECTACULAR_SETTINGS = {
         #   encountered multiple names for the same choice set
         "ApprovalWorkflowStateChoices": "nautobot.extras.choices.ApprovalWorkflowStateChoices",
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
+        "RackDimensionUnitChoices": "nautobot.dcim.choices.RackDimensionUnitChoices",
         # These choice enums need to be overridden because they get assigned to the `protocol` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
@@ -733,7 +749,7 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
-    "nautobot.core.middleware.RequestMetricMiddleware",
+    "nautobot.core.middleware.RequestPerformanceMeasurementsMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "nautobot.core.middleware.ComplexityCostRateLimitingMiddleware",
@@ -1015,6 +1031,12 @@ CONSTANCE_CONFIG = {
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
         field_type=bool,
     ),
+    "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT": ConstanceConfigItem(
+        default=True,
+        help_text="Whether a primary IP address for a device, virtual machine, or virtual device context must be "
+        "assigned to one of its interfaces. If disabled, IP addresses not assigned to any interface may also be used.",
+        field_type=bool,
+    ),
     "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
         default=42,
         help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
@@ -1057,7 +1079,7 @@ CONSTANCE_CONFIG = {
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
-    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
@@ -1226,6 +1248,10 @@ CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseSchedul
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
+
+# Seconds allowed for a single evaluation of an operator-supplied regular expression against
+# user-supplied data, such as a custom field `validation_regex` or a data validation rule.
+REGEX_TIMEOUT = float(os.getenv("NAUTOBOT_REGEX_TIMEOUT", str(_REGEX_TIMEOUT_DEFAULT)))
 
 #
 # Custom branding (logo and title)

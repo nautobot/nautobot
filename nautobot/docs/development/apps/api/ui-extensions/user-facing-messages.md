@@ -17,11 +17,11 @@ The message level — `info`, `success`, `warning`, or `error` — corresponds t
 
 +/- 3.3.0 "Messages now render as toasts by default, instead of alerts"
 
-By default, a message is shown as a toast: a small notification in the top-right corner, overlaying the page, that dismisses itself after ten seconds. This default behavior is overridable via `extra_tags`, a space-separated keyword list, of which Nautobot recognizes the following:
+By default, a message is shown as a toast: a small notification in the top-right corner, overlaying the page, that dismisses itself after five seconds. This default behavior is overridable via `extra_tags`, a space-separated keyword list, of which Nautobot recognizes the following:
 
 | Tag              | Effect                                                                                     |
 |------------------|--------------------------------------------------------------------------------------------|
-| _(none)_         | Toast dismissed after ten seconds.                                                         |
+| _(none)_         | Toast dismissed after five seconds.                                                        |
 | `indefinite`     | Toast displayed until manually closed by a user.                                           |
 | `header_message` | Full-width alert at the top of the page, above the title, default behavior prior to 3.3.0. |
 

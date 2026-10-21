@@ -156,6 +156,22 @@ DEVICE_LINK = """
 </a>
 """
 
+DEVICETYPE_DEPTH = """
+{% if record.depth is not None %}
+    {{ record.depth }} {{ record.get_depth_unit_display }}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
+"""
+
+WEIGHT = """
+{% if record.weight is not None %}
+    {{ record.weight }} {{ record.get_weight_unit_display }}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
+"""
+
 # Interface Connections list: the A-side (origin) device/interface is blanked on all but the first
 # lane of a breakout group so the repeated trunk reads as one visually-merged block. `group_row` is
 # annotated by `InterfaceConnectionsListView.base_queryset()` (1 for the first lane of each origin);

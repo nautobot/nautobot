@@ -19,6 +19,9 @@ Devices installed in device bays can be nested across multiple levels; see [Devi
 
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
 
++++ 3.3.0
+    If the [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../../administration/configuration/settings.md#primary_ip_requires_interface_assignment) setting is disabled, an IP address that isn't assigned to any interface can also be designated as a device's primary IP, including when creating the device. Such a primary IP is retained if it is later assigned to and then removed from the device's interfaces. An IP address assigned to another device's interface -- but _not_ to any interface on this device -- still can't be used as this device's primary IP.
+
 +/- 2.0.0
     In Nautobot 1.x, it was not possible to delete an IPAddress or an Interface that was serving as the primary IP address (`primary_ip4`/`primary_ip6`) for a Device. As of Nautobot 2.0, this is now permitted; doing so will clear out the Device's corresponding primary IP value.
 

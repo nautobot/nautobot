@@ -7,7 +7,7 @@ import logging
 from django.conf import settings
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
-from nautobot.core.api.import_export import EXCLUDED_CSV_FIELDS, PRIORITY_CSV_FIELDS
+from nautobot.core.api.import_export import EXCLUDED_CSV_FIELDS, PRIORITY_CSV_FIELDS, selection_position
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 
@@ -158,13 +158,7 @@ class NautobotCSVRenderer(BaseRenderer):
         if field_order:
             # Order headers to match the explicit field selection; a header belongs to the earliest
             # selection entry it equals or nests under (e.g. `location__name` under `location`).
-            def selection_index(header):
-                for index, selected in enumerate(field_order):
-                    if header == selected or header.startswith(f"{selected}__"):
-                        return (index, header)
-                return (len(field_order), header)
-
-            headers.sort(key=selection_index)
+            headers.sort(key=lambda header: selection_position(header, field_order))
         else:
             # Coerce important fields, if present, to the front of the list. Walked back-to-front, each
             # insert going ahead of the last, so the result reads in `PRIORITY_CSV_FIELDS` order.

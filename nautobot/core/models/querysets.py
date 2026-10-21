@@ -7,6 +7,8 @@ from nautobot.core.models.sensitive_fields import (
     check_expression,
     check_lookup_path,
     get_sensitive_field_names,
+    NO_NARROWING,
+    non_sensitive_field_names,
     sensitive_field_alias,
     strict_sensitive_fields_enabled,
 )
@@ -87,22 +89,15 @@ class SensitiveFieldsQuerySetMixin:
             check_expression(self.model, expression, self._sensitive_fields_allowed)
 
     def _non_sensitive_field_names(self):
-        """Return this model's concrete field attnames minus any withheld sensitive fields, or None.
+        """Return this model's concrete field attnames minus any withheld sensitive fields, or `NO_NARROWING`.
 
         Used to give bare `values()`/`values_list()` a sane result on a model that declares sensitive
         fields: raising instead would make such a model unusable with a call that generic Nautobot code
-        makes routinely. Returns None when there is nothing to withhold, so that the overwhelmingly common
-        case passes through to Django untouched rather than having its field list rebuilt here.
-
-        Uses `attname` rather than `name` to match the keys Django's own bare `values()` produces, which
-        for a foreign key is `<name>_id` holding the raw key rather than `<name>` holding the instance.
+        makes routinely.
         """
         if not strict_sensitive_fields_enabled():
-            return None
-        withheld = get_sensitive_field_names(self.model) - self._sensitive_fields_allowed
-        if not withheld:
-            return None
-        return [field.attname for field in self.model._meta.concrete_fields if field.attname not in withheld]
+            return NO_NARROWING
+        return non_sensitive_field_names(self.model, self._sensitive_fields_allowed)
 
     def with_sensitive_fields(self, *field_names):
         """Return a queryset that will retrieve the named sensitive fields of this queryset's model.
@@ -142,7 +137,8 @@ class SensitiveFieldsQuerySetMixin:
 
     def values(self, *fields, **expressions):
         if not fields and not expressions:
-            fields = self._non_sensitive_field_names() or ()
+            narrowed = self._non_sensitive_field_names()
+            fields = () if narrowed is NO_NARROWING else tuple(narrowed)
         else:
             self._check_field_names(fields)
             self._check_expressions(expressions.values())
@@ -151,7 +147,8 @@ class SensitiveFieldsQuerySetMixin:
     def values_list(self, *fields, **kwargs):
         # `values_list()` reaches `Query.set_values()` without going through `values()`, so it needs its own check.
         if not fields:
-            fields = self._non_sensitive_field_names() or ()
+            narrowed = self._non_sensitive_field_names()
+            fields = () if narrowed is NO_NARROWING else tuple(narrowed)
         else:
             self._check_field_names(fields)
         return super().values_list(*fields, **kwargs)

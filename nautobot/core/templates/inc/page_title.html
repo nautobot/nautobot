@@ -11,6 +11,7 @@
     {% if copy_title %}
         <span class="d-flex gap-4">
             <span id="copy_title">{{ title }}</span>{% saved_view_title %}
+            {% include "buttons/favorite.html" %}
             <button type="button" class="btn btn-secondary align-self-end nb-btn-inline-hover" data-clipboard-text="{{ title }}">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
@@ -18,5 +19,6 @@
         </span>
     {% else %}
         {{ title }}{% saved_view_title %}
+        {% include "buttons/favorite.html" %}
     {% endif %}
 </h1>

@@ -3,7 +3,7 @@ import datetime
 import random
 from textwrap import dedent
 import types
-from unittest import TestCase as UnitTestTestCase
+from unittest import mock, TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -1186,6 +1186,25 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         self.client.credentials(HTTP_AUTHORIZATION="Token zzzzzzzzzzabcdef0123456789abcdef01234567")
         response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    def test_graphql_api_applies_graphene_middleware_setting(self):
+        """Validate that the REST API GraphQL view applies the middleware configured in `GRAPHENE["MIDDLEWARE"]`."""
+        resolved_field_names = []
+
+        class RecordingMiddleware:
+            def resolve(self, next_resolver, root, info, **kwargs):
+                resolved_field_names.append(info.field_name)
+                return next_resolver(root, info, **kwargs)
+
+        # `graphene_settings` is rebound (not mutated) when the GRAPHENE setting changes, so `override_settings` would
+        # not reach the reference already imported by the view module; patch the value that the view actually reads.
+        with mock.patch("nautobot.core.api.views.graphene_settings.MIDDLEWARE", (RecordingMiddleware,)):
+            response = self.clients[2].post(self.api_url, {"query": self.get_racks_query}, format="json")
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        names = [item["name"] for item in response.data["data"]["racks"]]
+        self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
+        self.assertIn("racks", resolved_field_names)
 
     def test_graphql_query_params(self):
         """Validate query parameters are available for a model."""

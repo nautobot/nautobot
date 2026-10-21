@@ -1,0 +1,1 @@
+Added a Playwright test asserting the Power Utilization panel is not rendered on a device without power components.

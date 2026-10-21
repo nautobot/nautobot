@@ -1,0 +1,1 @@
+Renamed the REST API OpenAPI schema component for the Rack `outer_unit` choices from `OuterUnitEnum` to `RackDimensionUnitChoices`, as the same choices now also apply to the Device Type `depth_unit` field.

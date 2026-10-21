@@ -75,10 +75,27 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
     timezone = TimeZoneFormField(required=False, help_text="Set your preferred timezone.", widget=StaticSelect2)
 
 
-class NavbarFavoritesAddForm(forms.Form):
-    link = forms.CharField()
-    name = forms.CharField()
-    tab_name = forms.CharField()
+class NavbarFavoritesAddForm(BootstrapMixin, forms.Form):
+    link = forms.CharField(label="Link")
+    name = forms.CharField(label="Name")
+    tab_name = forms.CharField(required=False)
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean(self):
+        super().clean()
+        name = self.cleaned_data.get("name")
+        link = self.cleaned_data.get("link")
+
+        if self.user and name is not None:
+            name_tab_pairs = {(item.get("name", ""), item.get("tab_name", "")) for item in self.user.navbar_favorites}
+            if (name, self.cleaned_data.get("tab_name", "")) in name_tab_pairs:
+                self.add_error("name", "A favorite with this name already exists.")
+
+        if self.user and link is not None and link in self.user.navbar_favorites_link_list:
+            self.add_error("link", "A favorite with this link already exists.")
 
 
 class NavbarFavoritesRemoveForm(forms.Form):

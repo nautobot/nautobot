@@ -1,9 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
-from nautobot.apps.models import BaseModel, extras_features, JSONArrayField, PrimaryModel, StatusField
-from nautobot.extras.models import RoleField
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseModel
+from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.generics import PrimaryModel
+from nautobot.extras.models import RoleField, StatusField
+from nautobot.extras.utils import extras_features
 from nautobot.vpn import choices
 
 

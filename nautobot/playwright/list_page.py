@@ -12,19 +12,21 @@ model:
 import re
 from urllib.parse import urlencode
 
-from playwright.sync_api import expect
+from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
 
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
 class ListPage(BasePage):
-    """Shared list-view behavior: navigation, table reads, and the filter drawer."""
+    """Shared list-view behavior."""
 
     LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
+    # The row selection checkbox; its value is the object's id.
+    _PK_CHECKBOX = "input[name='pk']"
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
     # rendered when a list has no results. Reference this constant, never inline it.
-    _DATA_ROWS = "table tbody tr:has(input[name='pk'])"
+    _DATA_ROWS = f"table tbody tr:has({_PK_CHECKBOX})"
 
     # The filter drawer and its dynamic-filter UI render identically on every list view.
     _FILTER_TOGGLE = "button#id__filterbtn"
@@ -41,6 +43,16 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
+    # The table-configuration drawer and its toolbar button. The drawer's id is derived
+    # from the table class name, so the selector finds the drawer by the form inside it.
+    _TABLE_CONFIG_TOGGLE = "button[title='Configure table']"
+    _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
+    _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
+    _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
+    # The bulk edit form lists the selected ids as hidden pk inputs.
+    _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
+    _BULK_EDIT_APPLY = "button[name='_apply']"
+    _JOB_RESULT_URL = re.compile(r"/extras/job-results/(?P<pk>[0-9a-f-]{36})/")
     # The per-row overview toggle.
     _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
     # Every overview fragment request, for routing and response waits.
@@ -99,6 +111,89 @@ class ListPage(BasePage):
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
 
+    def _column_header(self, label):
+        """Locator for the column header whose text is *label*."""
+        # Sortable headers add a visually-hidden sort instruction after the label.
+        text = re.compile(rf"^\s*{re.escape(label)}\s*(activate to .*)?$", re.DOTALL)
+        return self.page.locator("table thead th").filter(has_text=text)
+
+    def expect_column(self, label):
+        """Assert (auto-retrying) that exactly one column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(1)
+
+    def expect_no_column(self, label):
+        """Assert (auto-retrying) that no column in the table is headed *label*."""
+        expect(self._column_header(label)).to_have_count(0)
+
+    # -------------------------------------------------------------------------
+    # Table configuration drawer
+    # -------------------------------------------------------------------------
+
+    def open_table_config(self):
+        """Open the table-configuration drawer, if it is not already open.
+
+        Saving or resetting reloads the page with the drawer kept open, and clicking
+        the toolbar button again would close it, so the open state is checked first.
+        """
+        drawer = self.page.locator(f"{self._TABLE_CONFIG_DRAWER}.nb-drawer-open")
+        if drawer.count() == 0:
+            self.page.locator(self._TABLE_CONFIG_TOGGLE).click()
+        expect(drawer).to_have_count(1)
+
+    def toggle_table_column(self, column_label):
+        """Flip the checkbox for the column labeled *column_label* and save the table config.
+
+        Saving stores the choice in the user's config and reloads the page, keeping the
+        current query string, so a filtered list stays filtered.
+        """
+        self.open_table_config()
+        self.page.locator(self._TABLE_CONFIG_DRAWER).get_by_label(column_label, exact=True).click()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_SAVE)
+
+    def reset_table_columns(self):
+        """Restore the table's default columns with the drawer's Reset button.
+
+        Reset saves an empty column list, which the table treats as the defaults, and
+        reloads the page.
+        """
+        self.open_table_config()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_RESET)
+
+    # -------------------------------------------------------------------------
+    # Row selection and bulk edit
+    # -------------------------------------------------------------------------
+
+    @property
+    def _edit_selected(self):
+        """Selector for Edit Selected. The formaction includes the active filter, and it has no name."""
+        return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
+
+    def select_row(self, name):
+        """Check the pk checkbox of the data row whose link text is exactly *name*."""
+        row = self.page.locator(self._DATA_ROWS).filter(has=self.page.get_by_role("link", name=name, exact=True))
+        row.locator(self._PK_CHECKBOX).check()
+
+    def click_edit_selected(self):
+        """Click Edit Selected and wait for the bulk edit form to load."""
+        self._click_and_wait_for_navigation(self._edit_selected)
+
+    def expect_bulk_edit_count(self, count):
+        """Assert (auto-retrying) that the bulk edit form's heading states it edits *count* objects."""
+        expect(self.page.locator("h1", has_text=re.compile(rf"\bEditing {count} "))).to_have_count(1)
+
+    def get_bulk_edit_pks(self) -> list:
+        """IDs of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
+        return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
+
+    def apply_bulk_edit(self) -> str:
+        """Submit the form and return the job result ID once the redirect commits."""
+        self.page.locator(self._BULK_EDIT_APPLY).click()
+        try:
+            self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
+        except PlaywrightTimeoutError:
+            raise AssertionError(f"Apply did not redirect to a job result. Page is at {self.page.url}") from None
+        return self._JOB_RESULT_URL.search(self.page.url).group("pk")
+
     # -------------------------------------------------------------------------
     # Overview rows
     # -------------------------------------------------------------------------
@@ -135,11 +230,11 @@ class ListPage(BasePage):
         toggle = self.overview_toggle(index)
         row_id = self._overview_row_id(index)
         label = "Hide details for " if expanded else "Show details for "
-        icon = "minimize" if expanded else "maximize"
+        icon = "less" if expanded else "more"
         expect(toggle).to_have_attribute("aria-expanded", "true" if expanded else "false")
         expect(toggle).to_have_attribute("title", re.compile(f"^{label}"))
         expect(toggle.locator("span.visually-hidden")).to_have_text(re.compile(f"^{label}"))
-        expect(toggle.locator(f"span.mdi.mdi-window-{icon}")).to_have_count(1)
+        expect(toggle.locator(f"span.mdi.mdi-unfold-{icon}-horizontal")).to_have_count(1)
         expect(self.page.locator(f"#{row_id}")).to_have_count(1 if expanded else 0)
         if expanded:
             expect(toggle).to_have_attribute("aria-controls", row_id)

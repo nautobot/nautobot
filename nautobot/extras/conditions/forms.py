@@ -17,6 +17,7 @@ from django.core.exceptions import NON_FIELD_ERRORS
 from django.forms.utils import ErrorDict
 from django.urls import reverse
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.utils import add_blank_choice
 from nautobot.core.forms.widgets import (
@@ -29,6 +30,7 @@ from nautobot.core.forms.widgets import (
     StaticSelect2,
 )
 from nautobot.extras.choices import ConditionTypeChoices
+from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.conditions.operators import (
     DISPLAY_KEY,
     KIND_BOOLEAN,
@@ -202,8 +204,8 @@ def _condition_type_choices():
     )
 
 
-def _apply_bootstrap_styling(widget, placeholder=""):
-    """Give a widget the Bootstrap class and placeholder, which `BootstrapMixin` cannot reach here.
+def _apply_bootstrap_styling(widget):
+    """Give a widget the Bootstrap class, which `BootstrapMixin` cannot reach here.
 
     It dresses the fields a form declares, and a row's are built after it has run.
     """
@@ -211,9 +213,6 @@ def _apply_bootstrap_styling(widget, placeholder=""):
     if "form-control" not in classes:
         classes.append("form-control")
     widget.attrs["class"] = " ".join(classes)
-    # A select keeps the placeholder every other Nautobot select shows, which `initializeSelect2` sets.
-    if placeholder and not isinstance(widget, forms.Select):
-        widget.attrs.setdefault("placeholder", placeholder)
     return widget
 
 
@@ -242,7 +241,7 @@ def _mark_for_editor_script(widget, role, *, key=None, rebuild_index=None):
     return widget
 
 
-def _build_control(label, widget, *, placeholder=None):
+def _build_control(label, widget):
     """Build a form field around `widget`. A `CharField` throughout, since nothing here validates.
 
     The `help_text` field for the parameter was intentionally omitted.
@@ -252,7 +251,7 @@ def _build_control(label, widget, *, placeholder=None):
     return forms.CharField(
         label=label,
         required=False,
-        widget=_apply_bootstrap_styling(widget, label if placeholder is None else placeholder),
+        widget=_apply_bootstrap_styling(widget),
     )
 
 
@@ -335,8 +334,10 @@ def _without_stale_values(data, prefix, triggered_by):
 def _stored_row_as_initial(row, addressable):
     """A stored row as a form's initial values.
 
-    A dotted field path becomes the field select and the sub-field select that edit it, unless the
-    whole path is a field of its own in `addressable`, as `custom_fields.site_code` is.
+    A field path is split into the field select and the sub-field select only when `addressable` offers
+    both parts, as it does `status` and `name`. Otherwise the path stays whole. A whole path such as
+    `custom_fields.site_code` is a field of its own. Any other whole path cannot be shown, so the field
+    select shows `—` for it.
     """
     if not row:
         return {}
@@ -356,25 +357,35 @@ def _stored_row_as_initial(row, addressable):
     values = row.get("values")
     if not isinstance(values, dict):
         values = {}
-    field_names = {entry["name"] for entry in addressable}
+    subfield_names_by_field = {
+        entry["name"]: {sub["name"] for sub in entry.get("subfields", ())} for entry in addressable
+    }
     for parameter in preset.parameters:
         value = values.get(parameter.name)
-        splits_into_field_and_subfield = isinstance(value, str) and "." in value and value not in field_names
+        field, _, subfield = value.partition(".") if isinstance(value, str) else ("", "", "")
+        splits_into_field_and_subfield = (
+            isinstance(value, str)
+            and value not in subfield_names_by_field
+            and subfield in subfield_names_by_field.get(field, ())
+        )
         if parameter.kind == PARAM_KIND_FIELD and splits_into_field_and_subfield:
-            initial[parameter.name], _, initial[_subfield_name(parameter.name)] = value.partition(".")
+            initial[parameter.name], initial[_subfield_name(parameter.name)] = field, subfield
         else:
             initial[parameter.name] = value
     return initial
 
 
-def errors_by_row_and_control(rows):
+def errors_by_row_and_control(rows, addressable=()):
     """What a save would refuse about the stored condition rows, keyed by row and then by the control.
 
-    The same complaints `validate_conditions` reports, so the editor cannot reach a different verdict.
+    The complaints `validate_conditions` reports, so the editor cannot reach a different verdict. With
+    `addressable`, also a field that cannot be referenced in a condition for the chosen content types, for a row
+    with no other complaint.
     A complaint naming no parameter is the row's own, and is keyed by `NON_FIELD_ERRORS`.
 
     Args:
         rows (list): The `conditions` field as stored, a list of condition row mappings.
+        addressable (list): `addressable_fields` for the content types a save would watch.
     """
     errors = {}
     for index, error in row_errors(rows).items():
@@ -384,7 +395,50 @@ def errors_by_row_and_control(rows):
             control = params.get("parameter") or params.get("key") or NON_FIELD_ERRORS
             by_control.setdefault(control, []).extend(message.messages)
         errors[index] = by_control
+    for index, row in enumerate(rows if addressable else ()):
+        if index in errors:
+            continue
+        not_offered = ConditionRowForm(index=index, addressable=addressable, row=row).field_path_not_offered
+        if not_offered is not None:
+            name, path = not_offered
+            errors[index] = {
+                name: [
+                    f"Parameter `{name}` names `{path}`, "
+                    "which is not a field that can be referenced in a condition for the chosen content types."
+                ]
+            }
     return errors
+
+
+def messages_for_fields_not_offered(conditions, content_types):
+    """The message for each condition whose field cannot be referenced for `content_types`, shown as `—`.
+
+    The content types are passed in, because a save assigns them only after the object is saved. Conditions
+    with a fault of their own get nothing here, since `validate_conditions` reports them in its own words.
+    """
+    if not isinstance(conditions, list) or not conditions or not content_types or row_errors(conditions):
+        return []
+    models = [content_type.model_class() for content_type in content_types]
+    try:
+        addressable = addressable_fields(*[model for model in models if model is not None])
+    except SerializerNotFound:
+        return []
+    return [
+        f"Condition {index + 1}: Preset `{conditions[index].get('preset')}`. {message}"
+        for index, by_control in errors_by_row_and_control(conditions, addressable).items()
+        for messages in by_control.values()
+        for message in messages
+    ]
+
+
+def reject_fields_not_offered(form):
+    """Add to the webhook or job hook `form` a complaint about each condition whose field cannot be referenced.
+
+    The content types are the form's own.
+    """
+    conditions = form.cleaned_data.get("conditions")
+    for message in messages_for_fields_not_offered(conditions, form.cleaned_data.get("content_types")):
+        form.add_error("conditions", message)
 
 
 class ConditionRowForm(forms.Form):
@@ -426,7 +480,6 @@ class ConditionRowForm(forms.Form):
         self.fields["negate"] = _build_control(
             "Negate",
             _mark_for_editor_script(StaticSelect2(choices=NEGATION_CHOICES), ROLE_NEGATE),
-            placeholder="",
         )
         self._add_chosen_controls(self._current_value("type"))
         chosen = set(self._chosen_control_names)
@@ -434,6 +487,18 @@ class ConditionRowForm(forms.Form):
             # Only a parameter control carries its own complaint. One about the type, or about a control
             # the row no longer brings, has nowhere to sit, so the row says it on their behalf.
             self.add_error(name if name in chosen else NON_FIELD_ERRORS, messages)
+
+    @property
+    def field_path_not_offered(self):
+        """The field parameter and the path it holds when its select can only show `—` for that path, else None."""
+        preset = get_condition_preset(self._current_value("type"))
+        named = _parameter_of_kind(preset, PARAM_KIND_FIELD) if preset is not None else None
+        if named is None or named.name not in self.fields or not self.addressable:
+            return None
+        path = self._current_value(named.name)
+        if not isinstance(path, str) or not path or path in dict(self.fields[named.name].widget.choices):
+            return None
+        return named.name, path
 
     @property
     def parameter_controls(self):
@@ -463,7 +528,6 @@ class ConditionRowForm(forms.Form):
             self.fields["source"] = _build_control(
                 "Expression",
                 _mark_for_editor_script(forms.TextInput(), ROLE_SOURCE),
-                placeholder="Jinja2 expression",
             )
             return
         preset = get_condition_preset(chosen)
@@ -495,7 +559,6 @@ class ConditionRowForm(forms.Form):
             self.fields[parameter.name] = _build_control(
                 parameter.label,
                 _mark_for_editor_script(closed, ROLE_PATH, key=parameter.name),
-                placeholder="",
             )
             return
 
@@ -515,7 +578,6 @@ class ConditionRowForm(forms.Form):
                     key=parameter.name,
                     rebuild_index=self.index,
                 ),
-                placeholder="",
             )
             # So the rendered select marks the one it is sending as chosen, rather than leaving the
             # browser to fall back to the first and the two to disagree about what the row holds.
