@@ -2171,6 +2171,19 @@ properties:
       "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
     type: "boolean"
     version_added: "3.3.0"
+  REST_API_MAX_DEPTH:
+    default: 2
+    description: >-
+      Maximum permitted value of the `depth` REST API query parameter (0-10).
+    details: |-
+      !!! warning
+          Higher values may permit extremely time-consuming and resource-intensive queries to be performed.
+    environment_variable: "NAUTOBOT_REST_API_MAX_DEPTH"
+    is_constance_config: true
+    see_also:
+      "REST API Depth Query Parameter": "../../platform-functionality/rest-api/overview.md#depth-query-parameter"
+    type: "integer"
+    version_added: "3.3.0"
   SANITIZER_PATTERNS:
     default: []
     default_literal: |-
