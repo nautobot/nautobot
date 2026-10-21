@@ -23,6 +23,8 @@ from nautobot.core.api import (
     SerializedPKRelatedField,
     WritableNestedSerializer,
 )
+from nautobot.core.constants import REST_API_MAX_DEPTH_DEFAULT
+from nautobot.core.utils.config import get_settings_or_config
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,10 @@ class NautobotAutoSchema(AutoSchema):
             "_delete": "bulk_destroy",
         }
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._max_depth = get_settings_or_config("REST_API_MAX_DEPTH", fallback=REST_API_MAX_DEPTH_DEFAULT)
 
     @property
     def is_bulk_action(self):
@@ -134,7 +140,7 @@ class NautobotAutoSchema(AutoSchema):
                             "name": "depth",
                             "required": False,
                             "description": "Serializer Depth",
-                            "schema": {"type": "integer", "minimum": 0, "maximum": 10, "default": 1},
+                            "schema": {"type": "integer", "minimum": 0, "maximum": self._max_depth, "default": 1},
                         }
                     )
                 if not any(param["name"] == "exclude_m2m" for param in operation["parameters"]):
@@ -144,7 +150,7 @@ class NautobotAutoSchema(AutoSchema):
                             "name": "exclude_m2m",
                             "required": False,
                             "description": "Exclude many-to-many fields from the response",
-                            "schema": {"type": "boolean"},
+                            "schema": {"type": "boolean", "default": True},
                         }
                     )
                 # TODO: add "include" parameter to the schema where relevant - nautobot/nautobot#685
