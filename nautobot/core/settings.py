@@ -84,6 +84,13 @@ if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"]
 if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
     BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
 
+# Many-to-many association model sides to exclude from automatic change logging, as a JSON object.
+if (
+    "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS" in os.environ
+    and os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"] != ""
+):
+    CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = json.loads(os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"])
+
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])

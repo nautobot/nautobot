@@ -562,6 +562,10 @@ properties:
 
       !!! warning
           Excluded objects receive no change record for association changes, so no [webhooks](../../platform-functionality/webhook.md), [job hooks](../../platform-functionality/jobs/jobhook.md), or [events](../../platform-functionality/events.md) fire for them either.
+
+      When set via the `NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` environment variable, the value must be a JSON
+      object, for example `{"ipam.vrfprefixassignment": ["prefix"]}`.
+    environment_variable: "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"
     is_constance_config: true
     type: "object"
     version_added: "3.2.8"
