@@ -1,10 +1,9 @@
 """axe-core accessibility scans for Playwright tests.
 
 `assert_no_accessibility_violations(page)` loads axe-core into the page that the test has open,
-runs the WCAG rules that Nautobot checks, and fails with the violations. The loader reads the
-axe-core version `nautobot/ui/package-lock.json` pins and verifies what it downloads against the
-lockfile, without Django: the Playwright suite is black-box and does not import `nautobot.core`,
-whose `__init__` imports the Celery app, which reads Django settings.
+runs the WCAG rules that Nautobot checks, and fails with the violations. The loader uses the
+axe-core version that `nautobot/ui/package-lock.json` pins and verifies a download against the
+lockfile's digest.
 """
 
 import base64
@@ -19,7 +18,7 @@ import tempfile
 
 import requests
 
-# `nautobot/`, the package directory, found from this file so that Django settings are not needed.
+# `nautobot/`, the package directory.
 NAUTOBOT_DIR = Path(__file__).resolve().parent.parent
 
 AXE_CORE_PATH = NAUTOBOT_DIR / "ui" / "node_modules" / "axe-core" / "axe.min.js"
