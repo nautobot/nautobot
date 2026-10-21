@@ -25,7 +25,7 @@ import os
 
 import pytest
 
-from nautobot.playwright.axe import get_axe_core_source
+from nautobot.playwright.accessibility import get_axe_core_source
 from nautobot.playwright.helpers import log_in, LoginError, unique_name
 
 PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
@@ -284,6 +284,7 @@ def axe_core_on_load(context):
     """Load axe-core into every page that this test's browser context opens from here on.
 
     Use it in a test that scans many pages. `run_axe` loads axe-core itself when a page lacks it, but the
-    trace records the 570 KB source with every call that passes it. An init script is recorded once.
+    Playwright trace (`--tracing=retain-on-failure` in CI) records the 570 KB source with every call that
+    passes it. An init script is recorded once.
     """
     context.add_init_script(get_axe_core_source())

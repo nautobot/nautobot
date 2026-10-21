@@ -51,7 +51,8 @@ MAX_NODES_PER_VIOLATION = 5
 
 _AXE_RUN_SCRIPT = """
 ([context, exclude, tags, disabledRules]) => {
-    /* `include`/`exclude` take arrays of selector arrays, so pass bare `document` rather than including it. */
+    /* `axe.run` takes either a context object with `include` and `exclude` lists of selector arrays, or a node.
+       An empty context object is an error, so `document` is passed when there is nothing to include or exclude. */
     const axeContext = {};
     if (context) { axeContext.include = [[context]]; }
     if (exclude && exclude.length) { axeContext.exclude = exclude.map((selector) => [selector]); }
@@ -79,6 +80,7 @@ def _extract_axe_core(tarball, origin):
 
 
 def _write_axe_core_cache(tarball, cache_path):
+    """Save the tarball for the next run. Best effort: the cache only makes the next run faster, so a failed write is not an error."""
     try:
         file_descriptor, partial_path = tempfile.mkstemp(dir=cache_path.parent, prefix=f"{cache_path.name}.")
     except OSError:
@@ -196,7 +198,14 @@ def run_axe(
 
 
 def format_violations(violations):
-    """Return one block of text per violation: impact, rule, help text, help URL, and the first offending selectors."""
+    """Return one block of text per violation: impact, rule, help text, help URL, and the first offending selectors.
+
+    For example:
+
+          [serious] image-alt: Images must have alternative text
+            https://dequeuniversity.com/rules/axe/4.12/image-alt?application=axeAPI
+            at body > img
+    """
     lines = []
     for violation in violations:
         lines.append(f"  [{violation['impact']}] {violation['id']}: {violation['help']}")

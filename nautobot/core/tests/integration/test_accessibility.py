@@ -16,7 +16,7 @@ from nautobot.core.tests.integration.pages.search_results_page import SearchResu
 from nautobot.dcim.tests.integration.pages.location_create_page import LocationCreatePage
 from nautobot.dcim.tests.integration.pages.location_detail_page import LocationDetailPage
 from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
-from nautobot.playwright.axe import AccessibilityViolations, assert_no_accessibility_violations
+from nautobot.playwright.accessibility import AccessibilityViolations, assert_no_accessibility_violations
 
 # App list views are under this prefix (their routes are named `plugins:...`). The sweep covers core views only.
 APPS_API_PREFIX = "/api/plugins/"
@@ -194,6 +194,7 @@ class AccessibilityTestCase:
         home = HomePage(auth_page, base_url)
         home.navigate()
         home.expect_loaded()
+        # An image with no `alt` attribute fails axe's `image-alt` rule.
         auth_page.evaluate(
             "document.body.insertAdjacentHTML('beforeend', '<img src=\"/static/img/nautobot_logo.svg\">')"
         )
