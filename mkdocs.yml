@@ -380,6 +380,8 @@ nav:
               - "user-guide/administration/configuration/index.md"
               - Settings: "user-guide/administration/configuration/settings.md"
               - Redis: "user-guide/administration/configuration/redis.md"
+              - Rate Limiting: "user-guide/administration/configuration/rate-limiting.md"
+              - Request Performance Measurements: "user-guide/administration/configuration/request-performance-measurements.md"
               - Time Zones: "user-guide/administration/configuration/time-zones.md"
               - External Authentication:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"

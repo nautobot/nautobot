@@ -34,7 +34,7 @@ For more information see the [`django-prometheus`](https://github.com/korfuri/dj
 
 +++ 2.1.5
 
-Metrics by default do not require authentication to view. Authentication can be toggled with the `METRICS_AUTHENTICATION` configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
+Metrics by default do not require authentication to view. Authentication can be toggled with the [`METRICS_AUTHENTICATED`](../configuration/settings.md#metrics_authenticated) configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
 ### Sample Telegraf configuration
 
@@ -78,6 +78,32 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to do perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
 
 For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance. For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
+
+## Rate Limiting Metrics
+
++++ 3.3.0
+
+When Nautobot [rate-limiting](../configuration/rate-limiting.md) features are enabled, these metrics will be tracked.
+
+| Name                                          | Description                                                               | Type      |
+|-----------------------------------------------|---------------------------------------------------------------------------|-----------|
+| `nautobot_rate_limiting_rest_complexity_cost`       | Cumulative complexity cost charged for rate limiting                      | Counter   |
+| `nautobot_rate_limiting_rest_backend_errors`  | Budget charge attempts that could not be completed against the Redis backend (incl. exception type label) | Counter |
+
+Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
+
+## Request Performance Measurements
+
++++ 3.3.0
+
+When Nautobot [request performance measurements](../configuration/request-performance-measurements.md) are enabled, these metrics will be tracked.
+
+| Name                                          | Description                                                               | Type      |
+|-----------------------------------------------|---------------------------------------------------------------------------|-----------|
+| `nautobot_request_total_duration_in_seconds`  | Total wall clock duration of requests                                     | Histogram |
+| `nautobot_request_db_duration_in_seconds`     | Total time executing database queries during requests                     | Histogram |
+
+Each metric is labeled by hashing the user's provided token. When a token cannot be found `Anonymous` is used as a label.
 
 ## Multi Processing Notes
 
@@ -177,69 +203,3 @@ Relevant documentation:
 
 - [Prometheus client library multi-process mode](https://prometheus.github.io/client_python/multiprocess/)
 - [Django Prometheus multi-process mode documentation](https://github.com/django-commons/django-prometheus/blob/master/documentation/exports.md)
-
-## Request Metrics
-
-+++ 3.3.0
-
-Request metrics were added in 3.3.0 to allow general benchmarking of a request.
-
-To enable these settings use these environment variables.
-
-| Environment Variable                           | Description                                                     |
-|------------------------------------------------|-----------------------------------------------------------------|
-| `NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED` | The total time spent processing each request.                   |
-| `NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED`    | The time spent performing database operations for each request. |
-
-When enabled, the header of an API response will return a `Server-Timing` property.
-These standards are dervied from the W3C specification here - [https://www.w3.org/TR/server-timing/](https://www.w3.org/TR/server-timing/)
-
-The `Server-Timing` header property is a comma-delimited(,) list of metrics.
-Each metric is a semi-colon(;) delimited set of attributes.
-The metric attributes are
-
-```bash
-name;dur=00:00:00;desc=DESCRIPTION
-```
-
-Example
-
-```bash
------ command -----------------------------------------------------------------
-curl --verbose --output /dev/null \
-    --header 'Accept: application/json' \
-    --header 'Authorization: Token REDACTED' \
-    'http://localhost:8080/api/extras/statuses/?limit=1'
-
------ output ------------------------------------------------------------------
-* Host localhost:8080 was resolved.
-* IPv6: ::1
-* IPv4: 127.0.0.1
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8080...
-* Connected to localhost (::1) port 8080
-> GET /api/extras/statuses/?limit=1 HTTP/1.1
-> Host: localhost:8080
-> User-Agent: curl/8.7.1
-> Accept: application/json
-> Authorization: Token REDACTED
->
-* Request completely sent off
-< HTTP/1.1 200 OK
-< Date: Tue, 08 Sep 2026 00:18:00 GMT
-< Server: WSGIServer/0.2 CPython/3.13.15
-< Content-Type: application/json
-< Vary: Accept, Cookie, origin
-< Allow: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
-< API-Version: 3.3
-< X-Content-Type-Options: nosniff
-< Referrer-Policy: same-origin
-< Cross-Origin-Opener-Policy: same-origin
-< X-Frame-Options: DENY
-< Content-Length: 1085
-< Server-Timing: total;dur=33.76;desc="Total request duration", db;dur=4.55;desc="11 database queries"
-```
-
-!!! note
-    Django Debug Toolbar also uses this implementation to track performance. If any metrics are enabled AND Django Toolbar is enabled, both will be using the `Server-Timing` property to report metrics. They will not overwrite each other's output, but there may be duplicated metric names.

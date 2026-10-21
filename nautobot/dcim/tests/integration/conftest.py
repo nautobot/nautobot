@@ -50,53 +50,6 @@ def created_location_tree(create_object, status_for):
 
 
 @pytest.fixture
-def created_manufacturer(create_object):
-    """A manufacturer owned by this test."""
-    return create_object("dcim/manufacturers/", name=unique_name())
-
-
-@pytest.fixture
-def device_prerequisites(create_object, status_for, created_manufacturer):
-    """A location, device type and role created for this test, and a device Status, as API records."""
-    unique = unique_name()
-    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
-    location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
-    location = create_object(
-        "dcim/locations/",
-        name=f"{unique}-location",
-        location_type=location_type["id"],
-        status=status_for("dcim.location")["id"],
-    )
-    device_type = create_object(
-        "dcim/device-types/",
-        model=f"{unique}-model",
-        manufacturer=created_manufacturer["id"],
-    )
-    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
-    return {
-        "location": location,
-        "device_type": device_type,
-        "role": role,
-        "status": status_for("dcim.device"),
-    }
-
-
-@pytest.fixture
-def created_device(create_object, device_prerequisites):
-    """A device created for this test, plus its related records, since the device record has only their ids."""
-    prerequisites = device_prerequisites
-    device = create_object(
-        "dcim/devices/",
-        name=unique_name(),
-        location=prerequisites["location"]["id"],
-        device_type=prerequisites["device_type"]["id"],
-        role=prerequisites["role"]["id"],
-        status=prerequisites["status"]["id"],
-    )
-    return {"device": device, **prerequisites}
-
-
-@pytest.fixture
 def created_pdu(create_object, created_device):
     """created_device plus a power port and a power outlet. The Power Utilization panel renders only for a device with both."""
     device_id = created_device["device"]["id"]

@@ -2114,6 +2114,114 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
         device.validated_save()
 
+    def _create_unassigned_ipv4_addresses(self, count):
+        namespace = Namespace.objects.create(name="Primary IP Test Namespace")
+        Prefix.objects.create(
+            prefix="198.51.100.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        return [
+            IPAddress.objects.create(address=f"198.51.100.{i}/24", namespace=namespace, status=ip_status)
+            for i in range(1, count + 1)
+        ]
+
+    def test_primary_ip_not_assigned_to_any_interface(self):
+        """An IP address not assigned to any interface is a valid primary IP only if the configuration permits it."""
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError, f"The specified IP address ({ip}) is not assigned to this device."
+        ):
+            device.validated_save()
+
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            device.validated_save()
+        device.refresh_from_db()
+        self.assertEqual(device.primary_ip4, ip)
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_assigned_to_another_device_interface(self):
+        """An IP address assigned to another device's interface is never a valid primary IP."""
+        (ip,) = self._create_unassigned_ipv4_addresses(1)
+        other_interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=self.intf_role,
+        )
+        other_interface.add_ip_addresses(ip)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError,
+            f"The specified IP address ({ip}) is assigned to an interface that does not belong to this device.",
+        ):
+            device.validated_save()
+
+    @override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False)
+    def test_primary_ip_nat_outside_of_another_device_interface_ip(self):
+        """The NAT outside address of an IP address assigned to another device's interface is never a valid primary IP."""
+        inside_ip, outside_ip = self._create_unassigned_ipv4_addresses(2)
+        outside_ip.nat_inside = inside_ip
+        outside_ip.validated_save()
+        other_interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=self.device,
+            status=Status.objects.get_for_model(Interface).first(),
+            role=self.intf_role,
+        )
+        other_interface.add_ip_addresses(inside_ip)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=outside_ip,
+        )
+        with self.assertRaisesMessage(
+            ValidationError,
+            f"The specified IP address ({outside_ip}) is the NAT outside address of {inside_ip}, which is assigned to "
+            "an interface that does not belong to this device.",
+        ):
+            device.validated_save()
+
+    def test_unchanged_primary_ip_not_revalidated(self):
+        """A device whose primary IP isn't assigned to an interface remains editable after the configuration changes."""
+        ip_1, ip_2 = self._create_unassigned_ipv4_addresses(2)
+        device = Device(
+            name="Test IP Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            primary_ip4=ip_1,
+        )
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            device.validated_save()
+
+        device.serial = "abc123"
+        device.validated_save()
+
+        device.primary_ip4 = ip_2
+        with self.assertRaisesMessage(
+            ValidationError, f"The specified IP address ({ip_2}) is not assigned to this device."
+        ):
+            device.validated_save()
+
     def test_software_version_device_type_validation(self):
         """
         Assert that device's software version contains a software image file that matches the device's device type or a default image.
@@ -6354,31 +6462,41 @@ class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="10.1.1.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
         )
+        vdc.primary_ip6 = None
         vdc.primary_ip4 = IPAddress.objects.create(
             address="10.1.1.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
         )
         with self.assertRaises(ValidationError) as err:
             vdc.validated_save()
         self.assertIn(
-            f"{vdc.primary_ip4} is not part of an interface that belongs to this VDC's device.",
+            f"The specified IP address ({vdc.primary_ip4}) is not assigned to this virtual device context.",
             str(err.exception),
         )
 
-        # TODO: Uncomment test case when VDC primary_ip interface validation is active
-        # interface = Interface.objects.create(
-        #     name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
-        # )
-        # intf_status = Status.objects.get_for_model(Interface).first()
-        # intf_role = Role.objects.get_for_model(Interface).first()
-        # vdc.primary_ip6 = ip_v6
-        # with self.assertRaises(ValidationError) as err:
-        #     vdc.validated_save()
-        # self.assertIn(
-        #     f"The specified IP address ({ip_v6}) is not assigned to this Virtual Device Context.",
-        #     str(err.exception),
-        # )
-        # interface.virtual_device_contexts.add(vdc)
-        # interface.add_ip_addresses([ip_v4, ip_v6])
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            vdc.validated_save()
+
+        # An IP address on one of the parent device's interfaces is only valid once that interface is in the VDC
+        interface = Interface.objects.create(
+            name="Primary IP Test Interface",
+            device=device,
+            status=Status.objects.get_for_model(Interface).first(),
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        vdc.primary_ip4 = IPAddress.objects.create(
+            address="10.1.1.2/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        interface.add_ip_addresses(vdc.primary_ip4)
+        with override_config(PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT=False):
+            with self.assertRaisesMessage(
+                ValidationError,
+                f"The specified IP address ({vdc.primary_ip4}) is assigned to an interface that does not belong to "
+                "this virtual device context.",
+            ):
+                vdc.validated_save()
+
+        vdc.interfaces.add(interface)
+        vdc.validated_save()
 
     def test_interfaces_validation_logic(self):
         """Assert Virtual Device COntext raises error when adding interfaces that do not belong to same device as the VDC's device."""
