@@ -1,0 +1,1 @@
+Added `nautobot.playwright.axe.assert_no_accessibility_violations()` and the `axe_core_on_load` fixture for axe-core scans in Playwright tests.

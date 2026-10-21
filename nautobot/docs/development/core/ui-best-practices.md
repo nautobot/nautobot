@@ -255,7 +255,7 @@ Two linters enforce a subset of this automatically, so run them before opening a
 
     def test_my_view(auth_page):
         auth_page.goto("/plugins/my-app/things/")
-        expect(auth_page.locator("#object_list_form")).to_be_attached()
+        expect(auth_page.locator("#object_table_wrapper")).to_be_attached()
         assert_no_accessibility_violations(auth_page)
     ```
 
@@ -266,10 +266,11 @@ Two linters enforce a subset of this automatically, so run them before opening a
     than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
     part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
 
-    One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
-    correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not
-    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/playwright/axe.py`, and pass
-    `disabled_rules=()` to scan with it on.
+    Two rules are currently switched off. `color-contrast` (WCAG 1.4.3): the theme fails it in a handful of places, and
+    correcting that means retuning palette tokens, which is a deferred product decision, so contrast is not checked
+    automatically anywhere. `target-size` (WCAG 2.5.8): the header's Search help link and the tag links in list
+    cells are under 24 px, and the rule returns when they are fixed. See `AXE_DISABLED_RULES` in
+    `nautobot/playwright/axe.py`, and pass `disabled_rules=()` to scan with both on.
 
 Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
 on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its

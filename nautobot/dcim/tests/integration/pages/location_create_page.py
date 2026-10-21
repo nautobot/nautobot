@@ -25,8 +25,8 @@ class LocationCreatePage(BasePage):
         )
 
     def submit(self):
-        """Click Create."""
-        self.page.click(self._CREATE_BUTTON)
+        """Click Create and wait for the server's response page."""
+        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
 
     def expect_validation_errors(self):
         """Assert (auto-retrying) that the server rejected the form and marked at least one field invalid."""

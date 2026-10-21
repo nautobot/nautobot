@@ -1,12 +1,9 @@
-"""Accessibility regression tests: axe-core against representative pages rather than every view.
+"""Accessibility regression tests. axe-core runs against the shared page templates and against every core list view.
 
 `base_django.html`, `generic/object_list.html`, `generic/object_retrieve.html` and `generic/object_create_base.html`
 render most of the UI, so a regression in shared markup fails these tests whichever model introduced it. That is true
 of the shared markup only. Overridden blocks, self-rendering columns and per-template `extra_styles` are invisible to a
 scan of one model, which is why `test_core_list_views` scans every core list view.
-
-Each test waits for an element that the view itself renders before scanning. Nautobot's error pages have the same `main`
-as every other page, so a wait on `main` would let a failed view be scanned as its error page.
 """
 
 from playwright.sync_api import expect
@@ -59,6 +56,7 @@ class AccessibilityTestCase:
     """Nautobot's shared pages have no axe-core violations."""
 
     def test_home_page(self, auth_page, base_url):
+        """The home page, with its panel grid rendered, has no violations."""
         home = HomePage(auth_page, base_url)
         home.navigate()
         home.expect_loaded()
@@ -66,20 +64,13 @@ class AccessibilityTestCase:
 
     @pytest.mark.slow
     def test_core_list_views(self, auth_page, base_url, api, axe_core_on_load):
-        """Scan the markup that each core view adds to the shared template. Not a substitute for an App scanning its own views."""
-        lists = AnyListPage(auth_page, base_url)
+        """Scan the markup that each core view adds to the shared template. This test is not a substitute for an App scanning its own views."""
         scanned = []
-        not_list_views = []
         failures = []
         for path in core_list_view_paths(api):
-            # The tree views redirect to `?max_depth=`. `navigate_to` returns the response after the redirect,
-            # so their status here is 200, not 302.
-            if lists.navigate_to(path).status != 200:
-                continue
-            # The wrapper is in the first response, so no wait is needed. A 200 page without it is not an
-            # object list (an endpoint whose UI page is something else) and is not what this test covers.
-            if lists.object_table_wrapper().count() == 0:
-                not_list_views.append(path)
+            # The tree views redirect to `?max_depth=`. `navigate_with_response` returns the response after the
+            # redirect, so their status here is 200, not 302. Any other status is not a page to scan.
+            if AnyListPage(auth_page, base_url, path).navigate_with_response().status != 200:
                 continue
             scanned.append(path)
             try:
@@ -89,24 +80,26 @@ class AccessibilityTestCase:
 
         # If the enumeration above breaks, this test would pass over a handful of paths.
         assert len(scanned) > MIN_CORE_LIST_VIEWS, (
-            f"Expected more than {MIN_CORE_LIST_VIEWS} core list views, scanned {len(scanned)}. "
-            f"Pages without an object table: {not_list_views}"
+            f"Expected more than {MIN_CORE_LIST_VIEWS} core list views, scanned {len(scanned)}"
         )
         assert not failures, f"{len(failures)} of {len(scanned)} list views have violations:\n" + "\n".join(failures)
 
     def test_object_list_view(self, auth_page, base_url, created_location_tree):
+        """An object list, with a row that has the tree caret and the descendants link, has no violations."""
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
         expect(locations.object_table_wrapper()).to_be_attached()
         assert_no_accessibility_violations(auth_page)
 
     def test_object_detail_view(self, auth_page, base_url, created_location_tree):
+        """An object detail page has no violations."""
         detail = LocationDetailPage(auth_page, base_url)
         detail.navigate(created_location_tree["parent"]["id"])
         detail.expect_heading(created_location_tree["parent"]["name"])
         assert_no_accessibility_violations(auth_page)
 
     def test_object_edit_view(self, auth_page, base_url):
+        """An object add form, before anything is entered, has no violations."""
         LocationCreatePage(auth_page, base_url).navigate()
         assert_no_accessibility_violations(auth_page)
 
@@ -120,6 +113,7 @@ class AccessibilityTestCase:
         assert_no_accessibility_violations(auth_page)
 
     def test_search_page(self, auth_page, base_url, created_location_tree):
+        """The global search results page, with at least one model's results in, has no violations."""
         results = SearchResultsPage(auth_page, base_url)
         results.navigate(created_location_tree["parent"]["name"])
         # The fixture guarantees a match in the location results, so that table is the one to wait for.
@@ -129,6 +123,7 @@ class AccessibilityTestCase:
     # storage_state=None leaves out the saved session login, so `page` starts logged out.
     @pytest.mark.browser_context_args(storage_state=None)
     def test_login_page(self, page, base_url):
+        """The login page, seen logged out, has no violations."""
         login = LoginPage(page, base_url)
         login.navigate()
         login.expect_loaded()
