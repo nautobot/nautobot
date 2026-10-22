@@ -12,6 +12,7 @@ from django.db import connection
 from django.db.models import IntegerField, Value
 from django.test import SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
+import django_tables2
 from django_tables2.utils import Accessor
 
 import nautobot
@@ -23,6 +24,7 @@ from nautobot.core.templatetags import helpers
 from nautobot.core.testing import AssertNoRepeatedQueries
 from nautobot.dcim.models import (
     Device,
+    Interface,
     InterfaceRedundancyGroupAssociation,
     InventoryItem,
     Location,
@@ -38,9 +40,16 @@ from nautobot.dcim.tables import (
     RackGroupTable,
 )
 from nautobot.extras.choices import ComputedFieldTypeChoices, RelationshipTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry, Relationship, RelationshipAssociation, Role
+from nautobot.extras.models import (
+    ApprovalWorkflowStage,
+    ComputedField,
+    JobLogEntry,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+)
 from nautobot.extras.tables import JobLogEntryTable, RoleTable
-from nautobot.ipam.models import RIR
+from nautobot.ipam.models import IPAddress, RIR
 from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
@@ -346,6 +355,55 @@ class BaseTablePrefetchTestCase(TestCase):
             table = LocationTable(Location.objects.filter(pk__in=[source.pk for source in sources]), user=user)
             for row in table.rows:
                 row.get_cell("cr_prefetch_test_src")
+
+
+class BaseTableAccessorWalkTestCase(TestCase):
+    """Records how BaseTable loads the related objects along each shape of column accessor."""
+
+    def _optimized_queryset(self, table_model, column_accessor):
+        class AccessorTable(BaseTable):
+            accessed = django_tables2.Column(accessor=column_accessor)
+
+            class Meta(BaseTable.Meta):
+                model = table_model
+                default_columns = ("accessed",)
+
+        return AccessorTable(table_model.objects.all()).data.data
+
+    def test_accessor_shapes(self):
+        cases = (
+            # ForeignKeys only: one join.
+            (Device, "tenant__tenant_group", {"tenant": {"tenant_group": {}}}, ()),
+            # The walk stops at the first non-relation field.
+            (Device, "tenant__name", {"tenant": {}}, ()),
+            # A to-many hop with no ForeignKey before it.
+            (Device, "interfaces", False, ("interfaces",)),
+            # A ForeignKey after a to-many hop joins the prefetch.
+            (Interface, "ip_addresses__parent", False, ("ip_addresses__parent",)),
+            # A to-many hop after a ForeignKey: the ForeignKey is joined, and the prefetch runs through it.
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses",
+                {"interface": {}},
+                ("interface__ip_addresses",),
+            ),
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses__parent",
+                {"interface": {}},
+                ("interface__ip_addresses__parent",),
+            ),
+            # A GenericForeignKey is prefetched only when no ForeignKey comes before it.
+            (RelationshipAssociation, "source", False, ("source",)),
+            (ApprovalWorkflowStage, "approval_workflow__object_under_review", {"approval_workflow": {}}, ()),
+            # A reverse many-to-many hop is not followed.
+            (IPAddress, "interfaces", False, ()),
+        )
+        for model, accessor, select_related, prefetch_related in cases:
+            with self.subTest(model=model.__name__, accessor=accessor):
+                queryset = self._optimized_queryset(model, accessor)
+                self.assertEqual(queryset.query.select_related, select_related)
+                self.assertEqual(queryset._prefetch_related_lookups, prefetch_related)
 
 
 class ButtonsColumnTestCase(TestCase):

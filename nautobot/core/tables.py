@@ -293,6 +293,14 @@ class BaseTable(django_tables2.Table):
                             prefetch_fields.append(lookup)
                     continue
 
+                # Walk the accessor, joining leading ForeignKeys and prefetching from the first to-many hop on:
+                #   "tenant__tenant_group"            -> select_related("tenant__tenant_group")
+                #   "interfaces"                      -> prefetch_related("interfaces")
+                #   "interface__ip_addresses"         -> select_related("interface"),
+                #                                        prefetch_related("interface__ip_addresses")
+                #   "interface__ip_addresses__parent" -> select_related("interface"),
+                #                                        prefetch_related("interface__ip_addresses__parent")
+                # A reverse many-to-many hop is not followed. BaseTableAccessorWalkTestCase covers each shape.
                 column_model = model
                 accessor = column.accessor
                 select_path = []
