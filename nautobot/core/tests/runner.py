@@ -190,6 +190,7 @@ class NautobotTestRunner(DiscoverRunner):
                             keepdb=self.keepdb
                             # Extra check added for Nautobot:
                             and self.reusedb,
+                            serialize=False,
                         )
                         if kwargs.get("serialized_aliases", None) is None or alias in kwargs.get("serialized_aliases"):
                             serialize_connections.append(connection)
@@ -209,9 +210,11 @@ class NautobotTestRunner(DiscoverRunner):
                                 ).encode("utf-8")
                             ).hexdigest(10)
                             command += ["--fixture-file", f"development/factory_dump.{hexdigest}.json"]
-                        with time_keeper.timed(f'  Pre-populating test database "{alias}" with factory data...'):
-                            db_command = [*command, "--database", alias]
-                            call_command(*db_command)
+                        db_name = connection.settings_dict["NAME"]
+                        with time_keeper.timed(
+                            f"  Pre-populating test database '{alias}' ({db_name}) with factory data..."
+                        ):
+                            call_command(*command)
 
                     # Django 5.2 code continues:
                     if self.parallel > 1:
@@ -268,9 +271,10 @@ class NautobotTestRunner(DiscoverRunner):
 
                 # Extra block added for Nautobot
                 if settings.TEST_USE_FACTORIES:
-                    db_name = connection.alias
-                    print(f'Emptying test database "{db_name}"...')
-                    call_command("flush", "--no-input", "--database", db_name)
+                    alias = connection.alias
+                    db_name = connection.settings_dict["NAME"]
+                    print(f"Emptying test database '{alias}' ({db_name})...")
+                    call_command("flush", "--no-input")
                     print(f"Database {db_name} emptied!")
 
                 connection.creation.destroy_test_db(old_name, self.verbosity, self.keepdb)
