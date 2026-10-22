@@ -86,19 +86,25 @@ class ArchivedObjectChange(ArchivedLogModel):
     """Archived copy of an `ObjectChange`."""
 
     time = models.DateTimeField(editable=False, db_index=True)
+    # Not indexed, unlike the live `user` foreign key: `user` can't be followed from an archived change, so
+    # archived changes are looked up by `user_name` instead.
     user_id = models.UUIDField(blank=True, null=True)
     user_name = models.CharField(max_length=150, editable=False, db_index=True)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
+    # Not indexed on its own, unlike the live foreign key: it leads `extras_aoc_changed_obj_idx`.
     changed_object_type_id = models.PositiveIntegerField(blank=True, null=True)
-    changed_object_id = models.UUIDField(db_index=True)
+    # Not indexed on its own, unlike the live field: objects are looked up by type and id together, which
+    # `extras_aoc_changed_obj_idx` covers.
+    changed_object_id = models.UUIDField()
+    # Not indexed, unlike the live field: it has only a handful of distinct values, so an index would rarely help.
     change_context = models.CharField(
         max_length=50,
         choices=ObjectChangeEventContextChoices,
         editable=False,
-        db_index=True,
     )
     change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
+    # Not indexed on its own, unlike the live foreign key: it leads `extras_aoc_related_obj_idx`.
     related_object_type_id = models.PositiveIntegerField(blank=True, null=True)
     related_object_id = models.UUIDField(blank=True, null=True)
     object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
@@ -116,23 +122,16 @@ class ArchivedObjectChange(ArchivedLogModel):
         verbose_name_plural = "archived object changes"
         # No counterpart to the live `unique_together`: rotation copies the live primary key, which already
         # prevents a record from being archived twice, and another unique index would only slow rotation.
+        # Not replicated from `ObjectChange`, since rotation pays for every index on every insert:
+        # - `extras_objectchange_triple_idx` and `extras_objectchange_double_idx` serve change logging, which looks up
+        #   a request's earlier changes while recording new ones, and webhook dispatch. Neither writes archived changes.
+        # - `extras_objectchange_rtime_idx` serves the homepage's latest changes panel. Newest-first ordering here
+        #   uses the index on `time`, since an index can be read in either direction.
+        # - `user_changed_object_idx` and `user_name_changed_object_idx` serve combined user and object lookups that
+        #   nothing makes against archived changes; `user_name` has its own index.
         indexes = [
-            models.Index(
-                name="extras_aoc_triple_idx",
-                fields=["request_id", "changed_object_type_id", "changed_object_id"],
-            ),
-            models.Index(name="extras_aoc_double_idx", fields=["request_id", "changed_object_type_id"]),
-            models.Index(name="extras_aoc_rtime_idx", fields=["-time"]),
             models.Index(name="extras_aoc_changed_obj_idx", fields=["changed_object_type_id", "changed_object_id"]),
             models.Index(name="extras_aoc_related_obj_idx", fields=["related_object_type_id", "related_object_id"]),
-            models.Index(
-                name="extras_aoc_user_chg_obj_idx",
-                fields=["user_id", "changed_object_type_id", "changed_object_id"],
-            ),
-            models.Index(
-                name="extras_aoc_uname_chg_obj_idx",
-                fields=["user_name", "changed_object_type_id", "changed_object_id"],
-            ),
         ]
 
     def get_related_changes(self, user=None, permission="view"):
@@ -187,26 +186,30 @@ class ArchivedObjectChange(ArchivedLogModel):
 class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     """Archived copy of a `JobResult`."""
 
+    # Indexed like the live foreign key, for listing a job's archived results.
     job_model_id = models.UUIDField(blank=True, null=True, db_index=True)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    # Not indexed, unlike the live field, which is internal to job execution.
     task_name = models.CharField(  # noqa: DJ001  # matches the live column, which is nullable
         max_length=CHARFIELD_MAX_LENGTH,
         null=True,
-        db_index=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
     date_created = models.DateTimeField(db_index=True)
-    date_started = models.DateTimeField(null=True, blank=True, db_index=True)
-    date_done = models.DateTimeField(null=True, blank=True, db_index=True)
-    user_id = models.UUIDField(blank=True, null=True, db_index=True)
+    # `date_started` and `date_done` aren't indexed, unlike the live fields: archived job results are listed and
+    # filtered by `date_created`.
+    date_started = models.DateTimeField(null=True, blank=True)
+    date_done = models.DateTimeField(null=True, blank=True)
+    # Not indexed, unlike the live `user` foreign key: `user` can't be followed from an archived job result.
+    user_id = models.UUIDField(blank=True, null=True)
     # `JobResult` has no `user_name` field; it reads the username through its `user` foreign key. With only the
     # user's id archived, the username would be unrecoverable once the User is deleted, so rotation records it
     # here, as `ObjectChange.user_name` already does.
     user_name = models.CharField(max_length=150, blank=True, default="")
+    # Not indexed on its own, unlike the live field: it leads `extras_ajr_statrcreate_idx`.
     status = models.CharField(
         max_length=30,
         choices=JobResultStatusChoices,
-        db_index=True,
         default=JobResultStatusChoices.STATUS_PENDING,
         help_text="Current state of the Job being run",
     )
@@ -224,13 +227,17 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # matches the live column
     meta = models.JSONField(null=True, default=None, editable=False)
-    scheduled_job_id = models.UUIDField(blank=True, null=True, db_index=True)
+    # Not indexed, unlike the live `scheduled_job` foreign key: `scheduled_job` can't be followed from an archived
+    # job result.
+    scheduled_job_id = models.UUIDField(blank=True, null=True)
     debug_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     success_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     info_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
-    canceled_by_id = models.UUIDField(blank=True, null=True, db_index=True)
+    # Not indexed, unlike the live `canceled_by` foreign key: `canceled_by` can't be followed from an archived job
+    # result.
+    canceled_by_id = models.UUIDField(blank=True, null=True)
     canceled_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
     cancel_type = models.CharField(
         max_length=30,
@@ -252,11 +259,12 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
         get_latest_by = "date_created"
         verbose_name = "archived job result"
         verbose_name_plural = "archived job results"
+        # Not replicated from `JobResult`, since rotation pays for every index on every insert:
+        # - `extras_jobresult_rcreated_idx`: newest-first ordering here uses the index on `date_created`, since an
+        #   index can be read in either direction.
+        # - `extras_jr_rdone_idx` and `extras_jr_statrdone_idx` serve the homepage's recent job results panel.
         indexes = [
-            models.Index(name="extras_ajr_rcreated_idx", fields=["-date_created"]),
-            models.Index(name="extras_ajr_rdone_idx", fields=["-date_done"]),
             models.Index(name="extras_ajr_statrcreate_idx", fields=["status", "-date_created"]),
-            models.Index(name="extras_ajr_statrdone_idx", fields=["status", "-date_done"]),
         ]
 
     def __str__(self):
@@ -266,13 +274,14 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
 class ArchivedJobLogEntry(ArchivedLogModel):
     """Archived copy of a `JobLogEntry`."""
 
-    job_result_id = models.UUIDField(db_index=True)
-    log_level = models.CharField(
-        max_length=32, choices=LogLevelChoices, db_index=True, default=LogLevelChoices.LOG_INFO
-    )
+    # Not indexed on its own, unlike the live foreign key: it leads `extras_ajoblog_jr_created_idx`.
+    job_result_id = models.UUIDField()
+    # `log_level` and `created` aren't indexed on their own, unlike the live fields: entries are only read within a
+    # single job result, which `extras_ajoblog_jr_created_idx` has already narrowed to.
+    log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO)
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
-    created = models.DateTimeField(db_index=True)
+    created = models.DateTimeField()
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
@@ -295,7 +304,8 @@ class ArchivedJobLogEntry(ArchivedLogModel):
 class ArchivedJobConsoleEntry(ArchivedLogModel):
     """Archived copy of a `JobConsoleEntry`."""
 
-    job_result_id = models.UUIDField(db_index=True)
+    # Not indexed on its own, unlike the live foreign key: it leads `extras_ajobconsole_jr_ts_idx`.
+    job_result_id = models.UUIDField()
     timestamp = models.DateTimeField(help_text="Timestamp when this output has been produced / received")
     output_type = models.CharField(
         max_length=10,
