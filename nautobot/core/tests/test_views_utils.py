@@ -14,7 +14,7 @@ from nautobot.core.views.utils import (
     get_saved_views_for_user,
     prepare_cloned_fields,
 )
-from nautobot.dcim.filters import DeviceFilterSet
+from nautobot.dcim.filters import CableFilterSet, DeviceFilterSet
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, InventoryItem, Location, Manufacturer
 from nautobot.extras.models import Role, SavedView, Status
 from nautobot.ipam.models import Namespace, VRF
@@ -104,6 +104,85 @@ class CheckFilterForDisplayTest(TestCase):
                     prefix="scope",
                 ),
                 expected_output,
+            )
+
+        with self.subTest("Test null choice value in filter"):
+            expected_output = {
+                "name": "platform",
+                "display": "Platform (name or ID)",
+                "values": [{"name": "null", "display": "None"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(device_filter_set_filters, "platform", ["null"]),
+                expected_output,
+            )
+
+        with self.subTest("Test None value in filter"):
+            expected_output = {
+                "name": "platform",
+                "display": "Platform (name or ID)",
+                "values": [{"name": "null", "display": "None"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(device_filter_set_filters, "platform", [None]),
+                expected_output,
+            )
+
+        with self.subTest("Test combined UUID and null in filter"):
+            example_obj = DeviceRedundancyGroup.objects.first()
+            expected_output = {
+                "name": "device_redundancy_group",
+                "display": "Device Redundancy Group (name or ID)",
+                "values": [
+                    {"name": str(example_obj.pk), "display": str(example_obj)},
+                    {"name": "null", "display": "None"},
+                ],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(
+                    device_filter_set_filters, "device_redundancy_group", [str(example_obj.pk), "null"]
+                ),
+                expected_output,
+            )
+
+        with self.subTest("Test combined UUID and non-UUID string in filter"):
+            example_obj = DeviceRedundancyGroup.objects.first()
+            expected_output = {
+                "name": "device_redundancy_group",
+                "display": "Device Redundancy Group (name or ID)",
+                "values": [
+                    {"name": str(example_obj.pk), "display": str(example_obj)},
+                    {"name": "custom-value", "display": "custom-value"},
+                ],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(
+                    device_filter_set_filters, "device_redundancy_group", [str(example_obj.pk), "custom-value"]
+                ),
+                expected_output,
+            )
+
+        with self.subTest("Test Cable filterset rack and rack_id null values"):
+            cable_filter_set_filters = CableFilterSet().filters
+            self.assertEqual(
+                check_filter_for_display(cable_filter_set_filters, "rack", ["null"]),
+                {
+                    "name": "rack",
+                    "display": "Rack (name)",
+                    "values": [{"name": "null", "display": "None"}],
+                },
+            )
+            self.assertEqual(
+                check_filter_for_display(cable_filter_set_filters, "rack_id", ["null"]),
+                {
+                    "name": "rack_id",
+                    "display": "Rack (ID)",
+                    "values": [{"name": "null", "display": "None"}],
+                },
             )
 
         # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
