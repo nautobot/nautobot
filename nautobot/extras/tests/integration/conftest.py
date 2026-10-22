@@ -136,9 +136,9 @@ def update_object(api):
 def schema_names_to_delete(api):
     """A list of config context schema names. Every schema with one of these names is deleted on teardown.
 
-    For schemas a test creates through the UI, which `create_object` cannot track. A test
-    adds the name before submitting the form, so the schema is deleted even when an
-    assertion fails after it was created.
+    Use it for schemas that a test creates through the UI, because `create_object` deletes
+    only the records that it created. Add the name before submitting the form, so that the
+    schema is deleted even when an assertion fails after the create.
     """
     names = []
     yield names
@@ -161,9 +161,9 @@ def schema_names_to_delete(api):
 def created_schema_validation_tree(create_object, update_object, status_for, created_device):
     """A config context schema with one valid config context, device and virtual machine bound to it.
 
-    These are the three kinds of object the schema's Validation tab reports on, each holding
-    VALID_DATA. The config context is scoped to the device's location so its data does not
-    apply to every device in the instance.
+    These are the three kinds of object that the schema's Validation tab reports on. Each one
+    has VALID_DATA as its context data. The config context is scoped to the device's location,
+    so its data does not apply to every device in the instance.
     """
     unique = unique_name()
     schema = create_object("extras/config-context-schemas/", name=f"{unique}-schema", data_schema=VALID_SCHEMA)

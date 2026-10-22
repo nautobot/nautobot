@@ -6,12 +6,7 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class ConfigContextSchemaDetailPage(DetailPage):
-    """The Config Context Schema detail view. Adds the Validation tab to DetailPage.
-
-    The Validation tab renders one panel per kind of object bound to the schema: "Config
-    Contexts", "Devices" and "Virtual Machines". Each is an object table with a "Validation
-    state" column added by the view.
-    """
+    """The Config Context Schema detail view. Adds the success toast and the Validation tab to DetailPage."""
 
     DETAIL_PATH = "/extras/config-context-schemas/{pk}/"
     VERBOSE_NAME = "Config Context Schema"
@@ -43,10 +38,9 @@ class ConfigContextSchemaDetailPage(DetailPage):
 
     def _validation_cell(self, panel_title, row_name):
         """Locator for the "Validation state" cell of *row_name* in panel *panel_title*.
-
-        The column is found by its header in that panel's own table: the three tables have
-        different columns, and the Config Contexts table renders "Active" with the same check
-        icon as a pass, so neither a fixed position nor a row-wide icon check is reliable.
+        Find the column by its header in that panel's own table, because the three tables have
+        different columns. Do not look for the check icon anywhere in the row. The Config
+        Contexts table shows "Active" with the same icon as a pass.
         """
         panel = self.panel(panel_title)
         expect(panel).to_have_count(1)

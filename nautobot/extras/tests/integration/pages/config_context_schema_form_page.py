@@ -9,7 +9,7 @@ from nautobot.playwright.base_page import BasePage
 
 
 class ConfigContextSchemaFormPage(BasePage):
-    """The add form: fill and submit it, then read either outcome, the redirect or the rejected data_schema field."""
+    """The add form. Fill and submit it, then check the redirect or the error on the data_schema field."""
 
     ADD_PATH = "/extras/config-context-schemas/add/"
 
@@ -36,7 +36,9 @@ class ConfigContextSchemaFormPage(BasePage):
         self.page.fill(self._DATA_SCHEMA, data_schema)
 
     def submit(self):
-        """Click Create and wait for the response. Both outcomes navigate, a rejected submit re-renders the form."""
+        """Click Create and wait for the next page to load.
+        A valid submit redirects to the detail view, and a rejected submit renders the form again.
+        """
         self._click_and_wait_for_navigation(self._CREATE_BUTTON)
 
     def expect_on_add_form(self):
@@ -57,9 +59,8 @@ class ConfigContextSchemaFormPage(BasePage):
         expect(self.page.locator(self._NAME)).to_have_value(name)
 
     def get_data_schema(self):
-        """The data_schema textarea's content, parsed. Reads once, with no retry.
-
-        A rejected form redisplays the schema re-serialized (sorted keys, indented), so the
-        textarea never holds the text that was typed. Compare it parsed.
+        """Return the data_schema textarea's content parsed as JSON. Reads once, with no retry.
+        A rejected form displays the schema again as JSON with sorted keys and indentation, so
+        the textarea does not contain the text that was typed. Compare the parsed value instead.
         """
         return json.loads(self.page.locator(self._DATA_SCHEMA).input_value())

@@ -12,18 +12,19 @@ from nautobot.playwright.helpers import unique_name
 ADD_FORM_HEADING = "Add a new config context schema"
 
 VALID_SCHEMA_TEXT = '{"type": "object", "properties": {"a": {"type": "string"}}}'
-# Rejected by the jsonschema library: "not a valid type" is not a JSON Schema type.
+# The jsonschema library rejects this schema, because "not a valid type" is not a JSON Schema type.
 BAD_TYPE_SCHEMA_TEXT = '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}'
-# Rejected by ConfigContextSchema.clean(): context data is an object, so the schema must be an object with properties.
+# ConfigContextSchema.clean() rejects this schema. Context data is always an object, so the schema
+# must be an object with properties.
 NON_OBJECT_SCHEMA_TEXT = '{"type": "array"}'
 NON_OBJECT_ERROR = (
     "Nautobot only supports context data in the form of an object and thus the JSON schema "
     "must be of type object and specify a set of properties."
 )
 
-# Replacements for the schema created_schema_validation_tree starts from (a, b and c, all
-# integers), each failing the {"a": 123, "b": 456, "c": 777} its children hold. The
-# messages come from the jsonschema library.
+# Each schema below replaces the one that created_schema_validation_tree creates, which has the
+# integer properties a, b and c. The data in its children, {"a": 123, "b": 456, "c": 777},
+# fails each one. The error messages come from the jsonschema library.
 RETYPED_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -46,7 +47,7 @@ REQUIRED_ERROR = "'d' is a required property"
 
 
 def schemas_named(api, name):
-    """API records of every config context schema named *name*."""
+    """Return the API records of every config context schema named *name*."""
     response = api.get("/api/extras/config-context-schemas/", params={"name": name})
     assert response.ok, f"GET config context schemas returned {response.status}: {response.text()}"
     return response.json()["results"]
@@ -105,7 +106,7 @@ class ConfigContextSchemaTestCase:
     ):
         """A schema the jsonschema library rejects redisplays the form with the error and the submitted input."""
         name = unique_name()
-        # Deleted on teardown in case a jsonschema upgrade starts accepting the schema.
+        # Add the name for teardown in case a jsonschema upgrade starts to accept this schema.
         schema_names_to_delete.append(name)
 
         form = ConfigContextSchemaFormPage(auth_page, base_url)
@@ -116,7 +117,7 @@ class ConfigContextSchemaTestCase:
         form.expect_on_add_form()
         form.expect_heading(ADD_FORM_HEADING)
         # The wording belongs to jsonschema, so only the rejected type is matched.
-        form.expect_data_schema_error("'not a valid type'")
+        form.expect_data_schema_error("'not a valid type' is not valid under any of the given schemas")
         form.expect_name(name)
         assert form.get_data_schema() == json.loads(BAD_TYPE_SCHEMA_TEXT)
         assert schemas_named(api, name) == [], "A rejected schema should not be created"
