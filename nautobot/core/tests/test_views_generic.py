@@ -15,7 +15,7 @@ class TestViewsGeneric(TestCase):
         """
         Test that `generic/object_list.html` can be rendered by a view that doesn't provide `list_url` in the context.
 
-        This is the case for an App whose list view overrides `get()` and builds its own template context.
+        This may be the case for an App whose list view overrides `get()` and builds its own template context.
         """
         request = RequestFactory().get("/custom-location-list/")
         request.user = self.user
