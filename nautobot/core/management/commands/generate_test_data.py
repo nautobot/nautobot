@@ -186,7 +186,7 @@ class Command(BaseCommand):
                     role = Role.objects.get(name=defaults["name"])
                     role.content_types.add(content_type)
                 except Role.DoesNotExist:
-                    role = RoleFactory.create(**defaults, content_types=[content_type])
+                    RoleFactory.create(**defaults, content_types=[content_type])
 
         _create_batch(RoleFactory, 20)
 
@@ -202,7 +202,7 @@ class Command(BaseCommand):
                     status = Status.objects.get(name=defaults["name"])
                     status.content_types.add(content_type)
                 except Status.DoesNotExist:
-                    status = StatusFactory.create(**defaults, content_types=[content_type])
+                    StatusFactory.create(**defaults, content_types=[content_type])
 
         _create_batch(StatusFactory, 10)
         # Ensure that we have some tags that are applicable to all relevant content-types
