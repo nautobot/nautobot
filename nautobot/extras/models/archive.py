@@ -37,10 +37,10 @@ from nautobot.extras.models.customfields import CustomFieldModel
 
 def unresolved_relation(relation_name):
     """
-    A read-only attribute standing in for a relation that an archived model stores only as an id.
+    A read-only property, representing a previous foreign key relation that can't be referenced from the archived model.
 
-    It always resolves to None, so code that reaches for the relation by name, as it would on the live
-    model, gets None instead of an `AttributeError`.
+    It always resolves to `None`, so that code that reaches for the relation by its name, as it would on the live
+    model, gets `None` instead of an `AttributeError`.
 
     Args:
         relation_name (str): The name of the relation on the live model, such as `"user"`. Assign the result to an
@@ -52,10 +52,12 @@ def unresolved_relation(relation_name):
 
 class ArchivedLogModel(BaseModel):
     """
-    Abstract base for archived copies of Nautobot's log models.
+    Abstract base for archived copies of Nautobot's log-like models.
 
-    The log models are `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry`. `id` is copied from the
-    live record, so an archived record keeps its primary key and rotation can re-run without duplicating.
+    The log models are `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry`.
+
+    The `id` of the original live record is copied to the archived record, to simplify auditing, and to allow
+    archival/rotation workflows and the like to re-run without duplicating archived records.
     """
 
     is_metadata_associable_model = False
@@ -71,7 +73,8 @@ class ArchivedLogModel(BaseModel):
         """
         The record's read-only detail page, or None where it has none.
 
-        None rather than raising, so a linkified column renders plain text instead of failing the row.
+        Returns None rather than raising in the case of no valid URL, so that a linkified table column
+        (which calls `get_absolute_url()`) renders unlinked plaintext instead of failing to render the row entirely.
         """
         try:
             return super().get_absolute_url(api=api)
