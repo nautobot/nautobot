@@ -132,9 +132,6 @@ class ConfigContextSchemaTestCase:
         form.expect_name(name)
         assert schemas_named(api, name) == [], "A rejected schema should not be created"
 
-    # -------------------------------------------------------------------------
-    # Replaces Selenium test_validation_tab
-    # -------------------------------------------------------------------------
 
     @pytest.mark.behavioral
     def test_validation_tab_reports_valid_children(self, auth_page, base_url, created_schema_validation_tree):
