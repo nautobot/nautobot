@@ -471,13 +471,16 @@ http://nautobot/api/ipam/ip-addresses/bd307eca-de34-4bda-9195-d69ca52206d6/ | jq
 +++ 2.0.0
 
 A `?depth` query parameter is introduced in Nautobot 2.0 to replace the `?brief` parameter. It enables [nested serialization](https://www.django-rest-framework.org/api-guide/serializers/#specifying-nested-serialization) functionality and offers a more dynamic and comprehensive browsable API. It is available for both retrieving a single object and a list of objects.
-This parameter is an positive integer value that can range from 0 to 10. In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
+This parameter is an integer value from 0 to a maximum of 10 (but see below). In most use cases, you will only need a maximum `depth` of 2 to get all the information you need.
 
 !!! note
     The `?brief` query parameter is removed for Nautobot v2.x. Use `?depth=0` instead.
 
 !!! important
     The `?depth` query parameter should only be used for `GET` operations in the API. It should not be used in `POST`, `PATCH` and `DELETE` requests. For these requests, only `?depth=0` should be used.
+
++++ 3.3.0 "`REST_API_MAX_DEPTH` configuration"
+    The variable [`REST_API_MAX_DEPTH`](../../administration/configuration/settings.md#rest_api_max_depth) can be configured in Nautobot to limit the maximum `depth` value permitted, up to a maximum of `10`. Because higher `depth` values can result in extremely resource-intensive queries, increase this value with caution.
 
 #### Default/?depth=0
 
@@ -663,6 +666,8 @@ A higher `depth` parameter in the query presents you with more insight to the ob
 
 !!! important
     Using higher `depth` values may substantially increase the amount of time it takes for the REST API to respond to your query when there are a large number of related objects. In some cases it may be more efficient to initially query with a lower `depth` and then follow the `url` values that the REST API response provides for specific related objects to query those objects directly as a more narrowly focused query approach.
+
+    In many cases where deeply nested retrieval of related-object data is needed, you may also want to explore using [GraphQL](../graphql.md) as an alternative.
 
 For example, if you need information on the `parent` of a `location` instance's `parent`.
 

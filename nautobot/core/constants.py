@@ -123,6 +123,8 @@ REGEX_TIMEOUT_DEFAULT = 1.0
 MAX_PAGE_SIZE_DEFAULT = 1000
 PAGINATE_COUNT_DEFAULT = 50
 
+REST_API_MAX_DEPTH_DEFAULT = 2
+
 # Models excluded from the global search list
 GLOBAL_SEARCH_EXCLUDE_LIST = [
     "anotherexamplemodel",

@@ -17,6 +17,7 @@ from nautobot.core.constants import (
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
     REGEX_TIMEOUT_DEFAULT as _REGEX_TIMEOUT_DEFAULT,
+    REST_API_MAX_DEPTH_DEFAULT as _REST_API_MAX_DEPTH_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
@@ -322,6 +323,10 @@ EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 # Remote auth backend settings
 REMOTE_AUTH_AUTO_CREATE_USER = False
 REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
+
+# Maximum value of the `depth` REST API query parameter (0-10). Higher values permit more expensive queries.
+if "NAUTOBOT_REST_API_MAX_DEPTH" in os.environ and os.environ["NAUTOBOT_REST_API_MAX_DEPTH"] != "":
+    REST_API_MAX_DEPTH = int(os.environ["NAUTOBOT_REST_API_MAX_DEPTH"])
 
 # SSO backend settings https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_POSTGRES_JSONFIELD = False
@@ -1068,6 +1073,14 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="release_check_url_field",
     ),
+    "REST_API_MAX_DEPTH": ConstanceConfigItem(
+        default=_REST_API_MAX_DEPTH_DEFAULT,
+        help_text=mark_safe(
+            "Maximum permitted value of the <code>depth</code> REST API query parameter (0-10). "
+            "Higher values may permit extremely time-consuming and resource-intensive queries to be performed."
+        ),
+        field_type=int,
+    ),
     "SUPPORT_MESSAGE": ConstanceConfigItem(
         default="",
         help_text="Help message to include on 4xx and 5xx error pages. "
@@ -1088,6 +1101,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "LOCATION_LIST_DEFAULT_MAX_DEPTH",
         "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
         "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+        "REST_API_MAX_DEPTH",
     ],
     "Rack Elevation Rendering": [
         "RACK_DEFAULT_U_HEIGHT",

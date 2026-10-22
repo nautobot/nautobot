@@ -43,8 +43,10 @@ from nautobot.core.api import BulkOperationSerializer
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
+from nautobot.core.constants import REST_API_MAX_DEPTH_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.fields import TagsField
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
@@ -231,10 +233,14 @@ class ModelViewSetMixin:
             try:
                 depth = int(self.request.query_params.get("depth", 0))
             except ValueError:
-                self.logger.warning("The depth parameter must be an integer between 0 and 10")
+                self.logger.warning("The depth parameter must be an integer")
 
-            if depth < 0 or depth > 10:
-                raise ParseError("The depth parameter must be an integer between 0 and 10")
+            max_depth = get_settings_or_config("REST_API_MAX_DEPTH", fallback=REST_API_MAX_DEPTH_DEFAULT)
+            max_depth = max(max_depth, 0)
+            max_depth = min(max_depth, 10)  # DRF enforced upper limit
+
+            if depth < 0 or depth > max_depth:
+                raise ParseError(f"The depth parameter must be an integer between 0 and {max_depth}")
 
             context["depth"] = depth
         else:
@@ -657,7 +663,9 @@ class NautobotSpectacularAPIView(SpectacularAPIView):
         # version specified as parameter to the view always takes precedence. after
         # that we try to source version through the schema view's own versioning_class.
         version = self.api_version or request.version or self._get_version_parameter(request)
-        cache_key = f"openapi_schema_cache_{version}_{settings.VERSION}"  # Invalidate cache on Nautobot release
+        # Invalidate cache on a change in API version, a change in Nautobot version, or a change in REST_API_MAX_DEPTH
+        max_depth = get_settings_or_config("REST_API_MAX_DEPTH", fallback=REST_API_MAX_DEPTH_DEFAULT)
+        cache_key = f"openapi_schema_cache_{version}_{settings.VERSION}_{max_depth}"
         etag = f'W/"{hash(cache_key)}"'
 
         # With combined browser cache and backend cache, we have three options:

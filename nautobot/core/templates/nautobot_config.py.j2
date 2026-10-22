@@ -602,6 +602,10 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # REMOTE_AUTH_AUTO_CREATE_USER = False
 # REMOTE_AUTH_HEADER = "HTTP_REMOTE_USER"
 
+# Maximum value of the `depth` REST API query parameter (0-10). Higher values permit more expensive queries.
+# if "NAUTOBOT_REST_API_MAX_DEPTH" in os.environ and os.environ["NAUTOBOT_REST_API_MAX_DEPTH"] != "":
+#     REST_API_MAX_DEPTH = int(os.environ["NAUTOBOT_REST_API_MAX_DEPTH"])
+
 # Job log entry sanitization and similar
 #
 # SANITIZER_PATTERNS = [

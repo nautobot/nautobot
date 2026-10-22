@@ -38,6 +38,7 @@ from nautobot.core.constants import (
     COMPOSITE_KEY_SEPARATOR,
 )
 from nautobot.core.templatetags.helpers import humanize_speed
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
@@ -1053,16 +1054,31 @@ class InvalidDepthParameterTest(testing.APITestCase):
         self.vlan_group_list_url = reverse(get_route_for_model(ipam_models.VLANGroup, "list", api=True))
 
     def test_depth_greater_than_max_returns_400(self):
-        response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        with override_settings(REST_API_MAX_DEPTH=10):
+            response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        with override_config(REST_API_MAX_DEPTH=5):
+            response = self.client.get(f"{self.vlan_group_list_url}?depth=6", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        # Django REST Framework itself limits to a maximum depth of 10
+        with override_config(REST_API_MAX_DEPTH=15):
+            response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_depth_returns_400(self):
         response = self.client.get(f"{self.vlan_group_list_url}?depth=-1", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
     def test_depth_within_range_returns_200(self):
-        response = self.client.get(f"{self.vlan_group_list_url}?depth=10", **self.header)
+        default_max_depth = get_settings_or_config("REST_API_MAX_DEPTH")
+        response = self.client.get(f"{self.vlan_group_list_url}?depth={default_max_depth}", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        with override_settings(REST_API_MAX_DEPTH=10):
+            response = self.client.get(f"{self.vlan_group_list_url}?depth=10", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
