@@ -2268,9 +2268,12 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
 
     def get_component_model_form(self, request, data=None):
         """Return the per-instance component model form used to validate/save each expanded child."""
+        # A bound form already carries the submitted parent (device/module/...) in `data`. Passing the
+        # query-string initial as well would disable those fields (see `ModularComponentEditForm`), and
+        # Django would then replace the submitted values with the initial ones, dropping e.g. the module.
         return self.form_class(  # pylint: disable=not-callable
             data or None,
-            initial=normalize_querydict(request.GET, form_class=self.form_class),
+            initial=None if data else normalize_querydict(request.GET, form_class=self.form_class),
         )
 
     def create(self, request, *args, **kwargs):
