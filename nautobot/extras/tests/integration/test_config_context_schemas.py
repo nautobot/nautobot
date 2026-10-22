@@ -93,9 +93,6 @@ class ConfigContextSchemaTestCase:
         assert records[0]["data_schema"] == json.loads(VALID_SCHEMA_TEXT)
         assert records[0]["description"] == description
 
-    # -------------------------------------------------------------------------
-    # Replaces Selenium test_create_invalid_config_context_schema
-    # -------------------------------------------------------------------------
 
     @pytest.mark.behavioral
     def test_create_invalid_config_context_schema_bad_jsonschema_type(
