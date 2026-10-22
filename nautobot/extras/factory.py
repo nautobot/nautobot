@@ -69,12 +69,12 @@ from nautobot.tenancy.models import Tenant
 User = get_user_model()
 
 # Change and job history is generated within fixed date ranges, not relative to the current date, so a given seed
-# always produces the same data. Archived history ends where warm history begins, so no archived record is newer
-# than a warm one, as rotation would leave them. `WARM_HISTORY_END` must stay in the past, as tests compare
+# always produces the same data. Archived history ends where live history begins, so no archived record is newer
+# than a live one, as rotation would leave them. `LIVE_HISTORY_END` must stay in the past, as tests compare
 # factory-generated history against the current time.
 ARCHIVED_HISTORY_START = datetime(2022, 7, 1, tzinfo=timezone.utc)
-WARM_HISTORY_START = datetime(2025, 7, 1, tzinfo=timezone.utc)
-WARM_HISTORY_END = datetime(2026, 7, 1, tzinfo=timezone.utc)
+LIVE_HISTORY_START = datetime(2025, 7, 1, tzinfo=timezone.utc)
+LIVE_HISTORY_END = datetime(2026, 7, 1, tzinfo=timezone.utc)
 
 
 def random_datetime(start, end):
@@ -226,7 +226,7 @@ class ArchivedJobResultFactory(BaseModelFactory):
         job_model = factory.Maybe("has_job_model", random_instance(Job), None)
         user = factory.Maybe("has_user", random_instance(get_user_model()), None)
         dates = factory.LazyFunction(
-            lambda: sorted(random_datetime(ARCHIVED_HISTORY_START, WARM_HISTORY_START) for _ in range(3))
+            lambda: sorted(random_datetime(ARCHIVED_HISTORY_START, LIVE_HISTORY_START) for _ in range(3))
         )
 
     job_model_id = factory.LazyAttribute(lambda obj: obj.job_model.pk if obj.job_model else None)
@@ -316,7 +316,7 @@ class ArchivedObjectChangeFactory(BaseModelFactory):
             )
             # Just before the rest of the request, which also keeps it within archived history.
             return earliest_in_request.time - timedelta(seconds=factory.random.randgen.randint(1, 5))
-        return random_datetime(ARCHIVED_HISTORY_START, WARM_HISTORY_START)
+        return random_datetime(ARCHIVED_HISTORY_START, LIVE_HISTORY_START)
 
 
 class ContactFactory(PrimaryModelFactory):
@@ -490,7 +490,7 @@ class JobResultFactory(BaseModelFactory):
             return
         if extracted:
             return
-        timestamps = sorted(random_datetime(WARM_HISTORY_START, WARM_HISTORY_END) for _ in range(3))
+        timestamps = sorted(random_datetime(LIVE_HISTORY_START, LIVE_HISTORY_END) for _ in range(3))
         self.date_created, self.date_started, self.date_done = timestamps
 
 
@@ -723,10 +723,10 @@ class ObjectChangeFactory(BaseModelFactory):
                     .first()
                 )
                 if latest_in_request is not None:
-                    # Just after the rest of the request, which also keeps it within warm history.
+                    # Just after the rest of the request, which also keeps it within live history.
                     self.time = latest_in_request.time + timedelta(seconds=factory.random.randgen.randint(1, 5))
                 else:
-                    self.time = random_datetime(WARM_HISTORY_START, WARM_HISTORY_END)
+                    self.time = random_datetime(LIVE_HISTORY_START, LIVE_HISTORY_END)
 
 
 class RoleFactory(OrganizationalModelFactory):

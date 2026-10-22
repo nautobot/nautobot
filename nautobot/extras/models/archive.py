@@ -1,11 +1,11 @@
 """
 Long-term retention of change and job history.
 
-The `Archived*` models mirror the warm `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry`
-models, one table each, and are populated by copying warm records into them ("rotation").
+The `Archived*` models hold archived copies of the live `ObjectChange`, `JobResult`, `JobLogEntry` and
+`JobConsoleEntry` models, one table each, and are populated by copying live records into them ("rotation").
 
 Foreign keys are stored as bare identifier columns rather than relations, so the archive tables can later
-move to a separate database and a retained record can outlive the object it refers to.
+move to a separate database and an archived record can outlive the object it refers to.
 """
 
 from django.contrib.contenttypes.models import ContentType
@@ -33,28 +33,33 @@ from nautobot.extras.constants import (
 from nautobot.extras.models.customfields import CustomFieldModel
 
 
-def demoted_relation(name):
+def unresolved_relation(relation_name):
     """
-    A read-only attribute standing in for a foreign key that a mirror stores only as `<name>_id`.
+    A read-only attribute standing in for a relation that an archived model stores only as an id.
 
-    It always resolves to None, so code that reaches for the relation by name, as it would on the warm
+    It always resolves to None, so code that reaches for the relation by name, as it would on the live
     model, gets None instead of an `AttributeError`.
+
+    Args:
+        relation_name (str): The name of the relation on the live model, such as `"user"`. Assign the result to an
+            attribute of the same name; the archived model is expected to store the related object's id in a
+            field named `<relation_name>_id`.
     """
-    return property(lambda self: None, doc=f"Always None; the related object is identified by `{name}_id`.")
+    return property(lambda self: None, doc=f"Always None; the related object is identified by `{relation_name}_id`.")
 
 
-class ArchivedRecord(BaseModel):
+class ArchivedLogModel(BaseModel):
     """
-    Shared shape for every retained-history mirror.
+    Abstract base for archived copies of Nautobot's log models.
 
-    `id` is copied from the warm record, so a retained record keeps its primary key and rotation can
-    re-run without duplicating.
+    The log models are `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry`. `id` is copied from the
+    live record, so an archived record keeps its primary key and rotation can re-run without duplicating.
     """
 
     is_metadata_associable_model = False
     is_data_compliance_model = False
     is_version_controlled = False
-    # `ArchivedJobResult` inherits `_custom_field_data`. Retained history is immutable, so it isn't offered as a
+    # `ArchivedJobResult` inherits `_custom_field_data`. Archived records are immutable, so it isn't offered as a
     # custom field model and its data isn't swept for orphaned keys.
     is_custom_field_model = False
     hide_in_diff_view = True
@@ -73,14 +78,12 @@ class ArchivedRecord(BaseModel):
 
     class Meta:
         abstract = True
-        # Read-only: retained records are written by rotation and never edited, so only `view` exists.
+        # Read-only: archived records are written by rotation and never edited, so only `view` exists.
         default_permissions = ("view",)
 
 
-class ArchivedObjectChange(ArchivedRecord):
-    """
-    Every field of a retained `extras.ObjectChange`.
-    """
+class ArchivedObjectChange(ArchivedLogModel):
+    """Archived copy of an `ObjectChange`."""
 
     time = models.DateTimeField(editable=False, db_index=True)
     user_id = models.UUIDField(blank=True, null=True)
@@ -102,17 +105,17 @@ class ArchivedObjectChange(ArchivedRecord):
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
-    user = demoted_relation("user")
-    changed_object = demoted_relation("changed_object")
-    related_object = demoted_relation("related_object")
+    user = unresolved_relation("user")
+    changed_object = unresolved_relation("changed_object")
+    related_object = unresolved_relation("related_object")
 
-    class Meta(ArchivedRecord.Meta):
+    class Meta(ArchivedLogModel.Meta):
         ordering = ["-time"]
         get_latest_by = "time"
         verbose_name = "archived object change"
         verbose_name_plural = "archived object changes"
-        # No counterpart to the warm `unique_together`: rotation copies the warm primary key, which already
-        # prevents a record from being retained twice, and another unique index would only slow rotation.
+        # No counterpart to the live `unique_together`: rotation copies the live primary key, which already
+        # prevents a record from being archived twice, and another unique index would only slow rotation.
         indexes = [
             models.Index(
                 name="extras_aoc_triple_idx",
@@ -133,7 +136,7 @@ class ArchivedObjectChange(ArchivedRecord):
         ]
 
     def get_related_changes(self, user=None, permission="view"):
-        """The other retained changes to this object, restricted to those `user` has `permission` for if given."""
+        """The other archived changes to this object, restricted to those `user` has `permission` for if given."""
         related_changes = (
             type(self)
             .objects.filter(
@@ -149,16 +152,19 @@ class ArchivedObjectChange(ArchivedRecord):
     @property
     def changed_object_type(self):
         """
-        The content type this record's `changed_object_type_id` names, or None.
+        The content type that `changed_object_type_id` identifies, or None if there is no such content type.
 
-        A content type is schema metadata rather than a changelog record, and `get_for_id` is cached per
-        process. None where the app has been uninstalled since.
+        Content types aren't archived, so this is looked up (and cached) from the live table.
         """
         return self._content_type_for(self.changed_object_type_id)
 
     @property
     def related_object_type(self):
-        """The content type this record's `related_object_type_id` names, or None."""
+        """
+        The content type that `related_object_type_id` identifies, or None if there is no such content type.
+
+        Content types aren't archived, so this is looked up (and cached) from the live table.
+        """
         return self._content_type_for(self.related_object_type_id)
 
     @staticmethod
@@ -178,14 +184,12 @@ class ArchivedObjectChange(ArchivedRecord):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
 
 
-class ArchivedJobResult(ArchivedRecord, CustomFieldModel):
-    """
-    Every field of a retained `extras.JobResult`.
-    """
+class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
+    """Archived copy of a `JobResult`."""
 
     job_model_id = models.UUIDField(blank=True, null=True, db_index=True)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
-    task_name = models.CharField(  # noqa: DJ001  # mirrors the warm column, which is nullable
+    task_name = models.CharField(  # noqa: DJ001  # matches the live column, which is nullable
         max_length=CHARFIELD_MAX_LENGTH,
         null=True,
         db_index=True,
@@ -195,9 +199,9 @@ class ArchivedJobResult(ArchivedRecord, CustomFieldModel):
     date_started = models.DateTimeField(null=True, blank=True, db_index=True)
     date_done = models.DateTimeField(null=True, blank=True, db_index=True)
     user_id = models.UUIDField(blank=True, null=True, db_index=True)
-    # Not a mirror: `JobResult` has no `user_name`, it reads through the `user` FK. With the FK demoted
-    # to an id column, the username would be unrecoverable once the User row is deleted, so rotation
-    # denormalizes it here. This is the same trade `ObjectChange.user_name` already makes.
+    # `JobResult` has no `user_name` field; it reads the username through its `user` foreign key. With only the
+    # user's id archived, the username would be unrecoverable once the User is deleted, so rotation records it
+    # here, as `ObjectChange.user_name` already does.
     user_name = models.CharField(max_length=150, blank=True, default="")
     status = models.CharField(
         max_length=30,
@@ -214,11 +218,11 @@ class ArchivedJobResult(ArchivedRecord, CustomFieldModel):
         editable=False,
         help_text="The data returned by the task",
     )
-    worker = models.CharField(max_length=100, null=True, default=None)  # noqa: DJ001  # mirrors the warm column
+    worker = models.CharField(max_length=100, null=True, default=None)  # noqa: DJ001  # matches the live column
     task_args = models.JSONField(blank=True, default=list, encoder=NautobotKombuJSONEncoder)
     task_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
     celery_kwargs = models.JSONField(blank=True, default=dict, encoder=NautobotKombuJSONEncoder)
-    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # mirrors the warm column
+    traceback = models.TextField(blank=True, null=True)  # noqa: DJ001  # matches the live column
     meta = models.JSONField(null=True, default=None, editable=False)
     scheduled_job_id = models.UUIDField(blank=True, null=True, db_index=True)
     debug_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
@@ -238,12 +242,12 @@ class ArchivedJobResult(ArchivedRecord, CustomFieldModel):
     # `_custom_field_data` comes from `CustomFieldModel`. Rotation copies the raw JSON, so no custom field value
     # is lost.
 
-    job_model = demoted_relation("job_model")
-    user = demoted_relation("user")
-    scheduled_job = demoted_relation("scheduled_job")
-    canceled_by = demoted_relation("canceled_by")
+    job_model = unresolved_relation("job_model")
+    user = unresolved_relation("user")
+    scheduled_job = unresolved_relation("scheduled_job")
+    canceled_by = unresolved_relation("canceled_by")
 
-    class Meta(ArchivedRecord.Meta):
+    class Meta(ArchivedLogModel.Meta):
         ordering = ["-date_created"]
         get_latest_by = "date_created"
         verbose_name = "archived job result"
@@ -259,10 +263,8 @@ class ArchivedJobResult(ArchivedRecord, CustomFieldModel):
         return f"{self.name} created at {self.date_created} ({self.status})"
 
 
-class ArchivedJobLogEntry(ArchivedRecord):
-    """
-    Every field of a retained `extras.JobLogEntry`.
-    """
+class ArchivedJobLogEntry(ArchivedLogModel):
+    """Archived copy of a `JobLogEntry`."""
 
     job_result_id = models.UUIDField(db_index=True)
     log_level = models.CharField(
@@ -274,9 +276,9 @@ class ArchivedJobLogEntry(ArchivedRecord):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
-    job_result = demoted_relation("job_result")
+    job_result = unresolved_relation("job_result")
 
-    class Meta(ArchivedRecord.Meta):
+    class Meta(ArchivedLogModel.Meta):
         ordering = ["created"]
         get_latest_by = "created"
         verbose_name = "archived job log entry"
@@ -290,10 +292,8 @@ class ArchivedJobLogEntry(ArchivedRecord):
         return self.message
 
 
-class ArchivedJobConsoleEntry(ArchivedRecord):
-    """
-    Every field of a retained `extras.JobConsoleEntry`.
-    """
+class ArchivedJobConsoleEntry(ArchivedLogModel):
+    """Archived copy of a `JobConsoleEntry`."""
 
     job_result_id = models.UUIDField(db_index=True)
     timestamp = models.DateTimeField(help_text="Timestamp when this output has been produced / received")
@@ -305,9 +305,9 @@ class ArchivedJobConsoleEntry(ArchivedRecord):
     )
     text = models.TextField(help_text="Actual line of output data")
 
-    job_result = demoted_relation("job_result")
+    job_result = unresolved_relation("job_result")
 
-    class Meta(ArchivedRecord.Meta):
+    class Meta(ArchivedLogModel.Meta):
         ordering = ["timestamp"]
         get_latest_by = "timestamp"
         verbose_name = "archived job console entry"

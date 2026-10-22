@@ -20,7 +20,7 @@ from nautobot.core.testing import create_job_result_and_run_job, TransactionTest
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory, WARM_HISTORY_END, WARM_HISTORY_START
+from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
     DynamicGroup,
@@ -207,16 +207,16 @@ class LogsCleanupTestCase(TransactionTestCase):
             JobResultFactory.create_batch(20)
         # To avoid spurious test failures due to factory randomness,
         # ensure that we have some records well outside the test data cutoff windows.
-        # The newest are at the end of the factories' warm history rather than after it, so that none is in the future:
+        # The newest are at the end of the factories' live history rather than after it, so that none is in the future:
         # tests that run with `max_age=0` against the current time expect the newest records to be old enough to delete.
-        before_warm_history = WARM_HISTORY_START - timedelta(days=365)
-        ObjectChangeFactory.create(time=before_warm_history)
-        ObjectChangeFactory.create(time=WARM_HISTORY_END)
+        before_live_history = LIVE_HISTORY_START - timedelta(days=365)
+        ObjectChangeFactory.create(time=before_live_history)
+        ObjectChangeFactory.create(time=LIVE_HISTORY_END)
         latest_jr = JobResult.objects.latest()
-        latest_jr.date_created = latest_jr.date_started = latest_jr.date_done = WARM_HISTORY_END
+        latest_jr.date_created = latest_jr.date_started = latest_jr.date_done = LIVE_HISTORY_END
         latest_jr.save()
         earliest_jr = JobResult.objects.earliest()
-        earliest_jr.date_created = earliest_jr.date_started = earliest_jr.date_done = before_warm_history
+        earliest_jr.date_created = earliest_jr.date_started = earliest_jr.date_done = before_live_history
         earliest_jr.save()
 
     @load_event_broker_override_settings(
@@ -327,8 +327,8 @@ class LogsCleanupTestCase(TransactionTestCase):
     )
     def test_cleanup_job_results(self):
         """With unconstrained permissions, all JobResults before the cutoff should be deleted."""
-        # Late in the factories' warm history, so there are records on both sides of the cutoff.
-        with time_machine.travel(WARM_HISTORY_END - timedelta(days=92)):
+        # Late in the factories' live history, so there are records on both sides of the cutoff.
+        with time_machine.travel(LIVE_HISTORY_END - timedelta(days=92)):
             cutoff = timezone.now() - timedelta(days=60)
             job_results_to_be_deleted = JobResult.objects.filter(date_done__lt=cutoff)
             job_results_to_be_deleted_count = job_results_to_be_deleted.count()
@@ -382,8 +382,8 @@ class LogsCleanupTestCase(TransactionTestCase):
 
     def test_cleanup_object_changes(self):
         """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
-        # Late in the factories' warm history, so there are records on both sides of the cutoff.
-        with time_machine.travel(WARM_HISTORY_END - timedelta(days=92)):
+        # Late in the factories' live history, so there are records on both sides of the cutoff.
+        with time_machine.travel(LIVE_HISTORY_END - timedelta(days=92)):
             cutoff = timezone.now() - timedelta(days=60)
             create_job_result_and_run_job(
                 "nautobot.core.jobs.cleanup",
