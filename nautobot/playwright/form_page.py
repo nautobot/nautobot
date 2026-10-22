@@ -6,6 +6,8 @@ Subclasses set ADD_PATH:
         ADD_PATH = "/dcim/devices/add/"
 """
 
+from playwright.sync_api import expect
+
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
@@ -23,8 +25,9 @@ class FormPage(BasePage):
         super().__init__(page, base_url)
 
     def navigate(self):
-        """Go to the empty create form."""
+        """Go to the empty create form and wait for its Create button."""
         self._goto(self.ADD_PATH)
+        expect(self.page.locator(self._CREATE_BUTTON)).to_be_attached()
 
     def fill_input(self, field_name, value):
         """Type *value* into the text input named *field_name*."""
