@@ -1469,12 +1469,8 @@ class ModuleTypeTestCase(
             "dcim.change_interfacetemplate",
             "dcim.delete_interfacetemplate",
         )
-        module_type = ModuleType.objects.first()
-        interface_template = InterfaceTemplate.objects.create(
-            module_type=module_type,
-            name="Test Interface Template 1",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-        )
+        interface_template = InterfaceTemplate.objects.get(module_type__model="Test Module Type 1")
+        module_type = interface_template.module_type
         response = self.client.get(module_type.get_absolute_url())
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
