@@ -2827,7 +2827,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "retrieve":
+        if self.action == "list":
+            # The table can't infer these relations from the primary_ip property.
+            queryset = queryset.select_related("primary_ip4", "primary_ip6")
+        elif self.action == "retrieve":
             queryset = queryset.select_related(
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
