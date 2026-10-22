@@ -173,6 +173,80 @@ def require_celery_worker(api):
         pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
 
 
+def _ok_json(response, request):
+    """Return *response*'s JSON body, failing the test with *request* in the message if it is not a success."""
+    if not response.ok:
+        pytest.fail(f"{request} returned {response.status}: {response.text()[:200]}")
+    return response.json() if response.status != 204 else None
+
+
+@pytest.fixture
+def refresh_members_job_on_default_queue(api):
+    """Make the default queue the Refresh Members job's only queue for the test, then restore its queue settings.
+
+    The Refresh Members job button submits the job to the first of the job's queues, and
+    generate_test_data assigns random queues to jobs. On a seeded instance the job can then
+    land on a queue no worker consumes, while the development worker consumes only the
+    default queue. The overrides are set so Nautobot does not reset the queues from the job
+    class on save.
+    """
+    job = _ok_json(
+        api.get(
+            "/api/extras/jobs/",
+            params={
+                "module_name": "nautobot.core.jobs.groups",
+                "job_class_name": "RefreshDynamicGroupCacheJobButtonReceiver",
+            },
+        ),
+        "GET the Refresh Members job",
+    )["results"][0]
+    job_url = f"/api/extras/jobs/{job['id']}/"
+    default_queue = _ok_json(
+        api.get("/api/extras/job-queues/", params={"name": "default"}), "GET the default job queue"
+    )["results"][0]
+
+    def _assignments():
+        return _ok_json(
+            api.get("/api/extras/job-queue-assignments/", params={"job": job["id"], "limit": 0}),
+            "GET the job's queue assignments",
+        )["results"]
+
+    def _set_queues(default_queue_id, queue_ids, overrides):
+        # The default queue goes first: Nautobot always adds a job's default queue to its queue list on save.
+        _ok_json(
+            api.patch(
+                job_url,
+                data={
+                    "default_job_queue": default_queue_id,
+                    "default_job_queue_override": overrides["default_job_queue_override"],
+                    "job_queues_override": overrides["job_queues_override"],
+                },
+            ),
+            f"PATCH {job_url}",
+        )
+        assigned = {assignment["job_queue"]["id"]: assignment["id"] for assignment in _assignments()}
+        for queue_id in set(queue_ids) - set(assigned):
+            _ok_json(
+                api.post("/api/extras/job-queue-assignments/", data={"job": job["id"], "job_queue": queue_id}),
+                "POST a job queue assignment",
+            )
+        for queue_id in set(assigned) - set(queue_ids):
+            _ok_json(
+                api.delete(f"/api/extras/job-queue-assignments/{assigned[queue_id]}/"),
+                "DELETE a job queue assignment",
+            )
+
+    original_default_queue_id = job["default_job_queue"]["id"]
+    original_queue_ids = [assignment["job_queue"]["id"] for assignment in _assignments()]
+    original_overrides = {key: job[key] for key in ("default_job_queue_override", "job_queues_override")}
+
+    _set_queues(
+        default_queue["id"], [default_queue["id"]], {"default_job_queue_override": True, "job_queues_override": True}
+    )
+    yield
+    _set_queues(original_default_queue_id, original_queue_ids, original_overrides)
+
+
 @pytest.fixture
 def dynamic_group_name(api):
     """A unique dynamic group name. A group the test saves under it through the form is deleted after the test.
