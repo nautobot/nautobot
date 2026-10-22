@@ -65,9 +65,6 @@ def validation_rows(tree):
 class ConfigContextSchemaTestCase:
     """Creating config context schemas through the add form, and the pass/fail states on the Validation tab."""
 
-    # -------------------------------------------------------------------------
-    # Replaces Selenium test_create_valid_config_context_schema
-    # -------------------------------------------------------------------------
 
     @pytest.mark.behavioral
     def test_create_valid_config_context_schema(self, auth_page, base_url, api, schema_names_to_delete):
