@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
+from html import unescape
 from http import HTTPStatus
+import json
 import re
 from unittest import mock
 import urllib.parse
@@ -18,7 +20,7 @@ from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
-from django.utils.html import escape, format_html
+from django.utils.html import escape, format_html, strip_tags
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
@@ -5067,6 +5069,52 @@ class JobResultTestCase(
         # not apply. Assert on the job-derived title actually rendered instead.
         expected_title = escape(instance.job_model.name)
         self.assertInHTML(expected_title, extract_page_title(response.content.decode(response.charset)))
+
+    def test_result_data_content(self):
+        """Full-page and HTMX responses preserve complete JSON and escape exception text."""
+        self.add_permissions("extras.view_jobresult")
+        job_result = self.job_result_completed
+        panel = next(
+            panel
+            for panel in views.JobResultUIViewSet.object_detail_content.panels
+            if isinstance(panel, views.JobResultSummaryPanel)
+        )
+        cases = [
+            (JobResultStatusChoices.STATUS_FAILURE, {"exc_message": message, "exc_type": "RuntimeError"})
+            for message in (
+                "x" * 400,
+                "This is a deliberately long exception message. " * 20,
+                "Short exception",
+                '<script>alert("exception")</script> & <b>text</b>',
+            )
+        ]
+        cases.append(
+            (JobResultStatusChoices.STATUS_SUCCESS, {"devices": [{"name": "router1", "interfaces": ["Ethernet1"]}]})
+        )
+        for status, result in cases:
+            job_result.status = status
+            job_result.result = result
+            job_result.save()
+            for htmx in (False, True):
+                with self.subTest(status=status, result=result, htmx=htmx):
+                    response = self.client.get(
+                        job_result.get_absolute_url(),
+                        {"component_id": panel.component_id} if htmx else {},
+                        headers={"HX-Request": "true"} if htmx else {},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    content = response.content.decode(response.charset)
+                    self.assertEqual("<html" in content, not htmx)
+                    rendered_result = re.search(
+                        r'<pre[^>]*><code class="language-json"[^>]*>(.*?)</code></pre>', content, re.S
+                    )
+                    self.assertIsNotNone(rendered_result)
+                    self.assertEqual(json.loads(unescape(strip_tags(rendered_result.group(1)))), result)
+                    self.assertNotIn('<script>alert("exception")</script>', content)
+                    self.assertNotIn('hx-trigger="every 3s"', content)
+            job_result.refresh_from_db()
+            self.assertEqual(job_result.result, result)
+            self.assertEqual(job_result.status, status)
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
