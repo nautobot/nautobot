@@ -1,1 +1,0 @@
-Changed the version range of `pillow` dependency to `>=12.3.0,<14` to allow installation of Pillow 13.x.
