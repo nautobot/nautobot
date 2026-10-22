@@ -1,4 +1,5 @@
 ---
+name: nautobot-${NAUTOBOT_VER}-${PYTHON_VER}_development
 volumes:
   media_root:
 services:

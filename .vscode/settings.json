@@ -1,0 +1,9 @@
+{
+    "python.testing.unittestArgs": [
+        "--config=nautobot/core/tests/nautobot_config.py",
+        "--keepdb",
+        "--noinput"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}
