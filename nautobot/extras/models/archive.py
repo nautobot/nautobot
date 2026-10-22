@@ -4,8 +4,10 @@ Long-term retention of change and job history.
 The `Archived*` models hold archived copies of the live `ObjectChange`, `JobResult`, `JobLogEntry` and
 `JobConsoleEntry` models, one table each, and are populated by copying live records into them ("rotation").
 
-Foreign keys are stored as bare identifier columns rather than relations, so the archive tables can later
-move to a separate database and an archived record can outlive the object it refers to.
+Foreign keys between archived models, such as from an archived job log entry to its archived job result, are
+real foreign keys, since the archive tables are always stored together. Foreign keys to any other model are stored
+as bare identifier columns rather than relations, so the archive tables can later move to a separate database and an
+archived record can outlive the object it refers to.
 """
 
 from django.contrib.contenttypes.models import ContentType
@@ -274,8 +276,9 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
 class ArchivedJobLogEntry(ArchivedLogModel):
     """Archived copy of a `JobLogEntry`."""
 
-    # Not indexed on its own, unlike the live foreign key: it leads `extras_ajoblog_jr_created_idx`.
-    job_result_id = models.UUIDField()
+    job_result = models.ForeignKey(
+        to="extras.ArchivedJobResult", on_delete=models.CASCADE, related_name="job_log_entries"
+    )
     # `log_level` and `created` aren't indexed on their own, unlike the live fields: entries are only read within a
     # single job result, which `extras_ajoblog_jr_created_idx` has already narrowed to.
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO)
@@ -285,8 +288,6 @@ class ArchivedJobLogEntry(ArchivedLogModel):
     log_object = models.CharField(max_length=JOB_LOG_MAX_LOG_OBJECT_LENGTH, blank=True, default="")
     absolute_url = models.CharField(max_length=JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, blank=True, default="")
 
-    job_result = unresolved_relation("job_result")
-
     class Meta(ArchivedLogModel.Meta):
         ordering = ["created"]
         get_latest_by = "created"
@@ -294,7 +295,7 @@ class ArchivedJobLogEntry(ArchivedLogModel):
         verbose_name_plural = "archived job log entries"
         indexes = [
             # The access path for a job result's log table.
-            models.Index(name="extras_ajoblog_jr_created_idx", fields=["job_result_id", "created"]),
+            models.Index(name="extras_ajoblog_jr_created_idx", fields=["job_result", "created"]),
         ]
 
     def __str__(self):
@@ -304,8 +305,9 @@ class ArchivedJobLogEntry(ArchivedLogModel):
 class ArchivedJobConsoleEntry(ArchivedLogModel):
     """Archived copy of a `JobConsoleEntry`."""
 
-    # Not indexed on its own, unlike the live foreign key: it leads `extras_ajobconsole_jr_ts_idx`.
-    job_result_id = models.UUIDField()
+    job_result = models.ForeignKey(
+        to="extras.ArchivedJobResult", on_delete=models.CASCADE, related_name="job_console_entries"
+    )
     timestamp = models.DateTimeField(help_text="Timestamp when this output has been produced / received")
     output_type = models.CharField(
         max_length=10,
@@ -315,15 +317,13 @@ class ArchivedJobConsoleEntry(ArchivedLogModel):
     )
     text = models.TextField(help_text="Actual line of output data")
 
-    job_result = unresolved_relation("job_result")
-
     class Meta(ArchivedLogModel.Meta):
         ordering = ["timestamp"]
         get_latest_by = "timestamp"
         verbose_name = "archived job console entry"
         verbose_name_plural = "archived job console entries"
         indexes = [
-            models.Index(name="extras_ajobconsole_jr_ts_idx", fields=["job_result_id", "timestamp"]),
+            models.Index(name="extras_ajobconsole_jr_ts_idx", fields=["job_result", "timestamp"]),
         ]
 
     def __str__(self):

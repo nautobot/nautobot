@@ -1,9 +1,9 @@
 """
 The contract between each archived log model and the live model it archives.
 
-An archived model has to stay field-compatible with its live model. It differs in only two ways: each foreign key
-is stored as a `<name>_id` identifier column, and `ArchivedJobResult` adds `user_name`, since its username can't be
-read through a `user` foreign key. Nothing else catches a field added to a live model and not to its archived model:
+An archived model has to stay field-compatible with its live model. It differs in only two ways: each foreign key to a
+model that isn't archived is stored as a `<name>_id` identifier column, and `ArchivedJobResult` adds `user_name`, since
+its username can't be read through a `user` foreign key. Foreign keys between archived models are real foreign keys. Nothing else catches a field added to a live model and not to its archived model:
 it produces no migration error and no failure anywhere else, and every record rotated afterwards is missing it.
 """
 
@@ -40,9 +40,10 @@ ARCHIVED_MODELS = tuple(ARCHIVED_FROM.values())
 class ArchivedLogModelTestCase(TestCase):
     """The archived log models have to stay field-compatible with the live models they archive."""
 
-    def test_archived_fields_match_live_fields_with_foreign_keys_as_ids(self):
+    def test_archived_fields_match_live_fields(self):
         """
-        Every live field is present on the archived model, with foreign keys held as `<name>_id` columns.
+        Every live field is present on the archived model, by name or, for a foreign key to a model that isn't
+        archived, as a `<name>_id` column.
 
         This is the check that catches the failure mode nothing else does: a field added to a live model
         and not to its archived model produces no migration error and no test failure anywhere else.
@@ -70,13 +71,17 @@ class ArchivedLogModelTestCase(TestCase):
         """
         A field shared with the live model has the same type and length, so rotation can copy its value as is.
 
+        A foreign key to another live model that is archived must point to that model's archived counterpart.
         Nullability is checked for every field, including foreign keys held as ids: an archived column that
         rejected a null its live counterpart allows would fail rotation.
         """
         for live, archived in ARCHIVED_FROM.items():
             for live_field in live._meta.fields:
                 with self.subTest(model=live.__name__, field=live_field.name):
-                    if live_field.is_relation:
+                    if live_field.is_relation and live_field.related_model in ARCHIVED_FROM:
+                        archived_field = archived._meta.get_field(live_field.name)
+                        self.assertIs(archived_field.related_model, ARCHIVED_FROM[live_field.related_model])
+                    elif live_field.is_relation:
                         archived_field = archived._meta.get_field(f"{live_field.name}_id")
                     else:
                         archived_field = archived._meta.get_field(live_field.name)
@@ -89,11 +94,13 @@ class ArchivedLogModelTestCase(TestCase):
         for live, archived in ARCHIVED_FROM.items():
             instance = archived()
             # Forward relations, including generic foreign keys, which `_meta.fields` omits. Content types are
-            # resolved from their ids on the archived model instead.
+            # resolved from their ids on the archived model instead, and relations to archived models are real.
             relations = [
                 field
                 for field in (*live._meta.fields, *live._meta.private_fields)
-                if field.many_to_one and field.related_model is not ContentType
+                if field.many_to_one
+                and field.related_model is not ContentType
+                and field.related_model not in ARCHIVED_FROM
             ]
             for live_field in relations:
                 with self.subTest(model=archived.__name__, field=live_field.name):
@@ -155,18 +162,18 @@ class ArchivedLogModelTestCase(TestCase):
             with self.subTest(model=archived.__name__):
                 self.assertEqual(archived._meta.default_permissions, ("view",))
 
-    def test_archived_models_hold_no_foreign_keys(self):
+    def test_archived_models_only_have_foreign_keys_to_archived_models(self):
         """
-        A real relation would become a cross-database constraint if the archive tables move to a separate database.
+        A relation to any other model would become a cross-database constraint if the archive tables move to a
+        separate database.
 
-        Each reference is a plain identifier column instead. Only concrete forward relations matter here;
-        the reverse `GenericRelation` descriptors inherited from `BaseModel` add no column and no
-        constraint.
+        Each such reference is a plain identifier column instead. Only concrete forward relations matter here;
+        the reverse `GenericRelation` descriptors inherited from `BaseModel` add no column and no constraint.
         """
         for archived in ARCHIVED_MODELS:
             with self.subTest(model=archived.__name__):
-                relations = [f.name for f in archived._meta.fields if f.is_relation]
-                self.assertEqual(relations, [])
+                related_models = {f.related_model for f in archived._meta.fields if f.is_relation}
+                self.assertLessEqual(related_models, set(ARCHIVED_MODELS))
 
     def test_archived_models_are_excluded_from_global_search(self):
         """Archived log models are excluded from global search, like the live models they archive."""

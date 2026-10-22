@@ -181,10 +181,7 @@ class ArchivedJobConsoleEntryFactory(BaseModelFactory):
     class Meta:
         model = ArchivedJobConsoleEntry
 
-    class Params:
-        job_result = random_instance(ArchivedJobResult, allow_null=False)
-
-    job_result_id = factory.SelfAttribute("job_result.pk")
+    job_result = random_instance(ArchivedJobResult, allow_null=False)
     timestamp = factory.LazyAttribute(lambda obj: random_time_during(obj.job_result))
     output_type = factory.Iterator(JobConsoleEntryOutputTypeChoices.CHOICES, getter=lambda choice: choice[0])
     text = factory.Faker("sentence")
@@ -200,9 +197,8 @@ class ArchivedJobLogEntryFactory(BaseModelFactory):
         has_message = NautobotBoolIterator(chance_of_getting_true=90)
         has_log_object = NautobotBoolIterator()
         has_absolute_url = NautobotBoolIterator()
-        job_result = random_instance(ArchivedJobResult, allow_null=False)
 
-    job_result_id = factory.SelfAttribute("job_result.pk")
+    job_result = random_instance(ArchivedJobResult, allow_null=False)
     log_level = factory.Iterator(LogLevelChoices.CHOICES, getter=lambda choice: choice[0])
     grouping = factory.Faker("word")
     message = factory.Maybe("has_message", factory.Faker("sentence"), "")
