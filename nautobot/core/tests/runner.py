@@ -1,5 +1,7 @@
 import copy
 import hashlib
+from pathlib import Path
+import tempfile
 
 try:
     from coverage import Coverage
@@ -19,9 +21,26 @@ from nautobot.core.celery import app, setup_nautobot_job_logging
 from nautobot.core.settings_funcs import parse_redis_connection
 
 
-def init_worker_with_unique_cache(*args, **kwargs):
-    """Extend Django's default parallel unit test setup to also ensure distinct Redis caches."""
-    _init_worker(*args, **kwargs)  # call Django default to set _worker_id and set up parallel DB instances
+def _setup_worker_git_root(git_directory):
+    """Allocate a worker's clones beside the parent's clones, owned and cleaned up by the parent."""
+    override_settings(GIT_ROOT=tempfile.mkdtemp(prefix="worker-", dir=git_directory)).enable()
+
+
+def init_worker_with_unique_cache(
+    counter,
+    initial_settings=None,
+    serialized_contents=None,
+    process_setup=None,
+    process_setup_args=None,
+    *args,
+    **kwargs,
+):
+    """Extend Django's parallel setup with distinct Git clones and Redis caches for each worker."""
+    # Run the setup hook for every start method, before Django can initialize apps or worker databases.
+    # Pass None for the hook so Django's spawn initialization doesn't call it a second time.
+    if process_setup is not None:
+        process_setup(*(process_setup_args or ()))
+    _init_worker(counter, initial_settings, serialized_contents, None, None, *args, **kwargs)
     # _worker_id is now 1, 2, 3, 4, etc.
 
     from django.test.runner import _worker_id
@@ -35,8 +54,11 @@ def init_worker_with_unique_cache(*args, **kwargs):
 
 class NautobotParallelTestSuite(ParallelTestSuite):
     init_worker = init_worker_with_unique_cache
+    process_setup = _setup_worker_git_root
 
     def run(self, result):
+        # Pass the owning temporary directory explicitly, as spawn doesn't inherit overridden settings.
+        self.process_setup_args = (str(Path(settings.GIT_ROOT).parent),)
         # TODO: Remove this override once we upgrade to Django 6.0, which fixes this upstream.
         # Ref: https://github.com/django/django/pull/19853
         result.buffer = False
@@ -104,6 +126,15 @@ class NautobotTestRunner(DiscoverRunner):
         kwargs["exclude_tags"] = exclude_tags
 
         super().__init__(**kwargs)
+
+    def run_tests(self, test_labels, **kwargs):
+        # Isolate clones before test discovery and database migrations can import Jobs. Enclose the entire
+        # lifecycle because Django doesn't call teardown_test_environment() if discovery or database setup fails.
+        with tempfile.TemporaryDirectory(prefix="nautobot-test-git-", ignore_cleanup_errors=True) as directory:
+            git_root = Path(directory) / "parent"
+            git_root.mkdir()
+            with override_settings(GIT_ROOT=str(git_root)):
+                return super().run_tests(test_labels, **kwargs)
 
     def setup_test_environment(self, **kwargs):
         super().setup_test_environment(**kwargs)
