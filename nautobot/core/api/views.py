@@ -663,7 +663,9 @@ class NautobotSpectacularAPIView(SpectacularAPIView):
         # version specified as parameter to the view always takes precedence. after
         # that we try to source version through the schema view's own versioning_class.
         version = self.api_version or request.version or self._get_version_parameter(request)
-        cache_key = f"openapi_schema_cache_{version}_{settings.VERSION}"  # Invalidate cache on Nautobot release
+        # Invalidate cache on a change in API version, a change in Nautobot version, or a change in REST_API_MAX_DEPTH
+        max_depth = get_settings_or_config("REST_API_MAX_DEPTH", fallback=REST_API_MAX_DEPTH_DEFAULT)
+        cache_key = f"openapi_schema_cache_{version}_{settings.VERSION}_{max_depth}"
         etag = f'W/"{hash(cache_key)}"'
 
         # With combined browser cache and backend cache, we have three options:
