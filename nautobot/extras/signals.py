@@ -55,6 +55,7 @@ from nautobot.extras.models.approvals import (
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.utils import (
+    get_change_logged_m2m_side_field_names,
     get_change_logged_m2m_through_side_field_names,
     get_explicit_m2m_through_side_field_names,
     refresh_job_model_from_job_class,
@@ -326,7 +327,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # A new record of an explicit M2M through model (created directly, e.g. via its REST API endpoint,
         # rather than through an M2M manager, which bulk-creates and so never fires post_save) is an update
         # to both of the objects it associates. m2m_changed additions are handled separately below.
-        side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+        side_field_names = get_change_logged_m2m_side_field_names(sender)
         if side_field_names:
             _record_m2m_side_object_changes(change_context, instance, side_field_names)
     elif kwargs.get("action") == "post_add" and kwargs["pk_set"] and not sender._meta.auto_created:
@@ -336,7 +337,12 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # a time (Nautobot's global pre_delete receiver rules out Django's fast-delete path), so
         # _handle_deleted_m2m_through_object records the other side exactly once per object.
         other_model = kwargs["model"]
-        if sender in get_change_logged_m2m_through_side_field_names() and hasattr(other_model, "to_objectchange"):
+        # A self-referential through model's sides can't be told apart here, as both relate to `other_model`;
+        # its added objects are logged unless both of its sides are excluded.
+        if hasattr(other_model, "to_objectchange") and any(
+            sender._meta.get_field(side_field_name).related_model is other_model
+            for side_field_name in get_change_logged_m2m_side_field_names(sender)
+        ):
             for other_instance in other_model.objects.filter(pk__in=kwargs["pk_set"]).iterator():
                 _create_or_update_object_change(change_context, other_instance, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -537,7 +543,7 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     if change_context is None:
         return
 
-    side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+    side_field_names = get_change_logged_m2m_side_field_names(sender)
     if not side_field_names:
         return
 
