@@ -331,6 +331,12 @@ class BaseTable(django_tables2.Table):
             self.data.set_table(self)
             self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
 
+    def before_render(self, request):
+        # django-tables2's TemplateColumn replaces the template context's `request` with `table.request`, which is
+        # only set by RequestConfig; ensure that column templates can always use `request.path` and the like.
+        super().before_render(request)
+        self.request = request
+
     @property
     def configurable_columns(self):
         selected_columns = [
