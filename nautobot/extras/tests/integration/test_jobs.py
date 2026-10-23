@@ -1,8 +1,10 @@
+import json
 import time
 from unittest import skip
 
 from django.utils import timezone
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
@@ -13,6 +15,87 @@ class JobResultTest(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login_as_superuser()
+
+    def assert_result_data_fits_panel(self, result):
+        """Check the rendered JSON and its actual dimensions, including after highlighting."""
+        code = self.browser.find_by_css("#main .attr-table pre code").first
+        self.assertEqual(json.loads(code["textContent"]), result)
+        dimensions = self.browser.evaluate_script(
+            """(() => {
+                const code = document.querySelector('#main .attr-table pre code');
+                const table = code.closest('table');
+                const panel = table.closest('.card');
+                const textRange = document.createRange();
+                textRange.selectNodeContents(code);
+                return {
+                    codeWidth: code.clientWidth,
+                    codeScrollWidth: code.scrollWidth,
+                    tableRight: table.getBoundingClientRect().right,
+                    panelRight: panel.getBoundingClientRect().right,
+                    textRight: Math.max(...Array.from(textRange.getClientRects(), rect => rect.right)),
+                };
+            })()"""
+        )
+        self.assertLessEqual(dimensions["codeScrollWidth"], dimensions["codeWidth"] + 1)
+        self.assertLessEqual(dimensions["tableRight"], dimensions["panelRight"] + 1)
+        self.assertLessEqual(dimensions["textRight"], dimensions["panelRight"] + 1)
+
+    def test_result_data_wraps(self):
+        """Long exception messages and structured results remain readable at different widths."""
+        job = Job.objects.get(name="Example logging job.")
+        cases = [
+            (JobResultStatusChoices.STATUS_FAILURE, {"exc_message": message, "exc_type": "RuntimeError"})
+            for message in ("x" * 400, "This is a deliberately long exception message. " * 20, "Short exception")
+        ]
+        structured_result = {"devices": [{"name": "x" * 400, "interfaces": ["Ethernet1", "Ethernet2"]}] * 20}
+        cases.extend(
+            (status, structured_result)
+            for status in (JobResultStatusChoices.STATUS_SUCCESS, JobResultStatusChoices.STATUS_FAILURE)
+        )
+        for case, (status, result) in enumerate(cases):
+            job_result = JobResult.objects.create(
+                job_model=job,
+                name=job.class_path,
+                user=self.user,
+                status=status,
+                result=result,
+                date_done=timezone.now(),
+            )
+            for width in (1440, 768, 375):
+                with self.subTest(case=case, status=status, width=width):
+                    self.browser.driver.set_window_size(width, 900)
+                    # Use the available content width on small screens by collapsing the navigation.
+                    self.browser.driver.add_cookie({"name": "sidenav_collapsed", "value": str(width == 375).lower()})
+                    self.browser.visit(f"{self.live_server_url}{job_result.get_absolute_url()}")
+                    self.assert_result_data_fits_panel(result)
+
+    def test_result_data_wraps_after_polling(self):
+        """A running job's summary keeps the wrapping behavior when HTMX replaces it."""
+        job = Job.objects.get(name="Example logging job.")
+        job_result = JobResult.objects.create(
+            job_model=job, name=job.class_path, user=self.user, status=JobResultStatusChoices.STATUS_STARTED
+        )
+        self.browser.driver.set_window_size(375, 900)
+        self.browser.driver.add_cookie({"name": "sidenav_collapsed", "value": "true"})
+        self.browser.visit(f"{self.live_server_url}{job_result.get_absolute_url()}")
+        self.assertTrue(self.browser.find_by_css('#main [hx-trigger="every 3s"] .attr-table'))
+        result = {"exc_message": "x" * 400, "exc_type": "RuntimeError"}
+        job_result.status = JobResultStatusChoices.STATUS_FAILURE
+        job_result.result = result
+        job_result.date_done = timezone.now()
+        job_result.save()
+        WebDriverWait(self.browser.driver, 15).until(
+            lambda driver: driver.execute_script(
+                "return document.querySelector('#main .attr-table pre code')?.textContent.includes(arguments[0]);",
+                result["exc_message"],
+            )
+        )
+        self.assert_result_data_fits_panel(result)
+        self.assertTrue(
+            self.browser.evaluate_script(
+                "document.querySelector('#main .attr-table').closest('.card').querySelector('[hx-trigger]') === null"
+            )
+        )
 
     @skip("Test fails currently because of a bug with Selenium Mozila Browser not registering events on time")
     def test_log_table_filter(self):
