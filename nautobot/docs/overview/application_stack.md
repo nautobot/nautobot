@@ -9,7 +9,7 @@ Nautobot is built on the [Django](https://djangoproject.com/) Python Web framewo
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | HTTP service       | :simple-nginx: NGINX                                                                                                               |
 | WSGI service       | :material-web: uWSGI or Gunicorn                                                                                                   |
-| Application        | :simple-django: Django <br> :material-language-python: Python 3.10 - 3.14 supported                                                |
+| Application        | :simple-django: Django <br> :material-language-python: Python 3.11 - 3.14 supported                                                |
 | Database           | :simple-postgresql: PostgreSQL 14+ or <br>  :simple-mysql: MySQL 8.0.11+                                                              |
 | Cache              | :simple-redis: Django/Redis                                                                                                        |
 | Task queuing       | :simple-redis: Redis / :simple-celery: Celery                                                                                      |
@@ -44,6 +44,9 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 --- 2.4.20 "Python 3.9"
     Python 3.9 support was removed.
 
+--- 2.4.46 "Python 3.10"
+    Python 3.10 support was removed.
+
 +++ 3.0.0 "Python 3.13"
     Python 3.13 support was added.
 
@@ -53,6 +56,9 @@ See the [installation guide](../user-guide/administration/installation/index.md)
 
 +++ 3.1.0 "Python 3.14"
     Python 3.14 support was added.
+
+--- 3.2.9 "Python 3.10"
+    Python 3.10 support was removed.
 
 ## Notices
 

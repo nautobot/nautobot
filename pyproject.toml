@@ -14,13 +14,12 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     # Background task processing
     "celery (>=5.6.3,<5.7)",
@@ -118,8 +117,7 @@ dependencies = [
     # Handling of version numbers
     "packaging (>=23.2)",
     # Image processing library
-    "pillow (>=12.3.0,<13) ; python_version < '3.11'",
-    "pillow (>=13.0.0,<14) ; python_version >= '3.11'",
+    "pillow (>=13.0.0,<14)",
     # Custom prometheus metrics
     "prometheus-client (>=0.25.0,<0.26)",
     # PostgreSQL database adapter
@@ -300,7 +298,7 @@ ignore-paths = [
 ]
 init-hook = "import nautobot; nautobot.setup()"
 load-plugins = "pylint_django"
-py-version = "3.10"
+py-version = "3.11"
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
@@ -425,7 +423,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
