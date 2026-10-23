@@ -118,7 +118,7 @@ dependencies = [
     # Handling of version numbers
     "packaging (>=23.2)",
     # Image processing library
-    "pillow (>=12.3.0,<13)",
+    "pillow (>=13,<14)",
     # Custom prometheus metrics
     "prometheus-client (>=0.26.0,<0.27)",
     # PostgreSQL database adapter
