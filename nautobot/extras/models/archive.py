@@ -152,7 +152,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     def get_related_changes(self, user=None, permission="view"):
         """
         Retrieve other ArchivedObjectChanges that have the same `changed_object` as this record.
-        
+
         Equivalent to `ObjectChange.get_related_changes`.
 
         Args:
@@ -181,7 +181,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     def changed_object_type(self):
         """
         The content type that `changed_object_type_id` identifies, or None if there is no such content type.
-        
+
         Equivalent to the `ObjectChange.changed_object_type` GenericForeignKey.
         Note that ContentTypes aren't archived, so this returns a "live" ContentType record, if any.
         """
@@ -191,7 +191,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     def related_object_type(self):
         """
         The content type that `related_object_type_id` identifies, or None if there is no such content type.
-        
+
         Equivalent to the `ObjectChange.related_object_type` GenericForeignKey.
         Note that ContentTypes aren't archived, so this returns a "live" ContentType record, if any.
         """
