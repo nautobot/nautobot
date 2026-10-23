@@ -393,6 +393,7 @@ nav:
               - Nautobot Docker Images: "user-guide/administration/guides/docker.md"
               - SELinux Troubleshooting: "user-guide/administration/guides/selinux-troubleshooting.md"
               - Health Checks: "user-guide/administration/guides/health-checks.md"
+              - High Availability: "user-guide/administration/guides/high-availability.md"
               - Permissions: "user-guide/administration/guides/permissions.md"
               - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
               - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
