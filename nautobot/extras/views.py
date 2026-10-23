@@ -3614,19 +3614,13 @@ def render_jobresult_cancel_type(cancel_type):
 
 class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
-        """Wrap result data and render placeholders for fields of incomplete jobs."""
+        """Render a placeholder for certain fields if the job hasn't yet completed."""
         if key in ["duration", "result"]:
             obj = get_obj_from_context(context, self.context_object_key)
             if obj.status not in JobResultStatusChoices.READY_STATES:
                 return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
-        if key == "result":
-            if value is None:
-                return helpers.placeholder(value)  # instead of an explicitly rendered `null`
-            return format_html(
-                '<pre style="white-space: pre-wrap;">'
-                '<code class="language-json" style="overflow-wrap: anywhere;">{}</code></pre>',
-                helpers.render_json(value, syntax_highlight=False),
-            )
+        if key == "result" and value is None:
+            return helpers.placeholder(value)  # instead of an explicitly rendered `null`
         return super().render_value(key, value, context)
 
 
