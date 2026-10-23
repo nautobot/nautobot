@@ -4,6 +4,7 @@ import pkgutil
 from types import SimpleNamespace
 import warnings
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -22,12 +23,35 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
 from nautobot.core.templatetags import helpers
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
-from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
-from nautobot.extras.choices import ComputedFieldTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry
-from nautobot.extras.tables import JobLogEntryTable
-from nautobot.ipam.models import RIR
+from nautobot.core.testing import AssertNoRepeatedQueries
+from nautobot.dcim.models import (
+    Device,
+    Interface,
+    InterfaceRedundancyGroupAssociation,
+    InventoryItem,
+    Location,
+    LocationType,
+    Rack,
+    RackGroup,
+)
+from nautobot.dcim.tables import (
+    InterfaceRedundancyGroupAssociationTable,
+    InventoryItemTable,
+    LocationTable,
+    LocationTypeTable,
+    RackGroupTable,
+)
+from nautobot.extras.choices import ComputedFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.models import (
+    ApprovalWorkflowStage,
+    ComputedField,
+    JobLogEntry,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+)
+from nautobot.extras.tables import JobLogEntryTable, RoleTable
+from nautobot.ipam.models import IPAddress, RIR
 from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
@@ -284,6 +308,104 @@ class LinkedCountColumnRenderTestCase(TestCase):
         )
         rendered = column.render(bound_column=None, record=record, value=1)
         self.assertIn("badge", rendered)
+
+
+class BaseTablePrefetchTestCase(TestCase):
+    def test_content_types_column_uses_the_prefetch(self):
+        content_type = ContentType.objects.get_for_model(Device)
+        for i in range(12):
+            Role.objects.create(name=f"Prefetch Test Role {i}").content_types.add(content_type)
+
+        with AssertNoRepeatedQueries(self):
+            table = RoleTable(Role.objects.filter(name__startswith="Prefetch Test Role"))
+            for row in table.rows:
+                row.get_cell("content_types")
+
+    def test_to_many_accessor_after_a_foreign_key_is_prefetched(self):
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config(
+            "tables.InterfaceRedundancyGroupAssociationTable.columns",
+            ["interface", "interface__ip_addresses"],
+            commit=True,
+        )
+
+        table = InterfaceRedundancyGroupAssociationTable(InterfaceRedundancyGroupAssociation.objects.all(), user=user)
+
+        self.assertIn("interface__ip_addresses", table.data.data._prefetch_related_lookups)
+
+    def test_relationship_column_uses_the_prefetch(self):
+        location_type = ContentType.objects.get_for_model(Location)
+        relationship = Relationship.objects.create(
+            label="Prefetch Test",
+            key="prefetch_test",
+            source_type=location_type,
+            destination_type=location_type,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        # BaseTable adds relationship columns to the class's base_columns, and the rollback skips the cache invalidation.
+        self.addCleanup(relationship.delete)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_src", None)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_dst", None)
+        destination, *sources = Location.objects.all()[:13]
+        self.assertEqual(len(sources), 12)
+        for source in sources:
+            RelationshipAssociation.objects.create(relationship=relationship, source=source, destination=destination)
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config("tables.LocationTable.columns", ["name", "cr_prefetch_test_src"], commit=True)
+
+        with AssertNoRepeatedQueries(self):
+            table = LocationTable(Location.objects.filter(pk__in=[source.pk for source in sources]), user=user)
+            for row in table.rows:
+                row.get_cell("cr_prefetch_test_src")
+
+
+class BaseTableAccessorWalkTestCase(TestCase):
+    """Records how BaseTable loads the related objects along each shape of column accessor."""
+
+    def _optimized_queryset(self, table_model, column_accessor):
+        class AccessorTable(BaseTable):
+            accessed = tables.Column(accessor=column_accessor)
+
+            class Meta(BaseTable.Meta):
+                model = table_model
+                default_columns = ("accessed",)
+
+        return AccessorTable(table_model.objects.all()).data.data
+
+    def test_accessor_shapes(self):
+        cases = (
+            # ForeignKeys only: one join.
+            (Device, "tenant__tenant_group", {"tenant": {"tenant_group": {}}}, ()),
+            # The walk stops at the first non-relation field.
+            (Device, "tenant__name", {"tenant": {}}, ()),
+            # A to-many hop with no ForeignKey before it.
+            (Device, "interfaces", False, ("interfaces",)),
+            # A ForeignKey after a to-many hop joins the prefetch.
+            (Interface, "ip_addresses__parent", False, ("ip_addresses__parent",)),
+            # A to-many hop after a ForeignKey: the ForeignKey is joined, and the prefetch runs through it.
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses",
+                {"interface": {}},
+                ("interface__ip_addresses",),
+            ),
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses__parent",
+                {"interface": {}},
+                ("interface__ip_addresses__parent",),
+            ),
+            # A GenericForeignKey is prefetched only when no ForeignKey comes before it.
+            (RelationshipAssociation, "source", False, ("source",)),
+            (ApprovalWorkflowStage, "approval_workflow__object_under_review", {"approval_workflow": {}}, ()),
+            # A reverse many-to-many hop is not followed.
+            (IPAddress, "interfaces", False, ()),
+        )
+        for model, accessor, select_related, prefetch_related in cases:
+            with self.subTest(model=model.__name__, accessor=accessor):
+                queryset = self._optimized_queryset(model, accessor)
+                self.assertEqual(queryset.query.select_related, select_related)
+                self.assertEqual(queryset._prefetch_related_lookups, prefetch_related)
 
 
 class ButtonsColumnTestCase(TestCase):
