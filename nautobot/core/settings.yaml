@@ -525,6 +525,50 @@ properties:
     environment_variable: "NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL"
     type: "string"
     version_added: "2.0.0"
+  CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS:
+    additionalProperties:
+      items:
+        type: "string"
+      type: "array"
+    default: {}
+    description: >-
+      Many-to-many association models whose associated objects should not receive an automatic "update" change
+      record when an association is created or deleted. Webhooks, job hooks, and events for those association
+      changes are suppressed for the excluded objects as well.
+    details: |-
+      By default, creating or deleting a record of a many-to-many association model (such as a `VRFPrefixAssignment`)
+      records an "update" change against _both_ of the objects it associates, as described in
+      [Change Logging](../../platform-functionality/change-logging.md#many-to-many-association-changes).
+      See [Excluding Associations from Change Logging](../../platform-functionality/change-logging.md#excluding-associations-from-change-logging)
+      for the caveats of this setting.
+      When one side of an association may have thousands of related objects, such as a VRF assigned to thousands of
+      Prefixes and Devices, serializing that object for every association change can be very slow.
+
+      Each key is the `app_label.modelname` of an association model, and each value is a list of the names of its
+      foreign key fields whose related objects should be excluded. These are field names on the association model
+      itself (for example, `vrf` and `prefix` on `VRFPrefixAssignment`), not the names of the related models
+      (`ipam.vrf`, `VRF`, etc.). Only the sides that are explicitly listed are
+      excluded, so an empty list is equivalent to omitting the association model entirely. For example, to keep
+      recording VRF assignments against the VRF itself, but not against each assigned Prefix and Device, and to
+      stop recording Cloud Network to Prefix assignments against either side:
+
+      ```python
+      CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = {
+          "ipam.vrfprefixassignment": ["prefix"],
+          "ipam.vrfdeviceassignment": ["device"],
+          "cloud.cloudnetworkprefixassignment": ["cloud_network", "prefix"],
+      }
+      ```
+
+      !!! warning
+          Excluded objects receive no change record for association changes, so no [webhooks](../../platform-functionality/webhook.md), [job hooks](../../platform-functionality/jobs/jobhook.md), or [events](../../platform-functionality/events.md) fire for them either.
+
+      When set via the `NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` environment variable, the value must be a JSON
+      object, for example `{"ipam.vrfprefixassignment": ["prefix"]}`.
+    environment_variable: "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"
+    is_constance_config: true
+    type: "object"
+    version_added: "3.2.8"
   CHANGELOG_RETENTION:
     default: 90
     description: >-
@@ -1478,6 +1522,9 @@ properties:
       A list of app names for which Prometheus metrics should be disabled.
       (If provided as an environment variable, it should be a comma-separated string, for example
       `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
+    details: |-
+      This setting only has an effect when `METRICS_ENABLED` is `True`. When metrics are disabled, no App metrics
+      are registered regardless of this setting.
     environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
     items:
       type: "string"
@@ -1487,7 +1534,9 @@ properties:
     version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
-    description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
+    description: >-
+      Toggle the availability of Prometheus-compatible metrics at `/metrics`.
+      When `False`, App metric functions are neither registered nor evaluated.
     environment_variable: "NAUTOBOT_METRICS_ENABLED"
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"

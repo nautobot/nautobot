@@ -11,7 +11,7 @@ from django.test import override_settings
 
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Cable, Device, PowerPort
+from nautobot.dcim.models import Cable, CableToCableTermination, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, SavedView, TaggedItem
@@ -20,6 +20,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
+    get_change_logged_m2m_side_field_names,
     get_change_logged_m2m_through_side_field_names,
     get_explicit_m2m_through_side_field_names,
     get_kubernetes_job_manifest,
@@ -58,6 +59,23 @@ class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
         with self.subTest("self-referential M2M with through_fields"):
             self.assertEqual(mapping[DynamicGroupMembership], ("group", "parent_group"))
 
+        with self.subTest("OneToOneField sides are included"):
+            self.assertEqual(
+                mapping[CableToCableTermination],
+                (
+                    "cable",
+                    "circuit_termination",
+                    "console_port",
+                    "console_server_port",
+                    "front_port",
+                    "interface",
+                    "power_feed",
+                    "power_outlet",
+                    "power_port",
+                    "rear_port",
+                ),
+            )
+
     def test_excluded_models(self):
         mapping = get_explicit_m2m_through_side_field_names()
 
@@ -79,6 +97,55 @@ class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
             expected = dict(base_mapping)
             del expected[UserSavedViewAssociation]
             self.assertEqual(change_logged_mapping, expected)
+
+
+class GetChangeLoggedM2MSideFieldNamesTest(TestCase):
+    """Tests for the `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS`-aware lookup of change-logged M2M through model sides."""
+
+    def test_excluded_associations(self):
+        vrf_device_sides = ("device", "virtual_device_context", "virtual_machine", "vrf")
+        cases = [
+            ("no exclusions configured", {}, VRFPrefixAssignment, ("prefix", "vrf")),
+            (
+                "an empty list excludes nothing",
+                {"ipam.vrfprefixassignment": []},
+                VRFPrefixAssignment,
+                ("prefix", "vrf"),
+            ),
+            ("a listed side is excluded", {"ipam.vrfprefixassignment": ["vrf"]}, VRFPrefixAssignment, ("prefix",)),
+            (
+                "all listed sides are excluded",
+                {"ipam.vrfprefixassignment": ["prefix", "vrf"]},
+                VRFPrefixAssignment,
+                (),
+            ),
+            ("labels are case-insensitive", {"ipam.VRFPrefixAssignment": ["vrf"]}, VRFPrefixAssignment, ("prefix",)),
+            (
+                "other through models are unaffected",
+                {"ipam.vrfprefixassignment": ["prefix", "vrf"]},
+                VRFDeviceAssignment,
+                vrf_device_sides,
+            ),
+            (
+                "unknown models and sides are ignored",
+                {"ipam.vrfprefixassignment": ["nonexistent"], "nonexistent.model": ["nonexistent"]},
+                VRFPrefixAssignment,
+                ("prefix", "vrf"),
+            ),
+            ("a model that is not a through model has no sides", {}, VRF, ()),
+            ("a through model with is_m2m_change_logged = False has no sides", {}, UserSavedViewAssociation, ()),
+        ]
+        for description, excluded_associations, through, expected in cases:
+            with (
+                self.subTest(description),
+                override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS=excluded_associations),
+            ):
+                self.assertEqual(get_change_logged_m2m_side_field_names(through), expected)
+
+        with self.subTest("a value that is not a dict is ignored with a warning"):
+            with override_settings(CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS=["ipam.vrfprefixassignment"]):
+                with self.assertLogs("nautobot.extras.utils", level="WARNING"):
+                    self.assertEqual(get_change_logged_m2m_side_field_names(VRFPrefixAssignment), ("prefix", "vrf"))
 
 
 class UtilsTestCase(TestCase):

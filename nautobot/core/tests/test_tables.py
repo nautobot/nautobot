@@ -5,14 +5,16 @@ from types import SimpleNamespace
 import warnings
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
 from django.db.models import IntegerField, Value
-from django.test import SimpleTestCase, tag, TestCase
+from django.template.loader import get_template
+from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
-import django_tables2
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 import nautobot
@@ -362,7 +364,7 @@ class BaseTableAccessorWalkTestCase(TestCase):
 
     def _optimized_queryset(self, table_model, column_accessor):
         class AccessorTable(BaseTable):
-            accessed = django_tables2.Column(accessor=column_accessor)
+            accessed = tables.Column(accessor=column_accessor)
 
             class Meta(BaseTable.Meta):
                 model = table_model
@@ -433,6 +435,28 @@ class ButtonsColumnTestCase(TestCase):
         """An explicit non-empty subset is passed through unchanged."""
         column = ButtonsColumn(RIR, buttons=("delete",))
         self.assertEqual(column.extra_context["buttons"], ("delete",))
+
+
+class BaseTableTemplateColumnRequestTestCase(TestCase):
+    """Covers the `request` that a `BaseTable`'s `TemplateColumn` templates see when rendered."""
+
+    class RequestPathTable(BaseTable):
+        request_path = tables.TemplateColumn(template_code="{{ request.path }}")
+
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("name", "request_path")
+
+    def test_template_column_sees_current_request_without_request_config(self):
+        """A table rendered without `RequestConfig`, as on detail-view tabs, still gives column templates the request."""
+        rir = RIR.objects.create(name="Template Column Request RIR")
+        table = self.RequestPathTable(RIR.objects.filter(pk=rir.pk))
+        request = RequestFactory().get("/some/detail/view/")
+        request.user = AnonymousUser()
+
+        rendered = get_template("responsive_table.html").render({"table": table}, request)
+
+        self.assertInHTML("<td>/some/detail/view/</td>", rendered)
 
 
 class ComputedFieldColumnRenderTestCase(TestCase):
