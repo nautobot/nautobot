@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -1917,6 +1917,34 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
         DeviceBay.objects.get(device=self.device, name="Device Bay 1")
         ModuleBay.objects.get(parent_device=self.device, position="1111")
+
+    def test_create_components_in_batches(self):
+        """
+        Ensure that components are created from the DeviceType with a bounded `bulk_create()` batch size.
+        """
+        with patch.object(QuerySet, "bulk_create", autospec=True, side_effect=QuerySet.bulk_create) as bulk_create:
+            Device.objects.create(
+                location=self.location_3,
+                device_type=self.device_type,
+                role=self.device_role,
+                status=self.device_status,
+                name="Test Device 2",
+            )
+
+        batch_sizes = {call.args[0].model: call.kwargs.get("batch_size") for call in bulk_create.call_args_list}
+        for model in (
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            RearPort,
+            FrontPort,
+            DeviceBay,
+            ModuleBay,
+        ):
+            with self.subTest(model=model.__name__):
+                self.assertEqual(batch_sizes.get(model), 1000)
 
     def test_multiple_unnamed_devices(self):
         device1 = Device(
@@ -5911,6 +5939,27 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         ModuleBay.objects.get(parent_module=module, position="1111")
+
+    def test_create_components_in_batches(self):
+        """
+        Ensure that components are created from the ModuleType with a bounded `bulk_create()` batch size.
+        """
+        with patch.object(QuerySet, "bulk_create", autospec=True, side_effect=QuerySet.bulk_create) as bulk_create:
+            Module.objects.create(module_type=self.module_type, location=self.location, status=self.status)
+
+        batch_sizes = {call.args[0].model: call.kwargs.get("batch_size") for call in bulk_create.call_args_list}
+        for model in (
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            RearPort,
+            FrontPort,
+            ModuleBay,
+        ):
+            with self.subTest(model=model.__name__):
+                self.assertEqual(batch_sizes.get(model), 1000)
 
     def test_module_infinite_recursion_self_parent(self):
         """Assert that a module cannot be its own parent."""

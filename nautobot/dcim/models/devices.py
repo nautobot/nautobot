@@ -970,7 +970,7 @@ class Device(PrimaryModel, ConfigContextModel):
         ]
         instantiated_components = []
         for model, templates in component_models:
-            model.objects.bulk_create([x.instantiate(device=self) for x in templates])
+            model.objects.bulk_create([x.instantiate(device=self) for x in templates], batch_size=1000)
         cache_key = construct_cache_key(self, method_name="has_device_bays", branch_aware=True)
         cache.delete(cache_key)
         cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
@@ -2192,7 +2192,9 @@ class Module(PrimaryModel):
         ]
         instantiated_components = []
         for model, templates in component_models:
-            model.objects.bulk_create([x.instantiate(device=self.device, module=self) for x in templates])
+            model.objects.bulk_create(
+                [x.instantiate(device=self.device, module=self) for x in templates], batch_size=1000
+            )
         return instantiated_components
 
     create_components.alters_data = True
