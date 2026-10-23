@@ -101,7 +101,7 @@ The following minimum versions are required for Nautobot to operate:
 
 | Dependency | Role         | Minimum Version |
 | ---------- | ------------ | --------------- |
-| Python     | Application  | 3.10            |
+| Python     | Application  | 3.11            |
 | PostgreSQL | Database     | 12.0            |
 | MySQL      | Database     | 8.0             |
 | Redis      | Cache, Queue | 4.0             |
@@ -121,6 +121,12 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 
 --- 2.4.20 "Python 3.9 support removed"
     Python 3.9 support was removed.
+
+--- 2.4.46 "Python 3.10 support removed"
+    Python 3.10 support was removed.
+
+--- 2.4.46 "Python 3.13 and 3.14 support added"
+    Python 3.13 and 3.14 support was added.
 
 #### Database
 
