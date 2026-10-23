@@ -106,3 +106,88 @@ def created_note(create_object, created_location):
         assigned_object_id=created_location["id"],
         note=f"{unique_name()} original note",
     )
+
+
+# The schema that created_schema_validation_tree binds its children to, and the data that they
+# contain. The API validates data against the bound schema on write, so a failing child cannot
+# be created directly. Tests make the children fail by changing the schema afterwards.
+VALID_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
+}
+VALID_DATA = {"a": 123, "b": 456, "c": 777}
+
+
+@pytest.fixture
+def update_object(api):
+    """Callable that PATCHes *fields* onto the REST object *pk* at *endpoint* and returns the updated record."""
+
+    def _update(endpoint, pk, **fields):
+        response = api.patch(f"/api/{endpoint}{pk}/", data=fields)
+        if not response.ok:
+            pytest.fail(f"PATCH /api/{endpoint}{pk}/ returned {response.status}: {response.text()}")
+        return response.json()
+
+    return _update
+
+
+@pytest.fixture
+def schema_names_to_delete(api):
+    """A list of config context schema names. Every schema with one of these names is deleted on teardown.
+
+    Use it for schemas that a test creates through the UI, because `create_object` deletes
+    only the records that it created. Add the name before submitting the form, so that the
+    schema is deleted even when an assertion fails after the create.
+    """
+    names = []
+    yield names
+
+    failures = []
+    for name in names:
+        response = api.get("/api/extras/config-context-schemas/", params={"name": name})
+        if not response.ok:
+            failures.append(f"GET config context schemas named {name!r} returned {response.status}")
+            continue
+        for record in response.json()["results"]:
+            deleted = api.delete(f"/api/extras/config-context-schemas/{record['id']}/")
+            if not deleted.ok and deleted.status != 404:
+                failures.append(f"DELETE config context schema {record['id']} returned {deleted.status}")
+    if failures:
+        pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
+
+
+@pytest.fixture
+def created_schema_validation_tree(create_object, update_object, status_for, created_device):
+    """A config context schema with one valid config context, device and virtual machine bound to it.
+
+    These are the three kinds of object that the schema's Validation tab reports on. Each one
+    has VALID_DATA as its context data. The config context is scoped to the device's location,
+    so its data does not apply to every device in the instance.
+    """
+    unique = unique_name()
+    schema = create_object("extras/config-context-schemas/", name=f"{unique}-schema", data_schema=VALID_SCHEMA)
+    config_context = create_object(
+        "extras/config-contexts/",
+        name=f"{unique}-context",
+        data=VALID_DATA,
+        config_context_schema=schema["id"],
+        locations=[created_device["location"]["id"]],
+    )
+    device = update_object(
+        "dcim/devices/",
+        created_device["device"]["id"],
+        local_config_context_data=VALID_DATA,
+        local_config_context_schema=schema["id"],
+    )
+    cluster_type = create_object("virtualization/cluster-types/", name=f"{unique}-cluster-type")
+    cluster = create_object("virtualization/clusters/", name=f"{unique}-cluster", cluster_type=cluster_type["id"])
+    virtual_machine = create_object(
+        "virtualization/virtual-machines/",
+        name=f"{unique}-vm",
+        cluster=cluster["id"],
+        status=status_for("virtualization.virtualmachine")["id"],
+        local_config_context_data=VALID_DATA,
+        local_config_context_schema=schema["id"],
+    )
+    return {"schema": schema, "config_context": config_context, "device": device, "virtual_machine": virtual_machine}
