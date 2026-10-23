@@ -53,11 +53,11 @@ Please see the [official MySQL documentation on migrating collation encoding set
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v2.4.20 and later requires the following:
+Nautobot v2.4.46 and later requires the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
-| Python     | 3.10            |
+| Python     | 3.11            |
 | PostgreSQL | 12.0            |
 | Redis      | 4.0             |
 
@@ -69,6 +69,9 @@ Nautobot v2.4.20 and later requires the following:
 
 --- 2.4.20
     Support for Python 3.9 was removed.
+
+--- 2.4.46
+    Support for Python 3.10 was removed.
 
 Nautobot v1.1.0 and later can optionally support the following:
 
