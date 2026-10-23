@@ -216,6 +216,8 @@ class NautobotTestRunner(DiscoverRunner):
                         ):
                             call_command(*command)
 
+                    call_command("migrate")  # Refresh Job database records, etc.
+
                     # Django 5.2 code continues:
                     if self.parallel > 1:
                         for index in range(self.parallel):
