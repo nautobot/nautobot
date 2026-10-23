@@ -38,6 +38,7 @@ class ConfigContextSchemaDetailPage(DetailPage):
 
     def _validation_cell(self, panel_title, row_name):
         """Locator for the "Validation state" cell of *row_name* in panel *panel_title*.
+
         Find the column by its header in that panel's own table, because the three tables have
         different columns. Do not look for the check icon anywhere in the row. The Config
         Contexts table shows "Active" with the same icon as a pass.
