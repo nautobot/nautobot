@@ -1,0 +1,1 @@
+Changed accessibility assertions in integration tests to run against a downloaded copy of axe-core rather than being skipped when it is not installed locally.

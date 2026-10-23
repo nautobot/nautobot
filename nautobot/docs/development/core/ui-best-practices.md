@@ -229,7 +229,7 @@ Two linters enforce a subset of this automatically, so run them before opening a
 
     One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
     correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not
-    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/core/testing/integration.py`, and pass
+    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/core/testing/axe.py`, and pass
     `disabled_rules=()` to scan with it on.
 
 Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated

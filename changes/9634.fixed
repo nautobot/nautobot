@@ -1,0 +1,1 @@
+Fixed "Update Group Assignment for All" in object list views assigning every object of that type to the selected group(s) instead of only the objects matching the current filters.
