@@ -159,7 +159,7 @@ def create_object(api):
 
         create_object.track("dcim/devices/", name=name)
 
-    Objects are deleted in reverse order. A 404 is expected and
+    Objects are deleted in the reverse of the order they were created or tracked. A 404 is expected and
     ignored, since a child may already have been removed by a parent's cascade delete.
     Any other failing status is collected and reported once every delete has been
     attempted, so a server error during cleanup is visible without leaking the records
