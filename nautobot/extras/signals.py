@@ -420,7 +420,7 @@ def _create_or_update_object_change(change_context, instance, action):
         instance._state.fields_cache = original_cache
 
 
-def _record_m2m_side_object_changes(change_context, through_instance, side_field_names):
+def _record_m2m_side_object_changes(change_context, through_instance, side_field_names, exclude_object=None):
     """
     Record an ACTION_UPDATE ObjectChange for each non-null, change-logged M2M "side" of an explicit
     through-model record, so that association changes appear in (and fire hooks for) both related
@@ -429,6 +429,15 @@ def _record_m2m_side_object_changes(change_context, through_instance, side_field
     for field_name in side_field_names:
         side_object = getattr(through_instance, field_name, None)
         if side_object is None or not hasattr(side_object, "to_objectchange"):
+            continue
+        if exclude_object is not None and (
+            side_object == exclude_object
+            or (
+                getattr(side_object, "pk", None)
+                and side_object.pk == getattr(exclude_object, "pk", None)
+                and type(side_object) is getattr(exclude_object, "__class__", None)
+            )
+        ):
             continue
         _create_or_update_object_change(change_context, side_object, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -558,10 +567,36 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     # dispatch within that one request. It also matches long-standing behavior, as the m2m_changed
     # signal never fires for cascades either; the deleted object's own DELETE change record still
     # captures its association memberships where its REST API representation includes them.
-    if not (origin is instance or getattr(origin, "model", None) is sender):
+    # Exception: Through models may define `allow_cascade_delete_fields` to specify parent models whose
+    # deletion should still record changes for surviving side objects (e.g., CableToCableTermination when
+    # a Cable is deleted, ensuring disconnected interfaces/ports record their cable removal).
+    allowed_cascade_fields = getattr(sender, "allow_cascade_delete_fields", ())
+    origin_matches_allowed_parent = False
+    if allowed_cascade_fields:
+        for field_name in allowed_cascade_fields:
+            side_field = sender._meta.get_field(field_name)
+            parent_model = side_field.remote_field.model
+            if isinstance(parent_model, str):
+                from django.apps import apps
+
+                parent_model = apps.get_model(parent_model)
+            if origin is not None and (
+                isinstance(origin, parent_model)
+                or origin is parent_model
+                or getattr(origin, "model", None) is parent_model
+            ):
+                origin_matches_allowed_parent = True
+                break
+
+    if not (origin is instance or getattr(origin, "model", None) is sender or origin_matches_allowed_parent):
         return
 
-    _record_m2m_side_object_changes(change_context, instance, side_field_names)
+    _record_m2m_side_object_changes(
+        change_context,
+        instance,
+        side_field_names,
+        exclude_object=origin if not (origin is instance) else None,
+    )
 
 
 #
