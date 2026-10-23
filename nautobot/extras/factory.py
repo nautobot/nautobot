@@ -79,16 +79,37 @@ LIVE_HISTORY_END = datetime(2026, 7, 1, tzinfo=timezone.utc)
 
 def random_datetime(start, end):
     """
-    A random datetime between `start` and `end` inclusive, drawn from factory_boy's seeded random generator.
+    Returns a random datetime between `start` and `end`, inclusive of both.
 
-    Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+    Drawn from factory_boy's seeded random generator, so a given seed always produces the same value. Avoids
+    standalone faker (bypasses the seed) and relative dates (faker#2149).
+
+    Args:
+        start (datetime): The earliest datetime that may be returned.
+        end (datetime): The latest datetime that may be returned. Must not be earlier than `start`.
+
+    Returns:
+        (datetime): A datetime between `start` and `end` at whole-second resolution, carrying `start`'s tzinfo.
     """
+
     seconds_range = int((end - start).total_seconds())
     return start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
 
 
 def random_time_during(job_result):
-    """A random time while `job_result` was running, or when it started or was created if it has no end time."""
+    """
+    Return a random time that occurs while `job_result` was running.
+
+    Falls back to when it started, or when it was created, for a job result that never finished and so has no end time to bound the range.
+
+    Args:
+        job_result (JobResult | ArchivedJobResult): The job result to draw a time from. Only its `date_started`,
+            `date_done` and `date_created` fields are read, so either model is accepted.
+
+    Returns:
+        (datetime): A time between `date_started` and `date_done` where both are set, otherwise `date_started`,
+            otherwise `date_created`.
+    """
     if job_result.date_started and job_result.date_done:
         return random_datetime(job_result.date_started, job_result.date_done)
     return job_result.date_started or job_result.date_created
@@ -106,12 +127,33 @@ def _job_result_result(obj):
 
 
 def _job_result_traceback(obj):
+    """
+    Return a randomized traceback for a JobResult if it failed, or None for all other outcomes.
+
+    Only a failed job carries a traceback; every other status leaves it empty.
+
+    Args:
+        obj (builder.Resolver): A Factory Boy Attribute Resolver for the job result being built, used for its `status`.
+
+    Returns:
+        (str | None): A paragraph of random prose where `status` is `STATUS_FAILURE`, otherwise None. The text
+        
     if obj.status == JobResultStatusChoices.STATUS_FAILURE:
         return faker.Faker().paragraph()
     return None
 
 
 def _job_result_celery_kwargs(obj):
+    """
+    Return randomized Celery kwargs for a JobResult, or an empty dict if no celery kwargs are present.
+
+    Args:
+        obj (builder.Resolver): A Factory Boy attribute resolver for the job result being built. Used for its
+            `has_celery_kwargs`, `job_model` and `user` parameters.
+
+    Returns:
+        (dict): Celery kwarg names mapped to randomized values. Empty dict if no celery kwargs found.
+    """
     if not obj.has_celery_kwargs:
         return {}
 
@@ -208,7 +250,9 @@ class ArchivedJobLogEntryFactory(BaseModelFactory):
 
 
 class ArchivedJobResultFactory(BaseModelFactory):
-    """ArchivedJobResult model factory, for job history older than any that `JobResultFactory` creates."""
+    """ArchivedJobResult model factory.
+    
+    Used to create ArchivedJobResult objects that should be older than any existing JobResult objects created by the JobResultFactory"""
 
     class Meta:
         model = ArchivedJobResult

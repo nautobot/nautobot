@@ -37,27 +37,31 @@ from nautobot.extras.models.customfields import CustomFieldModel
 
 def unresolved_relation(relation_name):
     """
-    A read-only property, representing a previous foreign key relation that can't be referenced from the archived model.
+    Helper method to create a read-only property, representing a previous foreign key relation that cannot be referenced from the archived model.
 
-    It always resolves to `None`, so that code that reaches for the relation by its name, as it would on the live
-    model, gets `None` instead of an `AttributeError`.
+    It always resolves to `None`, to prevent `AttributeErrors` from occurring when code tries to access the relation by its property name, as it would have done the live
+    model.
 
     Args:
         relation_name (str): The name of the relation on the live model, such as `"user"`. Assign the result to an
             attribute of the same name; the archived model is expected to store the related object's id in a
             field named `<relation_name>_id`.
+
+    Returns:
+        (property): A read-only property that resolves to `None` on every instance.
     """
-    return property(lambda self: None, doc=f"Always None; the related object is identified by `{relation_name}_id`.")
+    def always_none(self):
+        return None
+
+    return property(always_none, doc=f"Always None; the related object is identified by `{relation_name}_id`.")
 
 
 class ArchivedLogModel(BaseModel):
     """
-    Abstract base for archived copies of Nautobot's log-like models.
+    Abstract base class for archived copies of Nautobot's log-like models.
 
-    The log models are `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry`.
-
-    The `id` of the original live record is copied to the archived record, to simplify auditing, and to allow
-    archival/rotation workflows and the like to re-run without duplicating archived records.
+    The `id` of the original live record is copied to the archived database record in order to simplify auditing, to allow
+    archival workflows, and to support idempotency.
     """
 
     is_metadata_associable_model = False
@@ -71,10 +75,16 @@ class ArchivedLogModel(BaseModel):
 
     def get_absolute_url(self, api=False):
         """
-        The record's read-only detail page, or None where it has none.
+        The archived model's read-only detail page, or None where it has none.
 
-        Returns None rather than raising in the case of no valid URL, so that a linkified table column
-        (which calls `get_absolute_url()`) renders unlinked plaintext instead of failing to render the row entirely.
+        Returns None rather than raising an exception in the case of no valid URL being located. Done so that a linkified table column
+        (which calls `get_absolute_url()`) renders unlinked plaintext correctly instead of failing to render the row entirely.
+
+        Args:
+            api (bool): Specifies if an API url should be returned
+
+        Returns:
+            (str | None): The UI or API URL for the Log, or None where it has no route.
         """
         try:
             return super().get_absolute_url(api=api)
@@ -83,12 +93,12 @@ class ArchivedLogModel(BaseModel):
 
     class Meta:
         abstract = True
-        # Read-only: archived records are written by rotation and never edited, so only `view` exists.
+        # Archived data must be read-only
         default_permissions = ("view",)
 
 
 class ArchivedObjectChange(ArchivedLogModel):
-    """Archived copy of an `ObjectChange`."""
+    """An ObjectChange model that has been Archived."""
 
     time = models.DateTimeField(editable=False, db_index=True)
     # Not indexed, unlike the live `user` foreign key: `user` can't be followed from an archived change, so
@@ -173,6 +183,12 @@ class ArchivedObjectChange(ArchivedLogModel):
 
     @staticmethod
     def _content_type_for(type_id):
+        """
+        Retrieves the `ContentType` by id or `None` if not located.
+
+        Returns:
+            (ContentType | None): A ContentType or None
+        """
         if not type_id:
             return None
         try:
@@ -191,7 +207,7 @@ class ArchivedObjectChange(ArchivedLogModel):
 class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     """Archived copy of a `JobResult`."""
 
-    # Indexed like the live foreign key, for listing a job's archived results.
+    # Indexed like the `JobResult.job_model_id`, for listing a job's archived results.
     job_model_id = models.UUIDField(blank=True, null=True, db_index=True)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     # Not indexed, unlike the live field, which is internal to job execution.
@@ -205,7 +221,7 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     # filtered by `date_created`.
     date_started = models.DateTimeField(null=True, blank=True)
     date_done = models.DateTimeField(null=True, blank=True)
-    # Not indexed, unlike the live `user` foreign key: `user` can't be followed from an archived job result.
+    # Not indexed. Unlike the `JobResult.user` foreign key, `user` cannot be followed from an `ArchivedJobResult`
     user_id = models.UUIDField(blank=True, null=True)
     # `JobResult` has no `user_name` field; it reads the username through its `user` foreign key. With only the
     # user's id archived, the username would be unrecoverable once the User is deleted, so rotation records it
