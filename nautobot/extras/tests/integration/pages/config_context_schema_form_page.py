@@ -37,6 +37,7 @@ class ConfigContextSchemaFormPage(BasePage):
 
     def submit(self):
         """Click Create and wait for the next page to load.
+
         A valid submit redirects to the detail view, and a rejected submit renders the form again.
         """
         self._click_and_wait_for_navigation(self._CREATE_BUTTON)
