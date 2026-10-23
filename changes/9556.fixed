@@ -1,0 +1,1 @@
+Fixed validators on form fields registered by a `FilterExtension` being ignored when filtering objects.
