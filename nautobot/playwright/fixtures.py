@@ -153,7 +153,12 @@ def create_object(api):
 
         parent = create_object("dcim/locations/", name=name, location_type=lt["id"], status=status_id)
 
-    Objects are deleted in reverse creation order at teardown. A 404 is expected and
+    For an object the test creates through the UI, call `track` before the UI action.
+    Teardown deletes every object matching the filters:
+
+        create_object.track("dcim/devices/", name=name)
+
+    Objects are deleted in reverse order. A 404 is expected and
     ignored, since a child may already have been removed by a parent's cascade delete.
     Any other failing status is collected and reported once every delete has been
     attempted, so a server error during cleanup is visible without leaking the records
@@ -169,13 +174,27 @@ def create_object(api):
         created.append((endpoint, record["id"]))
         return record
 
+    def _track(endpoint, **filters):
+        created.append((endpoint, filters))
+
+    _create.track = _track
     yield _create
 
     failures = []
-    for endpoint, pk in reversed(created):
-        response = api.delete(f"/api/{endpoint}{pk}/")
-        if not response.ok and response.status != 404:
-            failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
+    # Each entry is a created object's id or a tracked object's filters.
+    for endpoint, target in reversed(created):
+        if isinstance(target, dict):
+            response = api.get(f"/api/{endpoint}", params=target)
+            if not response.ok:
+                failures.append(f"GET /api/{endpoint} returned {response.status}: {response.text()[:200]}")
+                continue
+            pks = [record["id"] for record in response.json()["results"]]
+        else:
+            pks = [target]
+        for pk in pks:
+            response = api.delete(f"/api/{endpoint}{pk}/")
+            if not response.ok and response.status != 404:
+                failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
     if failures:
         pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
 
