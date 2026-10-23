@@ -131,6 +131,11 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "approvalworkflowstage",
     "approvalworkflowstagedefinition",
     "approvalworkflowstageresponse",
+    # Archived log models are excluded, like the models they archive.
+    "archivedjobconsoleentry",
+    "archivedjoblogentry",
+    "archivedjobresult",
+    "archivedobjectchange",
     "cablepath",
     "cabletocabletermination",
     "circuittermination",

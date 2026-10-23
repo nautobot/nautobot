@@ -46,6 +46,9 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 
     The ORM-side enforcement is governed by [`STRICT_SENSITIVE_FIELDS`](../../../../user-guide/administration/configuration/settings.md#strict_sensitive_fields), which defaults to `False` so that existing code reading such a field keeps working, and is expected to default to `True` in a future major release. Denial of template access is **not** governed by that setting and always applies. An App that declares `sensitive_fields` should therefore not assume the ORM enforcement is active on a given deployment, and should move its own reads to the opt-in methods now so that it keeps working when the default changes.
 
++++ 3.3.0 "Opting out of custom fields"
+    A model that inherits from `CustomFieldModel` (including any `OrganizationalModel` or `PrimaryModel` subclass) can opt out of custom field support by declaring the class attribute `is_custom_field_model = False`. Custom fields then cannot be defined for that model, although its `_custom_field_data` database column remains.
+
 Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python

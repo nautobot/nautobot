@@ -28,6 +28,7 @@ article ul li {
     - _optional_ Define appropriate `verbose_name`/`verbose_name_plural` if defaults aren't optimal
     - _optional_ Opt out of specific model features **if and only if** there is a strong justification for doing so:
         - Contact/team association (`is_contact_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Custom fields (`is_custom_field_model = False`, any `CustomFieldModel` subclass, including OrganizationalModel/PrimaryModel)
         - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
