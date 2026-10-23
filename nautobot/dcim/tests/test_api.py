@@ -2976,6 +2976,26 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 response = self.client.get(f"{url}?limit=0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_interface_list_joins_the_nested_device_parent_bay_only_at_depth_1(self):
+        """At depth 1 each interface renders its own Device, whose reverse one-to-one `parent_bay` must be joined."""
+        self.add_permissions("dcim.view_interface", "dcim.view_device")
+        url = reverse("dcim-api:interface-list")
+        bay_table = connection.ops.quote_name(DeviceBay._meta.db_table)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in (result["device"] or {})]), 1
+        )
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if f"FROM {bay_table}" in q["sql"]], [])
+
+        # At depth 0 the device is a reference, so there is nothing to join.
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if bay_table in q["sql"]], [])
+
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
@@ -3516,6 +3536,24 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "installed_device": devices[4].pk,
             },
         ]
+
+    def test_device_bay_list_joins_the_nested_device_parent_bay_at_depth_1(self):
+        """At depth 1 each device bay renders its own Device, whose reverse one-to-one `parent_bay` must be joined."""
+        self.add_permissions("dcim.view_devicebay", "dcim.view_device")
+        url = reverse("dcim-api:devicebay-list")
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in result["device"]]), 1
+        )
+        # The per-row lookup of a Device's parent bay is by installed_device; the list query itself has no WHERE on it.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        self.assertEqual(
+            [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+        )
 
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):

@@ -12,7 +12,7 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, Valida
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
-from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
@@ -281,6 +281,13 @@ class ModelViewSetMixin:
                     continue
                 if isinstance(model_field, ForeignKey):
                     select_fields.append(field_instance.source)
+                    if isinstance(field_instance, drf_serializers.Serializer):
+                        # A nested serializer renders the related object in full, once per row. A reverse one-to-one
+                        # it includes (e.g. Device.parent_bay) has no column on the related row, so join it too.
+                        select_fields.extend(
+                            f"{field_instance.source}__{lookup}"
+                            for lookup in self._reverse_one_to_one_lookups(field_instance, model_field.related_model)
+                        )
 
         # Prefetch deeper relations needed for this object's natural key (e.g. for `natural_slug`) to avoid N+1 queries.
         try:
@@ -304,6 +311,21 @@ class ModelViewSetMixin:
             queryset = maybe_prefetch_related(queryset, prefetch_fields)
 
         return queryset
+
+    @staticmethod
+    def _reverse_one_to_one_lookups(serializer, model):
+        """Return the sources of the fields in `serializer` that are reverse one-to-one relations on `model`."""
+        lookups = []
+        for field_instance in serializer.fields.values():
+            if field_instance.write_only or field_instance.source == "*" or "." in field_instance.source:
+                continue
+            try:
+                model_field = model._meta.get_field(field_instance.source)
+            except FieldDoesNotExist:
+                continue
+            if isinstance(model_field, OneToOneRel):
+                lookups.append(field_instance.source)
+        return lookups
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
