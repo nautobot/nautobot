@@ -108,9 +108,9 @@ def created_note(create_object, created_location):
     )
 
 
-# The schema created_schema_validation_tree binds its children to, and the data they hold.
-# The API validates data against the bound schema on write, so a failing child cannot be
-# created directly. Tests make the children fail by changing the schema afterwards.
+# The schema that created_schema_validation_tree binds its children to, and the data that they
+# contain. The API validates data against the bound schema on write, so a failing child cannot
+# be created directly. Tests make the children fail by changing the schema afterwards.
 VALID_SCHEMA = {
     "type": "object",
     "additionalProperties": False,

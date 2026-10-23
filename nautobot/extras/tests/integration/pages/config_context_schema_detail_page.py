@@ -6,7 +6,7 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class ConfigContextSchemaDetailPage(DetailPage):
-    """The Config Context Schema detail view. Adds the success toast and the Validation tab to DetailPage."""
+    """The Config Context Schema detail view. Adds the Validation tab to DetailPage."""
 
     DETAIL_PATH = "/extras/config-context-schemas/{pk}/"
     VERBOSE_NAME = "Config Context Schema"
