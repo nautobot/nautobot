@@ -17,8 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
 ]
 packages = [
     {include = "nautobot"}
@@ -33,7 +31,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.15"
+python = ">=3.11,<3.13"
 # Background task processing
 celery = "~5.6.2"
 # Cryptographic recipes and primitives.

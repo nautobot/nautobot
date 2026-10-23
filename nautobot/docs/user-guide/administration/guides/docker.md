@@ -10,8 +10,6 @@ Currently images are pushed for the following Python versions:
 
 * 3.11
 * 3.12
-* 3.13
-* 3.14
 
 +++ 2.3.0 "Added Python 3.12"
     Python 3.12 was added to the set of published images and is now the default version.
@@ -24,9 +22,6 @@ Currently images are pushed for the following Python versions:
 
 --- 2.4.46 "Removed Python 3.10"
     Python 3.10 was removed from the set of published images as Python 3.10 is now end-of-life.
-
-+++ 2.4.46 "Added Python 3.13 and 3.14"
-    Python 3.13 and 3.14 were added to the set of published images; 3.12 remains the default version in Nautobot 2.4.x.
 
 ## Platforms
 

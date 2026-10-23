@@ -431,7 +431,7 @@ files = [
     {file = "cffi-2.1.1-cp315-cp315t-win_arm64.whl", hash = "sha256:d18e5ac0f2f03f4f518d3e23db0f0cad7faa1da8620e9c09461d443bbf6e6692"},
     {file = "cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\"", testing = "implementation_name != \"pypy\" and os_name == \"nt\""}
+markers = {main = "platform_python_implementation != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -1555,7 +1555,7 @@ name = "example-app"
 version = "1.0.0"
 description = "Nautobot example app that does a whole lot of nothing."
 optional = false
-python-versions = ">=3.11,<3.15"
+python-versions = ">=3.11,<3.13"
 groups = ["dev"]
 files = []
 develop = true
@@ -1676,10 +1676,7 @@ files = [
 ]
 
 [package.dependencies]
-cryptography = [
-    {version = ">=38.0.3", markers = "python_version < \"3.14\""},
-    {version = ">=41.0.5", markers = "python_version >= \"3.14\""},
-]
+cryptography = {version = ">=38.0.3", markers = "python_version < \"3.14\""}
 pyasn1-modules = ">=0.2.1"
 
 [package.extras]
@@ -3543,7 +3540,7 @@ files = [
     {file = "pycparser-3.11-py3-none-any.whl", hash = "sha256:51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"},
     {file = "pycparser-3.11.tar.gz", hash = "sha256:d875f09c3507d00e1aba0eecc6dcadc1352f30fff09dc6bff2f1c2935e97c2bc"},
 ]
-markers = {main = "implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\"", testing = "implementation_name != \"pypy\" and implementation_name != \"PyPy\" and os_name == \"nt\""}
+markers = {main = "platform_python_implementation != \"PyPy\" and implementation_name != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\" and implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -5951,5 +5948,5 @@ sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.15"
-content-hash = "b65156310e5b09a08f4b76caf151ff00f421a1b8a4c5ac84c2a37ce6ab95dd17"
+python-versions = ">=3.11,<3.13"
+content-hash = "3fcbaa83e26f94636d1bee101103c500cf36a518c1fe6d5747b64cbd7d5d1600"
