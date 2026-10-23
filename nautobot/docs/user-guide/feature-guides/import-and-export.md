@@ -276,6 +276,18 @@ Every column or key must be a field of that content type's REST API serializer, 
 
 Fields Nautobot generates rather than stores — `display`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
 
+### Creating, updating, or both
+
++++ 3.3.0
+
+**Import Mode** decides what a record may do with the existing object it [matches](#match-fields):
+
+- **Create/Update**, the default, updates the object a record matches, and creates a new object for a record that matches none.
+- **Create Only** creates a new object for every record. A record that matches an existing object is reported as an error, and nothing is changed for it, so an import meant to add new objects can't overwrite existing ones by mistake. Records are checked against every existing object that you have permission to view, so a match is refused even when the match fields aren't unique in Nautobot itself.
+- **Update Only** updates the existing object that each record matches. A record that matches no object is reported as an error rather than created, so an import meant to edit existing objects can't add stray new ones, for example because of a misspelled name. Every record must be matchable, even when the [default match fields](#match-fields) are in use, and an object type with no match fields at all can't be imported in this mode.
+
+A record refused by its import mode fails like any other invalid row, so whether the rest of the import is kept depends on **Rollback Changes on Failure**, below.
+
 ### If a row fails
 
 **Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back, so nothing is created or updated. Every failing row is still reported, so one run tells you everything that needs fixing. If you disable it, the rows that succeeded are kept, including any updates to existing objects, and you can import the rest later.
@@ -287,7 +299,10 @@ Fields Nautobot generates rather than stores — `display`, `object_type`, `natu
 ```no-highlight
 nautobot-server import_objects ./statuses.yaml --username admin
 nautobot-server import_objects ./devices.csv --username admin --content-type dcim.device --no-rollback
+nautobot-server import_objects ./statuses.yaml --username admin --mode update
 ```
+
+`--mode` takes `create_update` (the default), `create` or `update`, for the three [import modes](#creating-updating-or-both).
 
 As in the UI, `--content-type` may be omitted for a file that declares its own model.
 
@@ -331,7 +346,9 @@ When importing, you can override the match fields for a particular file either b
 | Import (create rows) | Run permission for the `Import Objects` job, plus _add_ permission on the model. |
 | Import (update rows) | Run permission for the `Import Objects` job, plus _change_ permission on the model. |
 
+In the default Create/Update [import mode](#creating-updating-or-both), either _add_ or _change_ permission lets the import start, and each record is then checked against the permission for what it does. Create Only mode requires _add_ permission and Update Only mode requires _change_ permission; without it, the import is refused before any record is read.
+
 Object permissions with constraints apply to imports as they do elsewhere in Nautobot:
 
-- Records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
+- In the Create/Update and Update Only modes, records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
 - An updated object must still fall within your _change_ permission's constraints after the update, and a created object must fall within your _add_ permission's constraints. A record that would leave an object outside them is reported as an error, such as "does not have permission to update an object with these attributes", and nothing is saved for it.

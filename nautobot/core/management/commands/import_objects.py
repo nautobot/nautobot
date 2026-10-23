@@ -4,6 +4,7 @@ from pathlib import Path
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 
+from nautobot.core.choices import ImportModeChoices
 from nautobot.core.management.utils import get_content_type, get_user, run_system_job_locally
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.management.utils import report_job_status
@@ -36,7 +37,16 @@ class Command(BaseCommand):
             "--match-fields",
             help='Field name(s) to match existing records on, separated by commas or spaces (e.g. "name,serial"), '
             "overriding any directive present in the file. Records that match an existing object update it, "
-            "and the rest create new objects.",
+            "and the rest create new objects, if permitted by --mode.",
+        )
+        parser.add_argument(
+            "--mode",
+            default=ImportModeChoices.CREATE_UPDATE,
+            choices=ImportModeChoices.values(),
+            help="Whether records may create new objects, update existing ones, or both "
+            f'(default: "{ImportModeChoices.CREATE_UPDATE}", which allows both). '
+            f'"{ImportModeChoices.CREATE}" refuses records that match an existing object, and '
+            f'"{ImportModeChoices.UPDATE}" refuses records that match none.',
         )
         parser.add_argument(
             "--format",
@@ -69,6 +79,7 @@ class Command(BaseCommand):
             "roll_back_if_error": options["rollback"],
             # "auto" leaves the detection to the Job, which sees the uploaded file's name
             "import_format": options["format"],
+            "import_mode": options["mode"],
         }
         if options["content_type"]:
             # Otherwise the Job takes it from the model the data declares

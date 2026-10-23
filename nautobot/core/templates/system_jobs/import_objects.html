@@ -9,6 +9,7 @@
         </div>
         <div class="card-body">
             {% render_field job_form.roll_back_if_error %}
+            {% render_field job_form.import_mode %}
             {# The three below are optional because a self-describing file supplies them: the model it #}
             {# declares, the format its extension or content gives away, and its match_fields directive. #}
             {% render_field job_form.import_format %}
