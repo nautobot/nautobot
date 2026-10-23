@@ -234,6 +234,31 @@ def created_location_tree(create_object, status_for):
 
 
 @pytest.fixture
+def restore_page_size(api):
+    """Put the user's saved list page size back after a test that sets `?per_page=`.
+
+    Nautobot saves every `?per_page=` it serves to the user's config, so a test that
+    forces a small page would leave every later test paging that small. The config
+    endpoint deep-merges dicts, so merging the old `pagination` dict back would keep the
+    forced `per_page`. Writing `null` first replaces the dict, then writing the old dict
+    (empty if the user had none) replaces the `null`. It must end as a dict: Nautobot
+    cannot save a page size under a `null`. Assumes the API token belongs to the user
+    the browser logs in as, which the development bootstrap gives.
+    """
+    response = api.get("/api/users/config/")
+    if not response.ok:
+        pytest.fail(f"GET /api/users/config/ returned {response.status}: {response.text()}")
+    saved = response.json().get("pagination") or {}
+
+    yield
+
+    for pagination in (None, saved):
+        response = api.patch("/api/users/config/", data={"pagination": pagination})
+        if not response.ok:
+            pytest.fail(f"PATCH /api/users/config/ returned {response.status}: {response.text()}")
+
+
+@pytest.fixture
 def created_manufacturer(create_object):
     """A manufacturer owned by this test."""
     return create_object("dcim/manufacturers/", name=unique_name())
