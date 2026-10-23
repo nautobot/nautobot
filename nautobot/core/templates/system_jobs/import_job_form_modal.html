@@ -32,6 +32,7 @@ content type is only on the full-page form, which this links to.
         </a>
         to see a list of importable fields.
     </div>
+    {% render_field job_form.import_mode %}
     {% render_field job_form.import_format %}
     {% render_field job_form.match_fields %}
     {% render_field job_form.roll_back_if_error %}
