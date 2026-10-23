@@ -70,7 +70,8 @@ User = get_user_model()
 
 # Change and job history is generated within fixed date ranges, not relative to the current date, so a given seed
 # always produces the same data. Archived history ends where live history begins, so no archived record is newer
-# than a live one, as rotation would leave them. `LIVE_HISTORY_END` must stay in the past, as tests compare
+# than a live one, which should always be the case when real data is archived.
+# `LIVE_HISTORY_END` must stay in the past, as tests compare
 # factory-generated history against the current time.
 ARCHIVED_HISTORY_START = datetime(2022, 7, 1, tzinfo=timezone.utc)
 LIVE_HISTORY_START = datetime(2025, 7, 1, tzinfo=timezone.utc)
@@ -121,6 +122,18 @@ def random_time_during(job_result):
 
 
 def _job_result_result(obj):
+    """
+    Return randomized `result` data for a successful job result, or None otherwise.
+
+    Shared by `JobResultFactory` and `ArchivedJobResultFactory` to populate their respective `result` fields.
+
+    Args:
+        obj (Resolver): The factory's attribute resolver for the job result being built, read for its `status`.
+
+    Returns:
+        (bool | str | float | int | list | dict | None): A random value of a randomly chosen type, if `status`
+            is `STATUS_SUCCESS`, otherwise None.
+    """
     if obj.status != JobResultStatusChoices.STATUS_SUCCESS:
         return None
     return faker.Faker().pyobject(faker.Faker().random_element([bool, str, float, int, list, dict]))
@@ -172,7 +185,7 @@ def _job_result_celery_kwargs(obj):
     return kwargs
 
 
-# More updates than creates or deletes.
+# For "realistic" data, there should be more updates than creates or deletes.
 OBJECT_CHANGE_ACTIONS = [
     ObjectChangeActionChoices.ACTION_CREATE,
     ObjectChangeActionChoices.ACTION_CREATE,

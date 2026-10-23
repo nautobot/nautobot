@@ -68,8 +68,8 @@ class ArchivedLogModel(BaseModel):
     is_metadata_associable_model = False
     is_data_compliance_model = False
     is_version_controlled = False
-    # `ArchivedJobResult` inherits `_custom_field_data`. Archived records are immutable, so it isn't offered as a
-    # custom field model and its data isn't swept for orphaned keys.
+    # ArchivedLogModel records are immutable, so their `_custom_field_data` (if any) exists
+    # independent of `CustomField` definitions, and new fields cannot be associated to them.
     is_custom_field_model = False
     hide_in_diff_view = True
     natural_key_field_names = ["id"]
@@ -108,19 +108,18 @@ class ArchivedObjectChange(ArchivedLogModel):
     user_name = models.CharField(max_length=150, editable=False, db_index=True)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
-    # Not indexed on its own, unlike the live foreign key: it leads `extras_aoc_changed_obj_idx`.
+    # Not indexed on its own, as it's already the first element in index `extras_aoc_changed_obj_idx`.
     changed_object_type_id = models.PositiveIntegerField(blank=True, null=True)
-    # Not indexed on its own, unlike the live field: objects are looked up by type and id together, which
-    # `extras_aoc_changed_obj_idx` covers.
+    # Not indexed on its own, as it's covered by the composite index `extras_aoc_changed_obj_idx`.
     changed_object_id = models.UUIDField()
-    # Not indexed, unlike the live field: it has only a handful of distinct values, so an index would rarely help.
+    # Not indexed on its own: it has only a handful of distinct values, so an index would rarely help.
     change_context = models.CharField(
         max_length=50,
         choices=ObjectChangeEventContextChoices,
         editable=False,
     )
     change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
-    # Not indexed on its own, unlike the live foreign key: it leads `extras_aoc_related_obj_idx`.
+    # Not indexed on its own, as it's covered by the composite index `extras_aoc_related_obj_idx`.
     related_object_type_id = models.PositiveIntegerField(blank=True, null=True)
     related_object_id = models.UUIDField(blank=True, null=True)
     object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
@@ -151,7 +150,21 @@ class ArchivedObjectChange(ArchivedLogModel):
         ]
 
     def get_related_changes(self, user=None, permission="view"):
-        """The other archived changes to this object, restricted to those `user` has `permission` for if given."""
+        """
+        Retrieve other ArchivedObjectChanges that have the same `changed_object` as this record.
+        
+        Equivalent to `ObjectChange.get_related_changes`.
+
+        Args:
+            user (User | None): If given, restrict the results to those this user holds `permission` for.
+                When None, no restriction is applied and every matching record is returned.
+            permission (str): The permission action to restrict by, such as `"view"`. Ignored unless
+                `user` is given.
+
+        Returns:
+            (QuerySet): ArchivedChangeObjects sharing this record's `changed_object_type_id` and
+                `changed_object_id`, excluding this record.
+        """
         related_changes = (
             type(self)
             .objects.filter(
@@ -168,8 +181,9 @@ class ArchivedObjectChange(ArchivedLogModel):
     def changed_object_type(self):
         """
         The content type that `changed_object_type_id` identifies, or None if there is no such content type.
-
-        Content types aren't archived, so this is looked up (and cached) from the live table.
+        
+        Equivalent to the `ObjectChange.changed_object_type` GenericForeignKey.
+        Note that ContentTypes aren't archived, so this returns a "live" ContentType record, if any.
         """
         return self._content_type_for(self.changed_object_type_id)
 
@@ -177,8 +191,9 @@ class ArchivedObjectChange(ArchivedLogModel):
     def related_object_type(self):
         """
         The content type that `related_object_type_id` identifies, or None if there is no such content type.
-
-        Content types aren't archived, so this is looked up (and cached) from the live table.
+        
+        Equivalent to the `ObjectChange.related_object_type` GenericForeignKey.
+        Note that ContentTypes aren't archived, so this returns a "live" ContentType record, if any.
         """
         return self._content_type_for(self.related_object_type_id)
 
@@ -198,7 +213,7 @@ class ArchivedObjectChange(ArchivedLogModel):
             return None
 
     def get_action_class(self):
-        """CSS class for the action badge, as `ObjectChange.get_action_class` provides it."""
+        """CSS class for rendering an `action` badge in the UI, same as `ObjectChange.get_action_class`."""
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
 
     def __str__(self):
@@ -211,15 +226,15 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     # Indexed like the `JobResult.job_model_id`, for listing a job's archived results.
     job_model_id = models.UUIDField(blank=True, null=True, db_index=True)
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
-    # Not indexed, unlike the live field, which is internal to job execution.
+    # Not indexed, as only live `JobResult` records are looked up by `task_name` during job execution.
     task_name = models.CharField(  # noqa: DJ001  # matches the live column, which is nullable
         max_length=CHARFIELD_MAX_LENGTH,
         null=True,
         help_text="Registered name of the Celery task for this job. Internal use only.",
     )
     date_created = models.DateTimeField(db_index=True)
-    # `date_started` and `date_done` aren't indexed, unlike the live fields: archived job results are listed and
-    # filtered by `date_created`.
+    # `date_started` and `date_done` are not indexed, unlike the equivalent `JobResult` fields, as
+    # `ArchivedJobResult` is almost always filtered or ordered by its `date_created` alone.
     date_started = models.DateTimeField(null=True, blank=True)
     date_done = models.DateTimeField(null=True, blank=True)
     # Not indexed. Unlike the `JobResult.user` foreign key, `user` cannot be followed from an `ArchivedJobResult`
@@ -268,8 +283,6 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
         help_text="Cancel type of the Job being canceled",
     )
     date_canceled = models.DateTimeField(null=True, blank=True, help_text="Timestamp at which the job was canceled")
-    # `_custom_field_data` comes from `CustomFieldModel`. Rotation copies the raw JSON, so no custom field value
-    # is lost.
 
     job_model = unresolved_relation("job_model")
     user = unresolved_relation("user")
@@ -281,10 +294,11 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
         get_latest_by = "date_created"
         verbose_name = "archived job result"
         verbose_name_plural = "archived job results"
-        # Not replicated from `JobResult`, since rotation pays for every index on every insert:
+        # The following indexes are NOT replicated from `JobResult` because:
         # - `extras_jobresult_rcreated_idx`: newest-first ordering here uses the index on `date_created`, since an
         #   index can be read in either direction.
-        # - `extras_jr_rdone_idx` and `extras_jr_statrdone_idx` serve the homepage's recent job results panel.
+        # - `extras_jr_rdone_idx` and `extras_jr_statrdone_idx` serve the homepage's "recent job results" panel,
+        #   and there is no equivalent UI for `ArchivedJobResult` records.
         indexes = [
             models.Index(name="extras_ajr_statrcreate_idx", fields=["status", "-date_created"]),
         ]
@@ -299,8 +313,8 @@ class ArchivedJobLogEntry(ArchivedLogModel):
     job_result = models.ForeignKey(
         to="extras.ArchivedJobResult", on_delete=models.CASCADE, related_name="job_log_entries"
     )
-    # `log_level` and `created` aren't indexed on their own, unlike the live fields: entries are only read within a
-    # single job result, which `extras_ajoblog_jr_created_idx` has already narrowed to.
+    # `log_level` and `created` are not indexed on their own, as entries are only retrieved within the
+    # context of a specific job result, which the index `extras_ajoblog_jr_created_idx` covers.
     log_level = models.CharField(max_length=32, choices=LogLevelChoices, default=LogLevelChoices.LOG_INFO)
     grouping = models.CharField(max_length=JOB_LOG_MAX_GROUPING_LENGTH, default="main")
     message = models.TextField(blank=True)
