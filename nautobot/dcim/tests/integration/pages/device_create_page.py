@@ -1,9 +1,9 @@
 """Page object for the Device create form (/dcim/devices/add/)."""
 
-from nautobot.playwright.form_page import FormPage
+from nautobot.playwright.create_form_page import CreateFormPage
 
 
-class DeviceCreatePage(FormPage):
+class DeviceCreatePage(CreateFormPage):
     """The Device create form."""
 
     ADD_PATH = "/dcim/devices/add/"

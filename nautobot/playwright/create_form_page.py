@@ -2,7 +2,7 @@
 
 Subclasses set ADD_PATH:
 
-    class DeviceCreatePage(FormPage):
+    class DeviceCreatePage(CreateFormPage):
         ADD_PATH = "/dcim/devices/add/"
 """
 
@@ -11,7 +11,7 @@ from playwright.sync_api import expect
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
-class FormPage(BasePage):
+class CreateFormPage(BasePage):
     """Open, fill and submit a create form."""
 
     ADD_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/add/"

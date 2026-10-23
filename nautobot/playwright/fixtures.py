@@ -264,7 +264,7 @@ def created_manufacturer(create_object):
 
 
 @pytest.fixture
-def device_prerequisites(create_object, status_for, created_manufacturer):
+def created_device_prerequisites(create_object, status_for, created_manufacturer):
     """A location, device type and role created for this test, and a device Status, as API records."""
     unique = unique_name()
     # Nautobot rejects a device whose location type does not list dcim.device in its content types.
@@ -290,17 +290,17 @@ def device_prerequisites(create_object, status_for, created_manufacturer):
 
 
 @pytest.fixture
-def created_device(create_object, device_prerequisites):
+def created_device(create_object, created_device_prerequisites):
     """A device created for this test, plus its related records, since the device record has only their ids."""
     device = create_object(
         "dcim/devices/",
         name=unique_name(),
-        location=device_prerequisites["location"]["id"],
-        device_type=device_prerequisites["device_type"]["id"],
-        role=device_prerequisites["role"]["id"],
-        status=device_prerequisites["status"]["id"],
+        location=created_device_prerequisites["location"]["id"],
+        device_type=created_device_prerequisites["device_type"]["id"],
+        role=created_device_prerequisites["role"]["id"],
+        status=created_device_prerequisites["status"]["id"],
     )
-    return {"device": device, **device_prerequisites}
+    return {"device": device, **created_device_prerequisites}
 
 
 @pytest.fixture
