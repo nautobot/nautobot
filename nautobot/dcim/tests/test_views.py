@@ -3201,6 +3201,39 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_lldp_neighbors_queries_do_not_grow_with_cabled_interfaces(self):
+        """The LLDP neighbors tab should not query each cabled interface's connected endpoint separately."""
+        self.add_permissions("dcim.napalm_read_device")
+        device, peer = self.devices[2], self.devices[1]
+        interface_status = self.interfaces[0].status
+        cable_status = Status.objects.get(name="Connected")
+        url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
+
+        query_counts = []
+        for i in range(1, 4):
+            Cable.objects.create(
+                termination_a=Interface.objects.create(
+                    device=device, name=f"LLDP {i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+                ),
+                termination_b=Interface.objects.create(
+                    device=peer,
+                    name=f"LLDP Peer {i}",
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    status=interface_status,
+                ),
+                status=cable_status,
+            )
+            # Warm shared caches before counting.
+            self.client.get(url)
+            with CaptureQueriesContext(connection) as queries:
+                response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, f"LLDP Peer {i}")
+            query_counts.append(len(queries))
+
+        self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_primary_ips(self):
         """Test assigning a primary IP to a device."""
         self.add_permissions("dcim.change_device")
