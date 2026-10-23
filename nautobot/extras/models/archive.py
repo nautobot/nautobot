@@ -50,6 +50,7 @@ def unresolved_relation(relation_name):
     Returns:
         (property): A read-only property that resolves to `None` on every instance.
     """
+
     def always_none(self):
         return None
 

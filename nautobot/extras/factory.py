@@ -136,8 +136,8 @@ def _job_result_traceback(obj):
         obj (builder.Resolver): A Factory Boy Attribute Resolver for the job result being built, used for its `status`.
 
     Returns:
-        (str | None): A paragraph of random prose where `status` is `STATUS_FAILURE`, otherwise None. The text
-        
+        (str | None): A paragraph of random prose if `status` is `STATUS_FAILURE`, otherwise None.
+    """
     if obj.status == JobResultStatusChoices.STATUS_FAILURE:
         return faker.Faker().paragraph()
     return None
@@ -251,7 +251,7 @@ class ArchivedJobLogEntryFactory(BaseModelFactory):
 
 class ArchivedJobResultFactory(BaseModelFactory):
     """ArchivedJobResult model factory.
-    
+
     Used to create ArchivedJobResult objects that should be older than any existing JobResult objects created by the JobResultFactory"""
 
     class Meta:
