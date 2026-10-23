@@ -18,7 +18,7 @@ from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
@@ -2645,6 +2645,62 @@ class ViewTestCases:
                 except AssertionError:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_add_component_with_constrained_parent_view_permission(self):
+            """Bulk-adding components must not expose or modify parent objects the user cannot view."""
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            model_name = self.model._meta.model_name
+            for url_name in (
+                f"dcim:device_bulk_add_{model_name}",
+                f"virtualization:virtualmachine_bulk_add_{model_name}",
+            ):
+                try:
+                    url = reverse(url_name)
+                    break
+                except NoReverseMatch:
+                    continue
+            else:
+                self.skipTest(f"No bulk-add view exists for {self.model._meta.verbose_name_plural}")
+            parent_model = resolve(url).func.view_class.parent_model
+
+            data = (self.bulk_add_data or self.bulk_create_data).copy()
+            for parent_field in ("device", "parent_device", "parent_module", "virtual_machine"):
+                data.pop(parent_field, None)
+
+            parents = list(parent_model.objects.all()[:2])
+            if len(parents) < 2:
+                self.skipTest(f"At least two {parent_model._meta.verbose_name_plural} are required for this test")
+            permitted_parent, hidden_parent = parents
+
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk": permitted_parent.pk},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(parent_model))
+
+            # Selecting "all" parents must only include permitted parents in the rendered form
+            response = self.client.post(url, data={"_all": "1"})
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
+            self.assertIn(str(permitted_parent.pk), content)
+            self.assertNotIn(str(hidden_parent.pk), content)
+
+            initial_count = self._get_queryset().count()
+
+            # Creating components on a non-permitted parent must fail, alone or mixed with a permitted parent
+            for pk_list in ([hidden_parent.pk], [permitted_parent.pk, hidden_parent.pk]):
+                with self.subTest(pk_list=pk_list):
+                    request_data = utils.post_data(data)
+                    request_data["pk"] = pk_list
+                    request_data["_create"] = ""
+                    response = self.client.post(url, data=request_data)
+                    self.assertIn(response.status_code, (200, 302))
+                    self.assertEqual(self._get_queryset().count(), initial_count)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_components_with_required_custom_field(self):
