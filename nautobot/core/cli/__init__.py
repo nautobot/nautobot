@@ -7,6 +7,7 @@ from copy import deepcopy
 import importlib.util
 import logging
 import os
+from pathlib import Path
 import sys
 
 import django
@@ -18,7 +19,7 @@ from nautobot.core.events import load_event_brokers
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.extras.plugins.utils import load_plugins
 
-CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), "../templates/nautobot_config.py.j2")
+CONFIG_TEMPLATE = str(Path(__file__).parent.parent / "templates" / "nautobot_config.py.j2")
 
 DESCRIPTION = """
 Nautobot server management utility.
@@ -36,6 +37,16 @@ USAGE = """%(prog)s --help
 
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_storage_directories(settings_module):
+    """Ensure that the various storage directories needed by Django and by Nautobot itself exist on the filesystem."""
+    os.makedirs(settings_module.GIT_ROOT, exist_ok=True)
+    os.makedirs(settings_module.JOBS_ROOT, exist_ok=True)
+    os.makedirs(settings_module.MEDIA_ROOT, exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
+    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "image-attachments"), exist_ok=True)
+    os.makedirs(settings_module.STATIC_ROOT, exist_ok=True)
 
 
 def _preprocess_settings(settings_module, config_path):
@@ -69,12 +80,7 @@ def _preprocess_settings(settings_module, config_path):
     #
     # Storage directories
     #
-    os.makedirs(settings_module.GIT_ROOT, exist_ok=True)
-    os.makedirs(settings_module.JOBS_ROOT, exist_ok=True)
-    os.makedirs(settings_module.MEDIA_ROOT, exist_ok=True)
-    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "devicetype-images"), exist_ok=True)
-    os.makedirs(os.path.join(settings_module.MEDIA_ROOT, "image-attachments"), exist_ok=True)
-    os.makedirs(settings_module.STATIC_ROOT, exist_ok=True)
+    ensure_storage_directories(settings_module)
 
     #
     # Databases
