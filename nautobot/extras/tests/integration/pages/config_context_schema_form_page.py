@@ -61,6 +61,7 @@ class ConfigContextSchemaFormPage(BasePage):
 
     def get_data_schema(self):
         """Return the data_schema textarea's content parsed as JSON. Reads once, with no retry.
+
         A rejected form displays the schema again as JSON with sorted keys and indentation, so
         the textarea does not contain the text that was typed. Compare the parsed value instead.
         """
