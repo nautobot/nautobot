@@ -1504,6 +1504,29 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
 
 class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
     model = ModuleType
+
+    def test_multipart_image_upload(self):
+        """Regression test for issue #9655: ModuleTypeViewSet supports multipart/form-data for image uploads."""
+        self.add_permissions("dcim.change_moduletype")
+        module_type = self._get_queryset().first()
+        url = self._get_detail_url(module_type)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                image_file = SimpleUploadedFile(
+                    name="front.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                response = self.client.patch(
+                    url,
+                    {"front_image": image_file},
+                    format="multipart",
+                    **self.header,
+                )
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                module_type.refresh_from_db()
+                self.assertTrue(bool(module_type.front_image))
+
     bulk_update_data = {
         "part_number": "ABC123",
         "comments": "changed comment",
