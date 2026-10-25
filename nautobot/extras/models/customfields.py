@@ -235,6 +235,10 @@ class CustomFieldModel(models.Model):
     Abstract class for any model which may have custom fields associated with it.
     """
 
+    # Whether custom fields may be defined on this model. A subclass sets this False to opt out of the
+    # `custom_fields` model feature while keeping the `_custom_field_data` column.
+    is_custom_field_model = True
+
     _custom_field_data = models.JSONField(encoder=DjangoJSONEncoder, blank=True, default=dict)
 
     class Meta:

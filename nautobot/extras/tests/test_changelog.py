@@ -555,7 +555,7 @@ class ChangeLogAPITest(APITestCase):
         resp = execute_query(gql_payload, user=self.user)
         self.assertIsNone(resp.errors)
         self.assertIsInstance(resp.data.get("query"), list)
-        # ObjectChangeFactory creates records with fixed dates in 2024; there shouldn't be any in this filtered response.
+        # ObjectChangeFactory only creates records long after this time.
         self.assertEqual(len(resp.data.get("query")), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

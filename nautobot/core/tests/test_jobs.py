@@ -1,5 +1,5 @@
 import codecs
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import timedelta
 import json
 import logging
 from pathlib import Path
@@ -20,11 +20,12 @@ from nautobot.core.testing import create_job_result_and_run_job, TransactionTest
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
+from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
+    JobConsoleEntry,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -206,17 +207,16 @@ class LogsCleanupTestCase(TransactionTestCase):
             JobResultFactory.create_batch(20)
         # To avoid spurious test failures due to factory randomness,
         # ensure that we have some records well outside the test data cutoff windows.
-        ObjectChangeFactory.create(time=datetime(2023, 1, 1, tzinfo=dt_timezone.utc))
-        ObjectChangeFactory.create(time=datetime(2026, 1, 1, tzinfo=dt_timezone.utc))
+        # The newest are at the end of the factories' live history rather than after it, so that none is in the future:
+        # tests that run with `max_age=0` against the current time expect the newest records to be old enough to delete.
+        before_live_history = LIVE_HISTORY_START - timedelta(days=365)
+        ObjectChangeFactory.create(time=before_live_history)
+        ObjectChangeFactory.create(time=LIVE_HISTORY_END)
         latest_jr = JobResult.objects.latest()
-        latest_jr.date_created += timedelta(days=365)
-        latest_jr.date_started += timedelta(days=365)
-        latest_jr.date_done += timedelta(days=365)
+        latest_jr.date_created = latest_jr.date_started = latest_jr.date_done = LIVE_HISTORY_END
         latest_jr.save()
         earliest_jr = JobResult.objects.earliest()
-        earliest_jr.date_created -= timedelta(days=365)
-        earliest_jr.date_started -= timedelta(days=365)
-        earliest_jr.date_done -= timedelta(days=365)
+        earliest_jr.date_created = earliest_jr.date_started = earliest_jr.date_done = before_live_history
         earliest_jr.save()
 
     @load_event_broker_override_settings(
@@ -327,11 +327,15 @@ class LogsCleanupTestCase(TransactionTestCase):
     )
     def test_cleanup_job_results(self):
         """With unconstrained permissions, all JobResults before the cutoff should be deleted."""
-        with time_machine.travel("2024-10-01 00:00 +0000"):
+        # Late in the factories' live history, so there are records on both sides of the cutoff.
+        with time_machine.travel(LIVE_HISTORY_END - timedelta(days=92)):
             cutoff = timezone.now() - timedelta(days=60)
             job_results_to_be_deleted = JobResult.objects.filter(date_done__lt=cutoff)
             job_results_to_be_deleted_count = job_results_to_be_deleted.count()
             job_log_entry_to_be_deleted_count = JobLogEntry.objects.filter(
+                job_result__in=job_results_to_be_deleted
+            ).count()
+            job_console_entry_to_be_deleted_count = JobConsoleEntry.objects.filter(
                 job_result__in=job_results_to_be_deleted
             ).count()
             objectmetadata_to_be_deleted_count = ObjectMetadata.objects.filter(
@@ -366,6 +370,8 @@ class LogsCleanupTestCase(TransactionTestCase):
                 "extras.JobResult": job_results_to_be_deleted_count,
                 "extras.JobLogEntry": job_log_entry_to_be_deleted_count,
             }
+            if job_console_entry_to_be_deleted_count > 0:
+                started_logs["job_output"]["extras.JobConsoleEntry"] = job_console_entry_to_be_deleted_count
             if objectmetadata_to_be_deleted_count > 0:
                 started_logs["job_output"]["extras.ObjectMetadata"] = objectmetadata_to_be_deleted_count
 
@@ -376,7 +382,8 @@ class LogsCleanupTestCase(TransactionTestCase):
 
     def test_cleanup_object_changes(self):
         """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
-        with time_machine.travel("2024-10-01 00:00 +0000"):
+        # Late in the factories' live history, so there are records on both sides of the cutoff.
+        with time_machine.travel(LIVE_HISTORY_END - timedelta(days=92)):
             cutoff = timezone.now() - timedelta(days=60)
             create_job_result_and_run_job(
                 "nautobot.core.jobs.cleanup",
