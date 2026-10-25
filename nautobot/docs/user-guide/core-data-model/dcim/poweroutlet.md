@@ -4,6 +4,8 @@ Power outlets represent the outlets on a power distribution unit (PDU) or other 
 
 For example, imagine a PDU with one power port which draws from a three-phase feed and 48 power outlets arranged into three banks of 16 outlets each. Outlets 1-16 would be associated with leg A on the port, and outlets 17-32 and 33-48 would be associated with legs B and C, respectively.
 
+For rack per-phase power utilization, assign a `feed_leg` to each outlet supplying a downstream power port from a three-phase feed. This assignment determines which leg receives that port's allocated load. If a connected outlet has no `feed_leg`, the rack's per-phase graphs are hidden because the load cannot be attributed to a leg; the overall power utilization is still displayed. Unconnected outlets do not require a leg assignment for these graphs. See [Rack Power Utilization](rack.md#rack-power-utilization) for the other conditions required to display per-phase graphs.
+
 Cables can connect power outlets only to downstream power ports. (Pass-through ports cannot be used to model power distribution.)
 
 +/- 2.3.0
