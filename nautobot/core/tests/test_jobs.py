@@ -18,7 +18,7 @@ import yaml
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.cleanup import CleanupTypes
+from nautobot.core.jobs.cleanup import CleanupTypes, LogsCleanup
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import Device, DeviceType, FrontPortTemplate, Location, LocationType, Manufacturer
@@ -26,6 +26,7 @@ from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoi
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
+    ConfigContext,
     Contact,
     ContactAssociation,
     DynamicGroup,
@@ -766,6 +767,30 @@ class LogsCleanupTestCase(TransactionTestCase):
             self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
             self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
             self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+
+    def test_recursive_delete_with_cascade_removes_m2m_through_rows(self):
+        """Rows in auto-created M2M through tables should be deleted in both directions."""
+        through = ConfigContext.roles.through
+        roles = [Role.objects.create(name=f"Cleanup M2M Role {i}") for i in range(2)]
+        for role in roles:
+            role.content_types.add(ContentType.objects.get_for_model(Device))
+        config_contexts = [ConfigContext.objects.create(name=f"Cleanup M2M Context {i}", data={}) for i in range(2)]
+        for config_context in config_contexts:
+            config_context.roles.set(roles)
+        job = LogsCleanup()
+
+        # Forward M2M: ConfigContext.roles
+        job.recursive_delete_with_cascade(ConfigContext.objects.filter(pk=config_contexts[0].pk), {})
+        self.assertFalse(ConfigContext.objects.filter(pk=config_contexts[0].pk).exists())
+        self.assertFalse(through.objects.filter(configcontext_id=config_contexts[0].pk).exists())
+        self.assertEqual(through.objects.filter(configcontext_id=config_contexts[1].pk).count(), 2)
+
+        # Reverse M2M: Role <- ConfigContext.roles (plus the forward Role.content_types)
+        job.recursive_delete_with_cascade(Role.objects.filter(pk=roles[0].pk), {})
+        self.assertFalse(Role.objects.filter(pk=roles[0].pk).exists())
+        self.assertFalse(through.objects.filter(role_id=roles[0].pk).exists())
+        self.assertFalse(Role.content_types.through.objects.filter(role_id=roles[0].pk).exists())
+        self.assertEqual(list(config_contexts[1].roles.all()), [roles[1]])
 
 
 class BulkEditTestCase(TransactionTestCase):
