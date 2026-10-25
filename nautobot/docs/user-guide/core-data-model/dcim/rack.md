@@ -38,7 +38,24 @@ Here are the typical instances required for the power utilization of a rack to b
 * 1 or more **Devices**
     * power port connected to a power outlet of the PDU
 
-The total power utilization for a rack is calculated as the sum of all allocated draw (from power ports of devices either directly connected to a power feed or connected to a power outlet of a device that is connected to a power feed) divided by the Total Power (Amps × Volts × Max Utilization %) for all power feeds.
+The total power utilization for a rack is calculated as the allocated apparent power draw, in volt-amperes (VA), divided by the total available power of all power feeds assigned to the rack. Allocated draw values are converted from watts to VA using the power factor of the power port reporting the draw.
+
+For each power port directly connected to a power feed:
+
+* If `allocated_draw` is set, the port's own allocated draw is used and downstream outlet loads are not added again.
+* If `allocated_draw` is unset, the allocated draw of downstream power ports connected to that port's power outlets is used instead, even if `maximum_draw` is set on the upstream port.
+
+!!! note
+    To calculate rack utilization from downstream loads, leave `allocated_draw` unset on the PDU's upstream power port. An explicitly configured `allocated_draw` of zero takes precedence over downstream loads. Setting only `maximum_draw` does not override downstream allocated loads in the rack calculation.
+
+### Per-Phase Power Utilization
+
+For three-phase power feeds, the rack detail page can also display utilization for feed legs A, B, and C. Each three-phase feed contributes one third of its available power to each leg. Downstream allocated loads are assigned to a leg using the `feed_leg` of the PDU power outlet to which they are connected.
+
+The per-phase graphs are shown only when three-phase capacity is available and all connected loads on those feeds can be attributed to a leg. If an upstream power port has `allocated_draw` set, or a connected downstream power port is supplied by an outlet without a `feed_leg`, the per-phase graphs are hidden and only the overall graph is shown. Unconnected outlets without a `feed_leg` do not prevent the graphs from being displayed.
+
+!!! note
+    The overall utilization includes all power feeds assigned to the rack, but the per-phase graphs include only three-phase feeds. On a rack with both single-phase and three-phase feeds, the sum of the per-phase loads and capacities therefore does not necessarily equal the overall load and capacity.
 
 ## Rack Height Configuration
 
