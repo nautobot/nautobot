@@ -340,6 +340,15 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Can be one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
 # CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = os.getenv("NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL", "WARNING")
 
+# Many-to-many association model sides to exclude from automatic change logging, as a JSON object (requires
+# `import json`), for example '{"ipam.vrfprefixassignment": ["prefix"]}'. Defaults to {} if not set here.
+#
+# if (
+#     "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS" in os.environ
+#     and os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"] != ""
+# ):
+#     CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = json.loads(os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"])
+
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 #
 # if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
