@@ -3202,24 +3202,38 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_lldp_neighbors_queries_do_not_grow_with_cabled_interfaces(self):
-        """The LLDP neighbors tab should not query each cabled interface's connected endpoint separately."""
+        """The LLDP neighbors tab should not query each cabled interface's connected endpoint separately,
+        whether the endpoint is an interface on a virtual chassis member or a circuit termination."""
         self.add_permissions("dcim.napalm_read_device")
         device, peer = self.devices[2], self.devices[1]
+        virtual_chassis = VirtualChassis.objects.create(name="LLDP Peer Stack", master=peer)
+        Device.objects.filter(pk=peer.pk).update(virtual_chassis=virtual_chassis, vc_position=1)
+        provider = Provider.objects.create(name="LLDP Provider")
+        circuit_type = CircuitType.objects.create(name="LLDP Circuit Type")
+        circuit_status = Status.objects.get_for_model(Circuit).first()
         interface_status = self.interfaces[0].status
         cable_status = Status.objects.get(name="Connected")
         url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
 
+        def create_interface(parent, name):
+            return Interface.objects.create(
+                device=parent, name=name, type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+
         query_counts = []
         for i in range(1, 4):
             Cable.objects.create(
-                termination_a=Interface.objects.create(
-                    device=device, name=f"LLDP {i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
-                ),
-                termination_b=Interface.objects.create(
-                    device=peer,
-                    name=f"LLDP Peer {i}",
-                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-                    status=interface_status,
+                termination_a=create_interface(device, f"LLDP {i}"),
+                termination_b=create_interface(peer, f"LLDP Peer {i}"),
+                status=cable_status,
+            )
+            circuit = Circuit.objects.create(
+                provider=provider, circuit_type=circuit_type, cid=f"LLDP Circuit {i}", status=circuit_status
+            )
+            Cable.objects.create(
+                termination_a=create_interface(device, f"LLDP Circuit {i}"),
+                termination_b=CircuitTermination.objects.create(
+                    circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=device.location
                 ),
                 status=cable_status,
             )
@@ -3229,6 +3243,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 response = self.client.get(url)
             self.assertHttpStatus(response, 200)
             self.assertContains(response, f"LLDP Peer {i}")
+            self.assertContains(response, 'data-chassis="LLDP Peer Stack"', count=i)
+            self.assertContains(response, f"LLDP Provider LLDP Circuit {i}")
             query_counts.append(len(queries))
 
         self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
