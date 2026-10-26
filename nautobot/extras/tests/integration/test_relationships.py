@@ -68,6 +68,8 @@ class RelationshipsTestCase:
         relationship_id = form.submit()
         form.expect_flash_message("Created relationship")
 
+        # The destination fields are disabled, and a browser does not post disabled inputs. The form's
+        # submit handler re-enables them, so the API shows whether the mirrored values reached the server.
         response = api.get(f"/api/extras/relationships/{relationship_id}/")
         assert response.ok, f"GET relationship {relationship_id} returned {response.status}: {response.text()}"
         relationship = response.json()

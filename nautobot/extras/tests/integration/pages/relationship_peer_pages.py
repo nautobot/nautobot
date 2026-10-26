@@ -19,11 +19,12 @@ class RelationshipPeerDetailPage(DetailPage):
         return self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id)).filter(has_text=peer_name)
 
     def expect_relationship_peer(self, tab_id, peer_name):
-        """Assert (auto-retrying) that a Relationships panel on tab *tab_id* shows *peer_name*."""
-        expect(self._relationship_panels_showing(tab_id, peer_name)).to_have_count(1)
+        """Assert (auto-retrying) that exactly one Relationships panel on tab *tab_id* shows *peer_name*, and that it is visible."""
+        expect(self._relationship_panels_showing(tab_id, peer_name)).to_be_visible()
 
     def expect_no_relationship_peer(self, tab_id, peer_name):
-        """Assert (auto-retrying) that no Relationships panel on tab *tab_id* shows *peer_name*."""
+        """Assert (auto-retrying) that the tab *tab_id* exists and no Relationships panel in it shows *peer_name*."""
+        expect(self._tab_pane(tab_id)).to_have_count(1)
         expect(self._relationship_panels_showing(tab_id, peer_name)).to_have_count(0)
 
 
