@@ -2,8 +2,8 @@
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
 `tests/integration/conftest.py` files build thin named fixtures on top of
-`create_object`. The fixtures that more than one app needs (a location tree, a
-manufacturer, a device, and the records a device needs) are defined here. Run
+`create_object`. The fixtures that more than one app needs (a location tree, a location,
+a manufacturer, a device type, a role and a device) are defined here. Run
 `pytest --fixtures nautobot/<app>/tests/integration` to list every available fixture
 with its location.
 
@@ -264,43 +264,49 @@ def created_manufacturer(create_object):
 
 
 @pytest.fixture
-def created_device_prerequisites(create_object, status_for, created_manufacturer):
-    """A location, device type and role created for this test, and a device Status, as API records."""
+def created_location(create_object, status_for):
+    """A location created for this test, in a location type that allows devices."""
     unique = unique_name()
-    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
     location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
-    location = create_object(
+    return create_object(
         "dcim/locations/",
         name=f"{unique}-location",
         location_type=location_type["id"],
         status=status_for("dcim.location")["id"],
     )
-    device_type = create_object(
-        "dcim/device-types/",
-        model=f"{unique}-model",
-        manufacturer=created_manufacturer["id"],
-    )
-    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
-    return {
-        "location": location,
-        "device_type": device_type,
-        "role": role,
-        "status": status_for("dcim.device"),
-    }
 
 
 @pytest.fixture
-def created_device(create_object, created_device_prerequisites):
+def created_device_type(create_object, created_manufacturer):
+    """A device type created for this test."""
+    return create_object("dcim/device-types/", model=f"{unique_name()}-model", manufacturer=created_manufacturer["id"])
+
+
+@pytest.fixture
+def created_role(create_object):
+    """A role created for this test that allows devices."""
+    return create_object("extras/roles/", name=f"{unique_name()}-role", content_types=["dcim.device"])
+
+
+@pytest.fixture
+def created_device(create_object, status_for, created_location, created_device_type, created_role):
     """A device created for this test, plus its related records, since the device record has only their ids."""
+    status = status_for("dcim.device")
     device = create_object(
         "dcim/devices/",
         name=unique_name(),
-        location=created_device_prerequisites["location"]["id"],
-        device_type=created_device_prerequisites["device_type"]["id"],
-        role=created_device_prerequisites["role"]["id"],
-        status=created_device_prerequisites["status"]["id"],
+        location=created_location["id"],
+        device_type=created_device_type["id"],
+        role=created_role["id"],
+        status=status["id"],
     )
-    return {"device": device, **created_device_prerequisites}
+    return {
+        "device": device,
+        "location": created_location,
+        "device_type": created_device_type,
+        "role": created_role,
+        "status": status,
+    }
 
 
 @pytest.fixture

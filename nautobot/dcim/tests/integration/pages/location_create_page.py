@@ -2,10 +2,10 @@
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.create_form_page import CreateFormPage
+from nautobot.playwright.object_form_page import ObjectFormPage
 
 
-class LocationCreatePage(CreateFormPage):
+class LocationCreatePage(ObjectFormPage):
     """The Location add form."""
 
     ADD_PATH = "/dcim/locations/add/"
