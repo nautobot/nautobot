@@ -1473,10 +1473,10 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
 
     @classmethod
     def connection_destination_querysets(cls):
-        """An Interface's path ends at another Interface or at a CircuitTermination.
+        """Return a queryset for each model an Interface's cable path can end at: Interface and CircuitTermination.
 
-        Joins what the Device LLDP neighbors tab renders for each: the peer's device and virtual chassis, or
-        the circuit and its provider.
+        The Device LLDP neighbors tab displays the peer interface's device and virtual chassis, or the circuit and its
+        provider. Each queryset uses `select_related` to load those objects in the same query as the path destination.
         """
         from nautobot.circuits.models import CircuitTermination
 
