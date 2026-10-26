@@ -1197,6 +1197,12 @@ class CableToCableTermination(BaseModel):
     row, enforced via a CheckConstraint.
     """
 
+    # Deleting a Cable cascades to at most `2 * CABLE_BREAKOUT_MAX_CONNECTORS` rows (32),
+    # so its disconnected terminations can afford a change record each.
+    # TODO 4.0: remove once `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` gates cascade change logging; see
+    # `nautobot.extras.signals._handle_deleted_m2m_through_object`.
+    m2m_change_logged_cascade_sides = ("cable",)
+
     cable = models.ForeignKey(
         to="dcim.Cable",
         on_delete=models.CASCADE,
