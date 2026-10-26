@@ -243,25 +243,35 @@ Two linters enforce a subset of this automatically, so run them before opening a
 
 - `invoke djlint` includes `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag"). Do not add
   either to the ignore list in `pyproject.toml`.
-- Integration tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
-  `SeleniumTestCase.assertNoAccessibilityViolations()`, which scans the page currently loaded in the browser against the
+- Playwright tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
+  `nautobot.playwright.accessibility.assert_no_accessibility_violations(page)`, which scans the page that the test has open against the
   WCAG 2.2 A and AA rule tags (which include everything carried forward from 2.0 and 2.1):
 
     ```python
-    def test_my_view(self):
-        self.browser.visit(f"{self.live_server_url}/plugins/my-app/things/")
-        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
-        self.assertNoAccessibilityViolations()
+    from playwright.sync_api import expect
+
+    from nautobot.playwright.accessibility import assert_no_accessibility_violations
+
+
+    def test_my_view(auth_page):
+        auth_page.goto("/plugins/my-app/things/")
+        expect(auth_page.locator("#object_table_wrapper")).to_be_attached()
+        assert_no_accessibility_violations(auth_page)
     ```
+
+    Wait for an element that the view itself renders before scanning. Nautobot's error pages have the same `main` as every
+    other page, so a wait on `main` lets a failed view be scanned as its error page. The response that `goto` returns is
+    worth checking too, but not instead: a page that redirects to the login page answers 200.
 
     It gates on findings at every impact level, because impact describes how badly a violation affects a user rather
     than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
-    part of it out. `nautobot/core/tests/selenium/test_accessibility.py` covers the shared page templates.
+    part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
 
-    One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
-    correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not
-    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/core/testing/integration.py`, and pass
-    `disabled_rules=()` to scan with it on.
+    Two rules are currently switched off. `color-contrast` (WCAG 1.4.3): the theme fails it in a handful of places, and
+    correcting that means retuning palette tokens, which is a deferred product decision, so contrast is not checked
+    automatically anywhere. `target-size` (WCAG 2.5.8): the header's Search help link and the tag links in list
+    cells are under 24 px, and the rule will be switched back on when `NAUTOBOT-1667` is fixed. See `AXE_DISABLED_RULES` in
+    `nautobot/playwright/accessibility.py`, and pass `disabled_rules=()` to scan with both on.
 
 Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
 on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its
@@ -285,7 +295,7 @@ Do it against a server with `DEBUG` off, or expect noise that is not yours. The 
 `DEBUG = True`, which enables Django Debug Toolbar, and the toolbar injects a `#djDebugRoot` element that reports a
 `color-contrast` finding on its own collapsed handle. It is a false positive twice over: the handle measures 5.27:1 in
 light mode and 7.01:1 in dark once its `opacity: 0.6` is composited (18.33:1 as declared), and the toolbar is a dev-only
-dependency that is never installed for a Nautobot user. `assertNoAccessibilityViolations()` excludes it via
+dependency that is never installed for a Nautobot user. `assert_no_accessibility_violations()` excludes it via
 `AXE_EXCLUDE_SELECTORS`; a browser extension will not, so set `NAUTOBOT_DEBUG=False` for the run.
 
 That exclusion list is for third-party developer tooling only. Reach for it when something injected into the page is not
