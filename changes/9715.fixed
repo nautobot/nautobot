@@ -1,0 +1,1 @@
+Fixed `CableTermination.get_cable_peer()`, `cable_peer`, and `get_cable_peers()` ignoring the lane mapping on breakout cables with the same number of connectors on both sides.

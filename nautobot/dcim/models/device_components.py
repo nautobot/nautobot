@@ -402,9 +402,10 @@ class CableTermination(models.Model):
     def get_cable_peer(self, peer_connector=None):
         """Return the far-end termination of this cable.
 
-        For non-breakout cables, returns the single peer (or the first peer if multiple exist).
+        For single-connector cables, returns the single peer (or the first peer if multiple exist).
 
-        For breakout cables, pass `peer_connector` to select the termination on a specific
+        For breakout cables, only peers reachable from this termination's connector via the cable
+        type's lane mapping are considered. Pass `peer_connector` to select the termination on a specific
         opposite-side connector. The connector number refers to the *peer's* side of the cable
         — i.e. the side opposite to this termination. Returns None if no termination occupies
         that connector (disconnected lane) or if `peer_connector` isn't a connector this
@@ -430,7 +431,8 @@ class CableTermination(models.Model):
         """Return the opposite-side termination objects mapped to this termination's lane(s).
 
         For standard cables, returns a list with one peer.
-        For breakout cables, returns peers mapped to this termination's connector via the template.
+        For breakout cables, returns peers mapped to this termination's connector via the cable
+        type's lane mapping.
 
         Reads `cable.terminations.all()` and filters / sorts in Python so callers can prefetch
         the cable's terminations (with per-type FKs `select_related`'d) to avoid N+1 queries
@@ -444,9 +446,9 @@ class CableTermination(models.Model):
         lane(s), sorted by connector. Internal helper shared by `get_cable_peer` (which picks
         one row by `peer_connector`) and `get_cable_peers` (which extracts terminations).
 
-        For breakout cables, only peer-side rows whose connector is reachable from this
-        termination's connector via the cable type's lane mapping are returned. For non-breakout
-        cables, all opposite-side rows are returned.
+        For breakout cables, including those with multiple connectors on both sides, only peer-side
+        rows whose connector is reachable from this termination's connector via the cable type's lane
+        mapping are returned. For single-connector cables, all opposite-side rows are returned.
         """
         my_endpoint = getattr(self, "cable_termination", None)
         if my_endpoint is None:
@@ -457,7 +459,7 @@ class CableTermination(models.Model):
 
         all_rows = cable.terminations.all()
 
-        if cable.cable_type_id and cable.cable_type.is_breakout:
+        if cable.cable_type_id and cable.cable_type.is_multi_connector:
             mapped_far_connectors = self._mapped_far_connectors()
             opposite_endpoints = [
                 ep for ep in all_rows if ep.cable_end == opposite_side and ep.connector in mapped_far_connectors
@@ -476,7 +478,7 @@ class CableTermination(models.Model):
         if my_endpoint is None or my_endpoint.cable is None:
             return set()
         cable = my_endpoint.cable
-        if not (cable.cable_type_id and cable.cable_type.is_breakout):
+        if not (cable.cable_type_id and cable.cable_type.is_multi_connector):
             return set()
         origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
         far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
@@ -490,7 +492,7 @@ class CableTermination(models.Model):
         That is, its connector maps to more than one opposite-side connector — the signal fans out
         to multiple lanes, which is a genuine path split, regardless of how many of those lanes are
         currently connected. A connector mapping to a single far connector (the aggregating side of
-        a breakout, or any non-breakout cable) is deterministic and not a split.
+        a breakout, a one-to-one lane, or any single-connector cable) is deterministic and not a split.
         """
         return len(self._mapped_far_connectors()) > 1
 
