@@ -3944,8 +3944,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
         instance = self.get_object()
         interfaces = (
             Interface.optimize_queryset_for_cable_columns(instance.all_interfaces.restrict(request.user, "view"))
-            # The template renders each interface's connected endpoint to compare against what LLDP reports.
-            # Without this the page walks the cable path per row.
+            # The template displays each interface's connected endpoint so it can be compared with what LLDP reports.
+            # Without this prefetch, the page runs extra queries on every row to load the cable path and its destination.
             .prefetch_related(Interface.connection_destination_prefetch())
             .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         )
