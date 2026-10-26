@@ -10,7 +10,7 @@ class DynamicGroupTestCase:
     """Dynamic group create and edit: the saved filter, the member count after Refresh Members, and the member's tab."""
 
     @pytest.mark.behavioral
-    @pytest.mark.usefixtures("require_celery_worker", "refresh_members_job_on_default_queue")
+    @pytest.mark.usefixtures("require_celery_worker")
     def test_create_with_filter(self, auth_page, base_url, created_device_set, dynamic_group_name):
         """A group created with a location filter has exactly that location's devices as members."""
         group = DynamicGroupPage(auth_page, base_url)
@@ -39,7 +39,7 @@ class DynamicGroupTestCase:
         device.expect_tab_to_contain("dynamic_groups", created_dynamic_group["name"])
 
     @pytest.mark.behavioral
-    @pytest.mark.usefixtures("require_celery_worker", "refresh_members_job_on_default_queue")
+    @pytest.mark.usefixtures("require_celery_worker")
     def test_edit_filter_and_refresh_members(self, auth_page, base_url, created_device_set, created_dynamic_group):
         """Adding a second location to the filter grows the membership once the members are refreshed."""
         pk = created_dynamic_group["id"]
