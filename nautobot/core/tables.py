@@ -4,8 +4,9 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, FieldError
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
@@ -226,6 +227,7 @@ class BaseTable(django_tables2.Table):
             select_fields = []
             prefetch_fields = []
             count_fields = []
+            relationship_peer_lookups = None
             for column in self.columns:
                 if not column.visible:
                     continue
@@ -264,6 +266,41 @@ class BaseTable(django_tables2.Table):
                         )
                     continue
 
+                if isinstance(column.column, RelationshipColumn):
+                    # Prefetch the associations and their peers once for every relationship column. A peer
+                    # prefetch raises on a stale ContentType (an uninstalled App), so then prefetch only the
+                    # associations and let those peers resolve per row.
+                    if relationship_peer_lookups is None:
+                        model_ct = ContentType.objects.get_for_model(model)
+                        relationship_peer_lookups = (
+                            (
+                                "source_for_associations__source",
+                                "source_for_associations__destination",
+                                "destination_for_associations__source",
+                                "destination_for_associations__destination",
+                            )
+                            if all(
+                                ContentType.objects.get_for_id(ct_id).model_class() is not None
+                                for relationship in models.Relationship.objects.filter(
+                                    Q(source_type=model_ct) | Q(destination_type=model_ct)
+                                )
+                                for ct_id in (relationship.source_type_id, relationship.destination_type_id)
+                            )
+                            else ("source_for_associations", "destination_for_associations")
+                        )
+                    for lookup in relationship_peer_lookups:
+                        if lookup not in prefetch_fields:
+                            prefetch_fields.append(lookup)
+                    continue
+
+                # Walk the accessor, joining leading ForeignKeys and prefetching from the first to-many hop on:
+                #   "tenant__tenant_group"            -> select_related("tenant__tenant_group")
+                #   "interfaces"                      -> prefetch_related("interfaces")
+                #   "interface__ip_addresses"         -> select_related("interface"),
+                #                                        prefetch_related("interface__ip_addresses")
+                #   "interface__ip_addresses__parent" -> select_related("interface"),
+                #                                        prefetch_related("interface__ip_addresses__parent")
+                # A reverse many-to-many hop is not followed. BaseTableAccessorWalkTestCase covers each shape.
                 column_model = model
                 accessor = column.accessor
                 select_path = []
@@ -277,8 +314,10 @@ class BaseTable(django_tables2.Table):
                         # Follow ForeignKeys to the related model via select_related
                         select_path.append(field_name)
                         column_model = field.remote_field.model
-                    elif isinstance(field, (RelatedField, ManyToOneRel)) and not select_path:
-                        # Follow O2M and M2M relations to the related model via prefetch_related
+                    elif isinstance(field, (RelatedField, ManyToOneRel)):
+                        # Follow O2M and M2M relations via prefetch_related, after any ForeignKeys already walked
+                        if select_path and not prefetch_path:
+                            prefetch_path = [*select_path]
                         prefetch_path.append(field_name)
                         column_model = field.remote_field.model
                     elif isinstance(field, GenericForeignKey) and not select_path:
@@ -292,7 +331,7 @@ class BaseTable(django_tables2.Table):
                         break
                 if select_path:
                     select_fields.append("__".join(select_path))
-                elif prefetch_path:
+                if prefetch_path:
                     prefetch_fields.append("__".join(prefetch_path))
 
             if select_fields:
@@ -330,6 +369,12 @@ class BaseTable(django_tables2.Table):
             self.data = TableData.from_data(data_transform_callback(self.data.data))
             self.data.set_table(self)
             self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
+    def before_render(self, request):
+        # django-tables2's TemplateColumn replaces the template context's `request` with `table.request`, which is
+        # only set by RequestConfig; ensure that column templates can always use `request.path` and the like.
+        super().before_render(request)
+        self.request = request
 
     @property
     def configurable_columns(self):
@@ -797,10 +842,6 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
     """
     Display a list of `content_types` m2m assigned to an object.
 
-    Default sorting of content-types is by pk. This sorting comes at a per-row
-    performance hit to querysets for table views. If this becomes an issue,
-    set `sort_items=False`.
-
     Args:
         sort_items (bool): Whether to sort by `(app_label, name)`.
         truncate_words (Optional[int]): Number of words at which to truncate, or `None` to disable.
@@ -812,9 +853,12 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
         self.truncate_words = truncate_words
 
     def filter(self, qs):
-        """Overload filter to optionally sort items."""
+        """Overload filter to optionally sort items.
+
+        Sorts in Python, since `qs.order_by()` would discard the prefetched content types and query once per row.
+        """
         if self.sort_items:
-            qs = qs.order_by("app_label", "model")
+            return sorted(qs.all(), key=lambda content_type: (content_type.app_label, content_type.model))
         return qs.all()
 
     def render(self, value):
@@ -904,7 +948,8 @@ class RelationshipColumn(django_tables2.Column):
     def render(self, *, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         # Filter the relationship associations by the relationship instance.
         # Since associations accessor returns all the relationship associations regardless of the relationship.
-        value = [v for v in value if v.relationship == self.relationship]
+        # Compare by id, since `v.relationship` would fetch the Relationship for each association.
+        value = [v for v in value if v.relationship_id == self.relationship.pk]
         if not self.relationship.symmetric:
             if self.side == choices.RelationshipSideChoices.SIDE_SOURCE:
                 value = [v for v in value if v.source_id == record.id]
