@@ -806,6 +806,7 @@ jobs:
       - "integration-test"
       - "migration-tests-mysql"
       - "migration-tests-postgres"
+      - "playwright-test"
       - "pylint"
       - "tests-mysql-plus-coverage"
       - "tests-postgres"
