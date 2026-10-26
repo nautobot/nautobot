@@ -2977,7 +2977,10 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
     def test_interface_list_joins_the_nested_device_parent_bay_only_at_depth_1(self):
-        """At depth 1 each interface renders its own Device, whose reverse one-to-one `parent_bay` must be joined."""
+        """At depth 1, each interface includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
         self.add_permissions("dcim.view_interface", "dcim.view_device")
         url = reverse("dcim-api:interface-list")
         bay_table = connection.ops.quote_name(DeviceBay._meta.db_table)
@@ -2990,7 +2993,8 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
         self.assertEqual([q["sql"] for q in ctx.captured_queries if f"FROM {bay_table}" in q["sql"]], [])
 
-        # At depth 0 the device is a reference, so there is nothing to join.
+        # At depth 0 the API renders each device as a reference (id, object_type and url) without parent_bay, so the
+        # query has no reason to join the device bay table.
         with CaptureQueriesContext(connection) as ctx:
             response = self.client.get(f"{url}?limit=0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
@@ -3538,7 +3542,10 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         ]
 
     def test_device_bay_list_joins_the_nested_device_parent_bay_at_depth_1(self):
-        """At depth 1 each device bay renders its own Device, whose reverse one-to-one `parent_bay` must be joined."""
+        """At depth 1, each device bay includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
         self.add_permissions("dcim.view_devicebay", "dcim.view_device")
         url = reverse("dcim-api:devicebay-list")
         with CaptureQueriesContext(connection) as ctx:
@@ -3547,7 +3554,9 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         self.assertGreater(
             len([result for result in response.json()["results"] if "parent_bay" in result["device"]]), 1
         )
-        # The per-row lookup of a Device's parent bay is by installed_device; the list query itself has no WHERE on it.
+        # Without the join, the serializer looks up each Device's parent bay in a separate query that filters on
+        # installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one
+        # is a per-row query.
         installed_device_column = (
             f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
         )

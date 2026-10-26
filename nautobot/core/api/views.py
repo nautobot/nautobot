@@ -282,8 +282,10 @@ class ModelViewSetMixin:
                 if isinstance(model_field, ForeignKey):
                     select_fields.append(field_instance.source)
                     if isinstance(field_instance, drf_serializers.Serializer):
-                        # A nested serializer renders the related object in full, once per row. A reverse one-to-one
-                        # it includes (e.g. Device.parent_bay) has no column on the related row, so join it too.
+                        # A nested serializer renders every field of the related object, once for each row. If one of
+                        # those fields is a reverse one-to-one relation (e.g. Device.parent_bay), the related row has no
+                        # column for it, so the select_related() on the foreign key does not fetch it. Add that relation
+                        # to select_fields so that the list query joins it too.
                         select_fields.extend(
                             f"{field_instance.source}__{lookup}"
                             for lookup in self._reverse_one_to_one_lookups(field_instance, model_field.related_model)
