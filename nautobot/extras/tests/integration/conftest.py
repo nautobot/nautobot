@@ -185,8 +185,8 @@ def refresh_members_job_on_default_queue(api):
     """Make the default queue the Refresh Members job's only queue for the test, then restore its queue settings.
 
     The Refresh Members job button submits the job to the first of the job's queues, and
-    generate_test_data assigns random queues to jobs. On a seeded instance the job can then
-    land on a queue no worker consumes, while the development worker consumes only the
+    generate_test_data assigns random queues to jobs. On a seeded instance the job is then
+    sent to a queue that no worker consumes, while the development worker consumes only the
     default queue. The overrides are set so Nautobot does not reset the queues from the job
     class on save.
     """

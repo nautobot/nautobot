@@ -35,7 +35,8 @@ class DynamicGroupTestCase:
         """A member device's Dynamic Groups tab lists the group."""
         device = DeviceDetailPage(auth_page, base_url)
         device.navigate(created_device_set["first_devices"][0]["id"])
-        device.expect_dynamic_groups_tab_to_list(created_dynamic_group["name"])
+        device.open_tab("dynamic_groups")
+        device.expect_tab_to_contain("dynamic_groups", created_dynamic_group["name"])
 
     @pytest.mark.behavioral
     @pytest.mark.usefixtures("require_celery_worker", "refresh_members_job_on_default_queue")
