@@ -1598,7 +1598,7 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
 
         if "_create" in request.POST:
             form = self.form(model, request.POST)  # pylint: disable=not-callable
-            form.fields["pk"].queryset = parent_queryset
+            restrict_form_fields(form, request.user)
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
