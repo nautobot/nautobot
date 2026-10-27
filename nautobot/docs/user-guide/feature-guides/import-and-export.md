@@ -283,10 +283,10 @@ Fields Nautobot generates rather than stores — `display`, `object_type`, `natu
 **Import Mode** decides what a record may do with the existing object it [matches](#match-fields):
 
 - **Create/Update**, the default, updates the object a record matches, and creates a new object for a record that matches none.
-- **Create Only** creates a new object for every record. A record that matches an existing object is reported as an error, and nothing is changed for it, so an import meant to add new objects can't overwrite existing ones by mistake. Records are checked against every existing object that you have permission to view, so a match is refused even when the match fields aren't unique in Nautobot itself.
+- **Create Only** creates a new object for every record. A record that matches an existing object is reported as an error, and nothing is changed for it, so an import meant to add new objects can't overwrite existing ones by mistake. Records are checked against every existing object that you have permission to view, so a matching record is reported as an error even when the match fields aren't unique in Nautobot itself.
 - **Update Only** updates the existing object that each record matches. A record that matches no object is reported as an error rather than created, so an import meant to edit existing objects can't add stray new ones, for example because of a misspelled name. Every record must be matchable, even when the [default match fields](#match-fields) are in use, and an object type with no match fields at all can't be imported in this mode.
 
-A record refused by its import mode fails like any other invalid row, so whether the rest of the import is kept depends on **Rollback Changes on Failure**, below.
+A record that its import mode rejects fails like any other invalid row, so whether the rest of the import is kept depends on **Rollback Changes on Failure**, below.
 
 ### If a row fails
 

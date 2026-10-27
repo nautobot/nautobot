@@ -867,11 +867,14 @@ class ImportObjects(Job):
     def _match_row(self, row, entry, match, match_serializer, match_queryset, import_mode):
         """The existing object that a row updates, or None if the row is to create one.
 
-        Only objects in `match_queryset` are matched. To update, that's the objects the user may change, as an
-        object's permission is checked again only after the row is saved to it, by which point the row may have
-        brought it within their constraints. A row matching an object outside it is created instead, and so
-        fails on the object's uniqueness, if it has any. In Create Only mode, the objects the user may view are
-        matched, so that a row colliding with one is refused even when no uniqueness constraint would refuse it.
+        Only objects in `match_queryset` are matched.
+
+        In Update Only or Create/Update mode, that's the existing objects the user may change. In Create/Update mode, a
+        row matching an object outside `match_queryset` is created instead, and so might fail on the object's
+        uniqueness constraints, if any. In Update Only mode, such a row is reported as matching no existing object.
+
+        In Create Only mode, the objects the user may view are matched, so that a row colliding with one is refused
+        even when no uniqueness constraint would refuse it.
 
         Raises:
             _RowFailed: if the row matches several objects, or can't be matched on match fields the user gave;
