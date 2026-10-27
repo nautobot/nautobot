@@ -350,5 +350,5 @@ In the default Create/Update [import mode](#creating-updating-or-both), either _
 
 Object permissions with constraints apply to imports as they do elsewhere in Nautobot:
 
-- In the Create/Update and Update Only modes, records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
+- In the Create/Update and Update Only modes, records are matched only against objects that you have permission to change. In Create/Update mode, a record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object. In Update Only mode, such a record is reported as matching no existing object.
 - An updated object must still fall within your _change_ permission's constraints after the update, and a created object must fall within your _add_ permission's constraints. A record that would leave an object outside them is reported as an error, such as "does not have permission to update an object with these attributes", and nothing is saved for it.

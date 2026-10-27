@@ -45,8 +45,8 @@ class Command(BaseCommand):
             choices=ImportModeChoices.values(),
             help="Whether records may create new objects, update existing ones, or both "
             f'(default: "{ImportModeChoices.CREATE_UPDATE}", which allows both). '
-            f'"{ImportModeChoices.CREATE}" refuses records that match an existing object, and '
-            f'"{ImportModeChoices.UPDATE}" refuses records that match none.',
+            f'"{ImportModeChoices.CREATE}" reports an error for each record that matches an existing object, and '
+            f'"{ImportModeChoices.UPDATE}" reports an error for each record that matches no existing object.',
         )
         parser.add_argument(
             "--format",

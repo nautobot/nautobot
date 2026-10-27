@@ -760,8 +760,8 @@ class ImportObjects(Job):
         default=ImportModeChoices.CREATE_UPDATE,
         required=False,
         description="<strong>Create/Update</strong> updates the records that match existing ones and creates the "
-        "rest. <strong>Create Only</strong> refuses records that match an existing record, and "
-        "<strong>Update Only</strong> refuses records that don't.",
+        "rest. <strong>Create Only</strong> reports an error for each record that matches an existing record, and "
+        "<strong>Update Only</strong> reports an error for each record that matches no existing record.",
     )
     match_fields = StringVar(
         label="Match Existing Records On",
