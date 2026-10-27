@@ -60,11 +60,15 @@ import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 import { initializeSubtrees } from './tree.js';
+import { createElement } from './utils.js';
 
 window.nb ??= {};
 
 // Export `getFieldAutoId` before `'DOMContentLoaded'` for convenience, because existing apps forms may need to use it.
 window.nb.form = { getFieldAutoId };
+
+// Export `createElement` so inline template scripts can build DOM nodes from user-controlled text without `innerHTML`.
+window.nb.utils = { createElement };
 
 document.addEventListener('DOMContentLoaded', () => {
   // History
