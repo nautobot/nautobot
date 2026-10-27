@@ -19,7 +19,7 @@
     "bootstrap": "^5.3.8",
     "clipboard": "2.0.11",
     "echarts": "^6.1.0",
-    "flatpickr": "4.6.13",
+    "flatpickr": "npm:flatpickr-ce@4.7.0",
     "fuse.js": "^7.3.0",
     "graphiql": "2.4.7",
     "graphql": "16.10.0",
