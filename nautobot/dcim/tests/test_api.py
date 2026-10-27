@@ -1373,6 +1373,32 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    # Each of these tests references a user, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable.
+
+    def test_create_object(self):
+        self.add_permissions("users.view_user")
+        super().test_create_object()
+
+    def test_bulk_create_objects(self):
+        self.add_permissions("users.view_user")
+        super().test_bulk_create_objects()
+
+    def test_update_object(self):
+        self.add_permissions("users.view_user")
+        super().test_update_object()
+
+    def test_get_put_round_trip(self):
+        self.add_permissions("users.view_user")
+        super().test_get_put_round_trip()
+
+    def test_recreate_object_csv(self):
+        self.add_permissions("users.view_user")
+        super().test_recreate_object_csv()
+
+    def test_recreate_object_document(self):
+        self.add_permissions("users.view_user")
+        super().test_recreate_object_document()
+
 
 class DeviceFamilyTest(APIViewTestCases.APIViewTestCase):
     model = DeviceFamily

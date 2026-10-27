@@ -11,6 +11,10 @@ nautobot/project-static/dist/js/graphql-libraries.js binary
 nautobot/project-static/dist/js/libraries.js binary
 nautobot/project-static/dist/js/nautobot.js binary
 nautobot/project-static/dist/js/nautobot-graphiql.js binary
+nautobot/project-static/dist/redoc/redoc.standalone.js binary
+nautobot/project-static/dist/swagger-ui/swagger-ui-bundle.js binary
+nautobot/project-static/dist/swagger-ui/swagger-ui-standalone-preset.js binary
+nautobot/project-static/dist/swagger-ui/swagger-ui.css binary
 
 *.html text=auto
 *.py text=auto

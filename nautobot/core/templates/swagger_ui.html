@@ -5,7 +5,7 @@
 {% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
-    <link rel="stylesheet" href="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/swagger-ui/swagger-ui.css' %}">
     <style>
         /* Manual styling inherited from drf-spectacular */
         html { box-sizing: border-box; overflow-y: scroll; }
@@ -36,8 +36,8 @@
 {% endblock content %}
 
 {% block javascript %}
-    <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-bundle.js' %}"></script>
-    <script src="{% static 'drf_spectacular_sidecar/swagger-ui-dist/swagger-ui-standalone-preset.js' %}"></script>
+    <script src="{% static 'dist/swagger-ui/swagger-ui-bundle.js' %}"></script>
+    <script src="{% static 'dist/swagger-ui/swagger-ui-standalone-preset.js' %}"></script>
     {% if script_url %}
         <script src="{{ script_url }}"></script>
     {% else %}
