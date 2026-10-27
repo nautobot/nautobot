@@ -106,33 +106,32 @@ class ObjectEditTestCase:
     # -------------------------------------------------------------------------
 
     def test_embedded_search_opens_the_search_form(self, auth_page, base_url):
-        """The "Search tenants" button opens the Tenant filter form in the modal, with an empty name filter."""
+        """The "Search tenants" button opens the Tenant filter form in the modal, with no tenant group filter set."""
         modal = open_device_form(auth_page, base_url)
         modal.open_search("tenants")
 
         modal.expect_title("Search tenants")
-        assert modal.field("name__ic").input_value() == ""
+        modal.expect_prefilled("tenant_group")
 
     @pytest.mark.behavioral
-    def test_embedded_search_filters_the_results(self, auth_page, base_url, create_object):
-        """Searching by name lists the matching tenant and not another one."""
-        tenant = create_object("tenancy/tenants/", name=unique_name())
-        other = create_object("tenancy/tenants/", name=unique_name())
+    def test_embedded_search_filters_the_results(self, auth_page, base_url, created_grouped_tenant):
+        """Searching by tenant group lists the tenant in that group and not the one outside it."""
+        group, tenant, other = (created_grouped_tenant[key] for key in ("group", "tenant", "other"))
         modal = open_device_form(auth_page, base_url)
         modal.open_search("tenants")
-        modal.search(name__ic=tenant["name"])
+        modal.search(tenant_group=group["name"])
 
         modal.expect_result_total(1)
         assert modal.result_rows(tenant["name"]).count() == 1
         assert modal.result_rows(other["name"]).count() == 0
 
     @pytest.mark.behavioral
-    def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, create_object):
+    def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, created_grouped_tenant):
         """Picking a search result closes the modal and selects that tenant in the Tenant field."""
-        tenant = create_object("tenancy/tenants/", name=unique_name())
+        group, tenant = created_grouped_tenant["group"], created_grouped_tenant["tenant"]
         modal = open_device_form(auth_page, base_url)
         modal.open_search("tenants")
-        modal.search(name__ic=tenant["name"])
+        modal.search(tenant_group=group["name"])
         modal.select_result(tenant["name"])
 
         modal.expect_closed()

@@ -89,6 +89,16 @@ class EmbeddedModal:
         """Type *value* into the modal input named *name*."""
         self.root.locator(f"input[name='{name}']").fill(value)
 
+    def pick(self, name, text):
+        """Pick the option showing *text* in the modal's API-backed Select2 field *name*.
+
+        The parent form has fields with the same names, e.g. `tenant_group`, so the click is scoped to the modal.
+        Only one Select2 dropdown is open at a time, so the dropdown itself needs no scoping.
+        """
+        self.root.locator(f"select[name='{name}'] + .select2-container").click()
+        self.page.locator(".select2-container--open .select2-search__field").first.fill(text)
+        self.page.locator(".select2-dropdown .select2-results__option").filter(has_text=text).first.click()
+
     def expect_prefilled(self, name, *labels):
         """Assert (auto-retrying) that the modal select *name* has exactly the options *labels* selected.
 
@@ -110,13 +120,17 @@ class EmbeddedModal:
     # -------------------------------------------------------------------------
 
     def search(self, **filters):
-        """Fill the search form inputs named by *filters*, click Search and wait for the new results.
+        """Set the search form fields named by *filters*, click Search and wait for the new results.
 
-        Until the new results replace the old ones, a row picked from the old results is swapped out from under the
-        request it started, and the pick is lost.
+        A select field is picked by its option text, any other field is typed into. Until the new results replace the
+        old ones, a row picked from the old results is swapped out from under the request it started, and the pick is
+        lost.
         """
         for name, value in filters.items():
-            self.fill(name, value)
+            if self.root.locator(f"select[name='{name}']").count():
+                self.pick(name, value)
+            else:
+                self.fill(name, value)
         list_path = self.root.locator(self._SEARCH_FORM).get_attribute("hx-get")
         with self.page.expect_response(lambda response: urlparse(response.url).path == list_path):
             self.root.locator(self._SEARCH_BUTTON).click()

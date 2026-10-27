@@ -11,6 +11,20 @@ are provided by nautobot.playwright.fixtures, registered in the repo-root confte
 
 import pytest
 
+from nautobot.playwright.helpers import unique_name
+
+
+@pytest.fixture
+def created_grouped_tenant(create_object):
+    """A tenant group with one tenant in it, plus a tenant outside it, all created for this test.
+
+    The Tenant filter form has no name filter in Core, so a search narrows to an owned tenant by its group.
+    """
+    group = create_object("tenancy/tenant-groups/", name=unique_name())
+    tenant = create_object("tenancy/tenants/", name=unique_name(), tenant_group=group["id"])
+    other = create_object("tenancy/tenants/", name=unique_name())
+    return {"group": group, "tenant": tenant, "other": other}
+
 
 @pytest.fixture
 def user_favorites(api):
