@@ -6897,24 +6897,18 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
+        Ensure that the job button passes the job's default job queue as a hidden form input, not its first job queue.
         """
-        self.job.job_queues_override = True
-        task_queues = ["overriden_queue", "default", "priority"]
-        for queue in task_queues:
+        for queue in ["overriden_queue", "default", "priority"]:
             JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+        self.job.job_queues_override = True
         self.job.task_queues = ["overriden_queue", "default", "priority"]
+        self.job.default_job_queue_override = True
+        self.job.default_job_queue = JobQueue.objects.get(name="priority")
         self.job.save()
-        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        job_queues = self.job.job_queues.all()
-        _job_queue = job_queues[0]
-        self.assertIn(f'<input type="hidden" name="_job_queue" value="{_job_queue.pk}">', content, content)
+        # The default job queue must not be the first of the job's queues, or this test can't tell them apart.
+        self.assertNotEqual(self.job.job_queues.first(), self.job.default_job_queue)
 
-        self.job.job_queues_override = False
-        self.job.save()
-        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
