@@ -825,7 +825,9 @@ class JobViewSetBase(
     ModelViewSetMixin,
     viewsets.GenericViewSet,
 ):
-    # The deprecated `task_queues` field reads job_queues for every Job, and exclude_m2m skips its automatic prefetch.
+    # The deprecated `task_queues` field reads `job_queues` for every Job. The serializer hides the `job_queues`
+    # field when `exclude_m2m` is absent or truthy, and `NautobotModelViewSet.get_queryset()` does not prefetch
+    # hidden fields, so we prefetch `job_queues` here.
     queryset = Job.objects.prefetch_related("job_queues")
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet

@@ -375,7 +375,8 @@ class Job(PrimaryModel):
     @property
     def task_queues(self) -> list[str]:
         """Deprecated backward-compatibility property for the list of queue names for this Job."""
-        # all() rather than values_list() so that a prefetch applies.
+        # Use all() rather than values_list(), because all() reads the prefetched job_queues if the queryset has them,
+        # while values_list() always runs a new query.
         return [job_queue.name for job_queue in self.job_queues.all()]
 
     @task_queues.setter
