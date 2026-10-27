@@ -49,7 +49,7 @@ import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
-import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
+import { getFieldAutoId, initializeFormEvents, initializeRequiredMessages, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { refreshMessages } from './messages.js';
@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+  initializeRequiredMessages();
 
   // HTMX button spinner
   initializeHtmxButtonSpinner();
