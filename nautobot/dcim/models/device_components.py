@@ -404,8 +404,8 @@ class CableTermination(models.Model):
 
         For single-connector cables, returns the single peer (or the first peer if multiple exist).
 
-        For breakout cables, only peers reachable from this termination's connector via the cable
-        type's lane mapping are considered. Pass `peer_connector` to select the termination on a specific
+        For multi-connector cables, only peers reachable from this termination's connector via the
+        cable type's lane mapping are considered. Pass `peer_connector` to select the termination on a specific
         opposite-side connector. The connector number refers to the *peer's* side of the cable
         — i.e. the side opposite to this termination. Returns None if no termination occupies
         that connector (disconnected lane) or if `peer_connector` isn't a connector this
@@ -431,7 +431,8 @@ class CableTermination(models.Model):
         """Return the opposite-side termination objects mapped to this termination's lane(s).
 
         For standard cables, returns a list with one peer.
-        For breakout cables, returns peers mapped to this termination's connector via the cable
+        For multi-connector cables (including symmetric types that are not breakouts), returns only
+        the peers on opposite-side connectors that this termination's connector maps to in the cable
         type's lane mapping.
 
         Reads `cable.terminations.all()` and filters / sorts in Python so callers can prefetch
@@ -446,9 +447,10 @@ class CableTermination(models.Model):
         lane(s), sorted by connector. Internal helper shared by `get_cable_peer` (which picks
         one row by `peer_connector`) and `get_cable_peers` (which extracts terminations).
 
-        For breakout cables, including those with multiple connectors on both sides, only peer-side
-        rows whose connector is reachable from this termination's connector via the cable type's lane
-        mapping are returned. For single-connector cables, all opposite-side rows are returned.
+        For multi-connector cables (either side has more than one connector, which includes symmetric
+        types such as a 2x2 that are not breakouts), only peer-side rows whose connector this
+        termination's connector maps to in the cable type's lane mapping are returned. For
+        single-connector cables, all opposite-side rows are returned.
         """
         my_endpoint = getattr(self, "cable_termination", None)
         if my_endpoint is None:
@@ -472,7 +474,7 @@ class CableTermination(models.Model):
 
     def _mapped_far_connectors(self):
         """Opposite-side connector numbers this termination's connector maps to via the cable type's
-        lane mapping. Only meaningful for breakout cables; returns an empty set otherwise.
+        lane mapping. Only meaningful for multi-connector cables; returns an empty set otherwise.
         """
         my_endpoint = getattr(self, "cable_termination", None)
         if my_endpoint is None or my_endpoint.cable is None:
@@ -492,7 +494,8 @@ class CableTermination(models.Model):
         That is, its connector maps to more than one opposite-side connector — the signal fans out
         to multiple lanes, which is a genuine path split, regardless of how many of those lanes are
         currently connected. A connector mapping to a single far connector (the aggregating side of
-        a breakout, a one-to-one lane, or any single-connector cable) is deterministic and not a split.
+        a breakout, a one-to-one lane on a symmetric multi-connector cable, or any single-connector
+        cable) is deterministic and not a split.
         """
         return len(self._mapped_far_connectors()) > 1
 

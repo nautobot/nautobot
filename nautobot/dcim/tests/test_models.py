@@ -4413,7 +4413,10 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(cable.terminations.count(), 1)
 
     def test_get_cable_peer_symmetric_multi_connector_follows_lane_mapping(self):
-        """A 2x2 breakout with a polarity-shuffled mapping resolves each connector to its mapped peer."""
+        """On a polarity-shuffled 2x2 cable, get_cable_peer() returns the peer that the lane mapping assigns.
+
+        The 2x2 cable type is multi-connector but not a breakout.
+        """
         shuffle_type = CableType(
             name="Peer resolution polarity-shuffled 2x2",
             a_connectors=2,
@@ -4446,10 +4449,10 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
                 termination.refresh_from_db()
                 self.assertEqual(termination.get_cable_peer(), expected_peer)
                 self.assertEqual(termination.get_cable_peers(), [expected_peer])
-                # One far connector per lane, so nothing fans out.
+                # Each connector maps to exactly one far connector, so breakout_fans_out() returns False.
                 self.assertFalse(termination.breakout_fans_out())
 
-        # Traced paths follow the same mapping.
+        # The CablePath traced from each termination ends at the peer the lane mapping assigns and is not split.
         for origin, expected_destination in expected_peers.items():
             with self.subTest(origin=origin.name):
                 path = CablePath.objects.get(
@@ -4459,7 +4462,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
                 self.assertFalse(path.is_split)
 
     def test_get_cable_peers_symmetric_identity_multi_connector_one_peer_per_connector(self):
-        """A 3x3 breakout with an identity mapping returns one peer per connector, not all three."""
+        """On a 3x3 identity-mapped cable (not a breakout), get_cable_peers() returns one peer per connector."""
         trunk_type = CableType(name="Peer resolution identity 3x3", a_connectors=3, b_connectors=3, total_lanes=3)
         trunk_type.validated_save()
         self.assertFalse(trunk_type.is_breakout)
@@ -4485,7 +4488,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
                 self.assertEqual(rear_a.get_cable_peers(), [rear_b])
                 self.assertEqual(rear_b.get_cable_peers(), [rear_a])
                 self.assertEqual(rear_a.get_cable_peer(peer_connector=connector), rear_b)
-                # Other connectors are not peers of this lane.
+                # Requesting a B-side connector that this lane does not map to returns None.
                 self.assertIsNone(rear_a.get_cable_peer(peer_connector=connector % 3 + 1))
 
 
