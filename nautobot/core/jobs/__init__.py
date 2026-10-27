@@ -838,7 +838,7 @@ class ImportObjects(Job):
         write_only_fields = import_utils.write_only_field_names(serializer_class)
         if import_mode == ImportModeChoices.CREATE:
             # Collisions are found among the objects the user can see, as they may have no change permission at all
-            match_queryset = import_utils.restricted_queryset(serializer_class.Meta.model, self.user, "view")
+            match_queryset = restrict_queryset(serializer_class.Meta.model.objects.all(), self.user, "view")
         else:
             match_queryset = change_queryset
         for row, entry in enumerate(data, start=1):
