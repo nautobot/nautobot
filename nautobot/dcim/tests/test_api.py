@@ -3462,6 +3462,23 @@ class FrontPortTest(Mixins.PassThroughPortPathsMixin, Mixins.BasePortTestMixin):
             {"non_field_errors": ["The fields device, name must make a unique set."]},
         )
 
+    def test_front_port_list_avoids_cable_peer_n_plus_one(self):
+        """Serializing the front ports list must not read each port's cable termination separately."""
+        self.add_permissions("dcim.view_frontport")
+        rear_port = RearPort.objects.create(device=self.device, name="n-plus-one", positions=15)
+        for position in range(1, 16):
+            FrontPort.objects.create(
+                device=self.device,
+                name=f"n-plus-one-{position}",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rear_port,
+                rear_port_position=position,
+            )
+        url = reverse("dcim-api:frontport-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
 
 class RearPortTest(Mixins.PassThroughPortPathsMixin, Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = RearPort
@@ -3498,6 +3515,17 @@ class RearPortTest(Mixins.PassThroughPortPathsMixin, Mixins.ModularDeviceCompone
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
+
+    def test_rear_port_list_avoids_cable_peer_n_plus_one(self):
+        """Serializing the rear ports list must not read each port's cable termination separately."""
+        self.add_permissions("dcim.view_rearport")
+        device = Device.objects.first()
+        for i in range(15):
+            RearPort.objects.create(device=device, name=f"n-plus-one-{i}", type=PortTypeChoices.TYPE_8P8C)
+        url = reverse("dcim-api:rearport-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class DeviceBayTest(Mixins.BaseComponentTestMixin):
