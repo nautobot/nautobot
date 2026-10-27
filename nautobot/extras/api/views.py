@@ -759,7 +759,7 @@ class JobViewSetBase(
 
         cleaned_data = None
         try:
-            cleaned_data = job_class.validate_data(data, files=files)
+            cleaned_data = job_class.validate_data(data, files=files, user=request.user)
             cleaned_data = job_class.prepare_job_kwargs(cleaned_data)
 
         except FormsValidationError as e:
@@ -1113,7 +1113,7 @@ class ScheduledJobViewSet(
         permission_classes=[ScheduledJobViewPermissions],
     )
     def dry_run(self, request, pk):
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        scheduled_job = get_object_or_404(ScheduledJob.objects.restrict(request.user, "view"), pk=pk)
         job_model = scheduled_job.job_model
         if job_model is None or not job_model.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")

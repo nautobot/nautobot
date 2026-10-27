@@ -7,8 +7,10 @@ from pathlib import Path
 from unittest import mock
 import uuid
 
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.utils import timezone
 import time_machine
@@ -20,7 +22,7 @@ from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Rack, RackReservation
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.models import (
@@ -29,6 +31,8 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     FileProxy,
+    Job,
+    JobButton,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -39,7 +43,8 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
-from nautobot.users.models import ObjectPermission
+from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission, User
 
 
 class ExportObjectListTest(TransactionTestCase):
@@ -264,6 +269,192 @@ class ExportObjectListTest(TransactionTestCase):
         sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
         rows = self._run_export_job(query_string=f"saved_view={sv.pk}&all_filters_removed=true")
         self.assertEqual(len(rows), Status.objects.count())
+
+    def test_object_var_lookup_must_be_permitted(self):
+        """An `ObjectVar` given as a dict of attributes (as the REST API accepts) may only use permitted lookups.
+
+        Otherwise, whether the Job is accepted would reveal data such as another user's API token, reached here
+        through the users of the object permissions for a content type.
+        """
+        content_type = ContentType.objects.get_for_model(Status)
+        self.assertEqual(
+            ExportObjectList.deserialize_data({"content_type": {"app_label": "extras", "model": "status"}}),
+            {"content_type": content_type},
+        )
+        for lookup in (
+            {"app_label": "extras", "model__startswith": "stat"},
+            {"app_label": "extras", "model": "status", "object_permissions__users__tokens__key__startswith": "a"},
+        ):
+            with self.subTest(lookup=lookup):
+                with self.assertRaisesRegex(ValidationError, "is not a permitted lookup"):
+                    ExportObjectList.deserialize_data({"content_type": lookup})
+
+
+class ImportObjectsRelatedObjectPermissionTest(TransactionTestCase):
+    """A CSV import may reference only related objects the importing user may view."""
+
+    databases = ("default", "job_logs")
+
+    def setUp(self):
+        super().setUp()
+        location_type = LocationType.objects.create(name="Perm Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location = Location.objects.create(
+            name="Perm Location", location_type=location_type, status=Status.objects.get_for_model(Location).first()
+        )
+        self.rack = Rack.objects.create(
+            name="Perm Rack", location=location, status=Status.objects.get_for_model(Rack).first(), u_height=10
+        )
+        User.objects.create(username="reservation-owner", is_superuser=True)
+        self.limited_user = User.objects.create(username="limited-user")
+        permission = ObjectPermission.objects.create(name="Add rack reservations", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(RackReservation))
+        self.limited_user = self.grant_view(self.limited_user, Rack)
+        self.own_tenant = Tenant.objects.create(name="Own Tenant")
+        Tenant.objects.create(name="Hidden Tenant")
+        self.limited_user = self.grant_view(self.limited_user, Tenant, constraints={"name": "Own Tenant"})
+
+    def grant_view(self, user, model, constraints=None):
+        """Grant `user` permission to view `model`, limited to `constraints` if given; returns the refreshed user."""
+        permission = ObjectPermission.objects.create(
+            name=f"View {model._meta.label_lower} {constraints}", actions=["view"], constraints=constraints
+        )
+        permission.users.add(user)
+        permission.object_types.add(ContentType.objects.get_for_model(model))
+        return User.objects.get(pk=user.pk)  # Discard the permission cache
+
+    def import_reservation(self, csv_columns, expected_status):
+        """Import a reservation of units on the rack for the limited user, as them, with the given extra columns.
+
+        The limited user has no permission to view users, but may always reference themselves.
+        """
+        header = ",".join(["rack__id", "units", "user__username", "description", *csv_columns])
+        values = ",".join([str(self.rack.pk), "9", "limited-user", "Imported Reservation", *csv_columns.values()])
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data=f"{header}\n{values}",
+        )
+        self.assertJobResultStatus(job_result, expected_status)
+        return job_result
+
+    def test_unviewable_related_object_cannot_be_referenced(self):
+        self.import_reservation({"tenant__name": "Hidden Tenant"}, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_viewable_related_object_can_be_referenced(self):
+        """A positive control for the test above, which would also pass if every reference were refused."""
+        self.import_reservation({"tenant__name": "Own Tenant"}, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(RackReservation.objects.get(description="Imported Reservation").tenant, self.own_tenant)
+
+    def test_unviewable_related_object_is_reported_as_nonexistent(self):
+        """The error must not depend on whether the referenced object exists, or the import becomes an oracle."""
+
+        def error_for(tenant_name):
+            job_result = self.import_reservation({"tenant__name": tenant_name}, JobResultStatusChoices.STATUS_FAILURE)
+            message = JobLogEntry.objects.get(
+                job_result=job_result, log_level=LogLevelChoices.LOG_ERROR, message__startswith="Row 1"
+            ).message
+            return message.replace(tenant_name, "X")
+
+        self.assertEqual(error_for("Hidden Tenant"), error_for("No Such Tenant"))
+
+    def test_location_may_be_identified_through_an_unviewable_parent(self):
+        """A Location's natural key names its parent, which identifies it even where the parent may not be viewed.
+
+        This is how an export identifies a Location, so a file exported by a user who may view only some Locations
+        must still import.
+        """
+        parent_type = LocationType.objects.create(name="Perm Parent Type")
+        child_type = LocationType.objects.create(name="Perm Child Type", parent=parent_type)
+        child_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Hidden Parent", location_type=parent_type, status=location_status)
+        child = Location.objects.create(
+            name="Visible Child", location_type=child_type, parent=parent, status=location_status
+        )
+        rack_status = Status.objects.get_for_model(Rack).first()
+        permission = ObjectPermission.objects.create(name="Add racks", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(Rack))
+        self.limited_user = self.grant_view(self.limited_user, Status)
+        self.limited_user = self.grant_view(self.limited_user, Location, constraints={"name": "Visible Child"})
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(Rack).pk,
+            csv_data=f"name,status__name,location__name,location__parent__name\nImported Rack,{rack_status.name},"
+            f"{child.name},{parent.name}",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(Rack.objects.get(name="Imported Rack").location, child)
+
+    def test_unviewable_user_cannot_be_referenced(self):
+        """`users.User` has no `restrict()`, which `WritableSerializerMixin` has relied on to apply permissions."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data=f"rack__id,units,user__username,description\n{self.rack.pk},9,reservation-owner,Imported Reservation",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_related_object_lookup_must_be_permitted(self):
+        """A CSV column naming a lookup such as `__startswith` is refused, as the REST API refuses it."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data="rack__name__startswith,units,user__username,description\nPerm,9,limited-user,Imported Reservation",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                log_level=LogLevelChoices.LOG_ERROR,
+                message__contains="is not a permitted lookup",
+            ).exists()
+        )
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_unviewable_group_cannot_be_referenced(self):
+        """`auth.Group` has no `restrict()`, which `WritableSerializerMixin` has relied on to apply permissions.
+
+        Exercised through the groups an object permission applies to, given by name.
+        """
+        Group.objects.create(name="Visible Group")
+        Group.objects.create(name="Hidden Group")
+        permission = ObjectPermission.objects.create(name="Add object permissions", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(ObjectPermission))
+        self.limited_user = self.grant_view(self.limited_user, Group, constraints={"name": "Visible Group"})
+
+        for group_name, expected_status in (
+            ("Hidden Group", JobResultStatusChoices.STATUS_FAILURE),
+            ("Visible Group", JobResultStatusChoices.STATUS_SUCCESS),
+        ):
+            with self.subTest(group_name=group_name):
+                permission_name = f"Imported for {group_name}"
+                job_result = create_job_result_and_run_job(
+                    "nautobot.core.jobs",
+                    "ImportObjects",
+                    username=self.limited_user.username,
+                    content_type=ContentType.objects.get_for_model(ObjectPermission).pk,
+                    csv_data=f"name,actions,object_types,groups\n{permission_name},view,dcim.device,{group_name}",
+                )
+                self.assertJobResultStatus(job_result, expected_status)
+                self.assertEqual(
+                    ObjectPermission.objects.filter(name=permission_name).exists(),
+                    expected_status == JobResultStatusChoices.STATUS_SUCCESS,
+                )
 
 
 class ImportObjectsTestCase(TransactionTestCase):
@@ -1501,6 +1692,25 @@ class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
         self.assertEqual(0, dg.count)
 
     def test_failure_on_non_dg(self):
+        """The job's buttons only apply to dynamic groups, so any other object is refused before the job sees it."""
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.status",
+            object_pk=Status.objects.first().pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, "No enabled job button for this job applies to extras.status objects")
+
+    def test_failure_on_non_dg_with_a_button(self):
+        """Should a button nonetheless apply the job to another type of object, the job itself refuses it."""
+        job_button = JobButton.objects.create(
+            name="Refresh Statuses",
+            text="Refresh",
+            job=Job.objects.get_for_class_path(f"{self.job_module}.{self.job_name}"),
+        )
+        job_button.content_types.add(ContentType.objects.get_for_model(Status))
         job_result = create_job_result_and_run_job(
             self.job_module,
             self.job_name,

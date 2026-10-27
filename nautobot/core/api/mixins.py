@@ -9,7 +9,8 @@ from django.core.exceptions import (
 from django.db.models import AutoField, Model
 from rest_framework.exceptions import ValidationError
 
-from nautobot.core.api.utils import dict_to_filter_params
+from nautobot.core.api.utils import dict_to_filter_params, get_request_with_user
+from nautobot.core.models.querysets import restrict_queryset, restrict_related_lookups
 from nautobot.core.utils.data import is_url
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,11 @@ class WritableSerializerMixin:
         Retrieve an unique object based on a dictionary of data attributes and raise errors accordingly if the object is not found.
         """
         filter_params = self.get_queryset_filter_params(data=data, queryset=queryset)
+        if request := get_request_with_user(self.context):
+            try:
+                queryset = restrict_related_lookups(queryset, filter_params, request)
+            except ValueError as e:
+                raise ValidationError(str(e)) from e
         try:
             return queryset.get(**filter_params)
         except ObjectDoesNotExist as e:
@@ -111,13 +117,8 @@ class WritableSerializerMixin:
             queryset = self.Meta.model.objects
 
         # Apply user permission on related objects
-        if (
-            "request" in self.context
-            and self.context["request"]
-            and self.context["request"].user
-            and hasattr(queryset, "restrict")
-        ):
-            queryset = queryset.restrict(self.context["request"].user, "view")
+        if request := get_request_with_user(self.context):
+            queryset = restrict_queryset(queryset, request.user)
 
         if isinstance(data, list):
             return [self.get_object(data=entry, queryset=queryset) for entry in data]

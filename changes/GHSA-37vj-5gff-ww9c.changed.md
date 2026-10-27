@@ -1,0 +1,2 @@
+Changed the lookup of a related object by attributes, in the REST API and the `Import Objects` system Job, to accept only exact matches on its fields and forward relations, and to match through other related objects only where the requesting user may view them or the attributes are part of the object's natural key.
+Changed Job object variables given as a dictionary of attributes, such as when running a Job through the REST API, to accept only exact matches on the object's fields and forward relations.

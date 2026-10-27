@@ -3538,6 +3538,26 @@ class JobTestCase(
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(errors, ["var: This field is required."])
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_with_unviewable_object_var(self, _):
+        """An object variable can't be given an object the user may not view, though the form can be crafted to."""
+        job_model = Job.objects.get_for_class_path("object_vars.TestObjectVars")
+        job_model.enabled = True
+        job_model.validated_save()
+        visible_role = Role.objects.create(name="Visible Job Role")
+        hidden_role = Role.objects.create(name="Hidden Job Role")
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_role", constraints={"name": visible_role.name})
+
+        data = {**self.data_run_immediately, "role": hidden_role.pk, "roles": [visible_role.pk]}
+        job_result_count = JobResult.objects.filter(job_model=job_model).count()
+        response = self.client.post(reverse("extras:job_run", kwargs={"pk": job_model.pk}), data)
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(errors, ["role: Select a valid choice. That choice is not one of the available choices."])
+        self.assertEqual(JobResult.objects.filter(job_model=job_model).count(), job_result_count)
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_with_args(self, _):
         self.add_permissions("extras.run_job")

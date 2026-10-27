@@ -21,7 +21,7 @@ from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.utils.requests import get_filterable_params_from_filter_params, mock_wsgi_request
 from nautobot.extras.datasources import (
     ensure_git_repository,
     git_repository_dry_run,
@@ -280,11 +280,13 @@ class ImportObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def _perform_atomic_operation(self, data, serializer_class, queryset):
+    def _perform_atomic_operation(self, data, serializer_class, queryset, serializer_context):
         new_objs = []
         with contextlib.suppress(AbortTransaction):
             with transaction.atomic():
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
                 if validation_failed:
                     raise AbortTransaction
                 return new_objs, validation_failed
@@ -292,11 +294,11 @@ class ImportObjects(Job):
         self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 
-    def _perform_operation(self, data, serializer_class, queryset):
+    def _perform_operation(self, data, serializer_class, queryset, serializer_context):
         new_objs = []
         validation_failed = False
         for row, entry in enumerate(data, start=1):
-            serializer = serializer_class(data=entry, context={"request": None})
+            serializer = serializer_class(data=entry, context=serializer_context)
             if serializer.is_valid():
                 try:
                     with transaction.atomic():
@@ -352,17 +354,28 @@ class ImportObjects(Job):
         else:
             csv_bytes = BytesIO(csv_data.encode("utf-8"))
 
+        # A request carrying the user, so that the related objects a row references are looked up only among those
+        # the user may view (see `WritableSerializerMixin.to_internal_value()`).
+        # A GET request, as the import has always been processed, so that opt-in fields such as `relationships` are
+        # not newly accepted from the data; see `OptInFieldsMixin`.
+        request = mock_wsgi_request(user=self.user, SERVER_NAME="import_objects")
+        serializer_context = {"request": request}
+
         new_objs = []
         try:
             data = NautobotCSVParser().parse(
                 stream=csv_bytes,
-                parser_context={"request": None, "serializer_class": serializer_class},
+                parser_context={"request": request, "serializer_class": serializer_class},
             )
             self.logger.info("Processing %d rows of data", len(data))
             if roll_back_if_error:
-                new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_atomic_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
             else:
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)
