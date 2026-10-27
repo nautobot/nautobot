@@ -19,6 +19,7 @@ from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
@@ -37,12 +38,15 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONField,
+    restrict_form_fields,
 )
 from nautobot.core.forms.widgets import ClearableFileInput
+from nautobot.core.models.querysets import get_related_paths, restrict_queryset, restrict_related_lookups
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
+from nautobot.core.utils.requests import mock_wsgi_request
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
@@ -54,6 +58,7 @@ from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
+    JobButton,
     JobHook,
     JobQueue,
     JobResult,
@@ -498,6 +503,8 @@ class BaseJob:
 
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
+
+        To limit object variables to objects that a user may view, pass the form to `restrict_form_fields()`.
         """
         form = cls.as_form_class()(data, files, initial=initial)
 
@@ -671,7 +678,7 @@ class BaseJob:
 
     # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
-    def deserialize_data(cls, data):
+    def deserialize_data(cls, data, user=None):
         """
         Given data input for a job execution, deserialize it by resolving object references using defined variables.
 
@@ -681,9 +688,16 @@ class BaseJob:
         Note that when resolving querysets or model instances by their PK, we do not catch DoesNotExist
         exceptions here, we leave it up the caller to handle those cases. The normal job execution code
         path would consider this a failure of the job execution, as described in `nautobot.extras.jobs.run_job`.
+
+        If `user` is given, as when validating the input a user submits, objects are only resolved among those the user
+        may view, and an object that can't be resolved instead raises a `ValidationError`, the same whether it doesn't
+        exist or the user may not view it.
         """
         cls_vars = cls._get_vars()
         return_data = {}
+        # A request with user, for `restrict_related_lookups()`, which remembers natural keys on it for the duration of
+        # this call
+        request = None
 
         if not isinstance(data, dict):
             raise TypeError("Data should be a dictionary.")
@@ -703,21 +717,54 @@ class BaseJob:
                     continue
 
             if isinstance(var, MultiObjectVar):
-                queryset = var.field_attrs["queryset"].filter(pk__in=value)
-                if queryset.count() < len(value):
-                    # Not all objects found
-                    found_pks = set(queryset.values_list("pk", flat=True))
-                    not_found_pks = set(value).difference(found_pks)
-                    raise queryset.model.DoesNotExist(
-                        f"Failed to find requested objects for var {field_name}: [{', '.join(not_found_pks)}]"
-                    )
-                return_data[field_name] = var.field_attrs["queryset"].filter(pk__in=value)
+                base_queryset = var.field_attrs["queryset"]
+                if user is not None:
+                    base_queryset = restrict_queryset(base_queryset, user)
+                # Normalized, as the pks given may be strings or UUIDs, and may repeat
+                pk_field = base_queryset.model._meta.pk
+                requested_pks = {pk_field.to_python(pk) for pk in value}
+                queryset = base_queryset.filter(pk__in=requested_pks)
+                not_found_pks = requested_pks.difference(queryset.values_list("pk", flat=True))
+                if not_found_pks:
+                    not_found = ", ".join(sorted(str(pk) for pk in not_found_pks))
+                    message = f"Failed to find requested objects for var {field_name}: [{not_found}]"
+                    if user is not None:
+                        raise ValidationError({field_name: message})
+                    raise queryset.model.DoesNotExist(message)
+                return_data[field_name] = queryset
 
             elif isinstance(var, ObjectVar):
+                queryset = var.field_attrs["queryset"]
+                if user is not None:
+                    queryset = restrict_queryset(queryset, user)
                 if isinstance(value, dict):
-                    return_data[field_name] = var.field_attrs["queryset"].get(**value)
-                else:
-                    return_data[field_name] = var.field_attrs["queryset"].get(pk=value)
+                    try:
+                        if user is None:
+                            for lookup in value:
+                                get_related_paths(queryset.model, lookup)
+                        else:
+                            if request is None:
+                                request = mock_wsgi_request(user=user)
+                            queryset = restrict_related_lookups(queryset, value, request)
+                    except ValueError as e:
+                        raise ValidationError({field_name: str(e)}) from e
+                try:
+                    if isinstance(value, dict):
+                        return_data[field_name] = queryset.get(**value)
+                    else:
+                        return_data[field_name] = queryset.get(pk=value)
+                except queryset.model.DoesNotExist as err:
+                    if user is None:
+                        raise
+                    raise ValidationError(
+                        {field_name: f"Failed to find requested object for var {field_name}"}
+                    ) from err
+                except queryset.model.MultipleObjectsReturned as err:
+                    if user is None:
+                        raise
+                    raise ValidationError(
+                        {field_name: f"More than one object matches the requested object for var {field_name}"}
+                    ) from err
             elif isinstance(var, FileVar):
                 return_data[field_name] = cls._load_file_from_proxy(value)
             # IPAddressVar is a netaddr.IPAddress object
@@ -732,7 +779,12 @@ class BaseJob:
         return return_data
 
     @classmethod
-    def validate_data(cls, data, files=None):
+    def validate_data(cls, data, files=None, user=None):
+        """
+        Validate the input submitted for a job execution, returning it as cleaned data.
+
+        If `user` is given, object variables only accept objects that the user may view.
+        """
         cls_vars = cls._get_vars()
 
         if not isinstance(data, dict):
@@ -743,7 +795,9 @@ class BaseJob:
                 raise ValidationError({k: "Job data contained an unknown property"})
 
         # defer validation to the form object
-        f = cls.as_form(data=cls.deserialize_data(data), files=files)
+        f = cls.as_form(data=cls.deserialize_data(data, user=user), files=files)
+        if user is not None:
+            restrict_form_fields(f, user)
         if not f.is_valid():
             raise ValidationError(f.errors)
 
@@ -1164,9 +1218,26 @@ class JobButtonReceiver(Job):
     object_model_name = StringVar()
 
     def run(self, object_pk, object_model_name):  # pylint: disable=arguments-differ
-        """JobButtonReceiver subclasses generally shouldn't need to override this method."""
+        """JobButtonReceiver subclasses generally shouldn't need to override this method.
+
+        The inputs are submitted like those of any other job, so they are checked here: the object must be of a type
+        that one of this job's enabled buttons applies to, and one that the user running the job may view.
+        """
         model = get_model_from_name(object_model_name)
-        obj = model.objects.get(pk=object_pk)
+        model_label = model._meta.label_lower
+        content_type = ContentType.objects.get_for_model(model)
+        if not JobButton.objects.filter(job=self.job_model, content_types=content_type, enabled=True).exists():
+            self.logger.error("No enabled job button for this job applies to %s objects", model_label)
+            raise RunJobTaskFailed(f"No enabled job button for this job applies to {model_label} objects")
+        queryset = model._default_manager.all()
+        if self.user is not None:
+            queryset = restrict_queryset(queryset, self.user)
+        try:
+            obj = queryset.get(pk=object_pk)
+        except (model.DoesNotExist, ValidationError, ValueError) as err:
+            # The same whether the object doesn't exist, the user may not view it, or the ID isn't a valid one
+            self.logger.error("No %s found with ID %s", model_label, object_pk)
+            raise RunJobTaskFailed(f"No {model_label} found with ID {object_pk}") from err
 
         self.receive_job_button(obj=obj)
 

@@ -2604,6 +2604,8 @@ class JobTest(
             "var3": False,
             "var4": device_role.pk,
         }
+        # `var4` is an object variable, which only accepts objects the user may view
+        self.add_permissions("extras.view_role")
 
     @classmethod
     def setUpTestData(cls):
@@ -3347,6 +3349,23 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_unviewable_object(self):
+        """An object variable can't be given an object the user may not view, which is reported as nonexistent."""
+        self.add_permissions("extras.run_job")
+        self.remove_permissions("extras.view_role")
+        hidden_role = Role.objects.create(name="Hidden Job Role")
+        self.add_permissions("extras.view_role", constraints={"name": "Visible Job Role"})
+        url = self.get_run_url()
+
+        def errors_for(role_pk):
+            data = {"data": {**self.job_proper_data, "var4": str(role_pk)}}
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            return response.data
+
+        self.assertEqual(errors_for(hidden_role.pk), errors_for(uuid.uuid4()))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_missing_data(self):
@@ -4722,6 +4741,34 @@ class ScheduledJobTest(
             start_time=now(),
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_dry_run_requires_permission_to_view_the_scheduled_job(self):
+        """A scheduled job the user may not view can't be dry-run, and is reported as nonexistent."""
+        job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        job_model.enabled = True
+        job_model.validated_save()
+        owner = User.objects.create(username="scheduled-job-owner")
+        scheduled_jobs = {
+            name: ScheduledJob.objects.create(
+                name=name,
+                task="dry_run.TestDryRun",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_FUTURE,
+                user=owner,
+                start_time=now() + timedelta(days=1),
+            )
+            for name in ("Visible Scheduled Job", "Hidden Scheduled Job")
+        }
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob", constraints={"name": "Visible Scheduled Job"})
+
+        def dry_run(name):
+            url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": scheduled_jobs[name].pk})
+            return self.client.post(url, format="json", **self.header)
+
+        self.assertHttpStatus(dry_run("Hidden Scheduled Job"), status.HTTP_404_NOT_FOUND)
+        self.assertHttpStatus(dry_run("Visible Scheduled Job"), status.HTTP_200_OK)
+
 
 class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
     model = MetadataType
@@ -5076,6 +5123,11 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             assigned_object_type=self.location_ct,
             assigned_object_id=self.location1.pk,
         )
+
+    def test_get_put_round_trip(self):
+        # The round-tripped note is another user's, whom `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable
+        self.add_permissions("users.view_user")
+        super().test_get_put_round_trip()
 
 
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):

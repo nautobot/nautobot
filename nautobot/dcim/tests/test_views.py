@@ -640,7 +640,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user2 = User.objects.create_user(username="testuser2")
-        user3 = User.objects.create_user(username="testuser3")
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
@@ -656,17 +655,23 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "rack": rack.pk,
             "units": "10,11,12",
-            "user": user3.pk,
             "tenant": None,
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
 
         cls.bulk_edit_data = {
-            "user": user3.pk,
             "tenant": None,
             "description": "New description",
         }
+
+    def setUp(self):
+        super().setUp()
+        # Reserved for the test user, whom a user may always view, as `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make
+        # other users viewable. `user` must remain the first field of `bulk_edit_data`, which is the one
+        # `test_bulk_edit_objects_with_constrained_permission` edits.
+        self.form_data = {**self.form_data, "user": self.user.pk}
+        self.bulk_edit_data = {"user": self.user.pk, **self.bulk_edit_data}
 
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
