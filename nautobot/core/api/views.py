@@ -279,7 +279,9 @@ class ModelViewSetMixin:
                     model_field = model._meta.get_field(field_instance.source)
                 except FieldDoesNotExist:
                     continue
-                if isinstance(model_field, ForeignKey):
+                # A reverse one-to-one (e.g. Device.parent_bay) is single-valued like a ForeignKey, and select_related()
+                # can join it the same way.
+                if isinstance(model_field, (ForeignKey, OneToOneRel)):
                     select_fields.append(field_instance.source)
                     if isinstance(field_instance, drf_serializers.ModelSerializer):
                         # A nested serializer renders every field of the related object, once for each row. If one of

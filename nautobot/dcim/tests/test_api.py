@@ -2462,7 +2462,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         """
         Listing devices must not run an extra query per device to resolve the reverse one-to-one `parent_bay`.
         """
-        self.add_permissions("dcim.view_device")
+        self.add_permissions("dcim.view_device", "dcim.view_devicebay")
         list_url = reverse("dcim-api:device-list")
 
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
@@ -2483,6 +2483,23 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         with AssertNoRepeatedQueries(self):
             response = self.client.get(list_url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # AssertNoRepeatedQueries allows up to 10 repeats, more than this test has devices, so check for the per-row query
+        # directly. Without the join, the serializer looks up each Device's parent bay in a separate query that filters
+        # on installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one is
+        # a per-row query. At depth 1 the API renders parent_bay as a nested DeviceBay rather than a reference.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        for depth in (0, 1):
+            with self.subTest(depth=depth):
+                with CaptureQueriesContext(connection) as ctx:
+                    response = self.client.get(f"{list_url}?depth={depth}&limit=0", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len([result for result in response.json()["results"] if result["parent_bay"]]), 2)
+                self.assertEqual(
+                    [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+                )
 
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
