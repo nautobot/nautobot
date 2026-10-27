@@ -1002,6 +1002,41 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertEqual(vrf_changes.first().action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertFalse(ObjectChange.objects.filter(changed_object_id=self.prefix.pk, request_id=change_id).exists())
 
+    def test_cable_delete_logs_disconnected_terminations(self):
+        int_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        deleters = {
+            "instance delete": lambda cable: cable.delete(),
+            "queryset delete": lambda cable: Cable.objects.filter(pk=cable.pk).delete(),
+        }
+        for label, delete_cable in deleters.items():
+            with self.subTest(label):
+                interface_a, interface_b = (
+                    Interface.objects.create(
+                        device=self.device,
+                        name=f"{label} {end}",
+                        status=int_status,
+                        type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    )
+                    for end in ("A", "B")
+                )
+                cable = Cable.objects.create(termination_a=interface_a, termination_b=interface_b, status=cable_status)
+                cable_pk = cable.pk
+
+                change_id = uuid.uuid4()
+                with context_managers.web_request_context(self.user, change_id=change_id):
+                    delete_cable(cable)
+
+                cable_changes = ObjectChange.objects.filter(changed_object_id=cable_pk, request_id=change_id)
+                self.assertEqual(cable_changes.count(), 1)
+                cable_change = cable_changes.first()
+                self.assertEqual(cable_change.action, ObjectChangeActionChoices.ACTION_DELETE)
+                self.assertEqual(cable_change.object_data_v2["termination_a_id"], str(interface_a.pk))
+                self.assertEqual(cable_change.object_data_v2["termination_b_id"], str(interface_b.pk))
+                for interface in (interface_a, interface_b):
+                    interface_change = self.assert_single_update_change(interface, change_id)
+                    self.assertIsNone(interface_change.object_data_v2["cable"])
+
     def test_queryset_delete_of_through_records_logs_both_sides(self):
         ip_address = self.ip_addresses[5]
         assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)

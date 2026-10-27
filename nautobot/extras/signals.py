@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
+from django.db.models import QuerySet
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -430,6 +431,12 @@ def _record_m2m_side_object_changes(change_context, through_instance, side_field
         side_object = getattr(through_instance, field_name, None)
         if side_object is None or not hasattr(side_object, "to_objectchange"):
             continue
+        # Reading a forward one-to-one caches `through_instance` on the side object as its reverse relation
+        # (e.g. `interface.cable_termination`); drop it so the snapshot reflects the database, where a deleted
+        # through record no longer exists.
+        side_field = through_instance._meta.get_field(field_name)
+        if side_field.one_to_one and side_field.remote_field.is_cached(side_object):
+            side_field.remote_field.delete_cached_value(side_object)
         _create_or_update_object_change(change_context, side_object, ObjectChangeActionChoices.ACTION_UPDATE)
 
 
@@ -534,9 +541,10 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     an update to both of the objects it associated.
 
     post_delete (rather than pre_delete) is required for snapshot correctness: the side objects' serialized
-    data includes their M2M memberships, which must reflect the association's removal. The side objects
-    themselves still exist at this point because cascade deletes are excluded below, and the through
-    record's foreign key values remain readable on the in-memory `instance`.
+    data includes their M2M memberships, which must reflect the association's removal. The recorded side
+    objects themselves still exist at this point because cascade deletes are excluded below (or, for an
+    opted-in cascade, the side being deleted is not recorded), and the through record's foreign key values
+    remain readable on the in-memory `instance`.
     """
     change_context = change_context_state.get()
 
@@ -558,10 +566,29 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     # dispatch within that one request. It also matches long-standing behavior, as the m2m_changed
     # signal never fires for cascades either; the deleted object's own DELETE change record still
     # captures its association memberships where its REST API representation includes them.
-    if not (origin is instance or getattr(origin, "model", None) is sender):
+    if origin is instance or getattr(origin, "model", None) is sender:
+        _record_m2m_side_object_changes(change_context, instance, side_field_names)
         return
 
-    _record_m2m_side_object_changes(change_context, instance, side_field_names)
+    # A through model may list in `m2m_change_logged_cascade_sides` the sides whose deletion is known to
+    # cascade to a small, bounded number of its records (e.g. a Cable's handful of CableToCableTerminations).
+    # When such a side's object (or queryset) is the origin, record the surviving sides. The origin side
+    # itself is never recorded: its pre_delete handler has already logged its DELETE, which an UPDATE here
+    # would overwrite.
+    # TODO 4.0: record surviving sides on every cascade, gated by `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` instead of
+    # `m2m_change_logged_cascade_sides`, ideally once change records store a delta rather than a full serialization.
+    origin_model = origin.model if isinstance(origin, QuerySet) else type(origin)
+    origin_side_field_names = {
+        field_name
+        for field_name in getattr(sender, "m2m_change_logged_cascade_sides", ())
+        if sender._meta.get_field(field_name).related_model is origin_model
+    }
+    if origin_side_field_names:
+        _record_m2m_side_object_changes(
+            change_context,
+            instance,
+            [field_name for field_name in side_field_names if field_name not in origin_side_field_names],
+        )
 
 
 #
