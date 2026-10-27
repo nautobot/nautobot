@@ -1,0 +1,1 @@
+Ported the object edit embedded create and embedded search tests from Selenium to Playwright and added the `EmbeddedModal` page component for Core Playwright tests.
