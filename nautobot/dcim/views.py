@@ -3942,9 +3942,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
     )
     def lldp_neighbors(self, request, *args, **kwargs):
         instance = self.get_object()
-        interfaces = Interface.optimize_queryset_for_cable_columns(
-            instance.all_interfaces.restrict(request.user, "view")
-        ).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+        interfaces = (
+            Interface.optimize_queryset_for_cable_columns(instance.all_interfaces.restrict(request.user, "view"))
+            # The template displays each interface's connected endpoint so it can be compared with what LLDP reports.
+            # Without this prefetch, the page runs extra queries on every row to load the cable path and its destination.
+            .prefetch_related(Interface.connection_destination_prefetch())
+            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+        )
         return Response(
             {
                 "template": "dcim/device/lldp_neighbors.html",

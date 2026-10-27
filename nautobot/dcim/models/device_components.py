@@ -1472,6 +1472,20 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         return self.ip_addresses.count()
 
     @classmethod
+    def connection_destination_querysets(cls):
+        """Return a queryset for each model an Interface's cable path can end at: Interface and CircuitTermination.
+
+        The Device LLDP neighbors tab displays the peer interface's device and virtual chassis, or the circuit and its
+        provider. Each queryset uses `select_related` to load those objects in the same query as the path destination.
+        """
+        from nautobot.circuits.models import CircuitTermination
+
+        return [
+            Interface.objects.select_related("device__virtual_chassis"),
+            CircuitTermination.objects.select_related("circuit__provider"),
+        ]
+
+    @classmethod
     def cable_columns_select_related_fields(cls):
         """Extend the base cable-column hints with the parent trunk interface's cable/cable-type.
 
