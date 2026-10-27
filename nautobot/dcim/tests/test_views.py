@@ -5739,6 +5739,26 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         for marker in breakout_only_markers:
             self.assertIn(marker, breakout_body, msg=f"Breakout cable detail missing expected {marker!r}")
 
+    def test_cable_detail_view_shows_connectors_for_symmetric_multi_connector_cable(self):
+        """A 2x2 cable (multi-connector, not a breakout) shows connector labels on its detail page."""
+        self.add_permissions("dcim.view_cable")
+        symmetric_type = CableType.objects.create(name="Cable View 2x2", a_connectors=2, b_connectors=2, total_lanes=2)
+        self.assertFalse(symmetric_type.is_breakout)
+        interface_a, interface_b = Interface.objects.filter(cable_termination__isnull=True).exclude(
+            type__in=NONCONNECTABLE_IFACE_TYPES
+        )[:2]
+        cable = Cable.objects.create(
+            termination_a=interface_a,
+            termination_b=interface_b,
+            cable_type=symmetric_type,
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        body = self.client.get(cable.get_absolute_url()).content.decode()
+
+        for marker in (">A1<", ">B1<", "2A &rarr; 2B"):
+            self.assertIn(marker, body, msg=f"Symmetric cable detail missing expected {marker!r}")
+
     def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
         """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""
         self.add_permissions("dcim.view_cable")

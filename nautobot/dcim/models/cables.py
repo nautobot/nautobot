@@ -1500,12 +1500,9 @@ class CablePath(BaseModel):
         (canonicalizing the trunk onto one side) and the reverse fan-out rows are dropped, while
         point-to-point connections keep a single canonical direction:
 
-        - `origin_fans_out=True`, `destination_fans_out=False` — a trunk-origin lane; keep all N.
-        - `origin_fans_out=False`, `destination_fans_out=True` — a reverse fan-out row (its far endpoint
-          is the trunk); drop it.
-        - Both flags equal — point-to-point, or a multi-connector cable where both ends fan out (for
-          example a 2x2 whose lanes cross-connect every A connector to every B connector); keep the
-          single canonical direction (`origin_id < destination_id`).
+        - `origin_fans_out=True` only — a trunk-origin lane; keep all N.
+        - `destination_fans_out=True` only — a reverse fan-out row (its far endpoint is the trunk); drop it.
+        - Otherwise (both flags equal) keep the single canonical direction (`origin_id < destination_id`).
 
         Both flags are stored (see `from_origin`), so this is a plain indexed column filter with no
         per-row subqueries. Rows are ordered so a trunk's lanes are consecutive. Shared by the UI
@@ -1540,7 +1537,7 @@ class CablePath(BaseModel):
 
         Args:
             origin: The PathEndpoint to trace from.
-            peer_connector: For origins on a multi-connector cable, the cable-peer-side connector to
+            peer_connector: For multi-connector-origin paths, the cable-peer-side connector to
                 follow on the first hop. Defaults to 1, which is the only valid value for
                 single-connector cables. Stamped onto the returned CablePath so its identity matches
                 the lane it represents.
