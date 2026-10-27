@@ -1,0 +1,3 @@
+Fixed `CableTermination.get_cable_peer()`, `cable_peer`, and `get_cable_peers()` ignoring the lane mapping on multi-connector cables with the same number of connectors on both sides.
+Fixed `CablePath` creation, `CablePath.interface_connections()`, and the `trace_paths` command to create and list one path per mapped far connector on multi-connector cables with the same number of connectors on both sides.
+Deployments with existing multipoint-to-multipoint cables may need to run "nautobot-server trace_paths --force".
