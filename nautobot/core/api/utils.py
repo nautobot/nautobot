@@ -446,6 +446,15 @@ def get_brief_representation(instance, request=None, *, include_display=False):
     return result
 
 
+def get_request_with_user(context):
+    """The request in a serializer `context` that has a user, for restricting related objects by permission, else None.
+
+    Without one, as when a serializer is used programmatically, related objects are not restricted.
+    """
+    request = context.get("request")
+    return request if getattr(request, "user", None) is not None else None
+
+
 def user_can_view_object(request, instance):
     """
     Return whether the requesting user is permitted to view the given related object.
