@@ -319,6 +319,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Added `restrict_queryset()` to `nautobot.apps.models`, to restrict any queryset, including of users and groups, to the objects that a user has permission to act on.
 - [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Added `mock_wsgi_request()` to `nautobot.apps.utils`, to construct a minimal request, such as to carry a user, outside of handling an actual HTTP request.
 - [#9660](https://github.com/nautobot/nautobot/issues/9660) - Added `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` setting to exclude selected sides of many-to-many association models from automatic change logging, for improved performance when an object has many associations.
+- [#9715](https://github.com/nautobot/nautobot/issues/9715) - Added an `is_multi_connector` filter to `CableTypeFilterSet` and an `is_multi_connector` column to `CableTypeTable`.
 
 ### Changed in v3.2.8
 
@@ -355,9 +356,14 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9680](https://github.com/nautobot/nautobot/issues/9680) - Fixed table columns showing content types issuing one database query per row.
 - [#9680](https://github.com/nautobot/nautobot/issues/9680) - Fixed table columns whose accessor follows a foreign key to a to-many relation issuing one database query per row.
 - [#9680](https://github.com/nautobot/nautobot/issues/9680) - Fixed relationship table columns issuing several database queries per row.
+- [#9682](https://github.com/nautobot/nautobot/issues/9682) - Fixed the Front Ports and Rear Ports REST API issuing one database query per row to serialize the cable peer.
+- [#9682](https://github.com/nautobot/nautobot/issues/9682) - Fixed the Jobs REST API issuing one database query per row to serialize `task_queues`.
+- [#9682](https://github.com/nautobot/nautobot/issues/9682) - Fixed REST API list endpoints at `depth=1` issuing one database query per row to retrieve the parent bay of each nested Device, for example on the Interfaces and Device Bays endpoints.
 - [#9685](https://github.com/nautobot/nautobot/issues/9685) - Fixed the missing "Data Compliance" tab on the Module Family detail view.
 - [#9685](https://github.com/nautobot/nautobot/issues/9685) - Fixed a server error when directly browsing to the "Data Compliance" URL of a Module Family.
 - [#9698](https://github.com/nautobot/nautobot/issues/9698) - Fixed job buttons running their job on the first of the job's queues instead of on its default job queue.
+- [#9715](https://github.com/nautobot/nautobot/issues/9715) - Fixed `CableTermination.get_cable_peer()`, `cable_peer`, and `get_cable_peers()` ignoring the lane mapping on multi-connector cables with the same number of connectors on both sides.
+- [#9715](https://github.com/nautobot/nautobot/issues/9715) - Fixed `CablePath` creation, `CablePath.interface_connections()`, and the `trace_paths` command to create and list one path per mapped far connector on multi-connector cables with the same number of connectors on both sides. Deployments with existing multi-connector cables may need to run `nautobot-server trace_paths --force`.
 
 ### Dependencies in v3.2.8
 

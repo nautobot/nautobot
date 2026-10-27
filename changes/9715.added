@@ -1,1 +1,0 @@
-Added an `is_multi_connector` filter to `CableTypeFilterSet` and an `is_multi_connector` column to `CableTypeTable`.
