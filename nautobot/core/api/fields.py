@@ -247,9 +247,13 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 except ValueError as err:
                     # Not a correctly constructed composite key?
                     raise ValidationError(f"Related object not found using provided composite-key: {data}") from err
-            elif related_model is not None and related_model.label_lower == "auth.group":
-                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method
-                data = {"name": deconstruct_composite_key(data)}
+            elif related_model is not None and related_model._meta.label_lower == "auth.group":
+                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method;
+                # its natural key is its name alone.
+                values = deconstruct_composite_key(data)
+                if len(values) != 1:
+                    raise ValidationError(f"Invalid composite-key for a group: {values}")
+                data = {"name": values[0]}
         return super().to_internal_value(data)
 
     def to_representation(self, value):
