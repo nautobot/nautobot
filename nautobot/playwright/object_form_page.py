@@ -16,7 +16,7 @@ class ObjectFormPage(BasePage):
 
     ADD_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/add/"
 
-    # Create on the add form, Update on the edit form.
+    # The add form has a Create button and the edit form has an Update button.
     _SUBMIT_BUTTON = "button[name='_create'], button[name='_update']"
 
     def __init__(self, page, base_url):
