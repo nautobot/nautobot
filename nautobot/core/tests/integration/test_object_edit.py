@@ -2,8 +2,8 @@
 
 import pytest
 
-from nautobot.core.tests.integration.pages.device_form_page import DeviceFormPage
 from nautobot.core.tests.integration.pages.embedded_modal import EmbeddedModal
+from nautobot.dcim.tests.integration.pages.device_create_page import DeviceCreatePage
 from nautobot.playwright.helpers import unique_name
 
 # The option label of the Device content type in content type selects.
@@ -12,7 +12,7 @@ DEVICE_CONTENT_TYPE = "DCIM | device"
 
 def open_device_form(auth_page, base_url):
     """Open an empty Device create form and return its embedded-action modal."""
-    form = DeviceFormPage(auth_page, base_url)
+    form = DeviceCreatePage(auth_page, base_url)
     form.navigate()
     return EmbeddedModal(form)
 

@@ -1,20 +1,23 @@
-"""Shared page object for object create forms (/<app>/<model>/add/).
+"""Shared page object for object add and edit forms.
 
 Subclasses set ADD_PATH:
 
-    class DeviceCreatePage(FormPage):
+    class DeviceCreatePage(ObjectFormPage):
         ADD_PATH = "/dcim/devices/add/"
 """
+
+from playwright.sync_api import expect
 
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
-class FormPage(BasePage):
-    """Open, fill and submit a create form."""
+class ObjectFormPage(BasePage):
+    """Open, fill and submit an object add or edit form."""
 
     ADD_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/add/"
 
-    _CREATE_BUTTON = "button[name='_create']"
+    # The add form has a Create button and the edit form has an Update button.
+    _SUBMIT_BUTTON = "button[name='_create'], button[name='_update']"
 
     def __init__(self, page, base_url):
         """Fail fast on a subclass that forgot to set `ADD_PATH`."""
@@ -23,8 +26,9 @@ class FormPage(BasePage):
         super().__init__(page, base_url)
 
     def navigate(self):
-        """Go to the empty create form."""
+        """Go to the empty add form and wait for its submit button."""
         self._goto(self.ADD_PATH)
+        expect(self.page.locator(self._SUBMIT_BUTTON)).to_be_attached()
 
     def fill_input(self, field_name, value):
         """Type *value* into the text input named *field_name*."""
@@ -38,5 +42,5 @@ class FormPage(BasePage):
         select2_filter_pick(self.page, field_name, search=search or record["display"], pick_text=record["display"])
 
     def submit(self):
-        """Click Create and wait for the next page to load."""
-        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
+        """Click Create or Update and wait for the next page to load."""
+        self._click_and_wait_for_navigation(self._SUBMIT_BUTTON)

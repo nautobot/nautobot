@@ -92,6 +92,8 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import (
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStageDefinition,
     Contact,
     ContactAssociation,
     CustomField,
@@ -4348,6 +4350,128 @@ class PermissionTests(ImportExportJobTestCase):
         )
         status.refresh_from_db()
         self.assertEqual(status.color, "111111")
+
+
+class ImportRelatedObjectPermissionTests(ImportExportJobTestCase):
+    """An import may reference only related objects the importing user may view."""
+
+    def setUp(self):
+        super().setUp()
+        self.rack = self.create_rack_reservation().rack
+        self.own_tenant = Tenant.objects.create(name="Own Tenant")
+        Tenant.objects.create(name="Hidden Tenant")
+        self.add_permissions("dcim.add_rackreservation", "dcim.view_rack")
+        self.add_permissions("tenancy.view_tenant", constraints={"name": "Own Tenant"})
+
+    def import_reservation(self, csv_columns, expected_status):
+        """Import a reservation of units on the rack for the test user, as them, with the given extra columns.
+
+        The test user has no permission to view users, but may always reference themselves.
+        """
+        header = ",".join(["rack__id", "units", "user__username", "description", *csv_columns])
+        values = ",".join([str(self.rack.pk), "9", self.user.username, "Imported Reservation", *csv_columns.values()])
+        return self.run_import(
+            f"{header}\n{values}",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=expected_status,
+        )
+
+    def test_perm__unviewable_related_object_cannot_be_referenced(self):
+        self.import_reservation({"tenant__name": "Hidden Tenant"}, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__viewable_related_object_can_be_referenced(self):
+        """A positive control for the test above, which would also pass if every reference were refused."""
+        self.import_reservation({"tenant__name": "Own Tenant"}, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(RackReservation.objects.get(description="Imported Reservation").tenant, self.own_tenant)
+
+    def test_perm__unviewable_related_object_is_reported_as_nonexistent(self):
+        """The error must not depend on whether the referenced object exists, or the import becomes an oracle."""
+
+        def error_for(tenant_name):
+            job_result = self.import_reservation({"tenant__name": tenant_name}, JobResultStatusChoices.STATUS_FAILURE)
+            message = JobLogEntry.objects.get(
+                job_result=job_result, log_level=LogLevelChoices.LOG_ERROR, message__startswith="Row 1"
+            ).message
+            return message.replace(tenant_name, "X")
+
+        self.assertEqual(error_for("Hidden Tenant"), error_for("No Such Tenant"))
+
+    def test_perm__location_may_be_identified_through_an_unviewable_parent(self):
+        """A Location's natural key names its parent, which identifies it even where the parent may not be viewed.
+
+        This is how an export identifies a Location, so a file exported by a user who may view only some Locations
+        must still import.
+        """
+        parent_type = LocationType.objects.create(name="Perm Parent Type")
+        child_type = LocationType.objects.create(name="Perm Child Type", parent=parent_type)
+        child_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Hidden Parent", location_type=parent_type, status=location_status)
+        child = Location.objects.create(
+            name="Visible Child", location_type=child_type, parent=parent, status=location_status
+        )
+        rack_status = Status.objects.get_for_model(Rack).first()
+        self.add_permissions("dcim.add_rack", "extras.view_status")
+        self.add_permissions("dcim.view_location", constraints={"name": "Visible Child"})
+
+        self.run_import(
+            f"name,status__name,location__name,location__parent__name\n"
+            f"Imported Rack,{rack_status.name},{child.name},{parent.name}",
+            model=Rack,
+            username=self.user.username,
+        )
+        self.assertEqual(Rack.objects.get(name="Imported Rack").location, child)
+
+    def test_perm__related_object_lookup_must_be_permitted(self):
+        """A column naming a lookup such as `__startswith` is refused, as the REST API refuses it."""
+        job_result = self.run_import(
+            "rack__name__startswith,units,user__username,description\n"
+            f"Perm,9,{self.user.username},Imported Reservation",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "is not a permitted lookup", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__unviewable_user_cannot_be_referenced(self):
+        """`users.User` has no `restrict()`, which `WritableSerializerMixin` has relied on to apply permissions."""
+        self.run_import(
+            f"rack__id,units,user__username,description\n{self.rack.pk},9,reservation-owner,Imported Reservation",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__unviewable_group_cannot_be_referenced(self):
+        """`auth.Group` has no `restrict()`, and `GroupField` (here, an approver group) applies permissions itself."""
+        workflow = ApprovalWorkflowDefinition.objects.create(
+            name="Perm Workflow", model_content_type=ContentType.objects.get_for_model(Rack), weight=0
+        )
+        Group.objects.create(name="Visible Group")
+        Group.objects.create(name="Hidden Group")
+        self.add_permissions("extras.add_approvalworkflowstagedefinition", "extras.view_approvalworkflowdefinition")
+        self.add_permissions("auth.view_group", constraints={"name": "Visible Group"})
+
+        for group_name, expected_status in (
+            ("Hidden Group", JobResultStatusChoices.STATUS_FAILURE),
+            ("Visible Group", JobResultStatusChoices.STATUS_SUCCESS),
+        ):
+            with self.subTest(group_name=group_name):
+                self.run_import(
+                    "approval_workflow_definition,sequence,name,min_approvers,approver_group\n"
+                    f"{workflow.pk},100,Stage for {group_name},1,{group_name}",
+                    model=ApprovalWorkflowStageDefinition,
+                    username=self.user.username,
+                    expected_status=expected_status,
+                )
+                self.assertEqual(
+                    ApprovalWorkflowStageDefinition.objects.filter(name=f"Stage for {group_name}").exists(),
+                    expected_status == JobResultStatusChoices.STATUS_SUCCESS,
+                )
 
 
 # ===========================================================================

@@ -5,7 +5,7 @@ A related-object field on a create form can carry two buttons, "Add a new <model
 renders. Creating an object there, or picking a search result, closes the modal and selects
 that object in the field the button belongs to.
 
-    form = DeviceFormPage(auth_page, base_url)
+    form = DeviceCreatePage(auth_page, base_url)
     form.navigate()
     modal = EmbeddedModal(form)
     modal.open_create("tenant")
@@ -16,11 +16,11 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.form_page import FormPage
+from nautobot.playwright.object_form_page import ObjectFormPage
 
 
 class EmbeddedModal:
-    """The embedded create and search modal of a `FormPage`."""
+    """The embedded create and search modal of an `ObjectFormPage`."""
 
     _MODAL = "#embedded_action_modal"
     _TITLE = "h2.modal-title"
@@ -38,7 +38,7 @@ class EmbeddedModal:
     _PARENT_FIELD = "#nb-create-form select[name='{name}']"
     _PARENT_FIELD_DISPLAY = "#nb-create-form select[name='{name}'] + .select2-container"
 
-    def __init__(self, form: FormPage):
+    def __init__(self, form: ObjectFormPage):
         """Bind the modal to the open create *form* whose fields it fills."""
         self.form = form
         self.page = form.page
