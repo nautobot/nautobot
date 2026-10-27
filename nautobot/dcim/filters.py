@@ -1474,6 +1474,7 @@ class CableTypeFilterSet(NautobotFilterSet):
         }
     )
     is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+    is_multi_connector = django_filters.BooleanFilter(method="filter_is_multi_connector")
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
@@ -1499,6 +1500,12 @@ class CableTypeFilterSet(NautobotFilterSet):
         if value:
             return queryset.exclude(a_connectors=F("b_connectors"))
         return queryset.filter(a_connectors=F("b_connectors"))
+
+    def filter_is_multi_connector(self, queryset, name, value):
+        multi_connector = Q(a_connectors__gt=1) | Q(b_connectors__gt=1)
+        if value:
+            return queryset.filter(multi_connector)
+        return queryset.exclude(multi_connector)
 
 
 class CableToCableTerminationFilterSet(NautobotFilterSet):

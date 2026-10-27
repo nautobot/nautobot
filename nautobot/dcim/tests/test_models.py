@@ -4412,6 +4412,85 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         cable.add_termination(self.power_port1, cable_end="A", connector=1)
         self.assertEqual(cable.terminations.count(), 1)
 
+    def test_get_cable_peer_symmetric_multi_connector_follows_lane_mapping(self):
+        """On a polarity-shuffled 2x2 cable, get_cable_peer() returns the peer that the lane mapping assigns.
+
+        The 2x2 cable type is multi-connector but not a breakout.
+        """
+        shuffle_type = CableType(
+            name="Peer resolution polarity-shuffled 2x2",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=2,
+            mapping=[
+                {"label": "1", "a_position": 1, "b_position": 1, "a_connector": 1, "b_connector": 2},
+                {"label": "2", "a_position": 1, "b_position": 1, "a_connector": 2, "b_connector": 1},
+            ],
+        )
+        shuffle_type.validated_save()
+        self.assertFalse(shuffle_type.is_breakout)
+        self.assertTrue(shuffle_type.is_multi_connector)
+
+        interface_status = self.interface1.status
+        a1 = Interface.objects.create(device=self.device1, name="shuffle-a1", status=interface_status)
+        a2 = Interface.objects.create(device=self.device1, name="shuffle-a2", status=interface_status)
+        b1 = Interface.objects.create(device=self.device2, name="shuffle-b1", status=interface_status)
+        b2 = Interface.objects.create(device=self.device2, name="shuffle-b2", status=interface_status)
+
+        # Cable.save() places termination_a/b on the connectors in mapping[0]: A1 and B2.
+        cable = Cable(termination_a=a1, termination_b=b2, cable_type=shuffle_type, status=self.status)
+        cable.save()
+        cable.add_termination(a2, "A", connector=2)
+        cable.add_termination(b1, "B", connector=1)
+
+        expected_peers = {a1: b2, a2: b1, b1: a2, b2: a1}
+        for termination, expected_peer in expected_peers.items():
+            with self.subTest(termination=termination.name):
+                termination.refresh_from_db()
+                self.assertEqual(termination.get_cable_peer(), expected_peer)
+                self.assertEqual(termination.get_cable_peers(), [expected_peer])
+                # Each connector maps to exactly one far connector, so breakout_fans_out() returns False.
+                self.assertFalse(termination.breakout_fans_out())
+
+        # The CablePath traced from each termination ends at the peer the lane mapping assigns and is not split.
+        for origin, expected_destination in expected_peers.items():
+            with self.subTest(origin=origin.name):
+                path = CablePath.objects.get(
+                    origin_type=ContentType.objects.get_for_model(Interface), origin_id=origin.pk
+                )
+                self.assertEqual(path.destination, expected_destination)
+                self.assertFalse(path.is_split)
+
+    def test_get_cable_peers_symmetric_identity_multi_connector_one_peer_per_connector(self):
+        """On a 3x3 identity-mapped cable (not a breakout), get_cable_peers() returns one peer per connector."""
+        trunk_type = CableType(name="Peer resolution identity 3x3", a_connectors=3, b_connectors=3, total_lanes=3)
+        trunk_type.validated_save()
+        self.assertFalse(trunk_type.is_breakout)
+
+        rears_a = [
+            RearPort.objects.create(device=self.device1, name=f"identity-a{i}", type="lc", positions=1)
+            for i in (1, 2, 3)
+        ]
+        rears_b = [
+            RearPort.objects.create(device=self.device2, name=f"identity-b{i}", type="lc", positions=1)
+            for i in (1, 2, 3)
+        ]
+        cable = Cable(termination_a=rears_a[0], termination_b=rears_b[0], cable_type=trunk_type, status=self.status)
+        cable.save()
+        for connector in (2, 3):
+            cable.add_termination(rears_a[connector - 1], "A", connector=connector)
+            cable.add_termination(rears_b[connector - 1], "B", connector=connector)
+
+        for connector, (rear_a, rear_b) in enumerate(zip(rears_a, rears_b), start=1):
+            with self.subTest(connector=connector):
+                rear_a.refresh_from_db()
+                rear_b.refresh_from_db()
+                self.assertEqual(rear_a.get_cable_peers(), [rear_b])
+                self.assertEqual(rear_b.get_cable_peers(), [rear_a])
+                self.assertEqual(rear_a.get_cable_peer(peer_connector=connector), rear_b)
+                # Requesting a B-side connector that this lane does not map to returns None.
+                self.assertIsNone(rear_a.get_cable_peer(peer_connector=connector % 3 + 1))
+
 
 class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
     model = CableToCableTermination
