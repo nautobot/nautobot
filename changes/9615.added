@@ -1,1 +1,1 @@
-Added `ObjectFormPage` and `create_object.track()` to `nautobot.playwright` for tests that create objects through an add or edit form.
+Added `ObjectFormPage`, `create_object.track()`, and the `created_location`, `created_device_type` and `created_role` fixtures to `nautobot.playwright`.
