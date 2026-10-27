@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -46,7 +47,7 @@ class MetadataTypeManager(BaseManager.from_queryset(RestrictedQuerySet)):
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(cache_key, queryset, timeout=None)
+            cache.set(cache_key, queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)
         return queryset
 
 
