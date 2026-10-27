@@ -281,7 +281,7 @@ class ModelViewSetMixin:
                     continue
                 if isinstance(model_field, ForeignKey):
                     select_fields.append(field_instance.source)
-                    if isinstance(field_instance, drf_serializers.Serializer):
+                    if isinstance(field_instance, drf_serializers.ModelSerializer):
                         # A nested serializer renders every field of the related object, once for each row. If one of
                         # those fields is a reverse one-to-one relation (e.g. Device.parent_bay), the related row has no
                         # column for it, so the select_related() on the foreign key does not fetch it. Add that relation
