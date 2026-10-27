@@ -8,6 +8,10 @@
         const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
 
         const getSelectField = (name) => $(`select${window.nb.form.getFieldAutoId('{{ form.auto_id }}', name)}`);
+        const selectedText = (name) => getSelectField(name).find(':selected')[0].text;
+
+        // Option text comes from user-editable names, so it is only ever inserted as text.
+        const boldText = (text) => window.nb.utils.createElement('b', {className: 'text-nowrap'}, text);
 
         function retrieve_software_images(url, params) {
             $.ajax({
@@ -17,13 +21,14 @@
                 context: this,
                 success: function(data) {
                     if (data.results.length === 0) {
-                        software_version_image_description.innerHTML = `
-                            No software images found for software version <b class="text-nowrap">${getSelectField('software_version').find(':selected')[0].text}</b>
-                        `;
+                        software_version_image_description.replaceChildren(
+                            'No software images found for software version ', boldText(selectedText('software_version')),
+                        );
                     } else {
-                        software_version_image_description.innerHTML = `
-                            Software version <b class="text-nowrap">${getSelectField('software_version').find(':selected')[0].text}</b> provides the following software images:
-                        `;
+                        software_version_image_description.replaceChildren(
+                            'Software version ', boldText(selectedText('software_version')),
+                            ' provides the following software images:',
+                        );
                     }
 
                     for (result of data.results) {

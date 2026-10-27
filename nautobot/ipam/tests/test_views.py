@@ -3,6 +3,7 @@ import random
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
 from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
@@ -26,10 +27,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     VirtualDeviceContext,
 )
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
+    ObjectChange,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -1539,9 +1541,88 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         device_3.primary_ip4 = cls.dup_ip_3
         device_3.save()
 
+    MERGE_PERMISSIONS = ("ipam.add_ipaddress", "ipam.change_ipaddress", "ipam.delete_ipaddress")
+
+    def test_merging_ip_addresses_requires_add_and_delete_permissions(self):
+        for missing_perm in ("ipam.add_ipaddress", "ipam.delete_ipaddress"):
+            with self.subTest(missing_perm=missing_perm):
+                self.add_permissions(*(perm for perm in self.MERGE_PERMISSIONS if perm != missing_perm))
+                num_ips_before = IPAddress.objects.count()
+                self.assertHttpStatus(self.client.get(self.merge_url), 403)
+                self.assertHttpStatus(self.client.post(self.merge_url, data=post_data(self.merge_data)), 403)
+                self.assertEqual(num_ips_before, IPAddress.objects.count())
+                ObjectPermission.objects.filter(users=self.user).delete()
+
+    def add_merge_permissions_with_constraint(self, constrained_perm, constraints):
+        """Grant all merge permissions, with `constrained_perm` limited by `constraints`."""
+        self.add_permissions(*(perm for perm in self.MERGE_PERMISSIONS if perm != constrained_perm))
+        self.add_permissions(constrained_perm, constraints=constraints)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merge_page_lists_only_ip_addresses_within_change_and_delete_constraints(self):
+        for constrained_perm in ("ipam.change_ipaddress", "ipam.delete_ipaddress"):
+            with self.subTest(constrained_perm=constrained_perm):
+                self.add_merge_permissions_with_constraint(
+                    constrained_perm, {"pk__in": [str(self.dup_ip_1.pk), str(self.dup_ip_2.pk)]}
+                )
+                response = self.client.get(self.merge_url)
+                self.assertHttpStatus(response, 200)
+                self.assertNotIn(self.dup_ip_3, response.context["queryset"])
+                ObjectPermission.objects.filter(users=self.user).delete()
+
+    def assertMergeExcludesDupIp3(self, constrained_perm):
+        """Merge all three duplicates while `constrained_perm` only covers dup_ip_1 and dup_ip_2."""
+        self.add_merge_permissions_with_constraint(
+            constrained_perm, {"pk__in": [str(self.dup_ip_1.pk), str(self.dup_ip_2.pk)]}
+        )
+        # merge_data["pk"] includes dup_ip_3, which is outside the constraint. Source every custom-field
+        # value from a permitted IP, since dup_ip_3 is no longer part of the merge.
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(self.dup_ip_1.pk)}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        self.assertTrue(IPAddress.objects.filter(pk=self.dup_ip_3.pk).exists())
+        self.assertFalse(IPAddress.objects.filter(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk]).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merge_enforces_change_constraints(self):
+        self.assertMergeExcludesDupIp3("ipam.change_ipaddress")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merge_enforces_delete_constraints(self):
+        self.assertMergeExcludesDupIp3("ipam.delete_ipaddress")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merge_enforces_add_constraints(self):
+        # The merged IP's description (from merge_data) does not match the user's add constraint.
+        self.add_merge_permissions_with_constraint("ipam.add_ipaddress", {"description": "not the merged description"})
+        num_ips_before = IPAddress.objects.count()
+        response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+        self.assertHttpStatus(response, 302)
+        # The whole merge was rolled back: no IPs deleted and no merged IP created.
+        self.assertEqual(num_ips_before, IPAddress.objects.count())
+        self.assertEqual(
+            IPAddress.objects.filter(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).count(), 3
+        )
+        self.assertIn(
+            "Merge failed due to object-level permissions violation",
+            [str(m) for m in get_messages(response.wsgi_request)],
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_custom_field_source_restricted_to_collapsed_ips(self):
+        """A crafted merge POST cannot source custom-field data from an IP outside the merge set."""
+        self.add_permissions(*self.MERGE_PERMISSIONS)
+        external_ip = IPAddress.objects.exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).first()
+        self.assertIsNotNone(external_ip)
+        num_ips_before = IPAddress.objects.count()
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(external_ip.pk)}
+        with self.assertRaises(IPAddress.DoesNotExist):
+            self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertEqual(num_ips_before, IPAddress.objects.count())
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_ip_addresses_success(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         num_ips_before = IPAddress.objects.all().count()
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         request = {
@@ -1586,8 +1667,85 @@ class IPAddressMergeTestCase(ModelViewTestCase):
             self.assertEqual(merged_ip, device.primary_ip4)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_records_object_changes(self):
+        """Every object the merge creates, deletes, or repoints must appear in the change log."""
+        self.add_permissions(*self.MERGE_PERMISSIONS)
+        cluster = Cluster.objects.create(
+            name="Merge IP Cluster", cluster_type=ClusterType.objects.create(name="Merge IP Cluster Type")
+        )
+        vm = VirtualMachine.objects.create(
+            name="Merge IP VM", cluster=cluster, status=Status.objects.get_for_model(VirtualMachine).first()
+        )
+        vm_interface = VMInterface.objects.create(
+            virtual_machine=vm, name="eth0", status=Status.objects.get_for_model(VMInterface).first()
+        )
+        vm_interface.ip_addresses.add(self.dup_ip_1)
+        vm.primary_ip4 = self.dup_ip_1
+        vm.save()
+
+        response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+
+        expected_changes = [
+            *((ip, ObjectChangeActionChoices.ACTION_DELETE) for ip in (self.dup_ip_1, self.dup_ip_2, self.dup_ip_3)),
+            (merged_ip, ObjectChangeActionChoices.ACTION_CREATE),
+            *((device, ObjectChangeActionChoices.ACTION_UPDATE) for device in self.devices),
+            (vm, ObjectChangeActionChoices.ACTION_UPDATE),
+            *((interface, ObjectChangeActionChoices.ACTION_UPDATE) for interface in self.interfaces),
+            (vm_interface, ObjectChangeActionChoices.ACTION_UPDATE),
+            *((service, ObjectChangeActionChoices.ACTION_UPDATE) for service in self.services),
+        ]
+        for obj, action in expected_changes:
+            with self.subTest(obj=obj, action=action):
+                self.assertTrue(
+                    ObjectChange.objects.filter(
+                        changed_object_type=ContentType.objects.get_for_model(obj),
+                        changed_object_id=obj.pk,
+                        action=action,
+                    ).exists()
+                )
+        for obj in (*self.devices, vm):
+            with self.subTest(primary_ip4_logged_for=obj):
+                change = ObjectChange.objects.get(
+                    changed_object_type=ContentType.objects.get_for_model(obj), changed_object_id=obj.pk
+                )
+                self.assertEqual(change.object_data["primary_ip4"], str(merged_ip.pk))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_reports_device_validation_errors(self):
+        """A merge that would leave a device with an invalid primary IP is rolled back with an error message."""
+        self.add_permissions(*self.MERGE_PERMISSIONS)
+        # Make dup_ip_3 a NAT-outside address: Device 3's interface holds only its NAT-inside IP.
+        inside_ip = IPAddress.objects.create(
+            address="94.0.0.3/27", parent=self.dup_ip_3.parent, status=self.dup_ip_3.status
+        )
+        self.interfaces[2].ip_addresses.remove(self.dup_ip_3)
+        self.interfaces[2].ip_addresses.add(inside_ip)
+        self.dup_ip_3.nat_inside = inside_ip
+        self.dup_ip_3.validated_save()
+        device_3 = self.devices[2]
+        device_3.refresh_from_db()
+        device_3.primary_ip4 = self.dup_ip_3
+        device_3.validated_save()
+        num_ips_before = IPAddress.objects.count()
+
+        # merge_data has no nat_inside, so the merged IP is no longer reachable from Device 3's interfaces.
+        response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(num_ips_before, IPAddress.objects.count())
+        device_3.refresh_from_db()
+        self.assertEqual(device_3.primary_ip4, self.dup_ip_3)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any(m.startswith(f"Unable to merge: could not update the primary IP of {device_3}") for m in messages_list),
+            messages_list,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         self.assertHttpStatus(self.client.get(self.merge_url), 200)
         num_ips_before = IPAddress.objects.all().count()
         self.merge_data["pk"] = self.merge_data["pk"][0]
@@ -1611,7 +1769,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_relationship_data_changes_after_merging(self):
-        self.add_permissions("ipam.change_ipaddress")
+        self.add_permissions(*self.MERGE_PERMISSIONS)
         num_ips_before = IPAddress.objects.all().count()
         ips = IPAddress.objects.all().exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk])
         self.assertGreaterEqual(len(ips), 6)
