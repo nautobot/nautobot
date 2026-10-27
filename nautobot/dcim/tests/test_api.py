@@ -2484,7 +2484,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         """
         Listing devices must not run an extra query per device to resolve the reverse one-to-one `parent_bay`.
         """
-        self.add_permissions("dcim.view_device")
+        self.add_permissions("dcim.view_device", "dcim.view_devicebay")
         list_url = reverse("dcim-api:device-list")
 
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
@@ -2505,6 +2505,23 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         with AssertNoRepeatedQueries(self):
             response = self.client.get(list_url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # AssertNoRepeatedQueries allows up to 10 repeats, more than this test has devices, so check for the per-row query
+        # directly. Without the join, the serializer looks up each Device's parent bay in a separate query that filters
+        # on installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one is
+        # a per-row query. At depth 1 the API renders parent_bay as a nested DeviceBay rather than a reference.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        for depth in (0, 1):
+            with self.subTest(depth=depth):
+                with CaptureQueriesContext(connection) as ctx:
+                    response = self.client.get(f"{list_url}?depth={depth}&limit=0", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len([result for result in response.json()["results"] if result["parent_bay"]]), 2)
+                self.assertEqual(
+                    [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+                )
 
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
@@ -2997,6 +3014,30 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             with AssertNoRepeatedQueries(self, threshold=10):
                 response = self.client.get(f"{url}?limit=0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_interface_list_joins_the_nested_device_parent_bay_only_at_depth_1(self):
+        """At depth 1, each interface includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
+        self.add_permissions("dcim.view_interface", "dcim.view_device")
+        url = reverse("dcim-api:interface-list")
+        bay_table = connection.ops.quote_name(DeviceBay._meta.db_table)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in (result["device"] or {})]), 1
+        )
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if f"FROM {bay_table}" in q["sql"]], [])
+
+        # At depth 0 the API renders each device as a reference (id, object_type and url) without parent_bay, so the
+        # query has no reason to join the device bay table.
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if bay_table in q["sql"]], [])
 
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
@@ -3538,6 +3579,29 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "installed_device": devices[4].pk,
             },
         ]
+
+    def test_device_bay_list_joins_the_nested_device_parent_bay_at_depth_1(self):
+        """At depth 1, each device bay includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
+        self.add_permissions("dcim.view_devicebay", "dcim.view_device")
+        url = reverse("dcim-api:devicebay-list")
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in result["device"]]), 1
+        )
+        # Without the join, the serializer looks up each Device's parent bay in a separate query that filters on
+        # installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one
+        # is a per-row query.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        self.assertEqual(
+            [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+        )
 
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):
