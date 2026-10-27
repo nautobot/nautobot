@@ -1,0 +1,1 @@
+Added `ObjectFormPage`, `create_object.track()`, and the `created_location`, `created_device_type` and `created_role` fixtures to `nautobot.playwright`.
