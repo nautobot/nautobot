@@ -191,7 +191,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
 
 
 class ObjectListViewStickyHeadersTestCase(TestCase):
-    """Covers `sticky_headers` argument reaching the rendered `<table>` in both list view implementations."""
+    """Covers whether the `sticky_headers` argument adds `nb-table-sticky-headers` to the rendered `<table>` in both list view implementations."""
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_view_tables_mark_headers_sticky(self):
