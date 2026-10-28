@@ -1750,7 +1750,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
         elif self.action == "members":
             # Members tab
-            context["base_template"] = get_base_template(self.base_template, instance.model)
+            context["base_template"] = get_base_template(self.base_template, instance.model)  # pylint: disable=no-member
             model = instance.model
             table_class = get_table_for_model(model)
             members = instance.members
