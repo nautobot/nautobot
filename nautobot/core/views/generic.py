@@ -369,6 +369,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
                 configurable=True,
+                sticky_headers=True,
                 is_object_embedded_search_results=is_object_embedded_search_request,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):

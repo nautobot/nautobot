@@ -75,6 +75,7 @@ class BaseTable(django_tables2.Table):
         row_attrs=None,
         data_transform_callback=None,
         configurable=False,
+        sticky_headers=False,
         is_object_embedded_search_results=False,
         row_overviews_visibility=RowOverviewsVisibility.HIDE,
         **kwargs,
@@ -97,6 +98,8 @@ class BaseTable(django_tables2.Table):
                 Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
             configurable (bool): Include cog wheel icon with "Table Configuration" form; this arg is ignored when
                 `is_object_embedded_search_results` is set to `True`.
+            sticky_headers (bool): Pin the table's column headers to the top of the page while the page is scrolled.
+                This arg is ignored when `is_object_embedded_search_results` is set to `True`.
             is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
                 columns unaffected by any user configuration, with static order and visibility.
             row_overviews_visibility (RowOverviewsVisibility): Whether to include a per-row button that expands the
@@ -156,6 +159,7 @@ class BaseTable(django_tables2.Table):
         if is_object_embedded_search_results:
             configurable = False
             orderable = False
+            sticky_headers = False
             if row_attrs is None:
                 row_attrs = {}
             row_attrs["hx-get"] = lambda record: record.get_absolute_url(api=True)
@@ -184,6 +188,9 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
+
+        if sticky_headers:
+            self.attrs["class"] = " ".join([self.attrs.get("class", ""), "nb-table-sticky-headers"]).strip()
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,

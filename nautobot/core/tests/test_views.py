@@ -190,6 +190,26 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertNotIn("hx-post", button)
 
 
+class ObjectListViewStickyHeadersTestCase(TestCase):
+    """Covers `sticky_headers` argument reaching the rendered `<table>` in both list view implementations."""
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_view_tables_mark_headers_sticky(self):
+        """Both list view implementations render a `<table>` carrying `nb-table-sticky-headers`.
+
+        `circuits:provider_list` is built by `NautobotHTMLRenderer.construct_table` and
+        `dcim:console_connections_list` by `ObjectListView.get`, which instantiate their tables
+        independently and can therefore diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertHttpStatus(response, 200)
+                body = extract_page_body(response.content.decode(response.charset))
+                self.assertRegex(body, r"<table[^>]*nb-table-sticky-headers")
+
+
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
     """Tests for the action buttons on object list views when the user lacks the `add` permission."""
 
@@ -1769,6 +1789,14 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    def test_detail_view_table_panels_are_not_sticky(self):
+        """A detail view renders its object table panel without `nb-table-sticky-headers`."""
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertRegex(body, r"<table")
+        self.assertNotIn("nb-table-sticky-headers", body)
 
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):
