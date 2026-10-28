@@ -41,6 +41,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
+from nautobot.core.choices import ImportModeChoices
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms.fields import ExportFieldsChoiceField
 from nautobot.core.forms.widgets import ExportFieldSelect
@@ -740,7 +741,7 @@ class ImportObjects(Job):
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import; defaults to the model the data declares for itself, if any.",
-        query_params={"can_add": True, "has_serializer": True},
+        query_params={"can_import": True, "has_serializer": True},
         required=False,
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
@@ -754,16 +755,25 @@ class ImportObjects(Job):
         required=False,
         description="Format of the import data; auto-detected from the file extension or content if not specified.",
     )
+    import_mode = ChoiceVar(
+        choices=ImportModeChoices.CHOICES,
+        label="Import Mode",
+        default=ImportModeChoices.CREATE_UPDATE,
+        required=False,
+        description="<strong>Create/Update</strong> updates the records that match existing ones and creates the "
+        "rest. <strong>Create Only</strong> reports an error for each record that matches an existing record, and "
+        "<strong>Update Only</strong> reports an error for each record that matches no existing record.",
+    )
     match_fields = StringVar(
         label="Match Existing Records On",
         default="",
         required=False,
         description="Optional field name(s), separated by commas or spaces, used to match records in the "
         "import data to existing records (e.g. <code>name serial</code>). Matched records are updated in "
-        "place; unmatched records are created. Overrides any <code>match_fields</code> "
-        "directive present in the data itself. If neither is specified, records are matched on the "
-        "<code>id</code> column if present, otherwise on the model's natural key; rows missing values for "
-        "that default match key are simply created as new records.",
+        "place and unmatched records are created, if permitted by the Import Mode. Overrides any "
+        "<code>match_fields</code> directive present in the data itself. If neither is specified, records are "
+        "matched on the <code>id</code> column if present, otherwise on the model's natural key; rows missing "
+        "values for that default match key are treated as unmatched.",
     )
     roll_back_if_error = BooleanVar(
         label="Rollback Changes on Failure",
@@ -787,7 +797,9 @@ class ImportObjects(Job):
         "yaml": NautobotYAMLImportParser,
     }
 
-    def _perform_import_operation(self, data, serializer_class, add_queryset, change_queryset, match, *, atomic):
+    def _perform_import_operation(
+        self, data, serializer_class, add_queryset, change_queryset, match, *, atomic, import_mode
+    ):
         """Run the upsert, optionally wrapped in an atomic transaction.
 
         When `atomic` is True the whole import runs inside `transaction.atomic()`, and any validation
@@ -804,7 +816,7 @@ class ImportObjects(Job):
         with contextlib.suppress(AbortTransaction):
             with transaction_ctx:
                 created_objs, updated_objs, unchanged_objs, validation_failed = self._perform_operation(
-                    data, serializer_class, add_queryset, change_queryset, match
+                    data, serializer_class, add_queryset, change_queryset, match, import_mode
                 )
                 if validation_failed and atomic:
                     rolled_back = True
@@ -815,7 +827,7 @@ class ImportObjects(Job):
             return [], [], [], validation_failed
         return created_objs, updated_objs, unchanged_objs, validation_failed
 
-    def _perform_operation(self, data, serializer_class, add_queryset, change_queryset, match):
+    def _perform_operation(self, data, serializer_class, add_queryset, change_queryset, match, import_mode):
         """Import each row in turn, returning `(created_objs, updated_objs, unchanged_objs, validation_failed)`."""
         match_fields, _ = match
         outcomes = {outcome: [] for outcome in import_utils.ImportRowOutcome}
@@ -824,9 +836,14 @@ class ImportObjects(Job):
         # Resolves each row's match-field values, as the serializer that saves the row will resolve them
         match_serializer = serializer_class(context=context)
         write_only_fields = import_utils.write_only_field_names(serializer_class)
+        if import_mode == ImportModeChoices.CREATE:
+            # Collisions are found among the objects the user can see, as they may have no change permission at all
+            match_queryset = restrict_queryset(serializer_class.Meta.model.objects.all(), self.user, "view")
+        else:
+            match_queryset = change_queryset
         for row, entry in enumerate(data, start=1):
             try:
-                instance = self._match_row(row, entry, match, match_serializer, change_queryset)
+                instance = self._match_row(row, entry, match, match_serializer, match_queryset, import_mode)
                 # Taken before validating the row, which sets its values on the instance
                 before = import_utils.change_snapshot(serializer_class, instance) if instance is not None else None
                 serializer = self._validated_row_serializer(
@@ -847,34 +864,59 @@ class ImportObjects(Job):
             validation_failed,
         )
 
-    def _match_row(self, row, entry, match, match_serializer, change_queryset):
+    def _match_row(self, row, entry, match, match_serializer, match_queryset, import_mode):
         """The existing object that a row updates, or None if the row is to create one.
 
-        Only objects the user may change are matched. A row matching one they can't is created instead, and
-        so fails on the object's uniqueness, without exposing or changing it.
+        Only objects in `match_queryset` are matched.
+
+        In Update Only or Create/Update mode, that's the existing objects the user may change. In Create/Update mode, a
+        row matching an object outside `match_queryset` is created instead, and so might fail on the object's
+        uniqueness constraints, if any. In Update Only mode, such a row is reported as matching no existing object.
+
+        In Create Only mode, the objects the user may view are matched, so that a row colliding with one is refused
+        even when no uniqueness constraint would refuse it.
 
         Raises:
-            _RowFailed: if the row matches several objects, or can't be matched on match fields the user gave.
+            _RowFailed: if the row matches several objects, or can't be matched on match fields the user gave;
+                in Create Only mode, if it matches any object; in Update Only mode, if it matches none.
         """
         match_fields, match_fields_source = match
         if not match_fields:
             return None
         try:
             filter_params = import_utils.build_match_filter(entry, match_fields, match_serializer)
-            return import_utils.find_existing_object(change_queryset, filter_params)
+            instance = import_utils.find_existing_object(match_queryset, filter_params)
         except MultipleObjectsReturned as exc:
             self.logger.error(
-                "Row %d: Multiple existing records match on (%s); cannot determine which to update",
+                "Row %d: Multiple existing records match on (%s)%s",
                 row,
                 ", ".join(match_fields),
+                "" if import_mode == ImportModeChoices.CREATE else "; cannot determine which to update",
             )
             raise _RowFailed from exc
         except ValueError as exc:
-            if match_fields_source == "default":
+            if match_fields_source == "default" and import_mode != ImportModeChoices.UPDATE:
                 # The default match key isn't fully present in this data; treat the row as a create.
                 return None
             self.logger.error("Row %d: `%s`", row, exc)
             raise _RowFailed from exc
+        if import_mode == ImportModeChoices.CREATE and instance is not None:
+            self.logger.error(
+                'Row %d: Existing record "%s" matches on (%s); not creating a new one in Create Only mode',
+                row,
+                instance,
+                ", ".join(match_fields),
+                extra={"object": instance},
+            )
+            raise _RowFailed
+        if import_mode == ImportModeChoices.UPDATE and instance is None:
+            self.logger.error(
+                "Row %d: No existing record matches on (%s); not creating a new one in Update Only mode",
+                row,
+                ", ".join(match_fields),
+            )
+            raise _RowFailed
+        return instance
 
     def _validated_row_serializer(self, row, entry, instance, match_fields, serializer_class, context):
         """A validated serializer for the row: updating `instance` if the row matched one, else creating an object.
@@ -1044,31 +1086,54 @@ class ImportObjects(Job):
 
     # ---- RESOLVE MATCH (which records to update vs create) ----
 
-    def _require_import_permissions(self, model, content_type):
-        """The add/change-restricted querysets for this import; hard-fail if the user can do neither."""
+    def _require_import_permissions(self, model, content_type, import_mode):
+        """The add/change-restricted querysets for this import; hard-fail if the user lacks what the mode needs.
+
+        Create Only mode needs add permission and Update Only needs change. Create/Update needs either one, as
+        each row is checked against the permission for what it does. The queryset for an action the mode never
+        performs is empty.
+        """
         can_add = self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}")
         can_change = self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}")
-        if not can_add and not can_change:
+        if import_mode == ImportModeChoices.CREATE:
+            permitted, verbs = can_add, "create"
+            can_change = False
+        elif import_mode == ImportModeChoices.UPDATE:
+            permitted, verbs = can_change, "update"
+            can_add = False
+        else:
+            permitted, verbs = can_add or can_change, "create or update"
+        if not permitted:
             self.logger.error(
-                'User "%s" does not have permission to create or update %s objects',
-                self.user,
-                content_type.model,
+                'User "%s" does not have permission to %s %s objects', self.user, verbs, content_type.model
             )
-            raise PermissionDenied("User does not have create or update permissions on the requested content-type")
+            raise PermissionDenied(f"User does not have {verbs} permissions on the requested content-type")
         return (
-            restrict_queryset(model.objects.all(), self.user, "add"),
-            restrict_queryset(model.objects.all(), self.user, "change"),
+            restrict_queryset(model.objects.all(), self.user, "add") if can_add else model.objects.none(),
+            restrict_queryset(model.objects.all(), self.user, "change") if can_change else model.objects.none(),
         )
 
-    def _validate_match(self, data, effective_match_fields, match_fields_source, serializer_class):
-        """Log the effective match key and validate it (field names + within-file uniqueness); no-op if unset."""
+    def _validate_match(self, data, effective_match_fields, match_fields_source, serializer_class, import_mode):
+        """Log the effective match key and validate it (field names + within-file uniqueness).
+
+        No-op if unset, except in Update Only mode, which can't update anything without one.
+        """
         if not effective_match_fields:
+            if import_mode == ImportModeChoices.UPDATE:
+                message = "Update Only mode requires match fields, and none were given or could be determined"
+                self.logger.error(message)
+                raise RunJobTaskFailed(message)
             return
         self.logger.info(
-            "Matching existing records on (%s), from the %s; "
-            "matched records are updated in place and unmatched rows become new records",
+            "Matching existing records on (%s), from the %s; %s",
             ", ".join(effective_match_fields),
             match_fields_source,
+            {
+                ImportModeChoices.CREATE_UPDATE: "matched records are updated in place and unmatched rows become "
+                "new records",
+                ImportModeChoices.CREATE: "unmatched rows become new records and matched rows are refused",
+                ImportModeChoices.UPDATE: "matched records are updated in place and unmatched rows are refused",
+            }[import_mode],
         )
         try:
             if match_fields_source != "default":
@@ -1106,7 +1171,10 @@ class ImportObjects(Job):
         roll_back_if_error=True,
         import_format="auto",
         match_fields="",
+        import_mode=ImportModeChoices.CREATE_UPDATE,
     ):
+        # Empty when submitted blank, as it isn't required
+        import_mode = import_mode or ImportModeChoices.CREATE_UPDATE
         # PREPARE — resolve target, read input, pick parser (guard clauses hard-fail on bad input)
         text, filename = self._read_import_text(csv_data, csv_file)
         parser_class, import_format = self._select_parser(import_format, filename, text)
@@ -1126,7 +1194,7 @@ class ImportObjects(Job):
 
         model, serializer_class = self._resolve_model_and_serializer(content_type)
         # Before parsing: a user who can neither add nor change these objects needn't wait for the file to be read
-        add_queryset, change_queryset = self._require_import_permissions(model, content_type)
+        add_queryset, change_queryset = self._require_import_permissions(model, content_type, import_mode)
 
         data = []
         created_objs, updated_objs, unchanged_objs = [], [], []
@@ -1140,13 +1208,19 @@ class ImportObjects(Job):
             effective_match_fields, match_fields_source = import_utils.resolve_match_fields(
                 model, serializer_class, data, match_fields, directive_match_fields
             )
-            self._validate_match(data, effective_match_fields, match_fields_source, serializer_class)
+            self._validate_match(data, effective_match_fields, match_fields_source, serializer_class, import_mode)
 
             # UPSERT
             self.logger.info("Processing %d rows of data", len(data))
             match = (effective_match_fields, match_fields_source)
             created_objs, updated_objs, unchanged_objs, validation_failed = self._perform_import_operation(
-                data, serializer_class, add_queryset, change_queryset, match, atomic=roll_back_if_error
+                data,
+                serializer_class,
+                add_queryset,
+                change_queryset,
+                match,
+                atomic=roll_back_if_error,
+                import_mode=import_mode,
             )
         except drf_exceptions.ParseError as exc:
             validation_failed = True
