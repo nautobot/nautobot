@@ -930,15 +930,14 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_nonracked_devices_table_respects_object_permissions(self):
         rack = self.racks[0]
-        device_type = DeviceType.objects.create(
-            model="Non-Racked Device Type", manufacturer=Manufacturer.objects.first()
-        )
+        device_type = DeviceType.objects.first()
         device_role = Role.objects.get_for_model(Device).first()
         device_status = Status.objects.get_for_model(Device).first()
         visible_device = Device.objects.create(
             name="Visible Non-Racked Device",
             location=rack.location,
             rack=rack,
+            position=None,
             device_type=device_type,
             role=device_role,
             status=device_status,
@@ -947,20 +946,14 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="Hidden Non-Racked Device",
             location=rack.location,
             rack=rack,
+            position=None,
             device_type=device_type,
             role=device_role,
             status=device_status,
         )
 
         self.add_permissions("dcim.view_rack")
-        obj_perm = ObjectPermission(
-            name="Visible device permission",
-            constraints={"pk": visible_device.pk},
-            actions=["view"],
-        )
-        obj_perm.save()
-        obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(Device))
+        self.add_permissions("dcim.view_device", constraints={"pk": str(visible_device.pk)})
 
         response = self.client.get(reverse("dcim:rack", args=[rack.pk]))
         self.assertHttpStatus(response, 200)
