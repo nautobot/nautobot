@@ -31,7 +31,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.utils import get_saved_view_or_none
+from nautobot.extras.utils import FeatureQuery, get_saved_view_or_none
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -156,6 +156,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action_buttons is None:
             view.action_buttons = []
         for action in view.action_buttons:
+            if action in ("import", "export") and not FeatureQuery("import_export").includes(queryset.model):
+                continue
             if action in always_valid_actions or validated_viewname(queryset.model, action) is not None:
                 valid_actions.append(action)
             else:

@@ -29,6 +29,7 @@ from django.db import IntegrityError
 from django.http import QueryDict
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
+from django_celery_beat.models import PeriodicTask
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 import yaml
@@ -66,6 +67,7 @@ from nautobot.core.testing import (
     TestCase as NautobotTestCase,
     TransactionTestCase,
 )
+from nautobot.core.testing.utils import temporarily_sensitive_fields
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
@@ -3202,16 +3204,19 @@ class CoreUpsertTests(ImportExportJobTestCase):
 
     def test_core_upsert__sensitive_field__update(self):
         """A changed sensitive field is logged as changed, without either of its values."""
-        old_key, new_key = "a" * 40, "b" * 40
-        token = Token.objects.create(user=self.user, key=old_key)
-        job_result = self.run_import(f"id,key\n{token.pk},{new_key}", model=Token)
-        self.assertImport(job_result, updated=1)
-        token.refresh_from_db()
-        self.assertEqual(token.key, new_key)
+        old_value, new_value = "old sensitive value", "new sensitive value"
+        status = self.create_status()
+        status.description = old_value
+        status.save()
+        with temporarily_sensitive_fields(Status, "description"):
+            job_result = self.run_import(f"id,description\n{status.pk},{new_value}")
+            self.assertImport(job_result, updated=1)
+            status.refresh_from_db()
+            self.assertEqual(status.description, new_value)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn("`key`: (redacted) → (redacted)", entry.message)
-        self.assertNotIn(old_key, entry.message)
-        self.assertNotIn(new_key, entry.message)
+        self.assertIn("`description`: (redacted) → (redacted)", entry.message)
+        self.assertNotIn(old_value, entry.message)
+        self.assertNotIn(new_value, entry.message)
 
     def test_core_upsert__write_only_field__update(self):
         """A row that sets only a write-only field is an update, not unchanged, as its old value can't be compared."""
@@ -4323,6 +4328,43 @@ class SentinelValueTests(ImportExportJobTestCase):
 # Permissions
 # ===========================================================================
 class PermissionTests(ImportExportJobTestCase):
+    def test_perm__unsupported_content_type_is_rejected(self):
+        """Neither Job accepts a content-type outside the `import_export` feature, even from a superuser."""
+        with self.subTest("export"):
+            job_result = self.run_export(model=PeriodicTask, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support import/export",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(job_result.files.exists())
+        with self.subTest("import"):
+            job_result = self.run_import(
+                "name,task\ntest_task,nautobot.foo",
+                model=PeriodicTask,
+                expected_status=JobResultStatusChoices.STATUS_FAILURE,
+            )
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support import/export",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
+        with self.subTest("import, with the content-type declared by the data"):
+            job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs",
+                "ImportObjects",
+                csv_data="model: django_celery_beat.periodictask\nrecords:\n  - name: test_task\n    task: nautobot.foo",
+                import_format="yaml",
+            )
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support import/export",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
+
     def test_perm__export_without_permission(self):
         """Job enforces view permission on the content-type being exported."""
         job_result = self.run_export(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)

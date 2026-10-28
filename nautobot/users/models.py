@@ -266,6 +266,7 @@ class Token(BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
+    is_import_export_model = False
     is_metadata_associable_model = False
     sensitive_fields = ("key",)
 

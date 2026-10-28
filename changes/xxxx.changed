@@ -1,0 +1,2 @@
+Changed the "Import Objects" and "Export Object List" system Jobs to only accept content-types for Nautobot core and App models (`BaseModel` subclasses), plus `auth.Group` and `contenttypes.ContentType`, rather than any installed model such as those provided by `django-celery-beat` or `django-constance`.
+Changed object list views to omit the "Import" and "Export" buttons for models that do not support import/export.
