@@ -1,1 +1,0 @@
-Fixed related objects in REST API requests, `Import Objects` data, and Job inputs being looked up by attributes that could reveal data the requesting user did not have permission to view, including other users' API tokens.
