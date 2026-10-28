@@ -514,14 +514,13 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "SCHEMA_PATH_PREFIX": "/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
-    # use sidecar - locally packaged UI files, not CDN
-    "SWAGGER_UI_DIST": "SIDECAR",
-    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    # Swagger UI and Redoc static files are bundled from NPM into project-static/dist and referenced directly
+    # by Nautobot's swagger_ui.html and redoc_ui.html templates, so SWAGGER_UI_DIST/REDOC_DIST are not used.
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "displayOperationId": True,
+        "filter": True,
     },
-    "REDOC_DIST": "SIDECAR",
     # Do not list all possible enum values in the description of filter fields and the like
     # In addition to being highly verbose, it's inaccurate for filter fields like *__ic and *__re
     "ENUM_GENERATE_CHOICE_DESCRIPTION": False,
@@ -734,7 +733,6 @@ INSTALLED_APPS = [
     "nautobot.vpn",
     "nautobot.wireless",
     "drf_spectacular",
-    "drf_spectacular_sidecar",
     "graphene_django",
     "health_check",
     "health_check.storage",

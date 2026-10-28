@@ -69,7 +69,9 @@ tests only, under `test-results/`.
 
 Tests that verify application output (row counts, values, side effects)
 carry `@pytest.mark.behavioral`. Unmarked tests check page structure only.
-The mark is simply a filter. Without `--marker`, every test runs, marked or
+A test that takes minutes on its own, such as the accessibility scan of
+every core list view, carries `@pytest.mark.slow`, and `--marker "not slow"`
+leaves it out of a quick run. The mark is simply a filter. Without `--marker`, every test runs, marked or
 not, and an unmarked test counts as "not behavioral" when filtering. Marks
 are registered in pyproject.toml, and a misspelled mark on a test fails
 collection with `--strict-markers` in the repo's pytest config. App scoping

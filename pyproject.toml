@@ -74,9 +74,6 @@ dependencies = [
     # OpenAPI 3.0 schema generation for the REST API
     # v0.30.0 is impacted by https://github.com/tfranzel/drf-spectacular/issues/1517
     "drf-spectacular (>=0.29.0,<0.30)",
-    # Swagger/Redoc API UI (TODO: add swagger-ui-dist and redoc as proper NPM dependencies instead)
-    # 2026.10.1 has test-impacting behavior changes (https://github.com/swagger-api/swagger-ui/issues/11056)
-    "drf-spectacular-sidecar (>=2026.9.1,<2026.10.1)",
     # Emoji terminal output for Python.
     "emoji (>=2.16.0,<2.17)",
     # Git integrations for Python
@@ -306,6 +303,7 @@ testpaths = ["nautobot/*/tests/integration"]
 python_classes = ["Test*", "*TestCase"]
 markers = [
     "behavioral: verifies application output correctness, not just page structure",
+    "slow: takes minutes on its own (a scan of every core list view). Deselect with -m 'not slow'",
 ]
 
 [tool.djlint]
