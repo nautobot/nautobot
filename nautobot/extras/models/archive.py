@@ -149,6 +149,38 @@ class ArchivedObjectChange(ArchivedLogModel):
             models.Index(name="extras_aoc_related_obj_idx", fields=["related_object_type_id", "related_object_id"]),
         ]
 
+    # TODO: Naming is hard, get a better name
+    @classmethod
+    def from_object_change(cls, object_change):
+        """
+        Build an unsaved `ArchivedObjectChange` from a live `ObjectChange`.
+
+        TODO: Add more documentation
+
+        Args:
+            object_change (ObjectChange): The live record to copy.
+
+        Returns:
+            (ArchivedObjectChange): An unsaved instance. Saving it is the caller's responsibility.
+        """
+        return cls(
+            id=object_change.id,
+            time=object_change.time,
+            user_id=object_change.user_id,
+            user_name=object_change.user_name,
+            request_id=object_change.request_id,
+            action=object_change.action,
+            changed_object_type_id=object_change.changed_object_type_id,
+            changed_object_id=object_change.changed_object_id,
+            change_context=object_change.change_context,
+            change_context_detail=object_change.change_context_detail,
+            related_object_type_id=object_change.related_object_type_id,
+            related_object_id=object_change.related_object_id,
+            object_repr=object_change.object_repr,
+            object_data=object_change.object_data,
+            object_data_v2=object_change.object_data_v2,
+        )
+
     def get_related_changes(self, user=None, permission="view"):
         """
         Retrieve other ArchivedObjectChanges that have the same `changed_object` as this record.

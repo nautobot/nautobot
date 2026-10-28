@@ -113,6 +113,23 @@ properties:
     items:
       type: "string"
     type: "array"
+  ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD:
+    default: 365
+    description: >-
+      The default age in days, past which a record is eligible to be archived Used by the `Archive Old Records`
+      system Job when no age threshold is supplied at runtime.
+    is_constance_config: true
+    type: "integer"
+    version_added: "3.3.0"
+  ARCHIVE_MODEL_DEFAULT_BATCH_SIZE:
+    default: 1000
+    description: >-
+      The default number of records the `Archive Old Records` system Job moves per batch. Each record in a
+      batch is held in memory twice while it is copied, once as the live record and once as the archived
+      copy built from it. Reduce this if archival runs out of memory on records carrying large data.
+    is_constance_config: true
+    type: "integer"
+    version_added: "3.3.0"
   AUTH_PASSWORD_VALIDATORS:
     default: []
     description: >-
