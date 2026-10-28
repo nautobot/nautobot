@@ -53,13 +53,8 @@ class Command(BaseCommand):
             default="development/factory_dump.json",
             help="Fixture file to use with --cache-test-fixtures.",
         )
-        parser.add_argument(
-            "--database",
-            default=DEFAULT_DB_ALIAS,
-            help='The database to generate the test data in. Defaults to the "default" database.',
-        )
 
-    def _generate_factory_data(self, seed, db_name, print_hashes=False):
+    def _generate_factory_data(self, seed, print_hashes=False):
         try:
             import factory.random
 
@@ -173,7 +168,7 @@ class Command(BaseCommand):
                 description = " " + description
             message = f"Creating {count} {model._meta.verbose_name_plural}{description}..."
             self.stdout.write(message)
-            records = some_factory.create_batch(count, using=db_name, **kwargs)
+            records = some_factory.create_batch(count, **kwargs)
             if print_hashes:
                 model_ids = [record.id for record in records]
                 sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
@@ -191,7 +186,7 @@ class Command(BaseCommand):
                     role = Role.objects.get(name=defaults["name"])
                     role.content_types.add(content_type)
                 except Role.DoesNotExist:
-                    role = RoleFactory.create(**defaults, content_types=[content_type], using=db_name)
+                    RoleFactory.create(**defaults, content_types=[content_type])
 
         _create_batch(RoleFactory, 20)
 
@@ -207,7 +202,7 @@ class Command(BaseCommand):
                     status = Status.objects.get(name=defaults["name"])
                     status.content_types.add(content_type)
                 except Status.DoesNotExist:
-                    status = StatusFactory.create(**defaults, content_types=[content_type], using=db_name)
+                    StatusFactory.create(**defaults, content_types=[content_type])
 
         _create_batch(StatusFactory, 10)
         # Ensure that we have some tags that are applicable to all relevant content-types
@@ -433,13 +428,18 @@ class Command(BaseCommand):
             description="with teams",
         )
 
+        # Populate member caches for non-static DynamicGroups
+        call_command("refresh_dynamic_group_member_caches")
+
     def handle(self, *args, **options):
+        db_name = connections[DEFAULT_DB_ALIAS].settings_dict["NAME"]
+
         if options["flush"]:
             if options["interactive"]:
                 confirm = input(
                     f"""\
 You have requested a flush of the database before generating new data.
-This will IRREVERSIBLY DESTROY all data in the "{connections[options["database"]].settings_dict["NAME"]}" database,
+This will IRREVERSIBLY DESTROY all data in the "{db_name}" database,
 including all user accounts, and return each table to an empty state.
 Are you SURE you want to do this?
 
@@ -449,37 +449,34 @@ Type 'yes' to continue, or 'no' to cancel: """
                     self.stdout.write("Cancelled.")
                     return
 
-            self.stdout.write(
-                self.style.WARNING(f'Flushing all existing data from the database "{options["database"]}"...')
-            )
+            self.stdout.write(self.style.WARNING(f'Flushing all existing data from the database "{db_name}"...'))
 
             # If we already have a fixture file to use, suppress the "post_migrate" signal that "flush" would normally
             # trigger, as that would lead to creation of Job records (etc.) that WILL conflict with the fixture data.
             inhibit_post_migrate = options["cache_test_fixtures"] and os.path.exists(options["fixture_file"])
-            call_command(
-                "flush", "--no-input", "--database", options["database"], inhibit_post_migrate=inhibit_post_migrate
-            )
+            call_command("flush", "--no-input", inhibit_post_migrate=inhibit_post_migrate)
 
         if options["cache_test_fixtures"] and os.path.exists(options["fixture_file"]):
             self.stdout.write(self.style.WARNING(f"Loading factory data from file {options['fixture_file']}"))
-            call_command("loaddata", "--database", options["database"], options["fixture_file"])
+            call_command("loaddata", options["fixture_file"])
         else:
             print_hashes = options["print_hashes"]
             if is_truthy(os.environ.get("GITHUB_ACTIONS", "false")):
                 print_hashes = True
-            self._generate_factory_data(options["seed"], options["database"], print_hashes=print_hashes)
+            self._generate_factory_data(options["seed"], print_hashes=print_hashes)
 
             if options["cache_test_fixtures"]:
                 self.stdout.write(self.style.WARNING(f"Saving factory data to file {options['fixture_file']}"))
 
                 call_command(
                     "dumpdata",
-                    indent=2,
-                    format="json",
+                    all=True,  # important, as otherwise the dynamic-group members caches will be omitted by default!
                     exclude=["auth.permission"],
+                    format="json",
+                    indent=2,
                     output=options["fixture_file"],
                 )
 
                 self.stdout.write(self.style.SUCCESS(f"Dumped factory data to {options['fixture_file']}"))
 
-        self.stdout.write(self.style.SUCCESS(f"Database {options['database']} populated successfully!"))
+        self.stdout.write(self.style.SUCCESS(f"Database {db_name} populated successfully!"))
