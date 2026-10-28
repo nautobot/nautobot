@@ -22,4 +22,5 @@ class DataValidationModelFormMixin:
                 field.required = True
 
                 if rule.error_message:
-                    field.widget.attrs["oninvalid"] = f"this.setCustomValidity('{strip_tags(rule.error_message)}')"
+                    # Passed as data and applied by the UI bundle so the user-authored message is never parsed as code.
+                    field.widget.attrs["data-nb-required-message"] = strip_tags(rule.error_message)

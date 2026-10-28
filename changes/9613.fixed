@@ -1,2 +1,0 @@
-Changed Device detail view to no longer show the "Dynamic Groups" tab when no relevant dynamic groups exist or the user lacks permission.
-Fixed missing "Dynamic Groups" tab in most detail views.

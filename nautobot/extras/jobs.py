@@ -780,6 +780,7 @@ class BaseJob:
         return return_data
 
     @classmethod
+<<<<<<< HEAD
     def _omitted_boolean_var_defaults(cls, data, cls_vars):
         """The declared defaults of the `BooleanVar`s that `data` doesn't mention.
 
@@ -802,6 +803,8 @@ class BaseJob:
         }
 
     @classmethod
+=======
+>>>>>>> develop
     def validate_data(cls, data, files=None, user=None):
         """
         Validate the input submitted for a job execution, returning it as cleaned data.

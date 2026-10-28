@@ -15,6 +15,13 @@ from splinter.browser import Browser
 from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core import testing
+from nautobot.core.testing.axe import (
+    AXE_DEFAULT_IMPACTS,
+    AXE_DEFAULT_TAGS,
+    AXE_DISABLED_RULES,
+    AXE_EXCLUDE_SELECTORS,
+    get_axe_core_source,
+)
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -491,6 +498,74 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.login(self.user.username, self.password)
         self.logged_in = True
 
+<<<<<<< HEAD
+=======
+    def assertNoAccessibilityViolations(
+        self,
+        impacts=AXE_DEFAULT_IMPACTS,
+        tags=AXE_DEFAULT_TAGS,
+        context=None,
+        exclude=AXE_EXCLUDE_SELECTORS,
+        disabled_rules=AXE_DISABLED_RULES,
+    ):
+        """
+        Assert that the page currently loaded in the browser has no axe-core violations.
+
+        `context` limits the scan to a CSS selector, `exclude` drops selectors from it, and `disabled_rules` names rules
+        not to run at all -- pass `()` to scan with everything the tags select. Errors if axe-core cannot be loaded.
+        Failures name the rule, impact, help text and the first five offending selectors per rule.
+
+        Only violations are reported. axe's `incomplete` bucket -- checks it could not decide -- needs a human, so read
+        it separately (see "Scanning by hand" in `docs/development/core/ui-best-practices.md`). Do not assume an entry
+        there is a checker limitation: contrast is indeterminate for any part of an element falling outside the ancestor
+        that paints its background, so a label overflowing its container reports as undecidable when it is really a
+        layout bug.
+        """
+        self.browser.execute_script(get_axe_core_source())
+
+        # `axe.run` returns a promise, so this needs `execute_async_script`: the driver appends a resolve callback as the
+        # final argument.
+        results = self.browser.driver.execute_async_script(
+            """
+            const [context, exclude, tags, disabledRules, done] = [
+                arguments[0], arguments[1], arguments[2], arguments[3], arguments[arguments.length - 1],
+            ];
+            /* `include`/`exclude` take arrays of selector arrays, so pass bare `document` rather than including it. */
+            const axeContext = {};
+            if (context) { axeContext.include = [[context]]; }
+            if (exclude && exclude.length) { axeContext.exclude = exclude.map((selector) => [selector]); }
+            const axeOptions = { runOnly: { type: 'tag', values: tags } };
+            if (disabledRules.length) {
+                axeOptions.rules = Object.fromEntries(disabledRules.map((rule) => [rule, { enabled: false }]));
+            }
+            axe.run(Object.keys(axeContext).length ? axeContext : document, axeOptions)
+                .then((results) => done({ violations: results.violations }))
+                .catch((error) => done({ error: String(error) }));
+            """,
+            context,
+            list(exclude or ()),
+            list(tags),
+            list(disabled_rules or ()),
+        )
+
+        if results.get("error"):
+            self.fail(f"axe-core failed to run: {results['error']}")
+
+        violations = [violation for violation in results.get("violations", []) if violation.get("impact") in impacts]
+        if not violations:
+            return
+
+        lines = []
+        for violation in violations:
+            lines.append(f"  [{violation['impact']}] {violation['id']}: {violation['help']}")
+            lines.append(f"    {violation['helpUrl']}")
+            for node in violation.get("nodes", [])[:5]:  # The first few offenders are enough to act on.
+                target = ", ".join(node.get("target", []))
+                lines.append(f"    at {target}")
+        details = "\n".join(lines)
+        self.fail(f"{len(violations)} accessibility violation(s) at impact {impacts} on {self.browser.url}:\n{details}")
+
+>>>>>>> develop
     def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
         """
         Scroll element into view. Element can be expressed either as Splinter `ElementList`, `ElementAPI`, CSS query selector or XPath.

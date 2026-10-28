@@ -50,10 +50,15 @@ import { initializeConditionsEditor, nextIndex } from './conditions-editor.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
+<<<<<<< HEAD
 import { initializeExportFields } from './export-fields.js';
 import { getFavoriteLink, getFavoriteName, initializeFavorites } from './favorites.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, pushState, replaceState, saveState } from './history.js';
+=======
+import { getFieldAutoId, initializeFormEvents, initializeRequiredMessages, observeFormStickyFooters } from './form.js';
+import { loadState, saveState } from './history.js';
+>>>>>>> develop
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { initializeToasts, refreshMessages, watchMessages } from './messages.js';
 import { initializeModal } from './modal.js';
@@ -64,11 +69,15 @@ import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 import { initializeSubtrees } from './tree.js';
+import { createElement } from './utils.js';
 
 window.nb ??= {};
 
 // Export `getFieldAutoId` before `'DOMContentLoaded'` for convenience, because existing apps forms may need to use it.
 window.nb.form = { getFieldAutoId };
+
+// Export `createElement` so inline template scripts can build DOM nodes from user-controlled text without `innerHTML`.
+window.nb.utils = { createElement };
 
 document.addEventListener('DOMContentLoaded', () => {
   // History
@@ -113,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+  initializeRequiredMessages();
 
   // HTMX button spinner
   initializeHtmxButtonSpinner();

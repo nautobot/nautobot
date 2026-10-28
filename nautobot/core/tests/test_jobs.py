@@ -5,9 +5,14 @@ import logging
 from pathlib import Path
 from unittest import mock
 
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+<<<<<<< HEAD
+=======
+from django.core.files.base import ContentFile
+>>>>>>> develop
 from django.utils import timezone
 import time_machine
 import yaml
@@ -19,13 +24,36 @@ from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCu
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
+<<<<<<< HEAD
 from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
+=======
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    FrontPortTemplate,
+    Location,
+    LocationType,
+    Manufacturer,
+    Rack,
+    RackReservation,
+)
+>>>>>>> develop
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
+<<<<<<< HEAD
     DynamicGroup,
     ExportTemplate,
+=======
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStageDefinition,
+    Contact,
+    ContactAssociation,
+    DynamicGroup,
+    ExportTemplate,
+    FileProxy,
+>>>>>>> develop
     Job,
     JobButton,
     JobLogEntry,
@@ -37,7 +65,12 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.models.metadata import ObjectMetadata
+<<<<<<< HEAD
 from nautobot.ipam.models import IPAddress, Namespace
+=======
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
+from nautobot.tenancy.models import Tenant
+>>>>>>> develop
 from nautobot.users.models import ObjectPermission, User
 
 
@@ -194,8 +227,361 @@ class ExportObjectListTest(TransactionTestCase):
     def test_object_var_lookup_must_be_permitted(self):
         """An `ObjectVar` given as a dict of attributes (as the REST API accepts) may only use permitted lookups.
 
+<<<<<<< HEAD
         Otherwise, whether the Job is accepted would reveal data such as another user's API token, reached here
         through the users of the object permissions for a content type.
+=======
+        for query_params, expected_output in test_cases:
+            with self.subTest(query_params=query_params, expected_output=expected_output):
+                job = ExportObjectList()
+                filter_params = job._get_saved_view_filter_params(query_params)
+                self.assertEqual(filter_params, expected_output)
+
+    def test_get_saved_view_filter_params_warns_when_saved_view_not_found(self):
+        """An unresolvable saved view is reported, as it silently widens the set of exported objects."""
+        job = ExportObjectList()
+        missing_pk = uuid.uuid4()
+        with mock.patch.object(job, "logger") as mock_logger:
+            self.assertEqual(job._get_saved_view_filter_params({"saved_view": missing_pk}), {})
+        mock_logger.warning.assert_called_once()
+        self.assertIn(str(missing_pk), str(mock_logger.warning.call_args))
+
+    def test_export_saved_view_to_csv_without_filters(self):
+        """Export a SavedView to CSV without any filters applied."""
+        # URL: /?saved_view=<id>
+        sv = self._create_saved_view()
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_export_saved_view_to_csv_with_filters_from_saved_view(self):
+        """Export a SavedView to CSV using filters defined in the SavedView config."""
+        # URL: /?saved_view=<id>
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertGreaterEqual(Status.objects.count(), 1)  # Ensure multiple Statuses exist and filter works
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], filter_name)
+
+    def test_export_saved_view_to_csv_with_combined_filters(self):
+        """Export a SavedView to CSV using combined filters from SavedView config and query params."""
+        # URL: /?saved_view=<id>&name=<filter_name>&name=<filter_name2>
+        filter_name = Status.objects.first().name
+        filter_name2 = Status.objects.last().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], filter_name)
+        self.assertEqual(rows[1]["name"], filter_name2)
+
+    def test_export_saved_view_manufacturer_to_csv_with_replaced_filters(self):
+        """Export a SavedView manufacturer to CSV after replacing filters."""
+        # URL: /?saved_view=<id>&description=<manufacturer2>
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        filter_name = manufacturer.name
+        filter_description = manufacturer2.description
+        sv = self._create_saved_view(model_class=Manufacturer, config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(
+            query_string=f"saved_view={sv.pk}&description={filter_description}", model_class=Manufacturer
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], manufacturer2.name)
+        self.assertEqual(rows[0]["description"], filter_description)
+        self.assertTrue(all(row["name"] != filter_name for row in rows))
+
+    def test_export_saved_view_to_csv_after_removing_all_filters(self):
+        """Export a SavedView to CSV after removing all filters."""
+        # URL: /?saved_view=<id>&all_filters_removed=true
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&all_filters_removed=true")
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_object_var_lookup_must_be_permitted(self):
+        """An `ObjectVar` given as a dict of attributes (as the REST API accepts) may only use permitted lookups.
+
+        Otherwise, whether the Job is accepted would reveal data such as another user's API token, reached here
+        through the users of the object permissions for a content type.
+        """
+        content_type = ContentType.objects.get_for_model(Status)
+        self.assertEqual(
+            ExportObjectList.deserialize_data({"content_type": {"app_label": "extras", "model": "status"}}),
+            {"content_type": content_type},
+        )
+        for lookup in (
+            {"app_label": "extras", "model__startswith": "stat"},
+            {"app_label": "extras", "model": "status", "object_permissions__users__tokens__key__startswith": "a"},
+        ):
+            with self.subTest(lookup=lookup):
+                with self.assertRaisesRegex(ValidationError, "is not a permitted lookup"):
+                    ExportObjectList.deserialize_data({"content_type": lookup})
+
+
+class ImportObjectsRelatedObjectPermissionTest(TransactionTestCase):
+    """A CSV import may reference only related objects the importing user may view."""
+
+    databases = ("default", "job_logs")
+
+    def setUp(self):
+        super().setUp()
+        location_type = LocationType.objects.create(name="Perm Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location = Location.objects.create(
+            name="Perm Location", location_type=location_type, status=Status.objects.get_for_model(Location).first()
+        )
+        self.rack = Rack.objects.create(
+            name="Perm Rack", location=location, status=Status.objects.get_for_model(Rack).first(), u_height=10
+        )
+        User.objects.create(username="reservation-owner", is_superuser=True)
+        self.limited_user = User.objects.create(username="limited-user")
+        permission = ObjectPermission.objects.create(name="Add rack reservations", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(RackReservation))
+        self.limited_user = self.grant_view(self.limited_user, Rack)
+        self.own_tenant = Tenant.objects.create(name="Own Tenant")
+        Tenant.objects.create(name="Hidden Tenant")
+        self.limited_user = self.grant_view(self.limited_user, Tenant, constraints={"name": "Own Tenant"})
+
+    def grant_view(self, user, model, constraints=None):
+        """Grant `user` permission to view `model`, limited to `constraints` if given; returns the refreshed user."""
+        permission = ObjectPermission.objects.create(
+            name=f"View {model._meta.label_lower} {constraints}", actions=["view"], constraints=constraints
+        )
+        permission.users.add(user)
+        permission.object_types.add(ContentType.objects.get_for_model(model))
+        return User.objects.get(pk=user.pk)  # Discard the permission cache
+
+    def import_reservation(self, csv_columns, expected_status):
+        """Import a reservation of units on the rack for the limited user, as them, with the given extra columns.
+
+        The limited user has no permission to view users, but may always reference themselves.
+        """
+        header = ",".join(["rack__id", "units", "user__username", "description", *csv_columns])
+        values = ",".join([str(self.rack.pk), "9", "limited-user", "Imported Reservation", *csv_columns.values()])
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data=f"{header}\n{values}",
+        )
+        self.assertJobResultStatus(job_result, expected_status)
+        return job_result
+
+    def test_unviewable_related_object_cannot_be_referenced(self):
+        self.import_reservation({"tenant__name": "Hidden Tenant"}, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_viewable_related_object_can_be_referenced(self):
+        """A positive control for the test above, which would also pass if every reference were refused."""
+        self.import_reservation({"tenant__name": "Own Tenant"}, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(RackReservation.objects.get(description="Imported Reservation").tenant, self.own_tenant)
+
+    def test_unviewable_related_object_is_reported_as_nonexistent(self):
+        """The error must not depend on whether the referenced object exists, or the import becomes an oracle."""
+
+        def error_for(tenant_name):
+            job_result = self.import_reservation({"tenant__name": tenant_name}, JobResultStatusChoices.STATUS_FAILURE)
+            message = JobLogEntry.objects.get(
+                job_result=job_result, log_level=LogLevelChoices.LOG_ERROR, message__startswith="Row 1"
+            ).message
+            return message.replace(tenant_name, "X")
+
+        self.assertEqual(error_for("Hidden Tenant"), error_for("No Such Tenant"))
+
+    def test_location_may_be_identified_through_an_unviewable_parent(self):
+        """A Location's natural key names its parent, which identifies it even where the parent may not be viewed.
+
+        This is how an export identifies a Location, so a file exported by a user who may view only some Locations
+        must still import.
+        """
+        parent_type = LocationType.objects.create(name="Perm Parent Type")
+        child_type = LocationType.objects.create(name="Perm Child Type", parent=parent_type)
+        child_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Hidden Parent", location_type=parent_type, status=location_status)
+        child = Location.objects.create(
+            name="Visible Child", location_type=child_type, parent=parent, status=location_status
+        )
+        rack_status = Status.objects.get_for_model(Rack).first()
+        permission = ObjectPermission.objects.create(name="Add racks", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(Rack))
+        self.limited_user = self.grant_view(self.limited_user, Status)
+        self.limited_user = self.grant_view(self.limited_user, Location, constraints={"name": "Visible Child"})
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(Rack).pk,
+            csv_data=f"name,status__name,location__name,location__parent__name\nImported Rack,{rack_status.name},"
+            f"{child.name},{parent.name}",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(Rack.objects.get(name="Imported Rack").location, child)
+
+    def test_unviewable_user_cannot_be_referenced(self):
+        """`users.User` has no `restrict()`, which `WritableSerializerMixin` has relied on to apply permissions."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data=f"rack__id,units,user__username,description\n{self.rack.pk},9,reservation-owner,Imported Reservation",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_related_object_lookup_must_be_permitted(self):
+        """A CSV column naming a lookup such as `__startswith` is refused, as the REST API refuses it."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.limited_user.username,
+            content_type=ContentType.objects.get_for_model(RackReservation).pk,
+            csv_data="rack__name__startswith,units,user__username,description\nPerm,9,limited-user,Imported Reservation",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                log_level=LogLevelChoices.LOG_ERROR,
+                message__contains="is not a permitted lookup",
+            ).exists()
+        )
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_unviewable_group_cannot_be_referenced(self):
+        """`auth.Group` has no `restrict()`, and `GroupField` (here, an approver group) applies permissions itself."""
+        workflow = ApprovalWorkflowDefinition.objects.create(
+            name="Perm Workflow", model_content_type=ContentType.objects.get_for_model(Rack), weight=0
+        )
+        Group.objects.create(name="Visible Group")
+        Group.objects.create(name="Hidden Group")
+        permission = ObjectPermission.objects.create(name="Add stage definitions", actions=["add"])
+        permission.users.add(self.limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(ApprovalWorkflowStageDefinition))
+        self.limited_user = self.grant_view(self.limited_user, ApprovalWorkflowDefinition)
+        self.limited_user = self.grant_view(self.limited_user, Group, constraints={"name": "Visible Group"})
+
+        for group_name, expected_status in (
+            ("Hidden Group", JobResultStatusChoices.STATUS_FAILURE),
+            ("Visible Group", JobResultStatusChoices.STATUS_SUCCESS),
+        ):
+            with self.subTest(group_name=group_name):
+                job_result = create_job_result_and_run_job(
+                    "nautobot.core.jobs",
+                    "ImportObjects",
+                    username=self.limited_user.username,
+                    content_type=ContentType.objects.get_for_model(ApprovalWorkflowStageDefinition).pk,
+                    csv_data=(
+                        "approval_workflow_definition,sequence,name,min_approvers,approver_group\n"
+                        f"{workflow.pk},100,Stage for {group_name},1,{group_name}"
+                    ),
+                )
+                self.assertJobResultStatus(job_result, expected_status)
+                self.assertEqual(
+                    ApprovalWorkflowStageDefinition.objects.filter(name=f"Stage for {group_name}").exists(),
+                    expected_status == JobResultStatusChoices.STATUS_SUCCESS,
+                )
+
+
+class ImportObjectsTestCase(TransactionTestCase):
+    databases = ("default", "job_logs")
+
+    csv_data = "\n".join(
+        [
+            "name,color,content_types",
+            "test_status1,111111,dcim.device",
+            'test_status2,222222,"dcim.device,dcim.location"',
+            "test_status3,333333,dcim.device",
+            "test_status4,444444,dcim.device",
+        ]
+    )
+
+    def test_csv_import_without_permission(self):
+        """Job should enforce user permissions on the content-type being imported."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to create status objects')
+        self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
+
+    def test_import_without_data(self):
+        """Either csv_data or csv_file arguments must be provided."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+
+    def test_csv_import_with_constrained_permission(self):
+        """Job should only allow the user to import objects they have permission to add."""
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"color__in": ["111111", "222222"]},
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        self.assertEqual(log_successes[0].message, 'Row 1: Created record "test_status1"')
+        self.assertTrue(Status.objects.filter(name="test_status1").exists())
+        self.assertEqual(log_successes[1].message, 'Row 2: Created record "test_status2"')
+        self.assertTrue(Status.objects.filter(name="test_status2").exists())
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            log_errors[0].message,
+            f'Row 3: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status3").exists())
+        self.assertEqual(
+            log_errors[1].message,
+            f'Row 4: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status4").exists())
+        self.assertEqual(log_successes[2].message, "Created 2 status object(s) from 4 row(s) of data")
+
+    def test_csv_import_with_permission(self):
+        """A superuser running the job with valid data should successfully create all specified objects."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            csv_data=self.csv_data,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
+        )
+        self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
+
+    def test_csv_import_with_utf_8_with_bom_encoding(self):
+>>>>>>> develop
         """
         content_type = ContentType.objects.get_for_model(Status)
         self.assertEqual(

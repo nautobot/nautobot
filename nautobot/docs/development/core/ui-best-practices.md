@@ -267,11 +267,18 @@ Two linters enforce a subset of this automatically, so run them before opening a
     than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
     part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
 
+<<<<<<< HEAD
     Two rules are currently switched off. `color-contrast` (WCAG 1.4.3): the theme fails it in a handful of places, and
     correcting that means retuning palette tokens, which is a deferred product decision, so contrast is not checked
     automatically anywhere. `target-size` (WCAG 2.5.8): the header's Search help link and the tag links in list
     cells are under 24 px, and the rule will be switched back on when `NAUTOBOT-1667` is fixed. See `AXE_DISABLED_RULES` in
     `nautobot/playwright/accessibility.py`, and pass `disabled_rules=()` to scan with both on.
+=======
+    One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
+    correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not
+    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/core/testing/axe.py`, and pass
+    `disabled_rules=()` to scan with it on.
+>>>>>>> develop
 
 Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
 on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its

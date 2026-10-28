@@ -165,7 +165,7 @@ class NautobotAppConfig(NautobotConfig):
 
         # Import metrics (if present)
         metrics = import_string_optional(f"{self.__module__}.{self.metrics}")
-        if metrics is not None and self.name not in settings.METRICS_DISABLED_APPS:
+        if metrics is not None and settings.METRICS_ENABLED and self.name not in settings.METRICS_DISABLED_APPS:
             register_metrics(metrics)
             self.features["metrics"] = []  # Initialize as empty, to be filled by the signal handler
             # Inject the metrics to discover into the signal handler.

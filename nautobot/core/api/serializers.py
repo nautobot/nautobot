@@ -832,7 +832,18 @@ class WritableNestedSerializer(BaseModelSerializer):
                     queryset = restrict_related_lookups(queryset, params, request)
                 except ValueError as e:
                     raise ValidationError(str(e)) from e
+<<<<<<< HEAD
             return resolve_related_object(queryset, params)
+=======
+            try:
+                return queryset.get(**params)
+            except ObjectDoesNotExist:
+                raise ValidationError(f"Related object not found using the provided attributes: {params}")
+            except MultipleObjectsReturned:
+                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
+            except FieldError as e:
+                raise ValidationError(e)
+>>>>>>> develop
 
         queryset = self.get_queryset()
         pk = None

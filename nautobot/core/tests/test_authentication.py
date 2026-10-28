@@ -652,7 +652,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         data = {"rack": rack.pk, "units": [1], "user": other_user.pk, "description": "Permission Reservation"}
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
+<<<<<<< HEAD
         self.assertIn(b"No User matches", response.content)
+=======
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
+>>>>>>> develop
         self.assertFalse(RackReservation.objects.filter(description="Permission Reservation").exists())
 
         # Reference themselves, which a user may always do
@@ -682,7 +686,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # Attempt to reference a group that the requesting user may not view
         response = self.client.patch(url, {"groups": [hidden_group.pk]}, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
+<<<<<<< HEAD
         self.assertIn(b"No Group matches", response.content)
+=======
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
+>>>>>>> develop
         self.assertFalse(other_user.groups.exists())
 
         # Reference a group that the requesting user may view
@@ -773,7 +781,11 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         # A lookup through an unviewable rack group can't find the rack, whether or not the value matches
         response = reserve({"name": rack.name, "rack_group": {"description": "Hidden description"}}, 1)
         self.assertEqual(response.status_code, 400)
+<<<<<<< HEAD
         self.assertIn(b"No Rack matches", response.content)
+=======
+        self.assertIn(b"Related object not found", response.content)
+>>>>>>> develop
 
         # The rack group's natural key, by which exports identify the rack, still finds it
         response = reserve({"name": rack.name, "rack_group": {"name": rack_group.name}}, 2)

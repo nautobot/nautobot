@@ -66,6 +66,7 @@ from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission, User
+<<<<<<< HEAD
 
 
 class ValidateDataBooleanDefaultTest(TestCase):
@@ -112,6 +113,8 @@ class ValidateDataBooleanDefaultTest(TestCase):
         self.assertNotIn("dryrun", defaults)
         # ... and the fill is otherwise working, so that absence means something
         self.assertIn("on_by_default", defaults)
+=======
+>>>>>>> develop
 
 
 class JobTest(TestCase):
