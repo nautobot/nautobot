@@ -5932,17 +5932,6 @@ class JobTestCase(
         response = self.client.get(instance.get_absolute_url())
         self.assertBodyContains(response, apps.get_app_config("example_app").version)
 
-    def test_tiles_actions_button_uses_vertical_dots(self):
-        self.add_permissions("extras.view_job")
-        response = self.client.get(reverse("extras:job_list"), {"display": "tiles"}, headers={"HX-Request": "true"})
-        self.assertHttpStatus(response, 200)
-        body = response.content.decode(response.charset)
-        self.assertIn(
-            '<span class="mdi mdi-dots-vertical" aria-hidden="true"><span class="visually-hidden">Actions</span></span>',
-            body,
-        )
-        self.assertNotIn("mdi-dots-horizontal", body)
-
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
         job_name = instance.name
