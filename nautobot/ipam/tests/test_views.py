@@ -2129,7 +2129,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         self.assertEqual(device_3.primary_ip4, self.dup_ip_3)
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any(m.startswith(f"Unable to merge: could not update the primary IP of {device_3}") for m in messages_list),
+            any(m.startswith(f"Unable to merge: {device_3}: ") for m in messages_list),
             messages_list,
         )
 

@@ -1241,20 +1241,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                             for obj in model.objects.filter(pk__in=pk_list):
                                 try:
                                     setattr(obj, field_name, merged_ip)
-                                    try:
-                                        obj.validated_save()
-                                    except ValidationError as e:
-                                        # e.g. a NAT-outside primary IP whose merged copy has a different `nat_inside`,
-                                        # so it is no longer reachable from the object's interfaces.
-                                        # Roll back the whole merge.
-                                        transaction.set_rollback(True)
-                                        messages.error(
-                                            request,
-                                            f"Unable to merge: could not update the primary IP of {obj}: "
-                                            f"{'; '.join(e.messages)}",
-                                        )
-                                        return redirect(self.get_return_url(request))
-
+                                    obj.validated_save()
                                 except ValidationError as e:
                                     raise ValidationError(f"{obj}: {'; '.join(e.messages)}") from e
                         for service in Service.objects.filter(pk__in=services):
