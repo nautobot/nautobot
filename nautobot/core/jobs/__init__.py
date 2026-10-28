@@ -54,6 +54,7 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.querysets import restrict_queryset
 from nautobot.core.models.sensitive_fields import get_sensitive_field_names
 from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.data import shallow_compare_dict
@@ -689,7 +690,7 @@ class ExportObjectList(Job):
 
         # RESOLVE QUERYSET — which records, in what order: whatever the query string says the launching
         # list view was showing. An empty query string is therefore a full export in the model's own order.
-        queryset = import_utils.restricted_queryset(model, self.user, "view")
+        queryset = restrict_queryset(model.objects.all(), self.user, "view")
         queryset = self._filter_queryset(model, queryset, query_params, saved_view)
 
         filename = self._export_filename(model)
@@ -1055,8 +1056,8 @@ class ImportObjects(Job):
             )
             raise PermissionDenied("User does not have create or update permissions on the requested content-type")
         return (
-            import_utils.restricted_queryset(model, self.user, "add"),
-            import_utils.restricted_queryset(model, self.user, "change"),
+            restrict_queryset(model.objects.all(), self.user, "add"),
+            restrict_queryset(model.objects.all(), self.user, "change"),
         )
 
     def _validate_match(self, data, effective_match_fields, match_fields_source, serializer_class):
