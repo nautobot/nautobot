@@ -39,7 +39,8 @@ def create_cablepath(path_endpoint: PathEndpoint, rebuild=True):
     """
     Create CablePaths for all paths originating from the specified PathEndpoint (Interface, etc.).
 
-    For breakouts, creates one CablePath per fan-out lane mapped to this path_endpoint's connector via the template.
+    For multi-connector cables, creates one CablePath per distinct opposite-side connector mapped to this
+    path_endpoint's connector via the cable type's lane mapping.
 
     Args:
         rebuild (bool): If True, `rebuild_paths(path_endpoint)` will be called to refresh related paths as well.
@@ -49,8 +50,8 @@ def create_cablepath(path_endpoint: PathEndpoint, rebuild=True):
         # path_endpoint is connected to a Cable.
         cable = cable_to_cable_termination.cable
 
-        if cable.cable_type_id and cable.cable_type.is_breakout:
-            # Breakout cable: fan out one CablePath per distinct peer-side connector mapped from this
+        if cable.cable_type_id and cable.cable_type.is_multi_connector:
+            # Multi-connector cable: one CablePath per distinct peer-side connector mapped from this
             # origin's connector. Multiple mapping entries that share a peer-side connector represent
             # internal lanes terminating at the same far-end object, so they collapse to one path.
             origin_side_key = "a_connector" if cable_to_cable_termination.cable_end == "A" else "b_connector"
@@ -77,7 +78,7 @@ def create_cablepath(path_endpoint: PathEndpoint, rebuild=True):
                 ).exists():
                     cable_path.save()
         else:
-            # Standard cable or no breakout endpoint found — single path
+            # Single-connector cable — single path
             cable_path = CablePath.from_origin(path_endpoint)
             if (
                 cable_path

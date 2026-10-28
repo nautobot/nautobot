@@ -2838,7 +2838,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "retrieve":
+        if self.action == "list":
+            # The table can't infer these relations from the primary_ip property.
+            queryset = queryset.select_related("primary_ip4", "primary_ip6")
+        elif self.action == "retrieve":
             queryset = queryset.select_related(
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
@@ -6576,38 +6579,31 @@ class ModuleFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ModuleFamilySerializer
     table_class = tables.ModuleFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if not instance:
-            return context
-
-        if self.action == "retrieve":
-            module_types = (
-                ModuleType.objects.restrict(request.user, "view")
-                .filter(module_family=instance)
-                .select_related("manufacturer")
-            )
-            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
-
-            module_bays = (
-                ModuleBay.objects.restrict(request.user, "view")
-                .filter(module_family=instance)
-                .select_related("parent_device", "parent_module")
-            )
-            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(module_type_table)
-            RequestConfig(request, paginate).configure(module_bay_table)
-
-            context["module_type_table"] = module_type_table
-            context["module_bay_table"] = module_bay_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ModuleTypeTable,
+                table_filter="module_family",
+                select_related_fields=["manufacturer"],
+                exclude_columns=["module_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ModuleBayTable,
+                table_filter="module_family",
+                select_related_fields=["parent_device", "parent_module"],
+                exclude_columns=["module_family"],
+            ),
+        )
+    )
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):

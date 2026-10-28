@@ -1,9 +1,12 @@
+import uuid
+
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from selenium.webdriver.common.keys import Keys
 
 from nautobot.core.testing.integration import ObjectsListMixin, SeleniumTestCase
-from nautobot.dcim.models import Device
+from nautobot.dcim.models import Controller, Device
+from nautobot.extras.choices import DynamicGroupTypeChoices
 from nautobot.extras.models import DynamicGroup
 
 from . import create_test_device
@@ -83,3 +86,34 @@ class DynamicGroupTestCase(SeleniumTestCase, ObjectsListMixin):
             f"{self.live_server_url}{reverse('dcim:device_dynamicgroups', kwargs={'pk': devices[0].pk})}"
         )
         self.assertTrue(self.browser.is_text_present(name))
+
+    def test_bulk_assign_all_filtered_items_from_all_pages(self):
+        """
+        Test that "Update Group Assignment for All" only assigns the objects matching the list view's filters.
+        """
+        Controller.objects.all().delete()
+        Device.objects.all().delete()
+        test_uuid = str(uuid.uuid4())
+        for i in range(1, 4):
+            create_test_device(f"Test Device {i}", test_uuid=test_uuid)
+        for i in range(4, 6):
+            create_test_device(f"Test Device {i}", "Test Location 2", test_uuid=test_uuid)
+        group = DynamicGroup.objects.create(
+            name="Static Device Group",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+
+        self.browser.visit(f"{self.live_server_url}{reverse('dcim:device_list')}")
+        self.set_per_page()
+        self.apply_filter("location", "Test Location 2")
+        self.select_all_items_from_all_pages()
+        self.click_button("#update_dynamic_groups_for_all")
+        self.browser.find_by_id("dynamic_group_assignment_modal").first.is_visible(wait_time=5)
+        self.fill_select2_multiselect_field("add_to_groups", group.name)
+        self.click_button('#dynamic_group_assignment_form button[type="submit"]')
+
+        self.assertTrue(self.browser.is_text_present("Added 2 devices to 1 dynamic group(s).", wait_time=5))
+        self.assertQuerySetEqualAndNotEmpty(
+            group.members, Device.objects.filter(location__name="Test Location 2"), ordered=False
+        )

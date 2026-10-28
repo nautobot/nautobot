@@ -1072,9 +1072,11 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         If not found, return to IPAddressListView with a helpful message.
         """
         queryset = self.get_queryset()
+        # Only offer IPs that post() would actually merge: within both the "change" and "delete" constraints.
+        mergeable_ips = queryset.restrict(request.user, "delete")
         if merged_attributes:
             host_values = (
-                queryset.filter(host__gt=merged_attributes.get("host"))
+                mergeable_ips.filter(host__gt=merged_attributes.get("host"))
                 .values("host")
                 .order_by("host")
                 .annotate(count=models.Count("host"))
@@ -1082,11 +1084,11 @@ class IPAddressUIViewSet(NautobotUIViewSet):
             )
         else:
             host_values = (
-                queryset.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
+                mergeable_ips.values("host").order_by("host").annotate(count=models.Count("host")).filter(count__gt=1)
             )
         if host_values:
             item = host_values[0]
-            duplicates = queryset.filter(host__in=[item["host"]])
+            duplicates = mergeable_ips.filter(host__in=[item["host"]])
             return render(
                 request=request,
                 template_name="ipam/ipaddress_merge.html",
