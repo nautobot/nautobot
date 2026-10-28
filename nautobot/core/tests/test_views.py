@@ -195,11 +195,11 @@ class ObjectListViewStickyHeadersTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_view_tables_mark_headers_sticky(self):
-        """Both list view implementations render a `<table>` carrying `nb-table-sticky-headers`.
+        """Both list view implementations render a `<table>` that has the `nb-table-sticky-headers` class.
 
-        `circuits:provider_list` is built by `NautobotHTMLRenderer.construct_table` and
-        `dcim:console_connections_list` by `ObjectListView.get`, which instantiate their tables
-        independently and can therefore diverge.
+        `NautobotHTMLRenderer.construct_table` builds the table for `circuits:provider_list`, and
+        `ObjectListView.get` builds the table for `dcim:console_connections_list`. The two methods create
+        their tables independently, so their output can diverge.
         """
         self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
         for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
