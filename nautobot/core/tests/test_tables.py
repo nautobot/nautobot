@@ -429,7 +429,7 @@ class BaseTableStickyHeadersTestCase(TestCase):
     """Covers how `BaseTable.__init__` applies `nb-table-sticky-headers` to the class string."""
 
     def test_argument_omitted(self):
-        """The class string omits `nb-table-sticky-headers` when `sticky_headers` kwarg is `False` by default."""
+        """The class string omits `nb-table-sticky-headers` when the `sticky_headers` kwarg is not passed and defaults to `False`."""
         table = RIRTable(RIR.objects.none())
         self.assertNotIn("nb-table-sticky-headers", table.attrs["class"].split())
 
