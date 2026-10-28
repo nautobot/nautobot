@@ -107,7 +107,7 @@
             if (!response.ok) {
                 table_info.style.display = "none";
                 table.style.display = "none";
-                fetch_failure.innerHTML = data.detail + " Data cannot be imported for this content-type.";
+                fetch_failure.textContent = data.detail + " Data cannot be imported for this content-type.";
                 fetch_failure.style.display = "";
                 return;
             }
@@ -153,12 +153,6 @@
                 /* Choices */
                 td = document.createElement("td");
                 if (field.choices) {
-                    let choicesHTML = "";
-                    for (const [value, label] of Object.entries(field.choices)) {
-                        if (value) {
-                            choicesHTML += `<tr><td><samp>${value}</samp></td><td>${label}</td></tr>`;
-                        }
-                    }
                     td.innerHTML += `
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#${ field.name }_choices">
@@ -180,12 +174,22 @@
                                     </div>
                                     <table class="table table-hover modal-body">
                                         <tr><th>Import Value</th><th>Label</th></tr>
-                                        ${choicesHTML}
                                     </table>
                                 </div>
                             </div>
                         </div>
                     `;
+                    /* Choice values and labels can be user-defined (custom field choices), so insert them as text */
+                    const choicesTable = td.querySelector("table");
+                    for (const [value, label] of Object.entries(field.choices)) {
+                        if (value) {
+                            const choiceRow = choicesTable.insertRow();
+                            const samp = document.createElement("samp");
+                            samp.textContent = value;
+                            choiceRow.insertCell().appendChild(samp);
+                            choiceRow.insertCell().textContent = label;
+                        }
+                    }
                 } else {
                     td.innerHTML = '<span class="text-secondary">—</span>';
                 }
@@ -194,12 +198,16 @@
                 /* Description */
                 td = document.createElement("td");
                 if (field.help_text) {
+                    /* help_text is intentionally HTML, not appended to the DOM as text here.
+                    Custom field descriptions are rendered and sanitized server side by render_markdown(),
+                    and other field help_texts are defined in code (not user-defined). */
                     td.innerHTML += `${field.help_text}<br>`;
                 } else if (field.label) {
-                    td.innerHTML += `${field.label}<br>`;
+                    /* Custom field labels are user-defined, so insert them as text */
+                    td.append(field.label, document.createElement("br"));
                 }
                 if (field.format) {
-                    td.innerHTML += `<small class="text-secondary">Format: ${field.format}</small>`
+                    td.insertAdjacentHTML("beforeend", `<small class="text-secondary">Format: ${field.format}</small>`);
                 }
                 tr.appendChild(td);
 

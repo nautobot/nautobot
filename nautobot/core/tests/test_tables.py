@@ -5,14 +5,17 @@ from types import SimpleNamespace
 from unittest import mock
 import warnings
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
 from django.db.models import IntegerField, Value
-from django.test import SimpleTestCase, tag, TestCase
+from django.template.loader import get_template
+from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
-from django_tables2 import Column
+import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 import nautobot
@@ -21,21 +24,41 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn, ToggleColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.testing import AssertNoRepeatedQueries
 from nautobot.dcim.api.serializers import DeviceSerializer, ManufacturerSerializer
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Manufacturer, Rack, RackGroup
+from nautobot.dcim.models import (
+    Device,
+    Interface,
+    InterfaceRedundancyGroupAssociation,
+    InventoryItem,
+    Location,
+    LocationType,
+    Manufacturer,
+    Rack,
+    RackGroup,
+)
 from nautobot.dcim.tables import (
     DeviceTable,
+    InterfaceRedundancyGroupAssociationTable,
     InventoryItemTable,
     LocationTable,
     LocationTypeTable,
     ManufacturerTable,
     RackGroupTable,
 )
-from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ComputedField, CustomField, JobLogEntry
-from nautobot.extras.tables import JobLogEntryTable
+from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.models import (
+    ApprovalWorkflowStage,
+    ComputedField,
+    CustomField,
+    JobLogEntry,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+)
+from nautobot.extras.tables import JobLogEntryTable, RoleTable
 from nautobot.ipam.api.serializers import PrefixSerializer
-from nautobot.ipam.models import Prefix, RIR
+from nautobot.ipam.models import IPAddress, Prefix, RIR
 from nautobot.ipam.tables import PrefixTable, RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.users.models import User
@@ -403,7 +426,7 @@ class BaseTableOverviewColumnTestCase(TestCase):
         table = self.OverviewTable(
             RIR.objects.none(),
             row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW,
-            extra_columns=[("extra", Column())],
+            extra_columns=[("extra", tables.Column())],
         )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "extra", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 4})
@@ -441,6 +464,104 @@ class LinkedCountColumnRenderTestCase(TestCase):
         self.assertIn("badge", rendered)
 
 
+class BaseTablePrefetchTestCase(TestCase):
+    def test_content_types_column_uses_the_prefetch(self):
+        content_type = ContentType.objects.get_for_model(Device)
+        for i in range(12):
+            Role.objects.create(name=f"Prefetch Test Role {i}").content_types.add(content_type)
+
+        with AssertNoRepeatedQueries(self):
+            table = RoleTable(Role.objects.filter(name__startswith="Prefetch Test Role"))
+            for row in table.rows:
+                row.get_cell("content_types")
+
+    def test_to_many_accessor_after_a_foreign_key_is_prefetched(self):
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config(
+            "tables.InterfaceRedundancyGroupAssociationTable.columns",
+            ["interface", "interface__ip_addresses"],
+            commit=True,
+        )
+
+        table = InterfaceRedundancyGroupAssociationTable(InterfaceRedundancyGroupAssociation.objects.all(), user=user)
+
+        self.assertIn("interface__ip_addresses", table.data.data._prefetch_related_lookups)
+
+    def test_relationship_column_uses_the_prefetch(self):
+        location_type = ContentType.objects.get_for_model(Location)
+        relationship = Relationship.objects.create(
+            label="Prefetch Test",
+            key="prefetch_test",
+            source_type=location_type,
+            destination_type=location_type,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        # BaseTable adds relationship columns to the class's base_columns, and the rollback skips the cache invalidation.
+        self.addCleanup(relationship.delete)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_src", None)
+        self.addCleanup(LocationTable.base_columns.pop, "cr_prefetch_test_dst", None)
+        destination, *sources = Location.objects.all()[:13]
+        self.assertEqual(len(sources), 12)
+        for source in sources:
+            RelationshipAssociation.objects.create(relationship=relationship, source=source, destination=destination)
+        user = get_user_model().objects.create_user(username="BaseTablePrefetchTestCase")
+        user.set_config("tables.LocationTable.columns", ["name", "cr_prefetch_test_src"], commit=True)
+
+        with AssertNoRepeatedQueries(self):
+            table = LocationTable(Location.objects.filter(pk__in=[source.pk for source in sources]), user=user)
+            for row in table.rows:
+                row.get_cell("cr_prefetch_test_src")
+
+
+class BaseTableAccessorWalkTestCase(TestCase):
+    """Records how BaseTable loads the related objects along each shape of column accessor."""
+
+    def _optimized_queryset(self, table_model, column_accessor):
+        class AccessorTable(BaseTable):
+            accessed = tables.Column(accessor=column_accessor)
+
+            class Meta(BaseTable.Meta):
+                model = table_model
+                default_columns = ("accessed",)
+
+        return AccessorTable(table_model.objects.all()).data.data
+
+    def test_accessor_shapes(self):
+        cases = (
+            # ForeignKeys only: one join.
+            (Device, "tenant__tenant_group", {"tenant": {"tenant_group": {}}}, ()),
+            # The walk stops at the first non-relation field.
+            (Device, "tenant__name", {"tenant": {}}, ()),
+            # A to-many hop with no ForeignKey before it.
+            (Device, "interfaces", False, ("interfaces",)),
+            # A ForeignKey after a to-many hop joins the prefetch.
+            (Interface, "ip_addresses__parent", False, ("ip_addresses__parent",)),
+            # A to-many hop after a ForeignKey: the ForeignKey is joined, and the prefetch runs through it.
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses",
+                {"interface": {}},
+                ("interface__ip_addresses",),
+            ),
+            (
+                InterfaceRedundancyGroupAssociation,
+                "interface__ip_addresses__parent",
+                {"interface": {}},
+                ("interface__ip_addresses__parent",),
+            ),
+            # A GenericForeignKey is prefetched only when no ForeignKey comes before it.
+            (RelationshipAssociation, "source", False, ("source",)),
+            (ApprovalWorkflowStage, "approval_workflow__object_under_review", {"approval_workflow": {}}, ()),
+            # A reverse many-to-many hop is not followed.
+            (IPAddress, "interfaces", False, ()),
+        )
+        for model, accessor, select_related, prefetch_related in cases:
+            with self.subTest(model=model.__name__, accessor=accessor):
+                queryset = self._optimized_queryset(model, accessor)
+                self.assertEqual(queryset.query.select_related, select_related)
+                self.assertEqual(queryset._prefetch_related_lookups, prefetch_related)
+
+
 class ButtonsColumnTestCase(TestCase):
     """Covers how ButtonsColumn resolves the `buttons` argument."""
 
@@ -468,6 +589,28 @@ class ButtonsColumnTestCase(TestCase):
         """An explicit non-empty subset is passed through unchanged."""
         column = ButtonsColumn(RIR, buttons=("delete",))
         self.assertEqual(column.extra_context["buttons"], ("delete",))
+
+
+class BaseTableTemplateColumnRequestTestCase(TestCase):
+    """Covers the `request` that a `BaseTable`'s `TemplateColumn` templates see when rendered."""
+
+    class RequestPathTable(BaseTable):
+        request_path = tables.TemplateColumn(template_code="{{ request.path }}")
+
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("name", "request_path")
+
+    def test_template_column_sees_current_request_without_request_config(self):
+        """A table rendered without `RequestConfig`, as on detail-view tabs, still gives column templates the request."""
+        rir = RIR.objects.create(name="Template Column Request RIR")
+        table = self.RequestPathTable(RIR.objects.filter(pk=rir.pk))
+        request = RequestFactory().get("/some/detail/view/")
+        request.user = AnonymousUser()
+
+        rendered = get_template("responsive_table.html").render({"table": table}, request)
+
+        self.assertInHTML("<td>/some/detail/view/</td>", rendered)
 
 
 class ComputedFieldColumnRenderTestCase(TestCase):
