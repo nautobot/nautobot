@@ -452,14 +452,16 @@ class FrontPortTemplate(ModularComponentTemplateModel):
     def clean(self):
         super().clean()
 
-        # Validate rear port assignment
+        # Validate rear port assignment before accessing the related object.
+        if not self.rear_port_template_id:
+            raise ValidationError({"rear_port_template": "A rear port must be specified."})
         if self.device_type and self.rear_port_template.device_type != self.device_type:
             raise ValidationError(f"Rear port ({self.rear_port_template}) must belong to the same device type")
         if self.module_type and self.rear_port_template.module_type != self.module_type:
             raise ValidationError(f"Rear port ({self.rear_port_template}) must belong to the same module type")
 
         # Validate rear port position assignment
-        if self.rear_port_position > self.rear_port_template.positions:
+        if self.rear_port_position is not None and self.rear_port_position > self.rear_port_template.positions:
             raise ValidationError(
                 (
                     f"Invalid rear port position ({self.rear_port_position}); "

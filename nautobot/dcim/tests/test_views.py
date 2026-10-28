@@ -977,9 +977,131 @@ class ManufacturerTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
         return [mf.pk for mf in mfs]
 
 
+class FrontPortTemplateImportTestMixin:
+    """Exercise front port validation and rollback through the YAML import views."""
+
+    def _front_port_import_data(self):
+        manufacturer, _ = Manufacturer.objects.get_or_create(name="Repro")
+        return {
+            "manufacturer": manufacturer.name,
+            "model": "repro-front-no-rear",
+            "rear-ports": [{"name": "R1", "type": "mpo", "positions": 12}],
+            "front-ports": [{"name": "F1", "type": "lc-upc"}],
+        }
+
+    def _add_front_port_import_permissions(self):
+        self.add_permissions(
+            "dcim.view_manufacturer",
+            f"dcim.view_{self.model._meta.model_name}",
+            f"dcim.add_{self.model._meta.model_name}",
+            "dcim.add_consoleporttemplate",
+            "dcim.add_consoleserverporttemplate",
+            "dcim.add_powerporttemplate",
+            "dcim.add_poweroutlettemplate",
+            "dcim.add_interfacetemplate",
+            "dcim.add_devicebaytemplate",
+            "dcim.add_modulebaytemplate",
+            "dcim.add_rearporttemplate",
+            "dcim.add_frontporttemplate",
+        )
+
+    def _post_front_port_import(self, data):
+        return self.client.post(
+            reverse(f"dcim:{self.model._meta.model_name}_import"),
+            data={"data": yaml.safe_dump(data), "format": "yaml"},
+        )
+
+    def _assert_front_port_import_failure(self, data, error):
+        models = (self.model, RearPortTemplate, FrontPortTemplate)
+        counts = [model.objects.count() for model in models]
+        response = self._post_front_port_import(data)
+        self.assertHttpStatus(response, 200)
+        self.assertIn(error, response.context["form"].non_field_errors())
+        self.assertContains(response, error)
+        self.assertEqual([model.objects.count() for model in models], counts)
+        self.assertFalse(self.model.objects.filter(model=data["model"]).exists())
+
+    def test_import_front_port_without_rear_port(self):
+        self.user.is_superuser = True
+        self.user.save()
+        for value in ({}, {"rear_port": None}, {"rear_port_template": ""}):
+            with self.subTest(value=value):
+                data = self._front_port_import_data()
+                data["front-ports"][0].update(value)
+                self._assert_front_port_import_failure(
+                    data, "front-ports[0] rear_port_template: A rear port must be specified."
+                )
+
+    def test_import_front_port_rear_port_aliases(self):
+        self._add_front_port_import_permissions()
+        for field in ("rear_port", "rear_port_template"):
+            for position in (None, 12):
+                with self.subTest(field=field, position=position):
+                    data = self._front_port_import_data()
+                    data["model"] = f"repro-{field}-{position}"
+                    data["front-ports"][0][field] = "R1"
+                    if position is not None:
+                        data["front-ports"][0]["rear_port_position"] = position
+                    response = self._post_front_port_import(data)
+                    self.assertHttpStatus(response, 302)
+                    parent = self.model.objects.get(model=data["model"])
+                    front_port = parent.front_port_templates.get(name="F1")
+                    self.assertEqual(front_port.rear_port_template, parent.rear_port_templates.get(name="R1"))
+                    self.assertEqual(front_port.rear_port_position, position or 1)
+
+    def test_import_front_port_invalid_position(self):
+        self._add_front_port_import_permissions()
+        data = self._front_port_import_data()
+        data["front-ports"][0].update(rear_port="R1", rear_port_position=13)
+        self._assert_front_port_import_failure(
+            data, "front-ports[0] __all__: Invalid rear port position (13); rear port R1 has only 12 positions"
+        )
+
+    def test_import_front_port_from_other_type(self):
+        self._add_front_port_import_permissions()
+        data = self._front_port_import_data()
+        other_parent = self.model.objects.exclude(model=data["model"]).first()
+        RearPortTemplate.objects.create(
+            **{self.model._meta.verbose_name.replace(" ", "_"): other_parent},
+            name="Foreign rear port",
+            type=PortTypeChoices.TYPE_MPO,
+        )
+        for field in ("rear_port", "rear_port_template"):
+            with self.subTest(field=field):
+                data["front-ports"] = [{"name": "F1", "type": "lc-upc", field: "Foreign rear port"}]
+                self._assert_front_port_import_failure(
+                    data,
+                    "front-ports[0] rear_port_template: Select a valid choice. That choice is not one of the available choices.",
+                )
+
+    def test_import_front_port_failure_rolls_back_previous_components(self):
+        self._add_front_port_import_permissions()
+        data = self._front_port_import_data()
+        data["front-ports"] = [
+            {"name": "F1", "type": "lc-upc", "rear_port": "R1"},
+            {"name": "F2", "type": "lc-upc"},
+        ]
+        self._assert_front_port_import_failure(
+            data, "front-ports[1] rear_port_template: A rear port must be specified."
+        )
+
+    def test_import_front_port_without_permission(self):
+        self._add_front_port_import_permissions()
+        self.remove_permissions("dcim.add_frontporttemplate")
+        data = self._front_port_import_data()
+        data["front-ports"][0]["rear_port"] = "R1"
+        models = (self.model, RearPortTemplate, FrontPortTemplate)
+        counts = [model.objects.count() for model in models]
+        response = self._post_front_port_import(data)
+        self.assertHttpStatus(response, 403)
+        self.assertContains(response, "You do not have permission to access this page.", status_code=403)
+        self.assertEqual([model.objects.count() for model in models], counts)
+
+
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by absence of bulk import view for DeviceTypes
 class DeviceTypeTestCase(
+    FrontPortTemplateImportTestMixin,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
@@ -990,6 +1112,14 @@ class DeviceTypeTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = DeviceType
+
+    def test_import_front_port_permission_violation(self):
+        self._add_front_port_import_permissions()
+        self.remove_permissions("dcim.add_devicetype")
+        self.add_permissions("dcim.add_devicetype", constraints={"model": "permitted"})
+        data = self._front_port_import_data()
+        data["front-ports"][0]["rear_port"] = "R1"
+        self._assert_front_port_import_failure(data, "Object creation failed due to object-level permissions violation")
 
     @classmethod
     def setUpTestData(cls):
@@ -1417,6 +1547,7 @@ module-bays:
 
 
 class ModuleTypeTestCase(
+    FrontPortTemplateImportTestMixin,
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.CreateObjectViewTestCase,
