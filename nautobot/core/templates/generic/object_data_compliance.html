@@ -1,0 +1,12 @@
+{% extends base_template %}
+
+{% block content %}
+    {% if object_detail_content %}
+        {{ block.super }}
+    {% else %}
+        <div class="card">
+            {% include 'responsive_table.html' %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=table.paginator page=table.page %}
+    {% endif %}
+{% endblock %}

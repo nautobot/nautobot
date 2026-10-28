@@ -29,6 +29,7 @@ from nautobot.core.testing import (
 from nautobot.core.testing.utils import (
     generate_random_device_asset_tag_of_specified_size,
 )
+from nautobot.data_validation.models import DataCompliance
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -3491,6 +3492,30 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(ipaddresses),
                 sorted(interface_ips),
             )
+
+    def test_data_compliance_tab(self):
+        """A Module with compliance results gets a Data Compliance tab that lists them, rather than the main tab content."""
+        self.add_permissions("dcim.view_module", "data_validation.view_datacompliance")
+        module = Module.objects.first()
+        DataCompliance.objects.create(
+            compliance_class_name="ModuleSerialRule",
+            content_type=ContentType.objects.get_for_model(Module),
+            object_id=module.pk,
+            validated_object_str=str(module),
+            validated_attribute="serial",
+            message="Module serial is not compliant.",
+            valid=False,
+        )
+        data_compliance_url = module.get_data_compliance_url()
+
+        response = self.client.get(module.get_absolute_url())
+        self.assertBodyContains(response, f'href="{data_compliance_url}"')
+        self.assertBodyContains(response, "<td>Installed in</td>", html=True)
+
+        response = self.client.get(data_compliance_url)
+        self.assertBodyContains(response, "Module serial is not compliant.")
+        # The main tab's attribute panel is not rendered on this tab
+        self.assertNotContains(response, "<td>Installed in</td>", html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):
