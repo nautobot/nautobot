@@ -8,12 +8,9 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.template import Context, Template
 from django.templatetags.static import static, StaticNode
 from django.test import override_settings, tag
-<<<<<<< HEAD
 from django.utils.html import format_html
-=======
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy
->>>>>>> develop
 
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import NAUTOBOT_EDITION_URLS, NAUTOBOT_STATIC_ASSETS

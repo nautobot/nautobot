@@ -107,11 +107,7 @@
             if (!response.ok) {
                 table_info.style.display = "none";
                 table.style.display = "none";
-<<<<<<< HEAD
-                fetch_failure.innerHTML = data.detail + " Data cannot be imported for this content-type.";
-=======
-                fetch_failure.textContent = data.detail + " CSV cannot be imported for this content-type.";
->>>>>>> develop
+                fetch_failure.textContent = data.detail + " Data cannot be imported for this content-type.";
                 fetch_failure.style.display = "";
                 return;
             }

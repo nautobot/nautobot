@@ -50,15 +50,10 @@ import { initializeConditionsEditor, nextIndex } from './conditions-editor.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
-<<<<<<< HEAD
 import { initializeExportFields } from './export-fields.js';
 import { getFavoriteLink, getFavoriteName, initializeFavorites } from './favorites.js';
-import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
-import { loadState, pushState, replaceState, saveState } from './history.js';
-=======
 import { getFieldAutoId, initializeFormEvents, initializeRequiredMessages, observeFormStickyFooters } from './form.js';
-import { loadState, saveState } from './history.js';
->>>>>>> develop
+import { loadState, pushState, replaceState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { initializeToasts, refreshMessages, watchMessages } from './messages.js';
 import { initializeModal } from './modal.js';

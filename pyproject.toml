@@ -2,11 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-<<<<<<< HEAD
 version = "3.3.0a0"
-=======
-version = "3.2.9a0"
->>>>>>> develop
 description = "Source of truth and network automation platform."
 authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
@@ -105,19 +101,6 @@ dependencies = [
     # OpenTelemetry (opt-in tracing/metrics/logs; enabled via OTEL_PYTHON_DJANGO_INSTRUMENT).
     # The SDK/exporter (1.4x) and the instrumentation packages (0.6xb0) release in lockstep;
     # keep them on the same coordinated line when bumping.
-<<<<<<< HEAD
-    "opentelemetry-exporter-otlp (>=1.45.0,<1.46)",
-    "opentelemetry-instrumentation-celery (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-dbapi (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-django (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-logging (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-mysqlclient (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-psycopg2 (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-redis (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-requests (>=0.66b0,<0.67)",
-    "opentelemetry-instrumentation-wsgi (>=0.66b0,<0.67)",
-    "opentelemetry-sdk (>=1.45.0,<1.46)",
-=======
     "opentelemetry-exporter-otlp (>=1.45.1,<1.46)",
     "opentelemetry-instrumentation-celery (>=0.66b1,<0.67)",
     "opentelemetry-instrumentation-dbapi (>=0.66b1,<0.67)",
@@ -129,12 +112,10 @@ dependencies = [
     "opentelemetry-instrumentation-requests (>=0.66b1,<0.67)",
     "opentelemetry-instrumentation-wsgi (>=0.66b1,<0.67)",
     "opentelemetry-sdk (>=1.45.1,<1.46)",
->>>>>>> develop
     # Handling of version numbers
     "packaging (>=23.2)",
     # Image processing library
-    "pillow (>=12.3.0,<13) ; python_version < '3.11'",
-    "pillow (>=13.0.0,<14) ; python_version >= '3.11'",
+    "pillow (>=13.0.0,<14)",
     # Custom prometheus metrics
     "prometheus-client (>=0.26.0,<0.27)",
     # PostgreSQL database adapter

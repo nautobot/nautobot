@@ -13,11 +13,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
-<<<<<<< HEAD
 from django.db import connections, DEFAULT_DB_ALIAS
-=======
 from django.db.models import QuerySet
->>>>>>> develop
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone

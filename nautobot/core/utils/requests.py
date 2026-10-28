@@ -62,34 +62,6 @@ def mock_wsgi_request(user=None, **kwargs):
     return request
 
 
-def mock_wsgi_request(user=None, **kwargs):
-    """
-    Stripped down version of `django.test.client.RequestFactory.request()` that isn't dependent on `django.test`.
-    """
-    request = WSGIRequest(
-        {
-            "PATH_INFO": "/",
-            "REMOTE_ADDR": "127.0.0.1",
-            "REQUEST_METHOD": "GET",
-            "SCRIPT_NAME": "",
-            "SERVER_NAME": "nautobot",
-            "SERVER_PORT": "80",
-            "SERVER_PROTOCOL": "HTTP/1.1",
-            "wsgi.version": (1, 0),
-            "wsgi.url_scheme": "http",
-            "wsgi.input": BytesIO(b""),
-            "wsgi.errors": BytesIO(),
-            "wsgi.multiprocess": True,
-            "wsgi.multithread": False,
-            "wsgi.run_once": False,
-            **kwargs,
-        }
-    )
-    if user is not None:
-        request.user = user
-    return request
-
-
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):
     """
     Convert request QueryDict/GET into an acceptable factory formset QueryDict

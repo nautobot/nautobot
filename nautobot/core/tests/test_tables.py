@@ -15,11 +15,7 @@ from django.db.models import IntegerField, Value
 from django.template.loader import get_template
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
-<<<<<<< HEAD
-from django_tables2 import Column
-=======
 import django_tables2 as tables
->>>>>>> develop
 from django_tables2.utils import Accessor
 
 import nautobot
@@ -28,25 +24,8 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn, ToggleColumn
 from nautobot.core.templatetags import helpers
-<<<<<<< HEAD
-from nautobot.dcim.api.serializers import DeviceSerializer, ManufacturerSerializer
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Manufacturer, Rack, RackGroup
-from nautobot.dcim.tables import (
-    DeviceTable,
-    InventoryItemTable,
-    LocationTable,
-    LocationTypeTable,
-    ManufacturerTable,
-    RackGroupTable,
-)
-from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices
-from nautobot.extras.models import ComputedField, CustomField, JobLogEntry
-from nautobot.extras.tables import JobLogEntryTable
-from nautobot.ipam.api.serializers import PrefixSerializer
-from nautobot.ipam.models import Prefix, RIR
-from nautobot.ipam.tables import PrefixTable, RIRTable
-=======
 from nautobot.core.testing import AssertNoRepeatedQueries
+from nautobot.dcim.api.serializers import DeviceSerializer, ManufacturerSerializer
 from nautobot.dcim.models import (
     Device,
     Interface,
@@ -54,29 +33,33 @@ from nautobot.dcim.models import (
     InventoryItem,
     Location,
     LocationType,
+    Manufacturer,
     Rack,
     RackGroup,
 )
 from nautobot.dcim.tables import (
+    DeviceTable,
     InterfaceRedundancyGroupAssociationTable,
     InventoryItemTable,
     LocationTable,
     LocationTypeTable,
+    ManufacturerTable,
     RackGroupTable,
 )
-from nautobot.extras.choices import ComputedFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices, RelationshipTypeChoices
 from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ComputedField,
+    CustomField,
     JobLogEntry,
     Relationship,
     RelationshipAssociation,
     Role,
 )
 from nautobot.extras.tables import JobLogEntryTable, RoleTable
-from nautobot.ipam.models import IPAddress, RIR
-from nautobot.ipam.tables import RIRTable
->>>>>>> develop
+from nautobot.ipam.api.serializers import PrefixSerializer
+from nautobot.ipam.models import IPAddress, Prefix, RIR
+from nautobot.ipam.tables import PrefixTable, RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.users.models import User
 from nautobot.wireless.models import WirelessNetwork
@@ -443,7 +426,7 @@ class BaseTableOverviewColumnTestCase(TestCase):
         table = self.OverviewTable(
             RIR.objects.none(),
             row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW,
-            extra_columns=[("extra", Column())],
+            extra_columns=[("extra", tables.Column())],
         )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "extra", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 4})

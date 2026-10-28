@@ -528,13 +528,10 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
         self.add_permissions("auth.view_group")
         super().test_recreate_object_csv()
 
-<<<<<<< HEAD
     def test_recreate_object_document(self):
         self.add_permissions("auth.view_group")
         super().test_recreate_object_document()
 
-=======
->>>>>>> develop
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approver_group_permission_constraints(self):
         """An approver group may be referenced only if the user may view it."""

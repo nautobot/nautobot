@@ -158,7 +158,10 @@ def create_test_device(name):
     """
     Convenience method for creating a Device (e.g. for component testing).
     """
-    location_type, _ = LocationType.objects.get_or_create(name="Campus")
+    device_ct = ContentType.objects.get_for_model(Device)
+    location_type, created = LocationType.objects.get_or_create(name="Campus")
+    if created:
+        location_type.content_types.add(device_ct)
     location_status = Status.objects.get_for_model(Location).first()
     location, _ = Location.objects.get_or_create(
         name="Test Location 1", location_type=location_type, status=location_status
@@ -166,7 +169,6 @@ def create_test_device(name):
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
-    device_ct = ContentType.objects.get_for_model(Device)
     devicerole.content_types.add(device_ct)
     devicestatus = Status.objects.get_for_model(Device).first()
     device = Device.objects.create(
@@ -1504,7 +1506,6 @@ class ModuleTypeTestCase(
             "comments": "changed comment",
         }
 
-<<<<<<< HEAD
     def test_detail_view_renders_weight_unit(self):
         """The detail view shows the weight together with its unit."""
         module_type = ModuleType.objects.create(
@@ -1518,7 +1519,7 @@ class ModuleTypeTestCase(
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn("0.45 Kilograms", content)
-=======
+
     def test_detail_component_table_action_buttons_have_correct_return_url(self):
         """Assert that a component template's edit/delete buttons return to the correct tab of the ModuleType view."""
         self.add_permissions(
@@ -1537,7 +1538,6 @@ class ModuleTypeTestCase(
         for action in ("edit", "delete"):
             action_url = reverse(f"dcim:interfacetemplate_{action}", kwargs={"pk": interface_template.pk})
             self.assertIn(f'href="{action_url}?return_url={return_url}"', content)
->>>>>>> develop
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has both import options (single-record YAML/JSON link, multi-record

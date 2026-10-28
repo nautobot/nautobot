@@ -54,17 +54,12 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
-<<<<<<< HEAD
 from nautobot.core.models.querysets import restrict_queryset
 from nautobot.core.models.sensitive_fields import get_sensitive_field_names
 from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.data import shallow_compare_dict
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
-=======
-from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params, mock_wsgi_request
->>>>>>> develop
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -786,7 +781,6 @@ class ImportObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-<<<<<<< HEAD
     IMPORT_PARSERS = {
         "csv": NautobotCSVParser,
         "json": NautobotJSONImportParser,
@@ -804,24 +798,6 @@ class ImportObjects(Job):
         created_objs = []
         updated_objs = []
         unchanged_objs = []
-=======
-    def _perform_atomic_operation(self, data, serializer_class, queryset, serializer_context):
-        new_objs = []
-        with contextlib.suppress(AbortTransaction):
-            with transaction.atomic():
-                new_objs, validation_failed = self._perform_operation(
-                    data, serializer_class, queryset, serializer_context
-                )
-                if validation_failed:
-                    raise AbortTransaction
-                return new_objs, validation_failed
-        # If validation failed return an empty list, since all objs created were rolled back
-        self.logger.warning("Rolling back all %s records.", len(new_objs))
-        return [], validation_failed
-
-    def _perform_operation(self, data, serializer_class, queryset, serializer_context):
-        new_objs = []
->>>>>>> develop
         validation_failed = False
         rolled_back = False
         transaction_ctx = transaction.atomic() if atomic else contextlib.nullcontext()
@@ -849,7 +825,6 @@ class ImportObjects(Job):
         match_serializer = serializer_class(context=context)
         write_only_fields = import_utils.write_only_field_names(serializer_class)
         for row, entry in enumerate(data, start=1):
-<<<<<<< HEAD
             try:
                 instance = self._match_row(row, entry, match, match_serializer, change_queryset)
                 # Taken before validating the row, which sets its values on the instance
@@ -861,25 +836,6 @@ class ImportObjects(Job):
                     row, serializer, instance, before, add_queryset, change_queryset, match_fields, write_only_fields
                 )
             except _RowFailed:
-=======
-            serializer = serializer_class(data=entry, context=serializer_context)
-            if serializer.is_valid():
-                try:
-                    with transaction.atomic():
-                        new_obj = serializer.save()
-                        if not queryset.filter(pk=new_obj.pk).exists():
-                            raise AbortTransaction()
-                    self.logger.info('Row %d: Created record "%s"', row, new_obj, extra={"object": new_obj})
-                    new_objs.append(new_obj)
-                except AbortTransaction:
-                    self.logger.error(
-                        'Row %d: User "%s" does not have permission to create an object with these attributes',
-                        row,
-                        self.user,
-                    )
-                    validation_failed = True
-            else:
->>>>>>> develop
                 validation_failed = True
                 continue
             self._report_row(row, outcome, obj, before, diff, write_only_changes)
@@ -1050,7 +1006,6 @@ class ImportObjects(Job):
             text = csv_data
             filename = ""
 
-<<<<<<< HEAD
         return text, filename
 
     def _select_parser(self, import_format, filename, text):
@@ -1082,20 +1037,6 @@ class ImportObjects(Job):
                 import_model,
                 content_type.app_label,
                 content_type.model,
-=======
-        # A request carrying the user, so that the related objects a row references are looked up only among those
-        # the user may view (see `WritableSerializerMixin.to_internal_value()`).
-        # A GET request, as the import has always been processed, so that opt-in fields such as `relationships` are
-        # not newly accepted from the data; see `OptInFieldsMixin`.
-        request = mock_wsgi_request(user=self.user, SERVER_NAME="import_objects")
-        serializer_context = {"request": request}
-
-        new_objs = []
-        try:
-            data = NautobotCSVParser().parse(
-                stream=csv_bytes,
-                parser_context={"request": request, "serializer_class": serializer_class},
->>>>>>> develop
             )
             raise RunJobTaskFailed("Import file model does not match the requested content-type")
 
@@ -1203,21 +1144,10 @@ class ImportObjects(Job):
 
             # UPSERT
             self.logger.info("Processing %d rows of data", len(data))
-<<<<<<< HEAD
             match = (effective_match_fields, match_fields_source)
             created_objs, updated_objs, unchanged_objs, validation_failed = self._perform_import_operation(
                 data, serializer_class, add_queryset, change_queryset, match, atomic=roll_back_if_error
             )
-=======
-            if roll_back_if_error:
-                new_objs, validation_failed = self._perform_atomic_operation(
-                    data, serializer_class, queryset, serializer_context
-                )
-            else:
-                new_objs, validation_failed = self._perform_operation(
-                    data, serializer_class, queryset, serializer_context
-                )
->>>>>>> develop
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)

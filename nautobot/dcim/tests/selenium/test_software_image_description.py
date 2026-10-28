@@ -2,8 +2,8 @@ from django.urls import reverse
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import InventoryItem, Platform, SoftwareImageFile, SoftwareVersion
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.extras.models import Status
-from nautobot.extras.tests.integration import create_test_device
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 DEVICE_TYPE_MARKER = '<b class="ncsat-marker">device type</b>'

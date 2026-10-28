@@ -1395,13 +1395,10 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         self.add_permissions("users.view_user")
         super().test_recreate_object_csv()
 
-<<<<<<< HEAD
     def test_recreate_object_document(self):
         self.add_permissions("users.view_user")
         super().test_recreate_object_document()
 
-=======
->>>>>>> develop
 
 class DeviceFamilyTest(APIViewTestCases.APIViewTestCase):
     model = DeviceFamily

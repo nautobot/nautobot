@@ -4,11 +4,7 @@ import uuid
 from django.db.models import AutoField, Model
 from rest_framework.exceptions import ValidationError
 
-<<<<<<< HEAD
 from nautobot.core.api.utils import dict_to_filter_params, get_request_with_user, resolve_related_object
-=======
-from nautobot.core.api.utils import dict_to_filter_params, get_request_with_user
->>>>>>> develop
 from nautobot.core.models.querysets import restrict_queryset, restrict_related_lookups
 from nautobot.core.utils.data import is_url
 
@@ -95,18 +91,7 @@ class WritableSerializerMixin:
                 queryset = restrict_related_lookups(queryset, filter_params, request)
             except ValueError as e:
                 raise ValidationError(str(e)) from e
-<<<<<<< HEAD
         return resolve_related_object(queryset, filter_params)
-=======
-        try:
-            return queryset.get(**filter_params)
-        except ObjectDoesNotExist as e:
-            raise ValidationError(f"Related object not found using the provided attributes: {filter_params}") from e
-        except MultipleObjectsReturned as e:
-            raise ValidationError(f"Multiple objects match the provided attributes: {filter_params}") from e
-        except FieldError as e:
-            raise ValidationError(e) from e
->>>>>>> develop
 
     def to_internal_value(self, data):
         """
