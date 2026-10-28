@@ -860,10 +860,11 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
 }
 
 /*
- * Focus Not Obscured (WCAG 2.4.11, AA). A sticky table header obscures a focused element scrolled to the top of the
- * page, so reserve scroll padding equal to the header row height. The selector is page-level, because its only
- * consumers are the list views, which always scroll the entire page. The value is derived from the same variables as
- * the table header, so the two are kept in sync.
+ * Focus Not Obscured (WCAG 2.4.11, AA). A sticky table header covers a focused element that the browser scrolls to
+ * the top of the page, so this rule reserves scroll padding equal to the height of the header row. The rule sets the
+ * padding on the root element rather than on a scroll container, because only list views use sticky headers, and
+ * list views always scroll the entire page. The value is calculated from the same variables as the table header, so
+ * the padding stays equal to the header height when those variables change.
  */
 :root:has(.nb-table-sticky-headers) {
   scroll-padding-block-start: calc($table-cell-padding-y * 2 + $line-height-base * $font-size-base + $table-border-width); /* 37.125px */
