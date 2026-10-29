@@ -2,6 +2,7 @@
 
 import re
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -40,7 +41,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model)
             # cache is explicitly invalidated by nautobot.data_validation.signals.invalidate_validation_rule_caches
-            cache.set(cache_key, queryset, timeout=None)
+            cache.set(cache_key, queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)
         return queryset
 
     @property
@@ -57,7 +58,7 @@ class ValidationRuleManager(BaseManager.from_queryset(RestrictedQuerySet)):
         if queryset is None:
             queryset = self.filter(content_type__app_label=app_label, content_type__model=model, enabled=True)
             # cache is explicitly invalidated by nautobot.data_validation.signals.invalidate_validation_rule_caches
-            cache.set(cache_key, queryset, timeout=None)
+            cache.set(cache_key, queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)
         return queryset
 
     @property

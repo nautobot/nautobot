@@ -2,6 +2,7 @@ from collections import defaultdict
 import logging
 
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -494,12 +495,19 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if not get_queryset:
                 listing, _ = cache_get_or_set(
                     list_cache_key,
-                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
-                    timeout=None,
+                    lambda: list(
+                        cache_get_or_set(cache_key, compute_queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)[0]
+                    ),
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                     cache_hit_callback=hit_callback,
                 )
                 return listing
-            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            queryset, _ = cache_get_or_set(
+                cache_key,
+                compute_queryset,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
+                cache_hit_callback=hit_callback,
+            )
             return queryset
 
     def get_for_model_destination(self, model, hidden=None, get_queryset=True):
@@ -555,12 +563,19 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if not get_queryset:
                 listing, _ = cache_get_or_set(
                     list_cache_key,
-                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
-                    timeout=None,
+                    lambda: list(
+                        cache_get_or_set(cache_key, compute_queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)[0]
+                    ),
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                     cache_hit_callback=hit_callback,
                 )
                 return listing
-            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            queryset, _ = cache_get_or_set(
+                cache_key,
+                compute_queryset,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
+                cache_hit_callback=hit_callback,
+            )
             return queryset
 
     def get_required_for_model(self, model):
@@ -602,7 +617,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                         listing=True,
                     ),
                     listings["source"][label][hidden],
-                    timeout=None,
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                 )
                 cache.set(
                     construct_cache_key(
@@ -614,7 +629,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                         listing=True,
                     ),
                     listings["destination"][label][hidden],
-                    timeout=None,
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                 )
 
 
