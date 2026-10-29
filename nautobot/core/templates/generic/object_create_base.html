@@ -137,7 +137,7 @@
                 .find('select.select2-hidden-accessible')
                 .each((index, select) => $(select).select2('destroy'));
 
-            const resetButtonSpinners = (root) =>
+            const clearSpinnersByEndingTheirRequest = (root) =>
             root.querySelectorAll('[data-nb-spinner-active]').forEach((button) => {
                 button.dispatchEvent(new CustomEvent('htmx:afterRequest', { bubbles: true, detail: { elt: button } }));
             });
@@ -153,7 +153,7 @@
                 hideTooltips(content);
                 destroySelect2Fields(content);
                 content.replaceChildren(fragment);
-                resetButtonSpinners(content);
+                clearSpinnersByEndingTheirRequest(content);
                 window.nb.select2.initializeSelect2Fields(content);
                 embeddedAction.targetFieldName = targetFieldName;
                 return { content, nestedTargetFieldName };
