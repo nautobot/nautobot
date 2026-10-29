@@ -116,7 +116,7 @@ properties:
   ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD:
     default: 365
     description: >-
-      The default age in days, past which a record is eligible to be archived Used by the `Archive Old Records`
+      The default age in days, past which a record is eligible to be archived. Used by the `Archive Old Records`
       system Job when no age threshold is supplied at runtime.
     is_constance_config: true
     type: "integer"

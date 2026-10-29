@@ -17,8 +17,6 @@ ARCHIVAL_ORDER = (
     "extras.objectchange",  # Independent
     # --------------------
     "extras.jobresult",  # Parent to JobConsoleEntry, Parent to JobLogEntry
-    "extras.joblogentry",  # Dependent on JobResult
-    "extras.jobconsoleentry",  # Dependent on JobResult
 )
 # TODO: Ask about FileProxy which is dependent on JobResult
 
@@ -31,30 +29,32 @@ ARCHIVAL_DISPLAY_ORDER = tuple(sorted(ARCHIVAL_ORDER))
 #       Should either separate these into different jobs or rename this to something like `ArchiveOldRecords` (naming is hard)
 class ArchiveOldRecords(Job):
     """
-    Move database records that are past specific age threshold into a warm database and table.
+    Move database records that are past specific age threshold into a warm table.
 
-    This job helps migrate old database records to a separate database and table in order to help optimize performance of database queries.
+    This job helps migrate old database records to a seaprate table in order to help optimize performance of database queries.
     """
 
-    ui_selected_models_to_archive = MultiChoiceVar(
+    selected_models_to_archive = MultiChoiceVar(
         choices=[(label, label) for label in ARCHIVAL_DISPLAY_ORDER],
-        description="The Database records archive. Leave empty to archive all of them.",
+        description="The models whose records are archived. Leave empty to archive all of them.",
         label="Models To Archive",
-        required=False,
+        required=True,
     )
-    ui_archive_age_threshold = IntegerVar(
+    archive_age_threshold = IntegerVar(
         description=(
-            "Records older than this age are selected to be archived. Leave empty to use the ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD setting."
+            "Records older than this many days are archived. Leave empty to use the ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD setting."
         ),
         label="Archive Age Threshold",
+        default=get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD"),
         min_value=1,
-        required=False,
+        required=True,
     )
-    ui_archive_batch_size = IntegerVar(
+    archive_batch_size = IntegerVar(
         description=(
-            "Records to move per each archival step. Leave empty to use the ARCHIVE_MODEL_DEFAULT_BATCH_SIZE setting. Lower it if the archival task runs out of memory."
+            "Number of records to move for each batch in the archival step. Leave empty to use the ARCHIVE_MODEL_DEFAULT_BATCH_SIZE setting. Lower it if the archival task runs out of memory."
         ),
         label="Archive Batch Size",
+        default=get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE"),
         min_value=1,
         required=False,
     )
@@ -62,39 +62,34 @@ class ArchiveOldRecords(Job):
 
     class Meta:
         name = JOB_NAME
-        description = "This job will migrate the specified Model records to a separate database and table in order to enhance performance of the existing database."
+        description = "This job will migrate the specified Model records to a separate table in order to enhance performance of the existing database."
         has_sensitive_variables = False
         dryrun_default = True
 
     def run(  # pylint: disable=arguments-differ
         self,
         *,
-        ui_selected_models_to_archive=None,
-        ui_archive_age_threshold=None,
-        ui_archive_batch_size=None,
+        selected_models_to_archive=None,
+        archive_age_threshold=None,
+        archive_batch_size=None,
         dryrun=True,
     ):
-        selected_models = set(ui_selected_models_to_archive or ARCHIVAL_ORDER)
+        selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
         dependency_sorted_models_to_archive = [
             model_label for model_label in ARCHIVAL_ORDER if model_label in selected_models
         ]
 
-        archive_model_age_threshold = ui_archive_age_threshold or get_settings_or_config(
-            "ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD"
-        )
-        archive_model_batch_size = ui_archive_batch_size or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE")
-
         # Calculated once so that every model is archived against the same instant
-        archive_model_threshold_timestamp = timezone.now() - timedelta(days=archive_model_age_threshold)
+        archive_model_threshold_timestamp = timezone.now() - timedelta(days=archive_age_threshold)
 
         # Nautobot has a global `_handle_deleted_object` registerd to the pre_delete signal
-        # We disable it here because deletions that occur with an archival job do not need it. Also helps with performance
+        # We disable it here because deletions that occur with an archival job does not need it. Also helps with performance.
         self.logger.debug("Temporarily disconnecting the _handle_deleted_object signal for performance")
         pre_delete.disconnect(_handle_deleted_object)
         try:
             for model_label in dependency_sorted_models_to_archive:
                 if model_label == "extras.objectchange":
-                    self._archive_object_changes(archive_model_threshold_timestamp, archive_model_batch_size, dryrun)
+                    self._archive_object_changes(archive_model_threshold_timestamp, archive_batch_size, dryrun)
                 # TODO: extras.jobresult, which carries its log and console entries with it.
         finally:
             self.logger.debug("Re-connecting the _handle_deleted_object signal")
@@ -104,8 +99,8 @@ class ArchiveOldRecords(Job):
         """
         Archive `ObjectChange` records older than `threshold_timestamp`, one batch at a time.
 
-        `ObjectChange` has no relations in either direction, so it is archived on its own and carries no
-        ordering constraints.
+        No other archivable model has a foreign key to `ObjectChange`, so it can be archived on its own, in any
+        order relative to the other models.
 
         Args:
             threshold_timestamp (datetime): Records older than this are archived.
@@ -149,7 +144,7 @@ class ArchiveOldRecords(Job):
             current_batch += 1
 
             try:
-                current_archived_object_change_count = self._archive_object_change_batch(object_change_batch)
+                current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
                 self.fail(
                     "Stopping at batch %d: %s. Archived %d of %d ObjectChange records before stopping.",
@@ -172,7 +167,7 @@ class ArchiveOldRecords(Job):
         )
         return total_archived_object_change_count
 
-    def _archive_object_change_batch(self, object_change_batch):
+    def _process_archive_object_change_batch(self, object_change_batch):
         """
         Copy one batch into the archive, confirm it landed, then delete the live rows it covers.
 
@@ -192,15 +187,18 @@ class ArchiveOldRecords(Job):
                 place, so a later run retries them.
         """
         object_changes_to_archive_pks = [object_change.pk for object_change in object_change_batch]
+        new_archived_object_changes = [ArchivedObjectChange.from_object_change(object_change) for object_change in object_change_batch]
+
 
         # `ignore_conflicts` is what makes a re-run harmless: an archived record keeps the primary key it
         # had live, so re-archiving one that is already there conflicts rather than duplicating it.
         ArchivedObjectChange.objects.bulk_create(
-            [ArchivedObjectChange.from_source(object_change) for object_change in object_change_batch],
+            new_archived_object_changes,
             ignore_conflicts=True,
         )
 
-        # The write above is silent about rows it skipped, so ask the archive what it has
+        # bulk_create() with ignore_conflicts=True does not report which rows it skipped, so query the archive table
+        # for the primary keys from this batch that it contains in order to compare with the archive candidates
         archived_object_change_pks = list(
             ArchivedObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).values_list("pk", flat=True)
         )
