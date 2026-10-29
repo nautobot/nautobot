@@ -191,7 +191,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
 
 
 class ObjectListViewStickyHeadersTestCase(TestCase):
-    """Covers whether the `sticky_headers` argument adds `nb-table-sticky-headers` to the rendered `<table>` in both list view implementations."""
+    """Covers whether the `sticky_headers` argument adds `nb-table-sticky-headers` to the rendered `<table>` in list views."""
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_view_tables_mark_headers_sticky(self):
@@ -208,6 +208,20 @@ class ObjectListViewStickyHeadersTestCase(TestCase):
                 self.assertHttpStatus(response, 200)
                 body = extract_page_body(response.content.decode(response.charset))
                 self.assertRegex(body, r"<table[^>]*nb-table-sticky-headers")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_htmx_table_fragment_marks_headers_sticky(self):
+        """The HTMX table fragment renders a `<table>` that has the `nb-table-sticky-headers` class.
+
+        `components/htmx/list_view_table.html` includes `panel_table.html` independently of the initial
+        response, so the two can diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name), headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertRegex(response.content.decode(response.charset), r"<table[^>]*nb-table-sticky-headers")
 
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):

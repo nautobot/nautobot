@@ -1071,7 +1071,7 @@ $table-variants: (
 }
 
 .table-responsive:has(.nb-table-sticky-headers) {
-  overflow: auto clip; /* Override Bootstrap's default `overflow-x: auto` to enable sticky headers. */
+  overflow-y: clip; /* Pairs with Bootstrap's `overflow-x: auto` to remove the vertical scroll and enable table sticky headers. */
 }
 
 .nb-table-headings th {
