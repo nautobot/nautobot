@@ -398,7 +398,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
