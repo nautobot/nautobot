@@ -6019,7 +6019,8 @@ class ControllerBulkEditForm(
         required=False,
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
     )
     external_integration = DynamicModelChoiceField(
@@ -6346,7 +6347,8 @@ class VirtualDeviceContextFilterForm(
         null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )

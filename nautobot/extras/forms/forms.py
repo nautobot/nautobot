@@ -980,7 +980,8 @@ class DynamicGroupBulkEditForm(NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
     )
 
@@ -1802,7 +1803,8 @@ class JobHookFilterForm(BootstrapMixin, forms.Form):
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     job = DynamicModelMultipleChoiceField(
         label="Job",
-        queryset=Job.objects.all(), query_params={"sort": "name"},
+        queryset=Job.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
@@ -1824,7 +1826,8 @@ class JobQueueBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
     )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
@@ -1860,7 +1863,8 @@ class JobQueueForm(NautobotModelForm):
         label="Queue Type",
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
     )
     description = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH)
@@ -1945,7 +1949,8 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
     q = forms.CharField(required=False, label="Search")
     job_model = DynamicModelMultipleChoiceField(
         label="Job",
-        queryset=Job.objects.all(), query_params={"sort": "name"},
+        queryset=Job.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/jobs/"),
@@ -1990,7 +1995,8 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
     name = forms.CharField(required=False)
     job_model = DynamicModelMultipleChoiceField(
         label="Job",
-        queryset=Job.objects.all(), query_params={"sort": "name"},
+        queryset=Job.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         to_field_name="name",
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),

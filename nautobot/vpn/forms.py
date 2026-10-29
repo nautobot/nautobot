@@ -83,7 +83,8 @@ class VPNProfileBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, 
     )
     tenant = DynamicModelChoiceField(
         required=False,
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         label="Tenant",
     )
 
@@ -439,7 +440,8 @@ class VPNBulkEditForm(
         label="VPN Profile",
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )
@@ -558,7 +560,8 @@ class VPNTunnelBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, N
         label="Encapsulation",
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )
@@ -704,7 +707,8 @@ class VPNTunnelEndpointBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditForm
         help_text="VPN Profile for the tunnel endpoint.",
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(), query_params={"sort": "name"},
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )
