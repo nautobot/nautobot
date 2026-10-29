@@ -1666,6 +1666,7 @@ class EmbeddedCreateDepthTestCase(TestCase):
         self.assertBodyContains(response, """hx-headers='{"HX-Embedded-Action": "create", "HX-Embedded-Depth": "1"}'""")
         self.assertNotContains(response, "Add a new status")
         self.assertNotContains(response, "Add a new tenant")
+        self.assertNotContains(response, 'data-bs-title="Add a new location"')
 
     def test_location_modal_hides_nested_button_without_permission(self):
         self.remove_permissions("dcim.add_locationtype")
