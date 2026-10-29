@@ -196,17 +196,18 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
             return False
         return True
 
-    def wait_for_focused_select2(self, field_name, timeout=10):
-        script = (
-            "return document.activeElement.closest('.select2-container')?.parentElement.querySelector('select')?.name;"
-        )
+    def wait_until_script_is_truthy(self, script, timeout=10):
         try:
-            WebDriverWait(self.browser.driver, timeout).until(
-                lambda driver: driver.execute_script(script) == field_name
-            )
+            WebDriverWait(self.browser.driver, timeout).until(lambda driver: driver.execute_script(script))
         except TimeoutException:
             return False
         return True
+
+    def wait_for_focused_select2(self, field_name):
+        return self.wait_until_script_is_truthy(
+            "return document.activeElement.closest('.select2-container')?.parentElement"
+            f".querySelector('select')?.name === '{field_name}';"
+        )
 
     def fill_modal_name(self, name):
         self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").fill(name)
@@ -274,13 +275,33 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.fill_modal_name(location_name)
         location_type_count = LocationType.objects.count()
 
+        self.assertTrue(
+            self.browser.execute_script(
+                "return !!bootstrap.Tooltip.getInstance(document.querySelector("
+                "'#embedded_action_modal [data-bs-title=\"Add a new location type\"]'));"
+            )
+        )
         self.click_modal_button(self.modal_xpath, "Add a new location type")
         self.wait_for_modal_title("Add a new location type")
+        self.assertTrue(
+            self.wait_until_script_is_truthy(
+                "return document.querySelector('#embedded_action_modal .modal-content').contains(document.activeElement);"
+            )
+        )
         self.click_modal_button(self.modal_xpath, "Back")
 
         self.wait_for_modal_title("Add a new location")
         self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, location_name)
         self.assertEqual(LocationType.objects.count(), location_type_count)
+        self.assertEqual(
+            self.browser.execute_script(
+                "const modal = document.querySelector('#embedded_action_modal');"
+                "return [...modal.querySelectorAll('select.nautobot-select2-api')].filter("
+                "(select) => !select.classList.contains('select2-hidden-accessible')).length"
+                " + modal.querySelectorAll('[data-nb-spinner-active]').length;"
+            ),
+            0,
+        )
         self.assertTrue(self.wait_for_focused_select2("location_type"))
 
         self.click_modal_button(self.modal_xpath, "Add a new location type")

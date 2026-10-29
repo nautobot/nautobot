@@ -89,7 +89,7 @@
             <div
                 class="modal-content"
                 hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
-                hx-on:htmx:load="jsify_form(this);"
+                hx-on:htmx:load="jsify_form(this); window.nb.embeddedAction.handleLoad(this);"
             ></div>
         </div>
     </div>
@@ -122,6 +122,25 @@
                 return targetField;
             };
 
+            const hideTooltips = (root) =>
+                root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+                    bootstrap.Tooltip.getInstance(element)?.hide();
+                });
+
+            /*
+             * Select2 keeps its instances in a cache keyed by element `id`, and the outer and the nested form render the
+             * same `embedded_id_*` ids, so a Select2 of one form would destroy the Select2 of the other.
+             */
+            const destroySelect2Fields = (root) =>
+                $(root)
+                    .find('select.select2-hidden-accessible')
+                    .each((index, select) => $(select).select2('destroy'));
+
+            const resetButtonSpinners = (root) =>
+                root.querySelectorAll('[data-nb-spinner-active]').forEach((button) => {
+                    button.dispatchEvent(new CustomEvent('htmx:afterRequest', { bubbles: true, detail: { elt: button } }));
+                });
+
             const restore = () => {
                 const embeddedAction = window.nb.embeddedAction;
                 if (embeddedAction.stack.length === 0) {
@@ -130,7 +149,11 @@
                 const { fragment, targetFieldName } = embeddedAction.stack.pop();
                 const nestedTargetFieldName = embeddedAction.targetFieldName;
                 const content = modalContent();
+                hideTooltips(content);
+                destroySelect2Fields(content);
                 content.replaceChildren(fragment);
+                resetButtonSpinners(content);
+                window.nb.select2.initializeSelect2Fields(content);
                 embeddedAction.targetFieldName = targetFieldName;
                 return { content, nestedTargetFieldName };
             };
@@ -154,8 +177,11 @@
                     return;
                 }
                 embeddedAction.pendingOuterForm = null;
+                const content = modalContent();
+                hideTooltips(content);
+                destroySelect2Fields(content);
                 const fragment = document.createDocumentFragment();
-                fragment.append(...modalContent().childNodes);
+                fragment.append(...content.childNodes);
                 embeddedAction.stack.push({ fragment, targetFieldName: pending.targetFieldName });
             };
 
@@ -206,6 +232,21 @@
                 }
             };
 
+            const handleLoad = (content) => {
+                content.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+                    bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+                const isNestedFormShowing = window.nb.embeddedAction.stack.length > 0;
+                if (isNestedFormShowing) {
+                    setTimeout(() => {
+                        if (!content.contains(document.activeElement)) {
+                            const firstField = content.querySelector('input:not([type="hidden"]), textarea');
+                            (firstField || content.closest('.modal')).focus();
+                        }
+                    }, 100);
+                }
+            };
+
             const handleStart = ({ targetFieldName, depth = 1 }) => {
                 const embeddedAction = window.nb.embeddedAction;
                 if (depth > 1) {
@@ -221,6 +262,7 @@
             window.nb.embeddedAction = {
                 handleBack,
                 handleEnd,
+                handleLoad,
                 handleStart,
                 pendingOuterForm: null,
                 stack: [],
