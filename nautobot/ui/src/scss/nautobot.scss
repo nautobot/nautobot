@@ -772,6 +772,14 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
+/* Structured data rendered by render_json and render_yaml, including inside auto-layout tables. */
+code.language-json,
+code.language-yaml {
+  white-space: pre-wrap;
+  /* Override Bootstrap's code word-wrap so long tokens also reduce the table's minimum content width. */
+  overflow-wrap: anywhere;
+}
+
 /* Links */
 a,
 button {
