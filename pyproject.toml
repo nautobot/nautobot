@@ -15,7 +15,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -32,7 +31,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.11,<3.13"
 # Background task processing
 celery = "~5.6.2"
 # Cryptographic recipes and primitives.
@@ -128,7 +127,7 @@ nh3 = "~0.3.2"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = [{version = "^12.3.0", python = "<3.11"}, {version = "^13.0.0", python = ">=3.11"}]
+Pillow = "^13.0.0"
 # Custom prometheus metrics
 prometheus-client = "~0.23.1"
 # PostgreSQL database adapter
@@ -278,7 +277,7 @@ extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
-py-version = "3.10"
+py-version = "3.11"
 ignore-paths = [
     ".*third_party.*",
     "nautobot/extras/tests/git_data/02-invalid-files/",
@@ -399,7 +398,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
