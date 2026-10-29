@@ -127,6 +127,11 @@
                 bootstrap.Tooltip.getInstance(element)?.hide();
             });
 
+            const disposeTooltips = (root) =>
+            root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+                bootstrap.Tooltip.getInstance(element)?.dispose();
+            });
+
             /*
              * Select2 stores each instance in a cache keyed by the element `id`. The outer form and the nested form
              * both render fields with the same `embedded_id_*` ids, so initializing or destroying a Select2 field in
@@ -150,7 +155,7 @@
                 const { fragment, targetFieldName } = embeddedAction.stack.pop();
                 const nestedTargetFieldName = embeddedAction.targetFieldName;
                 const content = modalContent();
-                hideTooltips(content);
+                disposeTooltips(content);
                 destroySelect2Fields(content);
                 content.replaceChildren(fragment);
                 clearSpinnersByEndingTheirRequest(content);
@@ -254,6 +259,7 @@
                 if (depth > 1) {
                     embeddedAction.pendingOuterForm ??= { targetFieldName: embeddedAction.targetFieldName, trigger };
                 } else {
+                    disposeTooltips(modalContent());
                     modalContent().innerHTML =
                         '<div class="spinner-border mx-auto my-16"><span class="visually-hidden">Loading...</span></div>';
                 }
@@ -273,6 +279,8 @@
 
             modalContent()?.addEventListener('htmx:afterRequest', cancelPendingOuterForm);
             document.querySelector('#embedded_action_modal')?.addEventListener('hidden.bs.modal', () => {
+                window.nb.embeddedAction.stack.forEach(({ fragment }) => disposeTooltips(fragment));
+                disposeTooltips(modalContent());
                 window.nb.embeddedAction.stack.length = 0;
                 window.nb.embeddedAction.pendingOuterForm = null;
             });
