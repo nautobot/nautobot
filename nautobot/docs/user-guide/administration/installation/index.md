@@ -90,6 +90,9 @@ Whether you are getting started for the first time, looking to build a local lab
 
     * You’ll have to find something else to do with all that freed-up time now that you’re not maintaining on-prem applications and infrastructure.
 
+!!! tip "Running Nautobot across multiple servers"
+    For a deployment that can survive the failure of a single server, see the [High Availability](../guides/high-availability.md) guide.
+
 ## About Dependencies
 
 This section describes the system dependencies required for Nautobot. They can be all installed on a single system, or distributed across your environment. That will be up to you. Our install instructions assume a single system install, and that is good for most use cases. More advanced configurations are also possible, but are not covered here.

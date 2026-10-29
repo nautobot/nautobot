@@ -2,6 +2,7 @@ from itertools import groupby
 import re
 
 from django import forms as django_forms
+from django.db.models import Manager, QuerySet
 from django.forms.models import fields_for_model
 
 from nautobot.core import forms
@@ -141,12 +142,16 @@ def form_from_model(model, fields):
 
 def restrict_form_fields(form, user, action="view"):
     """
-    Restrict all form fields which reference a RestrictedQuerySet. This ensures that users see only permitted objects
-    as available choices.
+    Restrict all form fields which reference a queryset to the objects on which `user` may perform `action` (see
+    `restrict_queryset()`). This ensures that users see, and may submit, only permitted objects as choices.
     """
     for field in form.fields.values():
-        if hasattr(field, "queryset") and issubclass(field.queryset.__class__, querysets.RestrictedQuerySet):
-            field.queryset = field.queryset.restrict(user, action)
+        queryset = getattr(field, "queryset", None)
+        # A field may name something else `queryset`, as an App's own field class might
+        if isinstance(queryset, (QuerySet, Manager)):
+            restricted = querysets.restrict_queryset(queryset, user, action)
+            if restricted is not queryset:
+                field.queryset = restricted
 
 
 def add_field_to_filter_form_class(form_class, field_name, field_obj):

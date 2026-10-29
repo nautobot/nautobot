@@ -29,6 +29,7 @@ from nautobot.core.testing import (
 from nautobot.core.testing.utils import (
     generate_random_device_asset_tag_of_specified_size,
 )
+from nautobot.data_validation.models import DataCompliance
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -640,7 +641,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user2 = User.objects.create_user(username="testuser2")
-        user3 = User.objects.create_user(username="testuser3")
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
@@ -656,17 +656,23 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "rack": rack.pk,
             "units": "10,11,12",
-            "user": user3.pk,
             "tenant": None,
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
 
         cls.bulk_edit_data = {
-            "user": user3.pk,
             "tenant": None,
             "description": "New description",
         }
+
+    def setUp(self):
+        super().setUp()
+        # Reserved for the test user, whom a user may always view, as `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make
+        # other users viewable. `user` must remain the first field of `bulk_edit_data`, which is the one
+        # `test_bulk_edit_objects_with_constrained_permission` edits.
+        self.form_data = {**self.form_data, "user": self.user.pk}
+        self.bulk_edit_data = {"user": self.user.pk, **self.bulk_edit_data}
 
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -3487,6 +3493,30 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(interface_ips),
             )
 
+    def test_data_compliance_tab(self):
+        """A Module with compliance results gets a Data Compliance tab that lists them, rather than the main tab content."""
+        self.add_permissions("dcim.view_module", "data_validation.view_datacompliance")
+        module = Module.objects.first()
+        DataCompliance.objects.create(
+            compliance_class_name="ModuleSerialRule",
+            content_type=ContentType.objects.get_for_model(Module),
+            object_id=module.pk,
+            validated_object_str=str(module),
+            validated_attribute="serial",
+            message="Module serial is not compliant.",
+            valid=False,
+        )
+        data_compliance_url = module.get_data_compliance_url()
+
+        response = self.client.get(module.get_absolute_url())
+        self.assertBodyContains(response, f'href="{data_compliance_url}"')
+        self.assertBodyContains(response, "<td>Installed in</td>", html=True)
+
+        response = self.client.get(data_compliance_url)
+        self.assertBodyContains(response, "Module serial is not compliant.")
+        # The main tab's attribute panel is not rendered on this tab
+        self.assertNotContains(response, "<td>Installed in</td>", html=True)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):
         status_active = Status.objects.get_for_model(Module).first()
@@ -5738,6 +5768,26 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         breakout_body = self.client.get(breakout_cable.get_absolute_url()).content.decode()
         for marker in breakout_only_markers:
             self.assertIn(marker, breakout_body, msg=f"Breakout cable detail missing expected {marker!r}")
+
+    def test_cable_detail_view_shows_connectors_for_symmetric_multi_connector_cable(self):
+        """A 2x2 cable (multi-connector, not a breakout) shows connector labels on its detail page."""
+        self.add_permissions("dcim.view_cable")
+        symmetric_type = CableType.objects.create(name="Cable View 2x2", a_connectors=2, b_connectors=2, total_lanes=2)
+        self.assertFalse(symmetric_type.is_breakout)
+        interface_a, interface_b = Interface.objects.filter(cable_termination__isnull=True).exclude(
+            type__in=NONCONNECTABLE_IFACE_TYPES
+        )[:2]
+        cable = Cable.objects.create(
+            termination_a=interface_a,
+            termination_b=interface_b,
+            cable_type=symmetric_type,
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        body = self.client.get(cable.get_absolute_url()).content.decode()
+
+        for marker in (">A1<", ">B1<", "2A &rarr; 2B"):
+            self.assertIn(marker, body, msg=f"Symmetric cable detail missing expected {marker!r}")
 
     def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
         """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""

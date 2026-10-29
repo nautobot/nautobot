@@ -91,7 +91,39 @@ class DataValidationFormMixinTestCase(ValidationRuleTestCaseMixin, NautobotTestC
 
         form = TestModelForm()
         widget_attrs = form.fields["asn"].widget.attrs
-        self.assertEqual(widget_attrs["oninvalid"], "this.setCustomValidity('Custom error message')")
+        self.assertEqual(widget_attrs["data-nb-required-message"], "Custom error message")
+        self.assertNotIn("oninvalid", widget_attrs)
+
+    def test_custom_error_message_is_not_rendered_as_script(self):
+        """Test custom error messages render only as escaped data, never inside an event handler."""
+        RequiredValidationRule.objects.create(
+            content_type=self.content_type,
+            field="asn",
+            enabled=True,
+            name="ASN required",
+            error_message='It\'s "required" & needed',
+        )
+
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
+            class Meta:
+                model = self.TestModel
+                fields = ["asn"]
+
+        rendered = str(TestModelForm()["asn"])
+        self.assertNotRegex(rendered, r"\son\w+=")
+        self.assertIn('data-nb-required-message="It&#x27;s &quot;required&quot; &amp; needed"', rendered)
+
+    def test_form_without_error_message_has_no_data_attribute(self):
+        """Test rules without a custom error message add no message attribute."""
+
+        class TestModelForm(DataValidationModelFormMixin, forms.ModelForm):
+            class Meta:
+                model = self.TestModel
+                fields = ["facility"]
+
+        form = TestModelForm()
+        self.assertTrue(form.fields["facility"].required)
+        self.assertNotIn("data-nb-required-message", form.fields["facility"].widget.attrs)
 
     def test_no_changes_in_form_if_no_rules(self):
         """Test fields remain unmodified without rules."""
