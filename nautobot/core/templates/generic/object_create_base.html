@@ -123,23 +123,23 @@
             };
 
             const hideTooltips = (root) =>
-                root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
-                    bootstrap.Tooltip.getInstance(element)?.hide();
-                });
+            root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+                bootstrap.Tooltip.getInstance(element)?.hide();
+            });
 
             /*
              * Select2 keeps its instances in a cache keyed by element `id`, and the outer and the nested form render the
              * same `embedded_id_*` ids, so a Select2 of one form would destroy the Select2 of the other.
              */
             const destroySelect2Fields = (root) =>
-                $(root)
-                    .find('select.select2-hidden-accessible')
-                    .each((index, select) => $(select).select2('destroy'));
+            $(root)
+                .find('select.select2-hidden-accessible')
+                .each((index, select) => $(select).select2('destroy'));
 
             const resetButtonSpinners = (root) =>
-                root.querySelectorAll('[data-nb-spinner-active]').forEach((button) => {
-                    button.dispatchEvent(new CustomEvent('htmx:afterRequest', { bubbles: true, detail: { elt: button } }));
-                });
+            root.querySelectorAll('[data-nb-spinner-active]').forEach((button) => {
+                button.dispatchEvent(new CustomEvent('htmx:afterRequest', { bubbles: true, detail: { elt: button } }));
+            });
 
             const restore = () => {
                 const embeddedAction = window.nb.embeddedAction;
