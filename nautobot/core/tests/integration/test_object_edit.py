@@ -185,23 +185,19 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
             )
         )
 
-    def modal_is_closed(self, timeout=10):
-        script = (
-            "const modal = document.querySelector('#embedded_action_modal');"
-            "return getComputedStyle(modal).display === 'none' && !document.querySelector('.modal-backdrop');"
-        )
-        try:
-            WebDriverWait(self.browser.driver, timeout).until(lambda driver: driver.execute_script(script))
-        except TimeoutException:
-            return False
-        return True
-
     def wait_until_script_is_truthy(self, script, timeout=10):
         try:
             WebDriverWait(self.browser.driver, timeout).until(lambda driver: driver.execute_script(script))
         except TimeoutException:
             return False
         return True
+
+    def modal_is_closed(self, timeout=10):
+        return self.wait_until_script_is_truthy(
+            "const modal = document.querySelector('#embedded_action_modal');"
+            "return getComputedStyle(modal).display === 'none' && !document.querySelector('.modal-backdrop');",
+            timeout,
+        )
 
     def wait_for_focused_select2(self, field_name):
         return self.wait_until_script_is_truthy(
