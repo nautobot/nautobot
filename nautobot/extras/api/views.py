@@ -13,12 +13,12 @@ from graphql import GraphQLError
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
-from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from nautobot.core.api.authentication import TokenPermissions
-from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.parsers import NautobotCSVParser, NautobotMultiPartParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
@@ -807,7 +807,7 @@ class ImageAttachmentViewSet(ModelViewSet):
     queryset = ImageAttachment.objects.all()
     serializer_class = serializers.ImageAttachmentSerializer
     filterset_class = filters.ImageAttachmentFilterSet
-    parser_classes = [JSONParser, NautobotCSVParser, MultiPartParser]
+    parser_classes = [JSONParser, NautobotCSVParser, NautobotMultiPartParser]
 
 
 #
@@ -899,7 +899,7 @@ class JobViewSetBase(
         detail=True,
         methods=["post"],
         permission_classes=[JobRunTokenPermissions],
-        parser_classes=[JSONParser, MultiPartParser],
+        parser_classes=[JSONParser, NautobotMultiPartParser],
     )
     def run(self, request, *args, **kwargs):
         """Run the specified Job."""

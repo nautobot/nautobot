@@ -11,7 +11,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
-from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -21,7 +21,7 @@ from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.exceptions import ServiceUnavailable
-from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.parsers import NautobotCSVParser, NautobotMultiPartParser
 from nautobot.core.api.serializers import StatsSerializer
 from nautobot.core.api.utils import serialize_object_for_user
 from nautobot.core.api.views import ModelViewSet
@@ -342,7 +342,7 @@ class DeviceTypeViewSet(NautobotModelViewSet):
     queryset = DeviceType.objects.annotate(device_count=count_related(Device, "device_type"))
     serializer_class = serializers.DeviceTypeSerializer
     filterset_class = filters.DeviceTypeFilterSet
-    parser_classes = [JSONParser, NautobotCSVParser, MultiPartParser]
+    parser_classes = [JSONParser, NautobotCSVParser, NautobotMultiPartParser]
 
 
 #
@@ -973,6 +973,7 @@ class ModuleTypeViewSet(NautobotModelViewSet):
     queryset = ModuleType.objects.all()
     serializer_class = serializers.ModuleTypeSerializer
     filterset_class = filters.ModuleTypeFilterSet
+    parser_classes = [JSONParser, NautobotCSVParser, NautobotMultiPartParser]
 
 
 class VirtualDeviceContextViewSet(NautobotModelViewSet):
