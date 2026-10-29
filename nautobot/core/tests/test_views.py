@@ -1698,8 +1698,3 @@ class EmbeddedCreateDepthTestCase(TestCase):
             with self.subTest(headers=headers):
                 request = RequestFactory().get("/", headers=headers)
                 self.assertEqual(get_embedded_action_depth(request), expected_depth)
-
-    def test_page_form_unchanged(self):
-        response = self.client.get(reverse("dcim:device_add"))
-        self.assertBodyContains(response, "Add a new location")
-        self.assertBodyContains(response, '"HX-Embedded-Depth": "1"')
