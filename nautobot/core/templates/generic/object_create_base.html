@@ -89,6 +89,7 @@
             <div
                 class="modal-content"
                 hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
+                hx-on:htmx:after-settle="window.nb.embeddedAction.handleSettle(this);"
                 hx-on:htmx:load="jsify_form(this); window.nb.embeddedAction.handleLoad(this);"
             ></div>
         </div>
@@ -243,14 +244,15 @@
                 content.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
                     bootstrap.Tooltip.getOrCreateInstance(element);
                 });
+            };
+
+            const handleSettle = (content) => {
                 const isNestedFormShowing = window.nb.embeddedAction.stack.length > 0;
-                if (isNestedFormShowing) {
-                    setTimeout(() => {
-                        if (!content.contains(document.activeElement)) {
-                            const firstField = content.querySelector('input:not([type="hidden"]), textarea');
-                            (firstField || content.closest('.modal')).focus();
-                        }
-                    }, 100);
+                if (isNestedFormShowing && !content.contains(document.activeElement)) {
+                    const firstField = content.querySelector(
+                        'input:not([type="hidden"]):not([type="checkbox"]):not([disabled]), textarea:not([disabled])',
+                    );
+                    (firstField || content.closest('.modal')).focus();
                 }
             };
 
@@ -271,6 +273,7 @@
                 handleBack,
                 handleEnd,
                 handleLoad,
+                handleSettle,
                 handleStart,
                 pendingOuterForm: null,
                 stack: [],
