@@ -146,6 +146,17 @@ def created_dynamic_group(create_object, created_device_set):
     )
 
 
+@pytest.fixture
+def created_static_group(create_object):
+    """An empty static device group owned by this test."""
+    return create_object(
+        "extras/dynamic-groups/",
+        name=unique_name(),
+        content_type="dcim.device",
+        group_type="static",
+    )
+
+
 @pytest.fixture(scope="session")
 def require_celery_worker(api):
     """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.

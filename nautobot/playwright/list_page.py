@@ -52,6 +52,14 @@ class ListPage(BasePage):
     _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
     _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
     _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
+    # The header checkbox that checks every row on the current page.
+    _TOGGLE_ALL = "table thead input.toggle"
+    # Rendered only while the list spans more than one page, and hidden with d-none until the
+    # header checkbox is checked. Its own checkbox enables Edit All and Delete All, which post
+    # `_all` plus the list's query string so the server rebuilds the filter over every page.
+    _SELECT_ALL_BOX = "#select_all_box"
+    _SELECT_ALL_CHECKBOX = "#select_all_box #select_all"
+    _EDIT_ALL = "#select_all_box button[name='_edit']"
     # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
@@ -179,6 +187,26 @@ class ListPage(BasePage):
         """Check the pk checkbox of the data row whose link text is exactly *name*."""
         row = self.page.locator(self._DATA_ROWS).filter(has=self.page.get_by_role("link", name=name, exact=True))
         row.locator(self._PK_CHECKBOX).check()
+
+    def select_all_rows(self):
+        """Check the header checkbox, which checks every row on the current page."""
+        self.page.locator(self._TOGGLE_ALL).check()
+
+    def select_all_matching(self, expected):
+        """Select every record matching the list's filter, on every page, and check that there are *expected* of them.
+
+        Page links are HTMX swaps that replace the table, so rows checked on one page are
+        gone on the next and cannot add up to a selection. This is the only way to select
+        past the first page. The header checkbox reveals the box, and the box's checkbox
+        enables its buttons. Both land a tick late, because the checkbox handler dispatches
+        its events from a setTimeout.
+        """
+        self.select_all_rows()
+        box = self.page.locator(self._SELECT_ALL_BOX)
+        expect(box).not_to_have_class(re.compile(r"\bd-none\b"))
+        expect(box.locator("label")).to_contain_text(re.compile(rf"\ball {expected} "))
+        self.page.locator(self._SELECT_ALL_CHECKBOX).check()
+        expect(self.page.locator(self._EDIT_ALL)).to_be_enabled()
 
     def click_edit_selected(self):
         """Click Edit Selected and wait for the bulk edit form to load."""

@@ -1,79 +1,40 @@
-"""Page object for the Dynamic Group add, edit, and detail views (/extras/dynamic-groups/)."""
+"""Page object for the Dynamic Group detail view (/extras/dynamic-groups/<pk>/)."""
 
-import re
 import time
+from urllib.parse import urlencode
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import select2_filter_pick
 from nautobot.playwright.detail_page import DetailPage
 
 
-class DynamicGroupPage(DetailPage):
-    """The dynamic group detail view, add form, and edit-form filter fields."""
+class DynamicGroupDetailPage(DetailPage):
+    """The Dynamic Group detail view: the Members count and the Refresh Members button."""
 
     DETAIL_PATH = "/extras/dynamic-groups/{pk}/"
     VERBOSE_NAME = "Dynamic Group"
-    ADD_PATH = "/extras/dynamic-groups/add/"
-    EDIT_PATH = "/extras/dynamic-groups/{pk}/edit/"
+    # The Members tab is a view of its own, not a pane of the detail view.
+    MEMBERS_PATH = "/extras/dynamic-groups/{pk}/members/"
     # `wait_for_member_count` reads the group's cached members from this endpoint.
     MEMBERS_API_PATH = "/api/extras/dynamic-groups/{pk}/members/?limit=1"
 
-    _NAME_INPUT = "input[name='name']"
-    # The content type field is a plain <select>, so `select_option()` can pick an option by its value
-    # (e.g. "dcim.device").
-    _CONTENT_TYPE_SELECT = "select[name='content_type']"
-    _CREATE_BUTTON = "button[name='_create']"
-    _UPDATE_BUTTON = "button[name='_update']"
     # The Members tab label contains a count badge, which is rendered only when the count is not zero.
     _MEMBERS_TAB_BADGE = "a[role='tab'][aria-controls='members'] span.badge"
     # "Refresh Members" is a JobButton that asks for confirmation. Its `data-bs-target` contains the id of
     # the modal (the id includes the JobButton pk), and the modal's submit button runs the job.
     _REFRESH_MEMBERS_BUTTON = "button[data-bs-toggle='modal']:has-text('Refresh Members')"
     _MODAL_CONFIRM_BUTTON = "button[type='submit']"
-    _PK_IN_URL = re.compile(r"/extras/dynamic-groups/([0-9a-f-]{36})/")
+    _MEMBERS_TABLE_BODY = "table tbody"
 
-    # -------------------------------------------------------------------------
-    # Navigation
-    # -------------------------------------------------------------------------
+    def navigate_members(self, pk, **params):
+        """Go to the Members tab of the group *pk*, optionally with query *params* such as `per_page`."""
+        path = self.MEMBERS_PATH.format(pk=pk)
+        self._goto(f"{path}?{urlencode(params)}" if params else path)
 
-    def navigate_add(self):
-        """Go to the add form."""
-        self._goto(self.ADD_PATH)
-
-    def navigate_edit(self, pk):
-        """Go to the edit form of the group *pk*."""
-        self._goto(self.EDIT_PATH.format(pk=pk))
-
-    # -------------------------------------------------------------------------
-    # Add and edit forms
-    # -------------------------------------------------------------------------
-
-    def create(self, name, content_type):
-        """Fill and submit the add form, returning the new group's pk from the detail-view redirect."""
-        self.page.fill(self._NAME_INPUT, name)
-        self.page.locator(self._CONTENT_TYPE_SELECT).select_option(value=content_type)
-        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
-        match = self._PK_IN_URL.search(self.current_url())
-        assert match, f"Creating the group did not redirect to its detail view (now on {self.current_url()})."
-        return match.group(1)
-
-    def add_filter_value(self, field_name, value):
-        """Add *value* to the edit form's multi-value filter field *field_name* (e.g. "location").
-
-        The option text is matched as a substring, because location options show their full ancestry path.
-        """
-        select2_filter_pick(self.page, f"filter-{field_name}", search=value, pick_text=value, exact=False)
-        expect(self.page.locator(f"select[name='filter-{field_name}'] option:checked", has_text=value)).to_have_count(1)
-
-    def save(self):
-        """Submit the edit form and assert that it redirected away from the form."""
-        self._click_and_wait_for_navigation(self._UPDATE_BUTTON)
-        self.expect_url_lacks("/edit/")
-
-    # -------------------------------------------------------------------------
-    # Members
-    # -------------------------------------------------------------------------
+    def expect_member_listed(self, name, listed=True):
+        """Assert (auto-retrying) that the Members tab's table links to the member *name*, or that it does not."""
+        link = self.page.locator(self._MEMBERS_TABLE_BODY).get_by_role("link", name=name, exact=True)
+        expect(link).to_have_count(1 if listed else 0)
 
     def expect_member_count(self, expected):
         """Assert (auto-retrying) that the Members tab label shows *expected* members."""
