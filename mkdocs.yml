@@ -395,6 +395,7 @@ nav:
               - Nautobot Docker Images: "user-guide/administration/guides/docker.md"
               - SELinux Troubleshooting: "user-guide/administration/guides/selinux-troubleshooting.md"
               - Health Checks: "user-guide/administration/guides/health-checks.md"
+              - High Availability: "user-guide/administration/guides/high-availability.md"
               - Permissions: "user-guide/administration/guides/permissions.md"
               - Prometheus Metrics: "user-guide/administration/guides/prometheus-metrics.md"
               - Replicating Nautobot: "user-guide/administration/guides/replicating-nautobot.md"
@@ -614,6 +615,7 @@ nav:
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
               - Search: "user-guide/platform-functionality/user-interface/search.md"
               - Searchable Fields: "user-guide/platform-functionality/user-interface/searchable-fields.md"
+              - Table Sticky Headers: "user-guide/platform-functionality/user-interface/table-sticky-headers.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"

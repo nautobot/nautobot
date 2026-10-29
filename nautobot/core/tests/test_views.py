@@ -190,6 +190,40 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertNotIn("hx-post", button)
 
 
+class ObjectListViewStickyHeadersTestCase(TestCase):
+    """Covers whether the `sticky_headers` argument adds `nb-table-sticky-headers` to the rendered `<table>` in list views."""
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_view_tables_mark_headers_sticky(self):
+        """Both list view implementations render a `<table>` that has the `nb-table-sticky-headers` class.
+
+        `NautobotHTMLRenderer.construct_table` builds the table for `circuits:provider_list`, and
+        `ObjectListView.get` builds the table for `dcim:console_connections_list`. The two methods create
+        their tables independently, so their output can diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertHttpStatus(response, 200)
+                body = extract_page_body(response.content.decode(response.charset))
+                self.assertRegex(body, r"<table[^>]*nb-table-sticky-headers")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_htmx_table_fragment_marks_headers_sticky(self):
+        """The HTMX table fragment renders a `<table>` that has the `nb-table-sticky-headers` class.
+
+        `components/htmx/list_view_table.html` includes `panel_table.html` independently of the initial
+        response, so the two can diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name), headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertRegex(response.content.decode(response.charset), r"<table[^>]*nb-table-sticky-headers")
+
+
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
     """Tests for the action buttons on object list views when the user lacks the `add` permission."""
 
@@ -199,10 +233,10 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
         self.add_permissions("circuits.view_provider")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_export_rendered_but_import_not_without_add_permission(self):
+    def test_export_rendered_but_import_not_without_add_or_change_permission(self):
         """
         Without the `add` permission but with the default action buttons, `export` (which does not require `add`)
-        renders inside the dropdown, while `import` (which requires `add`) does not.
+        renders inside the dropdown, while `import` (which requires `add` or `change`) does not.
         """
         response = self.client.get(reverse("circuits:provider_list"))
         self.assertHttpStatus(response, 200)
@@ -216,10 +250,10 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
         self.assertNotIn(f'hx-post="{job_export_url()}"', response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
+    def test_actions_dropdown_not_rendered_when_import_only_without_add_or_change_permission(self):
         """
-        With `action_buttons = ("import",)` and no `add` permission, `import` cannot render (it requires `add`) and
-        there is no `export`, so no dropdown caret should render.
+        With `action_buttons = ("import",)` and no `add` permission, `import` cannot render (it requires `add` or
+        `change`) and there is no `export`, so no dropdown caret should render.
         """
         with mock.patch.object(ProviderUIViewSet, "action_buttons", ("import",)):
             response = self.client.get(reverse("circuits:provider_list"))
@@ -228,6 +262,18 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
         self.assertNotIn('id="add-button"', response_body)
         self.assertNotIn('id="actions-dropdown"', response_body)
         self.assertNotIn('id="import-button"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_rendered_with_change_permission(self):
+        """With `change` but not `add` permission, `import` renders in the dropdown, as Update Only can be run."""
+        self.add_permissions("circuits.change_provider")
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("import",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+        self.assertIn('id="import-button"', response_body)
 
 
 class HomeViewTestCase(TestCase):
@@ -1769,6 +1815,14 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    def test_detail_view_table_panels_are_not_sticky(self):
+        """A detail view renders its object table panel without `nb-table-sticky-headers`."""
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertRegex(body, r"<table")
+        self.assertNotIn("nb-table-sticky-headers", body)
 
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):
