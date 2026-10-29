@@ -156,7 +156,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django is a non-optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=5.2.0,<5.3)" ]
+sso = [ "social-auth-core[saml] (>=6.2,<6.3)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
