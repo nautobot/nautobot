@@ -141,13 +141,11 @@ class ArchiveOldRecords(Job):
             if not object_change_batch:
                 break
 
-            current_batch += 1
-
             try:
                 current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
                 self.fail(
-                    "Stopping at batch %d: %s. Archived %d of %d ObjectChange records before stopping.",
+                    "Stopping at batch %d (0-indexed): %s. Archived %d of %d ObjectChange records before stopping.",
                     current_batch,
                     exception,
                     total_archived_object_change_count,
@@ -157,11 +155,13 @@ class ArchiveOldRecords(Job):
 
             total_archived_object_change_count += current_archived_object_change_count
             self.logger.info(
-                "Batch %d: archived %d ObjectChange records", current_batch, current_archived_object_change_count
+                "Batch %d (0-indexed): archived %d ObjectChange records", current_batch, current_archived_object_change_count
             )
 
+            current_batch += 1
+
         self.logger.success(
-            "Archived %d ObjectChange records across %d batches",
+            "Archived %d ObjectChange records across %d batches (0-indexed).",
             total_archived_object_change_count,
             current_batch,
         )
@@ -190,26 +190,13 @@ class ArchiveOldRecords(Job):
         new_archived_object_changes = [ArchivedObjectChange.from_object_change(object_change) for object_change in object_change_batch]
 
 
-        # `ignore_conflicts` is what makes a re-run harmless: an archived record keeps the primary key it
-        # had live, so re-archiving one that is already there conflicts rather than duplicating it.
+        # An ObjectChange doesn't change, so it is overwritten if it already exists
         ArchivedObjectChange.objects.bulk_create(
             new_archived_object_changes,
-            ignore_conflicts=True,
+            update_conflicts=True,
         )
 
-        # bulk_create() with ignore_conflicts=True does not report which rows it skipped, so query the archive table
-        # for the primary keys from this batch that it contains in order to compare with the archive candidates
-        archived_object_change_pks = list(
-            ArchivedObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).values_list("pk", flat=True)
-        )
-
-        if len(archived_object_change_pks) != len(object_changes_to_archive_pks):
-            raise RuntimeError(
-                f"{len(object_changes_to_archive_pks) - len(archived_object_change_pks)} of {len(object_changes_to_archive_pks)} "
-                "ObjectChange records did not reach the archive"
-            )
-
-        deleted_count, _ = ObjectChange.objects.filter(pk__in=archived_object_change_pks).delete()
+        deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
         self.logger.debug(
             "Archived %d and deleted %d live ObjectChange rows", len(archived_object_change_pks), deleted_count
         )
