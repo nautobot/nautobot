@@ -63,6 +63,40 @@ export const initializeFormEvents = () => {
 };
 
 /**
+ * Initialize custom required field messages. Form fields with a `data-nb-required-message` attribute show its value as
+ * the browser validation message when left empty, instead of the browser default.
+ * @returns {function(): void} Destructor function - remove all event listeners added during initialization.
+ */
+export const initializeRequiredMessages = () => {
+  const onInvalid = (event) => {
+    const field = event.target;
+    const message = field.getAttribute?.('data-nb-required-message');
+    if (message && field.validity.valueMissing) {
+      field.setCustomValidity(message);
+    }
+  };
+
+  // Clear the custom message on edit, otherwise the field stays invalid after the user fills it in.
+  const onEdit = (event) => {
+    const field = event.target;
+    if (field.getAttribute?.('data-nb-required-message')) {
+      field.setCustomValidity('');
+    }
+  };
+
+  // `'invalid'` does not bubble, so listen in the capture phase to also cover forms added later, e.g. with htmx.
+  document.addEventListener('invalid', onInvalid, true);
+  document.addEventListener('input', onEdit, true);
+  document.addEventListener('change', onEdit, true);
+
+  return () => {
+    document.removeEventListener('invalid', onInvalid, true);
+    document.removeEventListener('input', onEdit, true);
+    document.removeEventListener('change', onEdit, true);
+  };
+};
+
+/**
  * Observe pinned state of elements of class `nb-form-sticky-footer` on the page and add drop shadow with `nb-is-pinned`
  * class if they are pinned. This is purely cosmetic and does not affect functionality.
  * @example
