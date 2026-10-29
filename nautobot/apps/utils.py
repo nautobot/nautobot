@@ -56,6 +56,7 @@ from nautobot.core.utils.requests import (
     ensure_content_type_and_field_name_in_query_params,
     get_filterable_params_from_filter_params,
     is_single_choice_field,
+    mock_wsgi_request,
     normalize_querydict,
 )
 from nautobot.extras.plugins.validators import custom_validator_clean, wrap_model_clean_methods
@@ -136,6 +137,7 @@ __all__ = (
     "merge_dicts_without_collision",
     "migrate_content_type_references_to_new_model",
     "migrate_role_data",
+    "mock_wsgi_request",
     "normalize_querydict",
     "permission_is_exempt",
     "populate_model_features_registry",

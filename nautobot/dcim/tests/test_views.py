@@ -164,6 +164,33 @@ def create_test_device(name):
     return device
 
 
+def create_test_module_type_component_templates(module_type):
+    """
+    Convenience method for creating one of each component template on a ModuleType, so that its views
+    (and those of any Module of this type created afterward) render component tables with rows.
+    """
+    ConsolePortTemplate.objects.create(module_type=module_type, name="Console Port Template 1")
+    ConsoleServerPortTemplate.objects.create(module_type=module_type, name="Console Server Port Template 1")
+    power_port_template = PowerPortTemplate.objects.create(module_type=module_type, name="Power Port Template 1")
+    PowerOutletTemplate.objects.create(
+        module_type=module_type, name="Power Outlet Template 1", power_port_template=power_port_template
+    )
+    InterfaceTemplate.objects.create(
+        module_type=module_type, name="Interface Template 1", type=InterfaceTypeChoices.TYPE_1GE_FIXED
+    )
+    rear_port_template = RearPortTemplate.objects.create(
+        module_type=module_type, name="Rear Port Template 1", type=PortTypeChoices.TYPE_8P8C, positions=1
+    )
+    FrontPortTemplate.objects.create(
+        module_type=module_type,
+        name="Front Port Template 1",
+        type=PortTypeChoices.TYPE_8P8C,
+        rear_port_template=rear_port_template,
+        rear_port_position=1,
+    )
+    ModuleBayTemplate.objects.create(module_type=module_type, name="Module Bay Template 1", position="1")
+
+
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = LocationType
     sort_on_field = "nestable"
@@ -483,7 +510,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user2 = User.objects.create_user(username="testuser2")
-        user3 = User.objects.create_user(username="testuser3")
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
@@ -499,17 +525,23 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "rack": rack.pk,
             "units": "10,11,12",
-            "user": user3.pk,
             "tenant": None,
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
 
         cls.bulk_edit_data = {
-            "user": user3.pk,
             "tenant": None,
             "description": "New description",
         }
+
+    def setUp(self):
+        super().setUp()
+        # Reserved for the test user, whom a user may always view, as `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make
+        # other users viewable. `user` must remain the first field of `bulk_edit_data`, which is the one
+        # `test_bulk_edit_objects_with_constrained_permission` edits.
+        self.form_data = {**self.form_data, "user": self.user.pk}
+        self.bulk_edit_data = {"user": self.user.pk, **self.bulk_edit_data}
 
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1239,11 +1271,12 @@ class ModuleTypeTestCase(
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
 
-        ModuleType.objects.create(
+        module_type = ModuleType.objects.create(
             model="Test Module Type 1",
             manufacturer=manufacturers[0],
             comments="test comment",
         )
+        create_test_module_type_component_templates(module_type)
         ModuleType.objects.create(
             model="Test Module Type 2",
             manufacturer=manufacturers[0],
@@ -1269,6 +1302,25 @@ class ModuleTypeTestCase(
             "manufacturer": manufacturers[1].pk,
             "comments": "changed comment",
         }
+
+    def test_detail_component_table_action_buttons_have_correct_return_url(self):
+        """Assert that a component template's edit/delete buttons return to the correct tab of the ModuleType view."""
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.view_interfacetemplate",
+            "dcim.change_interfacetemplate",
+            "dcim.delete_interfacetemplate",
+        )
+        interface_template = InterfaceTemplate.objects.get(module_type__model="Test Module Type 1")
+        module_type = interface_template.module_type
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        return_url = f"{module_type.get_absolute_url()}%3Ftab=interfaces"
+        for action in ("edit", "delete"):
+            action_url = reverse(f"dcim:interfacetemplate_{action}", kwargs={"pk": interface_template.pk})
+            self.assertIn(f'href="{action_url}?return_url={return_url}"', content)
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
@@ -2786,6 +2838,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ModuleType.objects.create(model="Module Type 1", manufacturer=manufacturer),
             ModuleType.objects.create(model="Module Type 2", manufacturer=manufacturer),
         )
+        create_test_module_type_component_templates(moduletypes[0])
 
         moduleroles = Role.objects.get_for_model(Module)[:2]
 
@@ -2890,8 +2943,8 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:module_interfaces", kwargs={"pk": module.pk})
         response = self.client.get(url)
-        # Assert that "Add IP address" appears for each of the three interfaces
-        self.assertBodyContains(response, "Add IP address", count=3)
+        # Assert that "Add IP address" appears for each of the module's interfaces
+        self.assertBodyContains(response, "Add IP address", count=module.interfaces.count())
 
     def test_module_interface_assign_ipaddress(self):
         module = Module.objects.first()

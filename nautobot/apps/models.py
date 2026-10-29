@@ -24,6 +24,7 @@ from nautobot.core.models.query_functions import CollateAsChar, EmptyGroupByJSON
 from nautobot.core.models.querysets import (
     CompositeKeyQuerySetMixin,
     count_related,
+    restrict_queryset,
     RestrictedQuerySet,
     SensitiveFieldsQuerySetMixin,
 )
@@ -127,6 +128,7 @@ __all__ = (
     "naturalize",
     "naturalize_interface",
     "pretty_print_query",
+    "restrict_queryset",
     "serialize_object",
     "serialize_object_v2",
     "slugify_dashes_to_underscores",

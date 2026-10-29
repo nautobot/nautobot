@@ -12,6 +12,8 @@ from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 from nautobot.core.api.mixins import WritableSerializerMixin
+from nautobot.core.api.utils import get_request_with_user
+from nautobot.core.models.querysets import restrict_queryset
 from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import is_url, is_uuid
@@ -212,9 +214,13 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
                 except ValueError as err:
                     # Not a correctly constructed composite key?
                     raise ValidationError(f"Related object not found using provided composite-key: {data}") from err
-            elif related_model is not None and related_model.label_lower == "auth.group":
-                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method
-                data = {"name": deconstruct_composite_key(data)}
+            elif related_model is not None and related_model._meta.label_lower == "auth.group":
+                # auth.Group is a base Django model and so doesn't implement our natural_key_args_to_kwargs() method;
+                # its natural key is its name alone.
+                values = deconstruct_composite_key(data)
+                if len(values) != 1:
+                    raise ValidationError(f"Related object not found using provided composite-key: {data}")
+                data = {"name": values[0]}
         return super().to_internal_value(data)
 
     def to_representation(self, value):
@@ -268,6 +274,13 @@ class SerializedPKRelatedField(PrimaryKeyRelatedField):
         self.serializer = serializer
         self.pk_field = kwargs.pop("pk_field", None)
         super().__init__(**kwargs)
+
+    def get_queryset(self):
+        """The objects that may be referenced, limited to those the requesting user (if any) may view."""
+        queryset = super().get_queryset()
+        if request := get_request_with_user(self.context):
+            queryset = restrict_queryset(queryset, request.user)
+        return queryset
 
     def to_representation(self, value):
         return self.serializer(value, context={"request": self.context["request"]}).data

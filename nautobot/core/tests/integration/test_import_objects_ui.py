@@ -1,4 +1,9 @@
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import Location
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField, CustomFieldChoice
 
 
 class ImportObjectsUITestCase(SeleniumTestCase):
@@ -40,3 +45,25 @@ class ImportObjectsUITestCase(SeleniumTestCase):
 
         self.assertTrue(self.browser.is_text_present("upstream_speed", wait_time=10))
         self.assertTrue(self.browser.is_text_present("Upstream speed, if different from port speed"))
+
+    def test_import_objects_ui_custom_field_label_and_choices_rendered_as_text(self):
+        label = '<b class="import-objects-marker">Marker Label</b>'
+        choice_value = '<b class="import-objects-marker">Marker Choice</b>'
+        custom_field = CustomField(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label=label,
+            key="import_objects_marker",
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Location)])
+        CustomFieldChoice(custom_field=custom_field, value=choice_value).validated_save()
+
+        self.browser.visit(self.live_server_url)
+        self.click_navbar_entry("Organization", "Locations")
+        self.browser.find_by_id("actions-dropdown").click()
+        self.browser.find_by_id("import-button").click()
+
+        self.assertTrue(self.browser.is_text_present(label, wait_time=10))
+        self.browser.find_by_css('button[data-target="#cf_import_objects_marker_choices"]').click()
+        self.assertTrue(self.browser.is_text_present(choice_value, wait_time=10))
+        self.assertTrue(self.browser.is_element_not_present_by_css(".import-objects-marker"))

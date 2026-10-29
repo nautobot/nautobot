@@ -88,3 +88,18 @@ class NavMenuTestCase(TestCase):
                 else:
                     expected_perms[tab_name] |= group_perms
             self.assertEqual(expected_perms[tab_name], tab_details["permissions"])
+
+    def test_circuits_navigation_items_registered(self):
+        """Verify that all Circuits navigation menu items are properly registered in nav_menu registry (Fix #9418)."""
+        self.assertIn("Circuits", registry["nav_menu"]["tabs"])
+        circuits_groups = registry["nav_menu"]["tabs"]["Circuits"]["groups"]
+        self.assertIn("Circuits", circuits_groups)
+        self.assertIn("Providers", circuits_groups)
+
+        circuit_items = [item["name"] for item in circuits_groups["Circuits"]["items"].values()]
+        for expected in ["Circuits", "Circuit Terminations", "Circuit Types"]:
+            self.assertIn(expected, circuit_items)
+
+        provider_items = [item["name"] for item in circuits_groups["Providers"]["items"].values()]
+        for expected in ["Providers", "Provider Networks"]:
+            self.assertIn(expected, provider_items)

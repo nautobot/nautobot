@@ -3,6 +3,222 @@
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
 <!-- pyml disable-num-lines 2000 proper-names -->
+## GHSA-37vj-5gff-ww9c
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>In a REST API POST/PATCH/PUT request, or a row of the Import Objects system Job, a related object can be identified by a dictionary of attributes, for example <code>"rack": {"name": "R1"}</code>. When evaluating this dictionary, Nautobot did not apply sufficient restrictions to the potential structure of this dictionary, allowing a crafted request to verify the existence or nonexistence of nested related objects matching the specified data.
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-37vj-5gff-ww9c">GHSA-37vj-5gff-ww9c</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-rg7h-q6c5-hr4h
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>When creating or updating an object via the REST API or the Import Objects Job, the permissions check for <code>view</code> permissions on referenced related objects did not run for references to <code>User</code> and <code>Group</code> objects.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h">GHSA-rg7h-q6c5-hr4h</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-5qqh-654x-4g4q
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Device Type or Software Version records could inject malicious content into a device type's model name or a software version's alias or version string, which would be rendered unescaped in the software image summary on the Device, Virtual Machine and Inventory Item create and edit forms, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-5qqh-654x-4g4q">GHSA-5qqh-654x-4g4q</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;2.2.0, &lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/39cdda210250c2c744f1fbd6ddd444aa82ba4243">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/5b8e9232f1a3b1609ddacb937e8b411038a92bca">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-mw4m-fgfr-qc98
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Job execution paths that take an object(s) chosen by the user didn't check whether the user had permission to view the specified object(s) before passing the object(s) to the requested <code>Job</code> or <code>JobButtonReceiver</code>.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98">GHSA-mw4m-fgfr-qc98</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-hjmc-4p4r-6fhx
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user permitted to create objects of one type, and permitted to run the Import Objects job, could use the job to create objects and link them to related objects they can't view, for example assigning a new device to a tenant or location outside their permissions. They could also learn whether a given related object exists from whether the job succeeds.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-hjmc-4p4r-6fhx">GHSA-hjmc-4p4r-6fhx</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-gpjq-54xp-rrj5
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Custom Field or Custom Field Choice records could inject malicious content into a custom field's label or choice values, which would be rendered unescaped on the Import Objects page, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-gpjq-54xp-rrj5">GHSA-gpjq-54xp-rrj5</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;2.2.0, &lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/f1ff10f6452b5e38e56a46ba902567e8ac0bf64b">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/2c5aabeb120896da5d5294a849fc4590fc4edfb2">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## GHSA-gffr-x2x7-7fgh
 
 <!-- pyml disable-next-line no-inline-html -->

@@ -108,7 +108,7 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .jobs import get_job
+from .jobs import get_job, restrict_job_form_fields
 from .models import (
     ComputedField,
     ConfigContext,
@@ -1428,6 +1428,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
+            restrict_job_form_fields(job_form, request.user)
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -1457,6 +1458,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        if job_form is not None:
+            # Object variables only accept objects that the user may view
+            restrict_job_form_fields(job_form, request.user)
         schedule_form = forms.JobScheduleForm(request.POST)
 
         return_url = request.POST.get("_return_url")

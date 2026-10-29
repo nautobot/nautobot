@@ -19,7 +19,7 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.filters.mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.ipam import choices, formfields

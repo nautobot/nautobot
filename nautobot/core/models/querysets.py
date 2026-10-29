@@ -1,8 +1,14 @@
+import contextlib
 from typing import ClassVar
 
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.functions import Coalesce
 
+from nautobot.core.exceptions import SensitiveFieldError
 from nautobot.core.models.sensitive_fields import (
     check_expression,
     check_lookup_path,
@@ -342,3 +348,143 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         """
         return self.order_by().values_list(*fields, flat=flat, named=named).distinct()
+
+
+def restrict_queryset(queryset, user, action="view"):
+    """
+    Return `queryset` limited to the objects on which `user` may perform `action`.
+
+    Like `RestrictedQuerySet.restrict()`, but for any queryset: `users.User` (whose manager extends Django's own
+    `UserManager`) and `auth.Group` have no `restrict()`, and wrapping them in a `RestrictedQuerySet` applies object
+    permissions to them all the same, while keeping any filtering the queryset itself applies. A user may always view
+    themselves. Any other model without `restrict()`, such as `ContentType`, is not restricted, being viewable by any
+    user.
+    """
+    if hasattr(queryset, "restrict"):  # A RestrictedQuerySet, or a manager of one
+        return queryset.restrict(user, action)
+    # Looked up at call time rather than imported, as this module is loaded before the app registry is ready
+    user_model = get_user_model()
+    if queryset.model not in (user_model, apps.get_model("auth", "Group")):
+        return queryset
+    restricted = RestrictedQuerySet(model=queryset.model).restrict(user, action)
+    if not restricted.query.where:  # The user may act on every object of this model
+        return queryset
+    permitted = Q(pk__in=restricted.values("pk"))
+    if queryset.model is user_model and action == "view":
+        permitted |= Q(pk=user.pk)
+    return queryset.filter(permitted)
+
+
+def get_related_paths(model, lookup):
+    """Return the paths to the related objects that a user-supplied `lookup` of a `model` object passes through.
+
+    The lookup is first checked that it may be used at all. It must be an exact match on a field, reached only through
+    forward single-valued relations (foreign keys and one-to-ones): no lookups or transforms such as `__startswith`, no
+    reverse or many-to-many relations, and no sensitive fields, any of which could reveal data the user may not view by
+    whether the object is found.
+
+    Returns:
+        (list): A `(related_path, related_model)` pair for each related object the lookup passes through, in order.
+
+    Raises:
+        ValueError: if the lookup is not permitted.
+    """
+    try:
+        check_lookup_path(model, lookup)
+    except SensitiveFieldError as e:
+        raise ValueError(f'"{lookup}" is not a permitted lookup') from e
+    segments = lookup.split(LOOKUP_SEP)
+    opts = model._meta
+    related_paths = []
+    for index, segment in enumerate(segments):
+        try:
+            field = opts.pk if segment == "pk" else opts.get_field(segment)
+        except FieldDoesNotExist as e:
+            raise ValueError(f'"{lookup}" is not a permitted lookup: "{segment}" is not a field') from e
+        if not field.concrete or field.many_to_many:
+            raise ValueError(f'"{lookup}" is not a permitted lookup: "{segment}" is not a forward field')
+        if index == len(segments) - 1:
+            break
+        if not (field.many_to_one or field.one_to_one):
+            raise ValueError(f'"{lookup}" is not a permitted lookup: "{segment}" is not a related object')
+        related_paths.append((LOOKUP_SEP.join(segments[: index + 1]), field.related_model))
+        opts = field.related_model._meta
+    return related_paths
+
+
+def _collapse_self_references(model, lookup):
+    """`lookup` with each run of a self-referential relation shortened to a single related object.
+
+    A natural key through a tree model, such as a Location, names as many ancestors as the tree is deep, so
+    `parent__parent__parent__name` and `parent__name` identify an object the same way.
+    """
+    segments = []
+    previous = None
+    for segment in lookup.split(LOOKUP_SEP):
+        try:
+            field = model._meta.get_field(segment)
+        except FieldDoesNotExist:
+            # `pk`, or a property in a natural key: nothing further to traverse
+            segments.append(segment)
+            previous = None
+            continue
+        related_model = field.related_model if field.is_relation else None
+        if related_model is model and segment == previous:
+            continue
+        segments.append(segment)
+        previous = segment if related_model is model else None
+        if related_model is not None:
+            model = related_model
+    return LOOKUP_SEP.join(segments)
+
+
+def _is_natural_key_lookup(model, lookup, request):
+    """Whether `lookup` is part of `model`'s natural key, in any of the spellings and depths Nautobot uses.
+
+    The natural-key lookups of each model are remembered on `request` for its duration, as they are not cached
+    otherwise and can be costly to determine.
+    """
+    cache = getattr(request, "_natural_key_lookups_cache", None)
+    if cache is None:
+        cache = {}
+        request._natural_key_lookups_cache = cache
+    if model not in cache:
+        lookups = set()
+        # A model may have no natural key, or (if it is misconfigured) one naming a field it does not have.
+        with contextlib.suppress(AttributeError, FieldDoesNotExist):
+            lookups.update(model.natural_key_field_lookups)
+        with contextlib.suppress(AttributeError, FieldDoesNotExist):
+            lookups.update(model.csv_natural_key_field_lookups())
+        cache[model] = {_collapse_self_references(model, natural_key_lookup) for natural_key_lookup in lookups}
+    return _collapse_self_references(model, lookup) in cache[model]
+
+
+def restrict_related_lookups(queryset, filter_params, request):
+    """Return `queryset` limited for looking up a related object by the user-supplied `filter_params`.
+
+    Each lookup must be permitted (see `get_related_paths()`). A lookup through a related object must also only match
+    through objects that the requesting user may view, or through no object at all, unless it is part of the natural
+    key by which exports identify an object, as an object's natural key is visible wherever the object is.
+
+    Args:
+        queryset (QuerySet): The objects to look the related object up among.
+        filter_params (dict): The user-supplied lookups.
+        request (HttpRequest): The request, with user, on which natural-key lookups are remembered for its duration.
+
+    Raises:
+        ValueError: if a lookup is not permitted.
+    """
+    user = request.user
+    related_path_filters = {}
+    for lookup in filter_params:
+        related_paths = get_related_paths(queryset.model, lookup)
+        if related_paths and not _is_natural_key_lookup(queryset.model, lookup, request):
+            for related_path, related_model in related_paths:
+                if related_path in related_path_filters:
+                    continue
+                viewable = restrict_queryset(related_model._default_manager.all(), user)
+                if viewable.query.where:  # Otherwise, the user may view every object of this model
+                    # A null relation passes through no object, so reveals nothing
+                    viewable_or_null = Q(**{f"{related_path}__in": viewable}) | Q(**{f"{related_path}__isnull": True})
+                    related_path_filters[related_path] = viewable_or_null
+    return queryset.filter(*related_path_filters.values()) if related_path_filters else queryset
