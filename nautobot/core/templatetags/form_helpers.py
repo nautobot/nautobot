@@ -17,7 +17,7 @@ def get_embedded_action_depth(request):
     if request.headers.get("HX-Embedded-Action", "") not in ("create", "search"):
         return 0
     try:
-        return int(request.headers.get("HX-Embedded-Depth", 1))
+        return max(1, int(request.headers.get("HX-Embedded-Depth", 1)))
     except ValueError:
         return 1
 

@@ -183,6 +183,11 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
             )
         )
 
+    def modal_is_closed(self):
+        return self.browser.is_element_not_present_by_xpath(
+            f"{self.modal_xpath}[contains(@class, 'show')]", wait_time=10
+        )
+
     def fill_modal_name(self, name):
         self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").fill(name)
 
@@ -202,13 +207,9 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.open_location_modal_from_device_form(device_name)
 
         self.assertTrue(self.modal_has_quick_add_button("Add a new location type"))
-        self.assertFalse(self.modal_has_quick_add_button("Add a new status"))
-        self.assertFalse(self.modal_has_quick_add_button("Add a new tenant"))
 
         self.click_modal_button(self.modal_xpath, "Add a new location type")
         self.wait_for_modal_title("Add a new location type")
-        self.assertFalse(self.modal_has_quick_add_button("Add a new location type"))
-        self.assertFalse(self.modal_has_quick_add_button("Add a new status"))
         self.fill_modal_name(location_type_name)
         self.submit_modal()
 
@@ -229,6 +230,7 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         )
         self.submit_modal()
 
+        self.assertTrue(self.modal_is_closed())
         location_option_xpath = (
             f"{self.form_xpath}//select[@name='location']/option[normalize-space()='{location_name}']"
         )
@@ -259,6 +261,19 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.wait_for_modal_title("Add a new location")
         self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, location_name)
         self.assertEqual(LocationType.objects.count(), location_type_count)
+        focused_field_name = self.browser.execute_script(
+            "return document.activeElement.closest('.select2-container')?.previousElementSibling?.name;"
+        )
+        self.assertEqual(focused_field_name, "location_type")
+
+        self.click_modal_button(self.modal_xpath, "Add a new location type")
+        self.wait_for_modal_title("Add a new location type")
+        self.browser.find_by_xpath(f"{self.modal_xpath}//button[@class='btn-close']").click()
+        self.assertTrue(self.modal_is_closed())
+        self.click_modal_button(self.form_xpath, "Add a new location")
+        self.wait_for_modal_title("Add a new location")
+        self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, "")
+        self.assertFalse(self.modal_has_quick_add_button("Back"))
 
     def test_embedded_create_nested_validation_error(self):
         location_name = "test location"

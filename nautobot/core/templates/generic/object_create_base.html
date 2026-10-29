@@ -107,7 +107,6 @@
                     text: option.innerText,
                     value: option.value,
                 }));
-                // If `multiple`, add selected object to already existing Select2 target field array of values.
                 window.nb.select2.setSelect2Value(targetField, [
                     ...(targetField.getAttribute('multiple') !== null ? targetFieldValue : []),
                     {
@@ -124,24 +123,40 @@
             };
 
             const restore = () => {
-                const { fragment, targetFieldName } = window.nb.embeddedAction.stack.pop();
-                const nestedTargetFieldName = window.nb.embeddedAction.targetFieldName;
+                const embeddedAction = window.nb.embeddedAction;
+                if (embeddedAction.stack.length === 0) {
+                    return undefined;
+                }
+                const { fragment, targetFieldName } = embeddedAction.stack.pop();
+                const nestedTargetFieldName = embeddedAction.targetFieldName;
                 const content = modalContent();
                 content.replaceChildren(fragment);
-                window.nb.embeddedAction.targetFieldName = targetFieldName;
+                embeddedAction.targetFieldName = targetFieldName;
                 return { content, nestedTargetFieldName };
             };
 
+            const cancelPendingOuterForm = () => {
+                const embeddedAction = window.nb.embeddedAction;
+                if (embeddedAction.pendingOuterForm) {
+                    embeddedAction.targetFieldName = embeddedAction.pendingOuterForm.targetFieldName;
+                    embeddedAction.pendingOuterForm = null;
+                }
+            };
+
             const stashPendingOuterForm = (event) => {
-                const pending = window.nb.embeddedAction.pendingOuterForm;
-                window.nb.embeddedAction.pendingOuterForm = null;
-                if (!pending || !event.detail.shouldSwap) {
+                const embeddedAction = window.nb.embeddedAction;
+                const pending = embeddedAction.pendingOuterForm;
+                if (!pending) {
                     return;
                 }
-                const content = modalContent();
+                if (!event.detail.shouldSwap) {
+                    cancelPendingOuterForm();
+                    return;
+                }
+                embeddedAction.pendingOuterForm = null;
                 const fragment = document.createDocumentFragment();
-                fragment.append(...content.childNodes);
-                window.nb.embeddedAction.stack.push({ fragment, targetFieldName: pending.targetFieldName });
+                fragment.append(...modalContent().childNodes);
+                embeddedAction.stack.push({ fragment, targetFieldName: pending.targetFieldName });
             };
 
             const handleEnd = (event) => {
@@ -154,63 +169,66 @@
                     }
                 })();
 
-                /*
-                 * Valid JSON object is returned only when object creation or search was successful, otherwise it is
-                 * expected to receive a rendered HTML template, a standard content eligible for HTMX swap, in which
-                 * case do nothing here and let HTMX default behaviors handle the rest.
-                 */
                 if (!obj) {
                     stashPendingOuterForm(event);
+                    return;
                 }
 
-                if (obj) {
-                    event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
+                event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
 
-                    if (window.nb.embeddedAction.stack.length > 0) {
-                        const { content, nestedTargetFieldName } = restore();
-                        const targetField = focusTargetField(content, nestedTargetFieldName);
-                        if (targetField) {
-                            setTargetFieldValue(targetField, obj);
-                        }
-                        window.nb.messages.refreshMessages('{% url "messages" %}');
-                        return;
-                    }
-
-                    const targetField = document.querySelector(
-                        `#nb-create-form select[name="${window.nb.embeddedAction.targetFieldName}"]`,
-                    );
+                const restored = restore();
+                if (restored) {
+                    const targetField = focusTargetField(restored.content, restored.nestedTargetFieldName);
                     if (targetField) {
                         setTargetFieldValue(targetField, obj);
                     }
-
-                    const modal = document.querySelector('#embedded_action_modal');
-                    bootstrap.Modal.getInstance(modal).hide();
-
                     window.nb.messages.refreshMessages('{% url "messages" %}');
+                    return;
                 }
+
+                const targetField = document.querySelector(
+                    `#nb-create-form select[name="${window.nb.embeddedAction.targetFieldName}"]`,
+                );
+                if (targetField) {
+                    setTargetFieldValue(targetField, obj);
+                }
+
+                const modal = document.querySelector('#embedded_action_modal');
+                bootstrap.Modal.getInstance(modal).hide();
+
+                window.nb.messages.refreshMessages('{% url "messages" %}');
             };
 
             const handleBack = () => {
-                const { content, nestedTargetFieldName } = restore();
-                focusTargetField(content, nestedTargetFieldName);
+                const restored = restore();
+                if (restored) {
+                    focusTargetField(restored.content, restored.nestedTargetFieldName);
+                }
             };
 
             const handleStart = ({ targetFieldName, depth = 1 }) => {
+                const embeddedAction = window.nb.embeddedAction;
                 if (depth > 1) {
-                    window.nb.embeddedAction.pendingOuterForm = {
-                        targetFieldName: window.nb.embeddedAction.targetFieldName,
-                    };
+                    embeddedAction.pendingOuterForm ??= { targetFieldName: embeddedAction.targetFieldName };
                 } else {
                     modalContent().innerHTML =
                         '<div class="spinner-border mx-auto my-16"><span class="visually-hidden">Loading...</span></div>';
                 }
-                window.nb.embeddedAction.targetFieldName = targetFieldName;
+                embeddedAction.targetFieldName = targetFieldName;
             };
 
             window.nb = window.nb || {};
-            window.nb.embeddedAction = { handleBack, handleEnd, handleStart, pendingOuterForm: null, stack: [], targetFieldName: null };
+            window.nb.embeddedAction = {
+                handleBack,
+                handleEnd,
+                handleStart,
+                pendingOuterForm: null,
+                stack: [],
+                targetFieldName: null,
+            };
 
-            document.querySelector('#embedded_action_modal').addEventListener('hidden.bs.modal', () => {
+            modalContent()?.addEventListener('htmx:sendError', cancelPendingOuterForm);
+            document.querySelector('#embedded_action_modal')?.addEventListener('hidden.bs.modal', () => {
                 window.nb.embeddedAction.stack.length = 0;
                 window.nb.embeddedAction.pendingOuterForm = null;
             });

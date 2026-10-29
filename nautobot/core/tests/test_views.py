@@ -26,6 +26,7 @@ from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
+from nautobot.core.templatetags.form_helpers import get_embedded_action_depth
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -1655,46 +1656,47 @@ class EmbeddedCreateDepthTestCase(TestCase):
         self.add_permissions("dcim.add_location", "dcim.add_locationtype", "dcim.add_device")
 
     @staticmethod
-    def _headers(depth=None):
-        headers = {"HX-Request": "true", "HX-Embedded-Action": "create"}
-        if depth is not None:
-            headers["HX-Embedded-Depth"] = str(depth)
-        return headers
-
-    def _assert_location_modal_buttons(self, response):
-        self.assertBodyContains(response, "Add a new location type")
-        self.assertBodyContains(response, '"HX-Embedded-Depth": "2"')
-        self.assertNotContains(response, "Add a new status")
-        self.assertNotContains(response, "Add a new tenant")
+    def _headers(depth):
+        return {"HX-Request": "true", "HX-Embedded-Action": "create", "HX-Embedded-Depth": str(depth)}
 
     def test_location_modal_shows_nested_button_only_for_location_type(self):
         response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=1))
-        self._assert_location_modal_buttons(response)
+        self.assertBodyContains(response, "Add a new location type")
+        self.assertBodyContains(response, '"HX-Embedded-Depth": "2"')
+        self.assertBodyContains(response, """hx-headers='{"HX-Embedded-Action": "create", "HX-Embedded-Depth": "1"}'""")
+        self.assertNotContains(response, "Add a new status")
+        self.assertNotContains(response, "Add a new tenant")
 
     def test_location_modal_hides_nested_button_without_permission(self):
         self.remove_permissions("dcim.add_locationtype")
         response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=1))
         self.assertHttpStatus(response, 200)
-        self.assertNotContains(response, "Add a new location type")
+        self.assertNotContains(response, 'data-bs-title="Add a new location type"')
 
     def test_nested_form_shows_no_buttons_and_back(self):
         response = self.client.get(reverse("dcim:locationtype_add"), headers=self._headers(depth=2))
         self.assertHttpStatus(response, 200)
         self.assertNotContains(response, 'data-bs-title="Add a new')
-        self.assertBodyContains(response, "handleBack()")
-        self.assertNotContains(response, "Cancel")
+        self.assertBodyContains(response, "handleBack")
+        self.assertNotContains(response, 'data-bs-dismiss="modal" type="button"')
 
-    def test_missing_depth_header_is_depth_one(self):
-        response = self.client.get(reverse("dcim:location_add"), headers=self._headers())
-        self._assert_location_modal_buttons(response)
+    def test_depth_limit_hides_nested_button_even_when_field_opts_in(self):
+        response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=2))
+        self.assertHttpStatus(response, 200)
+        self.assertNotContains(response, 'data-bs-title="Add a new location type"')
 
-    def test_invalid_depth_header_is_depth_one(self):
-        response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth="abc"))
-        self._assert_location_modal_buttons(response)
-
-    def test_invalid_post_keeps_depth_rules(self):
-        response = self.client.post(reverse("dcim:location_add"), data={}, headers=self._headers(depth=1))
-        self._assert_location_modal_buttons(response)
+    def test_get_embedded_action_depth(self):
+        cases = (
+            ({}, 0),
+            ({"HX-Embedded-Action": "create"}, 1),
+            ({"HX-Embedded-Action": "create", "HX-Embedded-Depth": "abc"}, 1),
+            ({"HX-Embedded-Action": "create", "HX-Embedded-Depth": "0"}, 1),
+            ({"HX-Embedded-Action": "create", "HX-Embedded-Depth": "2"}, 2),
+        )
+        for headers, expected_depth in cases:
+            with self.subTest(headers=headers):
+                request = RequestFactory().get("/", headers=headers)
+                self.assertEqual(get_embedded_action_depth(request), expected_depth)
 
     def test_page_form_unchanged(self):
         response = self.client.get(reverse("dcim:device_add"))

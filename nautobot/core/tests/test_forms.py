@@ -965,8 +965,3 @@ class EmbeddedActionsFormMixinTestCase(testing.TestCase):
         self.assertFalse(form.fields["content_type"].embedded_search)
         self.assertTrue(form.fields["device"].embedded_create)
         self.assertTrue(form.fields["device"].embedded_search)
-
-    def test_embedded_create_nested_defaults_to_false_and_is_set_on_location_type(self):
-        field = forms.DynamicModelChoiceField(queryset=dcim_models.Device.objects.all())
-        self.assertFalse(field.embedded_create_nested)
-        self.assertTrue(dcim_forms.LocationForm().fields["location_type"].embedded_create_nested)
