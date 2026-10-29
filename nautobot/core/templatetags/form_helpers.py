@@ -13,7 +13,13 @@ EMBEDDED_ACTION_MAX_DEPTH = 2
 
 
 def get_embedded_action_depth(request):
-    """Return the embedded form depth of the request: 0 for a page form, 1 or more inside the modal."""
+    """
+    Return how deeply the form for this request is nested in the embedded action modal.
+
+    Return 0 if the `HX-Embedded-Action` header is not "create" or "search", meaning the form is on a full page.
+    Otherwise return the `HX-Embedded-Depth` header value, which is at least 1. A missing or non-integer value is
+    treated as 1.
+    """
     if request.headers.get("HX-Embedded-Action", "") not in ("create", "search"):
         return 0
     try:
