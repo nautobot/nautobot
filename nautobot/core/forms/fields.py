@@ -501,8 +501,9 @@ class DynamicModelChoiceMixin:
             conditions are later evaluated on the template level
         embedded_search (Optional[boolean]): Indicates "Embedded Search" availability for this field, its actual render
             conditions are later evaluated on the template level
-        embedded_create_nested (Optional[boolean]): Also show the "Embedded Create" button for this field when the form
-            renders inside an "Embedded Create" modal. Only one nested level is supported.
+        embedded_create_nested (Optional[boolean]): If True, also show the "Embedded Create" button for this field when
+            the form is rendered inside an "Embedded Create" modal. The nested form that this button opens does not
+            show any "Embedded Create" buttons, so forms can be nested only one level deep.
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
