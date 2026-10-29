@@ -1,4 +1,6 @@
 from django.urls import reverse
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import LocationType
@@ -183,10 +185,28 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
             )
         )
 
-    def modal_is_closed(self):
-        return self.browser.is_element_not_present_by_xpath(
-            f"{self.modal_xpath}[contains(@class, 'show')]", wait_time=10
+    def modal_is_closed(self, timeout=10):
+        script = (
+            "const modal = document.querySelector('#embedded_action_modal');"
+            "return getComputedStyle(modal).display === 'none' && !document.querySelector('.modal-backdrop');"
         )
+        try:
+            WebDriverWait(self.browser.driver, timeout).until(lambda driver: driver.execute_script(script))
+        except TimeoutException:
+            return False
+        return True
+
+    def wait_for_focused_select2(self, field_name, timeout=10):
+        script = (
+            "return document.activeElement.closest('.select2-container')?.parentElement.querySelector('select')?.name;"
+        )
+        try:
+            WebDriverWait(self.browser.driver, timeout).until(
+                lambda driver: driver.execute_script(script) == field_name
+            )
+        except TimeoutException:
+            return False
+        return True
 
     def fill_modal_name(self, name):
         self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").fill(name)
@@ -261,15 +281,13 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.wait_for_modal_title("Add a new location")
         self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, location_name)
         self.assertEqual(LocationType.objects.count(), location_type_count)
-        focused_field_name = self.browser.execute_script(
-            "return document.activeElement.closest('.select2-container')?.previousElementSibling?.name;"
-        )
-        self.assertEqual(focused_field_name, "location_type")
+        self.assertTrue(self.wait_for_focused_select2("location_type"))
 
         self.click_modal_button(self.modal_xpath, "Add a new location type")
         self.wait_for_modal_title("Add a new location type")
         self.browser.find_by_xpath(f"{self.modal_xpath}//button[@class='btn-close']").click()
         self.assertTrue(self.modal_is_closed())
+        self.browser.execute_script("document.querySelectorAll('.tooltip').forEach((tooltip) => tooltip.remove());")
         self.click_modal_button(self.form_xpath, "Add a new location")
         self.wait_for_modal_title("Add a new location")
         self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, "")

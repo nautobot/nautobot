@@ -118,7 +118,7 @@
 
             const focusTargetField = (container, targetFieldName) => {
                 const targetField = container.querySelector(`select[name="${targetFieldName}"]`);
-                targetField?.parentElement?.querySelector('.select2-selection')?.focus();
+                setTimeout(() => targetField?.parentElement?.querySelector('.select2-selection')?.focus());
                 return targetField;
             };
 
