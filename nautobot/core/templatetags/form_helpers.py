@@ -9,7 +9,7 @@ from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
 register = template.Library()
 
 EMBEDDED_ACTION_MAX_DEPTH = 2
-"""Deepest form level that may render inside the embedded action modal."""
+"""The maximum nesting depth of a form in the embedded action modal: 1 is the form opened from the page, 2 is the form opened from inside that modal form."""
 
 
 def get_embedded_action_depth(request):
