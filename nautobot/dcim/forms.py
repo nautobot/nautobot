@@ -438,7 +438,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
     pk = forms.ModelMultipleChoiceField(queryset=Location.objects.all(), widget=forms.MultipleHiddenInput)
     # location_type is not editable on existing instances
     parent = DynamicModelChoiceField(queryset=Location.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     asn = forms.IntegerField(min_value=BGP_ASN_MIN, max_value=BGP_ASN_MAX, required=False, label="ASN")
     time_zone = TimeZoneFormField(
@@ -656,7 +656,7 @@ class RackBulkEditForm(
         required=False,
         query_params={"location": "$location"},
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
     asset_tag = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
@@ -805,7 +805,7 @@ class RackReservationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
@@ -2450,7 +2450,7 @@ class DeviceBulkEditForm(
         queryset=Cluster.objects.all(), required=False, label="Remove from clusters"
     )
     comments = CommentField(widget=SmallTextarea, label="Comments")
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
@@ -2761,7 +2761,7 @@ class ModuleBulkEditForm(
         required=False,
         query_params={"manufacturer": "$manufacturer"},
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     serial = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False, label="Serial Number")
 
     class Meta:
@@ -4943,7 +4943,11 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     cable_type = DynamicModelMultipleChoiceField(queryset=CableType.objects.all(), to_field_name="name", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(), to_field_name="name", required=False, null_option="None"
+        queryset=Tenant.objects.all(),
+        query_params={"sort": "name"},
+        to_field_name="name",
+        required=False,
+        null_option="None",
     )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
@@ -5193,7 +5197,7 @@ class VirtualChassisFilterForm(NautobotFilterForm):
         to_field_name="name",
         required=False,
         null_option="None",
-        query_params={"tenant_group": "$tenant_group"},
+        query_params={"sort": "name", "tenant_group": "$tenant_group"},
     )
     tags = TagFilterField(model)
 
@@ -5294,12 +5298,12 @@ class PowerFeedForm(NautobotModelForm):
     )
     power_panel = DynamicModelChoiceField(
         queryset=PowerPanel.objects.all(),
-        query_params={"location": "$location"},
+        query_params={"sort": "name", "location": "$location"},
     )
     destination_panel = DynamicModelChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
-        query_params={"location": "$location"},
+        query_params={"sort": "name", "location": "$location"},
     )
     rack = DynamicModelChoiceField(
         queryset=Rack.objects.all(),
@@ -5340,8 +5344,12 @@ class PowerFeedForm(NautobotModelForm):
 
 class PowerFeedBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=PowerFeed.objects.all(), widget=forms.MultipleHiddenInput)
-    power_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
-    destination_panel = DynamicModelChoiceField(queryset=PowerPanel.objects.all(), required=False)
+    power_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(), query_params={"sort": "name"}, required=False
+    )
+    destination_panel = DynamicModelChoiceField(
+        queryset=PowerPanel.objects.all(), query_params={"sort": "name"}, required=False
+    )
     rack = DynamicModelChoiceField(queryset=Rack.objects.all(), required=False)
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerFeedTypeChoices),
@@ -5392,14 +5400,14 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         required=False,
         label="Power panel",
         null_option="None",
-        query_params={"location": "$location"},
+        query_params={"sort": "name", "location": "$location"},
     )
     destination_panel = DynamicModelMultipleChoiceField(
         queryset=PowerPanel.objects.all(),
         required=False,
         label="Destination panel",
         null_option="None",
-        query_params={"location": "$location"},
+        query_params={"sort": "name", "location": "$location"},
     )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
@@ -6011,7 +6019,7 @@ class ControllerBulkEditForm(
         required=False,
     )
     tenant = DynamicModelChoiceField(
-        queryset=Tenant.objects.all(),
+        queryset=Tenant.objects.all(), query_params={"sort": "name"},
         required=False,
     )
     external_integration = DynamicModelChoiceField(
@@ -6179,7 +6187,7 @@ class ControllerManagedDeviceGroupBulkEditForm(TagsBulkEditFormMixin, NautobotBu
         base_field=forms.CharField(),
         required=False,
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
 
     class Meta:
         model = ControllerManagedDeviceGroup
@@ -6207,7 +6215,7 @@ class VirtualDeviceContextForm(NautobotModelForm):
     tenant_group = DynamicModelChoiceField(queryset=TenantGroup.objects.all(), to_field_name="name", required=False)
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
-        query_params={"tenant_group": "$tenant_group"},
+        query_params={"sort": "name", "tenant_group": "$tenant_group"},
         required=False,
     )
     interfaces = DynamicModelMultipleChoiceField(
@@ -6289,7 +6297,7 @@ class VirtualDeviceContextBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualDeviceContext.objects.all(), widget=forms.MultipleHiddenInput())
     device = DynamicModelChoiceField(queryset=Device.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     add_interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(), required=False, query_params={"device": "$device"}
     )
@@ -6338,7 +6346,7 @@ class VirtualDeviceContextFilterForm(
         null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
-        queryset=Tenant.objects.all(),
+        queryset=Tenant.objects.all(), query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )

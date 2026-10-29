@@ -115,7 +115,7 @@ class VirtualServerBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  #
         widget=StaticSelect2,
         label="Load Balancer Type",
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     source_nat_pool = DynamicModelChoiceField(queryset=Prefix.objects.all(), required=False, label="Source NAT Pool")
     source_nat_type = forms.ChoiceField(
         required=False,
@@ -256,7 +256,7 @@ class LoadBalancerPoolBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         required=False,
         label="Health Check Monitor",
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
 
     class Meta:
         """Meta attributes."""
@@ -360,7 +360,7 @@ class LoadBalancerPoolMemberBulkEditForm(StatusModelBulkEditFormMixin, TagsBulkE
         queryset=models.CertificateProfile.objects.all(),
         required=False,
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
 
     class Meta:
         """Meta attributes."""
@@ -437,7 +437,7 @@ class HealthCheckMonitorBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm
         widget=StaticSelect2,
         label="Health Check Type",
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
 
     class Meta:
         """Meta attributes."""
@@ -506,7 +506,7 @@ class CertificateProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm
     key_file_path = forms.CharField(required=False, max_length=CHARFIELD_MAX_LENGTH, label="Key File Path")
     expiration_date = forms.DateTimeField(required=False, label="Expiration Date", widget=DateTimePicker)
     cipher = forms.CharField(required=False, label="Cipher")
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
 
     class Meta:
         """Meta attributes."""
