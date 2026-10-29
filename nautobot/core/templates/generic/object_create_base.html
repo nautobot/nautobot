@@ -196,7 +196,8 @@
                     }
                 })();
 
-                if (!obj) {
+                const isRenderedFormResponse = !obj;
+                if (isRenderedFormResponse) {
                     stashPendingOuterForm(event);
                     return;
                 }
