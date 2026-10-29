@@ -100,6 +100,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
+                    sticky_headers=True,
                     row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT,
                     is_object_embedded_search_results=is_object_embedded_search_request,
                 )

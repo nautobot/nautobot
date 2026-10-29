@@ -448,6 +448,30 @@ class BaseTableOverviewColumnTestCase(TestCase):
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
 
+class BaseTableStickyHeadersTestCase(TestCase):
+    """Covers how `BaseTable.__init__` applies `nb-table-sticky-headers` to the class string."""
+
+    def test_argument_omitted(self):
+        """The class string omits `nb-table-sticky-headers` when the `sticky_headers` kwarg is not passed and defaults to `False`."""
+        table = RIRTable(RIR.objects.none())
+        self.assertNotIn("nb-table-sticky-headers", table.attrs["class"].split())
+
+    def test_argument_adds_marker_class(self):
+        """`sticky_headers=True` appends `nb-table-sticky-headers` to the class string."""
+        table = RIRTable(RIR.objects.none(), sticky_headers=True)
+        self.assertIn("nb-table-sticky-headers", table.attrs["class"].split())
+
+    def test_marker_class_joins_caller_supplied_classes(self):
+        """An `attrs` dict supplied by the caller is preserved, with `nb-table-sticky-headers` appended to it when `sticky_headers=True`."""
+        table = RIRTable(RIR.objects.none(), attrs={"class": "table"}, sticky_headers=True)
+        self.assertEqual(table.attrs["class"].split(), ["table", "nb-table-sticky-headers"])
+
+    def test_object_embedded_search_results(self):
+        """`is_object_embedded_search_results=True` overrides `sticky_headers=True` and omits the class."""
+        table = RIRTable(RIR.objects.none(), sticky_headers=True, is_object_embedded_search_results=True)
+        self.assertNotIn("nb-table-sticky-headers", table.attrs["class"].split())
+
+
 class LinkedCountColumnRenderTestCase(TestCase):
     def test_nested_lookup_with_none_mid_chain_falls_back_to_count(self):
         """A None partway through a nested `lookup` chain breaks the walk and falls back to the count badge."""
