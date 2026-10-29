@@ -211,7 +211,7 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
     def submit_modal(self):
         self.browser.find_by_xpath(f"{self.modal_xpath}//button[@type='submit']").click()
 
-    def modal_has_quick_add_button(self, label):
+    def modal_has_button(self, label):
         return self.browser.is_element_present_by_xpath(
             f"{self.modal_xpath}//button[normalize-space()='{label}']", wait_time=1
         )
@@ -223,7 +223,7 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         status = Status.objects.get(name="Active")
         self.open_location_modal_from_device_form(device_name)
 
-        self.assertTrue(self.modal_has_quick_add_button("Add a new location type"))
+        self.assertTrue(self.modal_has_button("Add a new location type"))
 
         self.click_modal_button(self.modal_xpath, "Add a new location type")
         self.wait_for_modal_title("Add a new location type")
@@ -308,7 +308,7 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.click_modal_button(self.form_xpath, "Add a new location")
         self.wait_for_modal_title("Add a new location")
         self.assertEqual(self.browser.find_by_xpath(f"{self.modal_xpath}//input[@name='name']").value, "")
-        self.assertFalse(self.modal_has_quick_add_button("Back"))
+        self.assertFalse(self.modal_has_button("Back"))
 
     def test_embedded_create_nested_validation_error(self):
         location_name = "test location"
