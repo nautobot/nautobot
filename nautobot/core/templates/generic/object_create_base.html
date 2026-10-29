@@ -128,8 +128,9 @@
             });
 
             /*
-             * Select2 keeps its instances in a cache keyed by element `id`, and the outer and the nested form render the
-             * same `embedded_id_*` ids, so a Select2 of one form would destroy the Select2 of the other.
+             * Select2 stores each instance in a cache keyed by the element `id`. The outer form and the nested form
+             * both render fields with the same `embedded_id_*` ids, so initializing or destroying a Select2 field in
+             * one form would replace or remove the cache entry of the matching field in the other form.
              */
             const destroySelect2Fields = (root) =>
             $(root)
