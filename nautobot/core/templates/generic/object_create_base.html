@@ -170,7 +170,7 @@
             const stashPendingOuterForm = (event) => {
                 const embeddedAction = window.nb.embeddedAction;
                 const pending = embeddedAction.pendingOuterForm;
-                if (!pending) {
+                if (!pending || event.detail.requestConfig?.elt !== pending.trigger) {
                     return;
                 }
                 if (!event.detail.shouldSwap) {
@@ -249,10 +249,10 @@
                 }
             };
 
-            const handleStart = ({ targetFieldName, depth = 1 }) => {
+            const handleStart = ({ targetFieldName, depth = 1, trigger }) => {
                 const embeddedAction = window.nb.embeddedAction;
                 if (depth > 1) {
-                    embeddedAction.pendingOuterForm ??= { targetFieldName: embeddedAction.targetFieldName };
+                    embeddedAction.pendingOuterForm ??= { targetFieldName: embeddedAction.targetFieldName, trigger };
                 } else {
                     modalContent().innerHTML =
                         '<div class="spinner-border mx-auto my-16"><span class="visually-hidden">Loading...</span></div>';

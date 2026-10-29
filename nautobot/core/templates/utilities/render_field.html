@@ -68,7 +68,7 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                                 {% endif %}
                                 hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
                                 hx-headers='{"HX-Embedded-Action": "create", "HX-Embedded-Depth": "{{ embedded_next_depth }}"}'
-                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}', depth: {{ embedded_next_depth }} });"
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}', depth: {{ embedded_next_depth }}, trigger: this });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
                                 {% if field.field.disabled %}disabled=""{% endif %}
