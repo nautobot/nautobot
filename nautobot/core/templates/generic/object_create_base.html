@@ -159,9 +159,9 @@
                 return { content, nestedTargetFieldName };
             };
 
-            const cancelPendingOuterForm = () => {
+            const cancelPendingOuterForm = (event) => {
                 const embeddedAction = window.nb.embeddedAction;
-                if (embeddedAction.pendingOuterForm) {
+                if (embeddedAction.pendingOuterForm && event.detail.elt === embeddedAction.pendingOuterForm.trigger) {
                     embeddedAction.targetFieldName = embeddedAction.pendingOuterForm.targetFieldName;
                     embeddedAction.pendingOuterForm = null;
                 }
@@ -174,7 +174,7 @@
                     return;
                 }
                 if (!event.detail.shouldSwap) {
-                    cancelPendingOuterForm();
+                    cancelPendingOuterForm(event);
                     return;
                 }
                 embeddedAction.pendingOuterForm = null;
@@ -271,7 +271,7 @@
                 targetFieldName: null,
             };
 
-            modalContent()?.addEventListener('htmx:sendError', cancelPendingOuterForm);
+            modalContent()?.addEventListener('htmx:afterRequest', cancelPendingOuterForm);
             document.querySelector('#embedded_action_modal')?.addEventListener('hidden.bs.modal', () => {
                 window.nb.embeddedAction.stack.length = 0;
                 window.nb.embeddedAction.pendingOuterForm = null;
