@@ -23,10 +23,10 @@ from nautobot.circuits.tables import ProviderTable
 from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
+from nautobot.core.templatetags.form_helpers import get_embedded_action_depth
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.core.templatetags.form_helpers import get_embedded_action_depth
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
