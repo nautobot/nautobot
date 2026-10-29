@@ -170,6 +170,9 @@ class ObjectEditNestedEmbeddedCreateTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(f"{self.form_xpath}//input[@name='name']").fill(device_name)
         self.click_modal_button(self.form_xpath, "Add a new location")
         self.wait_for_modal_title("Add a new location")
+        self.assertTrue(
+            self.wait_until_script_is_truthy("return document.activeElement.id === 'embedded_action_modal';")
+        )
 
     def click_modal_button(self, scope_xpath, label):
         button_xpath = f"{scope_xpath}//button[normalize-space()='{label}']"
