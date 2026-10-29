@@ -1645,3 +1645,58 @@ class ViewSetCustomActionsTestCase(TestCase):
         self.add_permissions("dcim.add_location", "dcim.change_location")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
+
+class EmbeddedCreateDepthTestCase(TestCase):
+    """Tests for the quick-add buttons that an embedded create form shows at each depth."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.add_location", "dcim.add_locationtype", "dcim.add_device")
+
+    @staticmethod
+    def _headers(depth=None):
+        headers = {"HX-Request": "true", "HX-Embedded-Action": "create"}
+        if depth is not None:
+            headers["HX-Embedded-Depth"] = str(depth)
+        return headers
+
+    def _assert_location_modal_buttons(self, response):
+        self.assertBodyContains(response, "Add a new location type")
+        self.assertBodyContains(response, '"HX-Embedded-Depth": "2"')
+        self.assertNotContains(response, "Add a new status")
+        self.assertNotContains(response, "Add a new tenant")
+
+    def test_location_modal_shows_nested_button_only_for_location_type(self):
+        response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=1))
+        self._assert_location_modal_buttons(response)
+
+    def test_location_modal_hides_nested_button_without_permission(self):
+        self.remove_permissions("dcim.add_locationtype")
+        response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=1))
+        self.assertHttpStatus(response, 200)
+        self.assertNotContains(response, "Add a new location type")
+
+    def test_nested_form_shows_no_buttons_and_back(self):
+        response = self.client.get(reverse("dcim:locationtype_add"), headers=self._headers(depth=2))
+        self.assertHttpStatus(response, 200)
+        self.assertNotContains(response, 'data-bs-title="Add a new')
+        self.assertBodyContains(response, "handleBack()")
+        self.assertNotContains(response, "Cancel")
+
+    def test_missing_depth_header_is_depth_one(self):
+        response = self.client.get(reverse("dcim:location_add"), headers=self._headers())
+        self._assert_location_modal_buttons(response)
+
+    def test_invalid_depth_header_is_depth_one(self):
+        response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth="abc"))
+        self._assert_location_modal_buttons(response)
+
+    def test_invalid_post_keeps_depth_rules(self):
+        response = self.client.post(reverse("dcim:location_add"), data={}, headers=self._headers(depth=1))
+        self._assert_location_modal_buttons(response)
+
+    def test_page_form_unchanged(self):
+        response = self.client.get(reverse("dcim:device_add"))
+        self.assertBodyContains(response, "Add a new location")
+        self.assertBodyContains(response, '"HX-Embedded-Depth": "1"')

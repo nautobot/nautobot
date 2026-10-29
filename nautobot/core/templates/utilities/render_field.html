@@ -62,11 +62,13 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                         <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
                             <button
                                 class="btn btn-primary flex-grow-0 flex-shrink-0"
-                                data-bs-toggle="modal"
-                                data-bs-target="#embedded_action_modal"
+                                {% if embedded_next_depth == 1 %}
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#embedded_action_modal"
+                                {% endif %}
                                 hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
-                                hx-headers='{"HX-Embedded-Action": "create"}'
-                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-headers='{"HX-Embedded-Action": "create", "HX-Embedded-Depth": "{{ embedded_next_depth }}"}'
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}', depth: {{ embedded_next_depth }} });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
                                 {% if field.field.disabled %}disabled=""{% endif %}

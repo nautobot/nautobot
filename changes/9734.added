@@ -1,0 +1,1 @@
+Added a quick-add (+) button for the Location Type field in the "Add a new location" modal, so that a user can create a Location Type from the Device form without leaving the page. Embedded create forms now send the `HX-Embedded-Action` header on submit, so quick-add buttons no longer appear inside the modal after a validation error.

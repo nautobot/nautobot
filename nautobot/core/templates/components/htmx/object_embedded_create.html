@@ -1,5 +1,6 @@
 {% load form_helpers %}
 {% load helpers %}
+{% embedded_action_depth as depth %}
 
 <div class="modal-header">
     {# `id` must match the `aria-labelledby` of `#embedded_action_modal`, which swaps this content in. #}
@@ -7,7 +8,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body pb-0">
-    <form data-nb-obj-type="{{ obj_type }}" hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
+    <form data-nb-obj-type="{{ obj_type }}" hx-headers='{"HX-Embedded-Action": "create", "HX-Embedded-Depth": "{{ depth }}"}' hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}
@@ -55,10 +56,17 @@
                     <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
                     -->Create
                 </button>
-                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
-                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                    -->Cancel
-                </button>
+                {% if depth > 1 %}
+                    <button class="btn btn-secondary" hx-on:click="window.nb.embeddedAction.handleBack();" type="button">
+                        <span aria-hidden="true" class="mdi mdi-arrow-left me-4"></span><!--
+                        -->Back
+                    </button>
+                {% else %}
+                    <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Cancel
+                    </button>
+                {% endif %}
             {% endblock %}
         </div>
     </form>

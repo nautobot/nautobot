@@ -8,6 +8,25 @@ from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
 
 register = template.Library()
 
+EMBEDDED_ACTION_MAX_DEPTH = 2
+"""Deepest form level that may render inside the embedded action modal."""
+
+
+def get_embedded_action_depth(request):
+    """Return the embedded form depth of the request: 0 for a page form, 1 or more inside the modal."""
+    if request.headers.get("HX-Embedded-Action", "") not in ("create", "search"):
+        return 0
+    try:
+        return int(request.headers.get("HX-Embedded-Depth", 1))
+    except ValueError:
+        return 1
+
+
+@register.simple_tag(takes_context=True)
+def embedded_action_depth(context):
+    """Return the embedded form depth of the current request."""
+    return get_embedded_action_depth(context.request)
+
 
 @register.inclusion_tag("utilities/render_field.html", takes_context=True)
 def render_field(context, field, bulk_nullable=False, container_class=None):
@@ -17,11 +36,14 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
     field_instance = getattr(field, "field", None)
     embedded_create = getattr(field_instance, "embedded_create", False)
     embedded_search = getattr(field_instance, "embedded_search", False)
-    # We're rendering inside an embedded-action modal flow only when the originating HTMX request
-    # came from one of the embedded-action buttons (which set HX-Embedded-Action explicitly).
-    # Plain HTMX swaps (e.g. dynamic field updates within a normal form) don't suppress the
-    # embedded-action affordances on their fields.
-    is_embedded = context.request.headers.get("HX-Embedded-Action", "") in ("create", "search")
+    embedded_action = context.request.headers.get("HX-Embedded-Action", "")
+    depth = get_embedded_action_depth(context.request)
+    is_embedded = depth > 0
+    can_nest_embedded_create = (
+        embedded_action == "create"
+        and depth < EMBEDDED_ACTION_MAX_DEPTH
+        and getattr(field_instance, "embedded_create_nested", False)
+    )
     has_embedded_create_permissions = context.request.user.has_perms(
         getattr(field_instance, "embedded_create_permissions", [])
     )
@@ -66,7 +88,10 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
     return {
         "field": field,
         "bulk_nullable": bulk_nullable,
-        "should_render_embedded_create": embedded_create and not is_embedded and has_embedded_create_permissions,
+        "should_render_embedded_create": embedded_create
+        and (not is_embedded or can_nest_embedded_create)
+        and has_embedded_create_permissions,
+        "embedded_next_depth": depth + 1,
         "should_render_embedded_search": embedded_search and not is_embedded,
         "embedded_create_query_string": urlencode(embedded_create_query_params),
         "embedded_search_query_string": urlencode(embedded_search_query_params),

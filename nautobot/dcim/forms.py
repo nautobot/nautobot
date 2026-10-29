@@ -376,7 +376,7 @@ class LocationTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 
 class LocationForm(NautobotModelForm, TenancyForm):
-    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all())
+    location_type = DynamicModelChoiceField(queryset=LocationType.objects.all(), embedded_create_nested=True)
     parent = DynamicModelChoiceField(
         queryset=Location.objects.all(),
         query_params={"child_location_type": "$location_type"},

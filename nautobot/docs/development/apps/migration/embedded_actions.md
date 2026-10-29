@@ -78,6 +78,12 @@ class MyModelForm(NautobotModelForm):
         fields = "__all__"
 ```
 
+The `embedded_create_nested` keyword argument also shows the embedded create button for the field when its form renders inside an embedded create modal. The nested form shows no further embedded create buttons and sends the `HX-Embedded-Depth` header.
+
+```python
+location_type = DynamicModelChoiceField(queryset=LocationType.objects.all(), embedded_create_nested=True)
+```
+
 ## Migrating to `window.nb.form`
 
 The `window.nb.form` object provides an interface to register your form initialization scripts so they run at the correct time and target the correct fields.

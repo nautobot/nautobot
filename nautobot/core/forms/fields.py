@@ -501,6 +501,8 @@ class DynamicModelChoiceMixin:
             conditions are later evaluated on the template level
         embedded_search (Optional[boolean]): Indicates "Embedded Search" availability for this field, its actual render
             conditions are later evaluated on the template level
+        embedded_create_nested (Optional[boolean]): Show the "Embedded Create" button for this field also when the form
+            renders inside an "Embedded Create" modal (one nested level)
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -517,6 +519,7 @@ class DynamicModelChoiceMixin:
         depth=0,
         embedded_create=None,
         embedded_search=None,
+        embedded_create_nested=False,
         *args,
         **kwargs,
     ):
@@ -530,6 +533,7 @@ class DynamicModelChoiceMixin:
         self.depth = depth
         self.embedded_create = embedded_create
         self.embedded_search = embedded_search
+        self.embedded_create_nested = embedded_create_nested
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
