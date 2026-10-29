@@ -303,6 +303,13 @@ plugins:
         "overview/index.md": "index.md"
         "development/apps/api/platform-features/populating-extensibility-features.md": "development/apps/api/platform-features/prepopulating-data.md"
         "development/apps/api/ui-extensions/object-detail-views.md": "development/apps/api/ui-extensions/object-views.md"
+        "development/apps/migration/code-updates.md": "development/apps/migration/from-v1/code-updates.md"
+        "development/apps/migration/dependency-updates.md": "development/apps/migration/from-v1/dependency-updates.md"
+        "development/apps/migration/from-v1.md": "development/apps/migration/from-v1/overview.md"
+        "development/apps/migration/model-updates/dcim.md": "development/apps/migration/from-v1/model-updates/dcim.md"
+        "development/apps/migration/model-updates/extras.md": "development/apps/migration/from-v1/model-updates/extras.md"
+        "development/apps/migration/model-updates/global.md": "development/apps/migration/from-v1/model-updates/global.md"
+        "development/apps/migration/model-updates/ipam.md": "development/apps/migration/from-v1/model-updates/ipam.md"
         "development/core/bootstrap-ui.md": "development/core/ui-best-practices.md"
         "development/core/extending-models.md": "development/core/model-checklist.md"
         "models/cloud/cloudaccount.md": "user-guide/core-data-model/cloud/cloudaccount.md"
@@ -703,19 +710,21 @@ nav:
               - nautobot.apps.utils: "code-reference/nautobot/apps/utils.md"
               - nautobot.apps.views: "code-reference/nautobot/apps/views.md"
           - Migration Guides:
-              - From Nautobot v1: "development/apps/migration/from-v1.md"
-              - From Nautobot v2:
+              - From Nautobot v1 to v2:
+                  - Overview: "development/apps/migration/from-v1/overview.md"
+                  - Dependency Updates: "development/apps/migration/from-v1/dependency-updates.md"
+                  - Code Updates: "development/apps/migration/from-v1/code-updates.md"
+                  - Model Updates:
+                      - Global: "development/apps/migration/from-v1/model-updates/global.md"
+                      - DCIM: "development/apps/migration/from-v1/model-updates/dcim.md"
+                      - Extras: "development/apps/migration/from-v1/model-updates/extras.md"
+                      - IPAM: "development/apps/migration/from-v1/model-updates/ipam.md"
+              - From Nautobot v2 to v3:
                   - Overview: "development/apps/migration/from-v2/overview.md"
                   - Migrating v2 to v3: "development/apps/migration/from-v2/migrating-v2-to-v3.md"
+                  - Code Updates: "development/apps/migration/from-v2/code-updates.md"
                   - New Nautobot Custom UI APIs: "development/apps/migration/from-v2/new-nautobot-custom-ui-apis.md"
                   - Upgrading from Bootstrap v3 to v5: "development/apps/migration/from-v2/upgrading-from-bootstrap-v3-to-v5.md"
-              - Dependency Updates: "development/apps/migration/dependency-updates.md"
-              - Code Updates: "development/apps/migration/code-updates.md"
-              - Model Updates:
-                  - Global: "development/apps/migration/model-updates/global.md"
-                  - DCIM: "development/apps/migration/model-updates/dcim.md"
-                  - Extras: "development/apps/migration/model-updates/extras.md"
-                  - IPAM: "development/apps/migration/model-updates/ipam.md"
               - UI Component Framework:
                   - "development/apps/migration/ui-component-framework/index.md"
                   - Migration steps: "development/apps/migration/ui-component-framework/migration-steps.md"
