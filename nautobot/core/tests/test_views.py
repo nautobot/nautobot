@@ -1679,7 +1679,7 @@ class EmbeddedCreateDepthTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertNotContains(response, 'data-bs-title="Add a new')
         self.assertBodyContains(response, "handleBack")
-        self.assertNotContains(response, 'data-bs-dismiss="modal" type="button"')
+        self.assertNotContains(response, "-->Cancel")
 
     def test_depth_limit_hides_nested_button_even_when_field_opts_in(self):
         response = self.client.get(reverse("dcim:location_add"), headers=self._headers(depth=2))
