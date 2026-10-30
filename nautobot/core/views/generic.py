@@ -1578,14 +1578,16 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
         parent_model_name = self.parent_model._meta.verbose_name_plural
         model_name = self.queryset.model._meta.verbose_name_plural
         model = self.queryset.model
+        parent_queryset = self.parent_model.objects.restrict(request.user, "view")
 
         # Are we editing *all* objects in the queryset or just a selected subset?
         if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.parent_model.objects.only("pk")).qs]  # pylint: disable=not-callable
+            pk_list = [obj.pk for obj in self.filterset(request.GET, parent_queryset.only("pk")).qs]  # pylint: disable=not-callable
         else:
             pk_list = request.POST.getlist("pk")
 
-        selected_objects = self.parent_model.objects.filter(pk__in=pk_list)
+        selected_objects = parent_queryset.filter(pk__in=pk_list)
+        pk_list = [obj.pk for obj in selected_objects]
         if not selected_objects:
             messages.warning(
                 request,
@@ -1596,6 +1598,7 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
 
         if "_create" in request.POST:
             form = self.form(model, request.POST)  # pylint: disable=not-callable
+            restrict_form_fields(form, request.user)
 
             if form.is_valid():
                 logger.debug("Form validation was successful")
