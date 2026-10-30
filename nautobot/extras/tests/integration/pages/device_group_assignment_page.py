@@ -9,7 +9,7 @@ class DeviceGroupAssignmentPage(DevicesPage):
     """The Devices list view's "Update Group Assignment" modal, which assigns devices to static groups."""
 
     # In the select-all box, so it is enabled only once every matching record is selected.
-    _UPDATE_GROUPS_FOR_ALL = "#update_dynamic_groups_for_all"
+    _UPDATE_GROUP_ASSIGNMENT_FOR_ALL = "#update_dynamic_groups_for_all"
     _ASSIGNMENT_MODAL = "#dynamic_group_assignment_modal"
     _ADD_TO_GROUPS = "select[name='add_to_groups']"
     _ASSIGNMENT_APPLY = "#dynamic_group_assignment_form button[type='submit']"
@@ -19,7 +19,7 @@ class DeviceGroupAssignmentPage(DevicesPage):
 
         Call `select_all_matching` first: the button is disabled until the select-all box is checked.
         """
-        self.page.locator(self._UPDATE_GROUPS_FOR_ALL).click()
+        self.page.locator(self._UPDATE_GROUP_ASSIGNMENT_FOR_ALL).click()
         expect(self.page.locator(self._ASSIGNMENT_MODAL)).to_be_visible()
         self.page.locator(f"{self._ADD_TO_GROUPS} + span.select2-container").click()
         # Select2 sizes this multi-select's search box while the modal is still hidden, so the box

@@ -31,10 +31,17 @@ class DynamicGroupDetailPage(DetailPage):
         path = self.MEMBERS_PATH.format(pk=pk)
         self._goto(f"{path}?{urlencode(params)}" if params else path)
 
-    def expect_member_listed(self, name, listed=True):
-        """Assert (auto-retrying) that the Members tab's table links to the member *name*, or that it does not."""
-        link = self.page.locator(self._MEMBERS_TABLE_BODY).get_by_role("link", name=name, exact=True)
-        expect(link).to_have_count(1 if listed else 0)
+    def _member_link(self, name):
+        """Locator for the link to the member *name* in the Members tab's table."""
+        return self.page.locator(self._MEMBERS_TABLE_BODY).get_by_role("link", name=name, exact=True)
+
+    def expect_member_listed(self, name):
+        """Assert (auto-retrying) that the Members tab's table links to the member *name*."""
+        expect(self._member_link(name)).to_have_count(1)
+
+    def expect_no_member_listed(self, name):
+        """Assert (auto-retrying) that the Members tab's table has no link to *name*."""
+        expect(self._member_link(name)).to_have_count(0)
 
     def expect_member_count(self, expected):
         """Assert (auto-retrying) that the Members tab label shows *expected* members."""

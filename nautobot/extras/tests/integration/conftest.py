@@ -169,19 +169,3 @@ def require_celery_worker(api):
         pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
     if not response.json()["celery-workers-running"]:
         pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
-
-
-@pytest.fixture
-def dynamic_group_name(api):
-    """A unique dynamic group name. A group the test saves under it through the form is deleted after the test.
-
-    Deleting by name rather than by the pk from the add form's redirect means the group is
-    cleaned up even if the save succeeds but the redirect does not.
-    """
-    name = unique_name()
-    yield name
-    response = api.get("/api/extras/dynamic-groups/", params={"name": name})
-    assert response.ok, f"GET dynamic groups named {name} returned {response.status}: {response.text()}"
-    for group in response.json()["results"]:
-        deleted = api.delete(f"/api/extras/dynamic-groups/{group['id']}/")
-        assert deleted.ok, f"DELETE dynamic group {group['id']} returned {deleted.status}: {deleted.text()}"

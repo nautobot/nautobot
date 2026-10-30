@@ -4,28 +4,32 @@ import pytest
 
 from nautobot.dcim.tests.integration.pages.device_detail_page import DeviceDetailPage
 from nautobot.extras.tests.integration.pages.device_group_assignment_page import DeviceGroupAssignmentPage
-from nautobot.extras.tests.integration.pages.dynamic_group_create_page import DynamicGroupCreatePage
+from nautobot.extras.tests.integration.pages.dynamic_group_create_page import DynamicGroupFormPage
 from nautobot.extras.tests.integration.pages.dynamic_group_detail_page import DynamicGroupDetailPage
-from nautobot.extras.tests.integration.pages.dynamic_group_edit_page import DynamicGroupEditPage
+from nautobot.playwright.helpers import unique_name
 
 
 class DynamicGroupTestCase:
-    """Dynamic group create and edit: the saved filter, the member count after Refresh Members, and the member's tab."""
+    """Dynamic group create and edit, the member's tab, and static assignment from a filtered device list."""
 
     @pytest.mark.behavioral
     @pytest.mark.usefixtures("require_celery_worker")
-    def test_create_with_filter(self, auth_page, base_url, created_device_set, dynamic_group_name):
+    def test_create_with_filter(self, auth_page, base_url, create_object, created_device_set):
         """A group created with a location filter has exactly that location's devices as members."""
-        create = DynamicGroupCreatePage(auth_page, base_url)
-        create.navigate()
-        pk = create.create(dynamic_group_name, content_type="dcim.device")
+        name = unique_name()
+        create_object.track("extras/dynamic-groups/", name=name)
+        form = DynamicGroupFormPage(auth_page, base_url)
+        form.navigate()
+        pk = form.create(name, content_type="dcim.device")
         group = DynamicGroupDetailPage(auth_page, base_url)
-        group.expect_heading(dynamic_group_name)
+        group.expect_flash_message(f"Created dynamic group {name}")
+        group.expect_heading(name)
+        group.expect_edit_button()
 
-        edit = DynamicGroupEditPage(auth_page, base_url)
-        edit.navigate(pk)
-        edit.add_filter_value("location", created_device_set["first_location"]["name"])
-        edit.save()
+        group.click_edit()
+        form.add_filter_value("location", created_device_set["first_location"]["name"])
+        form.save()
+        group.expect_flash_message(f"Modified dynamic group {name}")
         group.expect_panel_to_contain("Filter", created_device_set["first_location"]["name"])
         group.expect_member_count(0)
 
@@ -52,10 +56,10 @@ class DynamicGroupTestCase:
         group.navigate(pk)
         group.expect_member_count(len(created_device_set["first_devices"]))
 
-        edit = DynamicGroupEditPage(auth_page, base_url)
-        edit.navigate(pk)
-        edit.add_filter_value("location", created_device_set["second_location"]["name"])
-        edit.save()
+        group.click_edit()
+        form = DynamicGroupFormPage(auth_page, base_url)
+        form.add_filter_value("location", created_device_set["second_location"]["name"])
+        form.save()
         group.expect_panel_to_contain("Filter", created_device_set["second_location"]["name"])
         # The edit alone leaves the cached membership as it was.
         group.expect_member_count(len(created_device_set["first_devices"]))
@@ -75,7 +79,10 @@ class DynamicGroupTestCase:
         first_devices = created_device_set["first_devices"]
         devices = DeviceGroupAssignmentPage(auth_page, base_url)
         # One device per page, so the select-all box renders and the selection spans every page.
-        devices.navigate(location=created_device_set["first_location"]["name"], per_page=1)
+        devices.navigate(per_page=1)
+        devices.open_filter_drawer()
+        devices.pick_filter_value("location", created_device_set["first_location"]["name"], exact=False)
+        devices.apply_filters()
         devices.select_all_matching(len(first_devices))
         devices.assign_all_matching_to_group(created_static_group["name"])
         devices.expect_flash_message(f"Added {len(first_devices)} devices to 1 dynamic group(s).")
@@ -87,4 +94,4 @@ class DynamicGroupTestCase:
         group.navigate_members(created_static_group["id"], per_page=50)
         for device in first_devices:
             group.expect_member_listed(device["name"])
-        group.expect_member_listed(created_device_set["second_devices"][0]["name"], listed=False)
+        group.expect_no_member_listed(created_device_set["second_devices"][0]["name"])
