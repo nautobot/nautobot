@@ -287,7 +287,10 @@ class UtilsTestCase(TestCase):
         )
 
     def test_export_templates_models_support_import_export(self):
-        """Every model that accepts Export Templates supports import/export, as `ExportObjectList` renders them."""
+        """Check that every model that declares the `export_templates` feature also supports import/export.
+
+        The `ExportObjectList` Job is what renders Export Templates, and it rejects models outside `import_export`.
+        """
         import_export = FeatureQuery("import_export")
         for app_label, model_names in FeatureQuery("export_templates").as_dict():
             for model_name in model_names:

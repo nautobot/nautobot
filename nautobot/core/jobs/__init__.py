@@ -217,7 +217,8 @@ class ExportObjectList(Job):
         model=ContentType,
         description="Type of objects to export",
         label="Content Type",
-        # not adding "has_serializer": True as it might just support export-templates
+        # "has_serializer": True is left out on purpose: a model without a serializer can still be exported
+        # with an Export Template, because that path renders from the queryset and does not use a serializer.
         query_params={"can_view": True, "feature": "import_export"},
     )
     query_string = StringVar(
