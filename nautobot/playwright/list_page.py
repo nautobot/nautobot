@@ -52,17 +52,34 @@ class ListPage(BasePage):
     _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
     _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
     _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
+    # The header checkbox that checks every row on the current page.
+    _TOGGLE_ALL = "table thead input.toggle"
+    # Rendered only while the list spans more than one page, and hidden with d-none until the
+    # header checkbox is checked. Its own checkbox enables Edit All and Delete All, which post
+    # `_all` plus the list's query string so the server rebuilds the filter over every page.
+    _SELECT_ALL_BOX = "#select_all_box"
+    _SELECT_ALL_CHECKBOX = "#select_all_box #select_all"
+    _EDIT_ALL = "#select_all_box button[name='_edit']"
+    _DELETE_ALL = "#select_all_box button[name='_delete']"
     # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
+    _BULK_DELETE_CONFIRM = "button[name='_confirm'][type='submit']"
+    _BULK_DELETE_WARNING = "#confirm-bulk-deletion"
     _JOB_RESULT_URL = re.compile(r"/extras/job-results/(?P<pk>[0-9a-f-]{36})/")
     # The per-row overview toggle.
     _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
     # Every overview fragment request, for routing and response waits.
     _OVERVIEW_REQUEST = re.compile(r"/overview/")
 
-    def __init__(self, page, base_url):
-        """Fail fast on a subclass that forgot to set `LIST_PATH`."""
+    def __init__(self, page, base_url, list_path=None):
+        """Fail fast on a subclass that forgot to set `LIST_PATH`.
+
+        Pass *list_path* to drive a list view that has no page object of its own, as the
+        shared bulk operations tests do.
+        """
+        if list_path:
+            self.LIST_PATH = list_path
         if not self.LIST_PATH:
             raise ValueError(f"{type(self).__name__} must set LIST_PATH (e.g. '/dcim/locations/').")
         super().__init__(page, base_url)
@@ -175,14 +192,51 @@ class ListPage(BasePage):
         """Selector for Edit Selected. The formaction includes the active filter, and it has no name."""
         return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
 
+    @property
+    def _delete_selected(self):
+        """Selector for Delete Selected, an item in the dropdown next to Edit Selected. Delete All shares its name."""
+        return f".dropdown-menu button[name='_delete'][formaction^='{self.LIST_PATH}delete/']"
+
+    def expect_on_list(self):
+        """Assert (auto-retrying) that the browser is on the list view, with or without a query string."""
+        expect(self.page).to_have_url(re.compile(rf"^{re.escape(self.base_url + self.LIST_PATH)}(\?.*)?$"))
+
     def select_row(self, name):
         """Check the pk checkbox of the data row whose link text is exactly *name*."""
         row = self.page.locator(self._DATA_ROWS).filter(has=self.page.get_by_role("link", name=name, exact=True))
         row.locator(self._PK_CHECKBOX).check()
 
+    def select_first_row(self):
+        """Check the pk checkbox of the first data row."""
+        self.data_row(0).locator(self._PK_CHECKBOX).check()
+
+    def select_all_rows(self):
+        """Check the header checkbox, which checks every row on the current page."""
+        self.page.locator(self._TOGGLE_ALL).check()
+
+    def select_all_matching(self, expected):
+        """Select every record matching the list's filter, on every page, and check that there are *expected* of them.
+
+        Page links are HTMX swaps that replace the table, so rows checked on one page are
+        gone on the next and cannot add up to a selection. This is the only way to select
+        past the first page. The header checkbox reveals the box, and the box's checkbox
+        enables its buttons. Both land a tick late, because the checkbox handler dispatches
+        its events from a setTimeout.
+        """
+        self.select_all_rows()
+        box = self.page.locator(self._SELECT_ALL_BOX)
+        expect(box).not_to_have_class(re.compile(r"\bd-none\b"))
+        expect(box.locator("label")).to_contain_text(re.compile(rf"\ball {expected} "))
+        self.page.locator(self._SELECT_ALL_CHECKBOX).check()
+        expect(self.page.locator(self._EDIT_ALL)).to_be_enabled()
+
     def click_edit_selected(self):
         """Click Edit Selected and wait for the bulk edit form to load."""
         self._click_and_wait_for_navigation(self._edit_selected)
+
+    def click_edit_all(self):
+        """Click Edit All in the select-all box and wait for the bulk edit form to load."""
+        self._click_and_wait_for_navigation(self._EDIT_ALL)
 
     def expect_bulk_edit_count(self, count):
         """Assert (auto-retrying) that the bulk edit form's heading states it edits *count* objects."""
@@ -192,13 +246,58 @@ class ListPage(BasePage):
         """IDs of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
         return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
 
+    def fill_bulk_edit_field(self, name, value):
+        """Type *value* into the bulk edit form's text input named *name*."""
+        self.page.locator(f"form input[name='{name}']").fill(value)
+
+    def expect_bulk_edit_dropdown_visible(self, name, visible=True):
+        """Assert (auto-retrying) that the Select2 widget standing in for the dropdown field *name* is shown or hidden."""
+        widget = self.page.locator(f"select#id_{name} + span.select2-container")
+        if visible:
+            expect(widget).to_be_visible()
+        else:
+            expect(widget).to_be_hidden()
+
+    def expect_bulk_edit_dropdown_unset(self, name):
+        """Assert (auto-retrying) that the dropdown field *name* shows its "—" placeholder, which renders only while nothing is selected."""
+        expect(self.page.locator(f"#select2-id_{name}-container .select2-selection__placeholder")).to_have_text("—")
+
+    def set_null(self, name):
+        """Check the Set null box of the bulk edit form's field *name*."""
+        self.page.locator(f"#id_{name}_nullify").check()
+
     def apply_bulk_edit(self) -> str:
         """Submit the form and return the job result ID once the redirect commits."""
         self.page.locator(self._BULK_EDIT_APPLY).click()
+        return self._wait_for_job_result("Apply")
+
+    def click_delete_selected(self):
+        """Open the dropdown next to Edit Selected, click Delete Selected, and wait for the next page to load."""
+        self.page.locator(f"{self._edit_selected} + button[data-bs-toggle='dropdown']").click()
+        self._click_and_wait_for_navigation(self._delete_selected)
+
+    def click_delete_all(self):
+        """Click Delete All in the select-all box and wait for the confirmation page to load."""
+        self._click_and_wait_for_navigation(self._DELETE_ALL)
+
+    def expect_bulk_delete_count(self, count):
+        """Assert (auto-retrying) that the confirmation page's warning and its button both state *count* objects."""
+        expect(self.page.locator(self._BULK_DELETE_WARNING)).to_contain_text(
+            f"The following operation will delete {count} "
+        )
+        expect(self.page.locator(self._BULK_DELETE_CONFIRM)).to_contain_text(f"Delete these {count} ")
+
+    def confirm_bulk_delete(self) -> str:
+        """Confirm the deletion and return the job result ID once the redirect commits."""
+        self.page.locator(self._BULK_DELETE_CONFIRM).click()
+        return self._wait_for_job_result("Confirm")
+
+    def _wait_for_job_result(self, button) -> str:
+        """Wait for the redirect to a job result that *button* started, and return its ID."""
         try:
             self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
         except PlaywrightTimeoutError:
-            raise AssertionError(f"Apply did not redirect to a job result. Page is at {self.page.url}") from None
+            raise AssertionError(f"{button} did not redirect to a job result. Page is at {self.page.url}") from None
         return self._JOB_RESULT_URL.search(self.page.url).group("pk")
 
     # -------------------------------------------------------------------------
