@@ -93,3 +93,21 @@ def created_note(create_object, created_location):
         assigned_object_id=created_location["id"],
         note=f"{unique_name()} original note",
     )
+
+
+# Dynamic dropdowns such as the Tags filter load 50 options at a time, so one more tag lands on the second page.
+PROVIDER_TAG_COUNT = 51
+
+
+@pytest.fixture
+def created_provider_tags(create_object):
+    """51 tags that apply only to providers, named `<prefix> 01` to `<prefix> 51`.
+
+    Returns the shared name `prefix` and the created `tags`.
+    """
+    prefix = unique_name()
+    tags = [
+        create_object("extras/tags/", name=f"{prefix} {index:02d}", content_types=["circuits.provider"])
+        for index in range(1, PROVIDER_TAG_COUNT + 1)
+    ]
+    return {"prefix": prefix, "tags": tags}

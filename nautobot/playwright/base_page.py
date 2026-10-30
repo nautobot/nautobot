@@ -28,12 +28,7 @@ def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True)
             options render an ancestry path (e.g. locations: "Parent → Child"), where
             an exact match on the bare name would never hit.
     """
-    page.locator(f"select[name='{field_name}'] + span.select2-container").first.click()
-    # Scope to the open dropdown: list views keep every filter field's Select2 search
-    # input in the DOM simultaneously, so an unscoped .first picks the wrong field.
-    search_input = page.locator(".select2-container--open .select2-search__field").first
-    search_input.wait_for(state="visible", timeout=8_000)
-    search_input.fill(search)
+    select2_filter_search(page, field_name, search)
     if pick_text is not None:
         # Wait for the target text itself, not just any option: AJAX-backed results
         # flicker (Searching → empty → populated) and a generic wait can resolve
@@ -43,6 +38,19 @@ def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True)
         option = page.locator(".select2-results__option:not(:has-text('Searching'))").first
     option.wait_for(state="visible", timeout=10_000)
     option.click()
+
+
+def select2_filter_search(page, field_name, search=""):
+    """Open the Select2 filter field named *field_name* and type *search*, leaving the dropdown open.
+
+    See `select2_filter_pick` for how these fields render.
+    """
+    page.locator(f"select[name='{field_name}'] + span.select2-container").first.click()
+    # Scope to the open dropdown: list views keep every filter field's Select2 search
+    # input in the DOM simultaneously, so an unscoped .first picks the wrong field.
+    search_input = page.locator(".select2-container--open .select2-search__field").first
+    search_input.wait_for(state="visible", timeout=8_000)
+    search_input.fill(search)
 
 
 class BasePage:

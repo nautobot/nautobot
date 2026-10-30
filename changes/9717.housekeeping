@@ -1,0 +1,1 @@
+Ported the tag filter tests from Selenium to Playwright and added Select2 filter-option helpers to the shared `ListPage`.
