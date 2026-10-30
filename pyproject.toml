@@ -266,6 +266,8 @@ optional = true
 [tool.poetry.group.playwright.dependencies]
 # Test runner for the Playwright suite (not used for the unittest-based suites)
 pytest = "~9.2.0"
+# Add `--base-url` argument support to pytest
+pytest-base-url = "~2.1.0"
 # Playwright browser automation and its pytest plugin (fixtures, --headed, --tracing)
 pytest-playwright = "~0.10.0"
 # Pinned: Playwright ties browser builds to the driver release, so upgrades stay deliberate.
