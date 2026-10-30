@@ -4,9 +4,12 @@ import json
 import logging
 from pathlib import Path
 from unittest import mock
+import weakref
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.db.models.signals import pre_delete
+from django.test import override_settings
 from django.utils import timezone
 import time_machine
 import yaml
@@ -15,6 +18,7 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, UpdateCustomFieldChoiceData
+from nautobot.core.jobs.archive import ArchiveOldRecords
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -23,6 +27,7 @@ from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoi
 from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
+    ArchivedObjectChange,
     DynamicGroup,
     ExportTemplate,
     JobConsoleEntry,
@@ -35,6 +40,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.models.metadata import ObjectMetadata
+from nautobot.extras.signals import _handle_deleted_object
 from nautobot.ipam.models import IPAddress, Namespace
 from nautobot.users.models import ObjectPermission, User
 
@@ -1370,3 +1376,232 @@ class UpdateCustomFieldChoiceDataTest(TransactionTestCase):
     def test_no_input_raises(self):
         with self.assertRaises(RunJobTaskFailed):
             self.job.run()
+
+
+class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
+    """
+    Test the ArchiveOldRecords system job's handling of ObjectChange records.
+    """
+
+    databases = ("default", "job_logs")
+
+    JOB_MODULE = "nautobot.core.jobs.archive"
+    JOB_CLASS_NAME = "ArchiveOldRecords"
+
+    def setUp(self):
+        super().setUp()
+
+        # Remove any left over models that may exist in order to provide a clean environment
+        # for testing
+        ObjectChange.objects.all().delete()
+        ArchivedObjectChange.objects.all().delete()
+
+    # --------------------------------------------------------------------------
+    # Helpers
+    # --------------------------------------------------------------------------
+    def make_object_change(self, *, age_in_days, **kwargs):
+        """
+        Create an `ObjectChange` whose `time` is `age_in_days` in the past.
+
+        Reloaded before being returned so that its `JSONField`s hold what the database holds. The factory
+        fills `object_data` with native `datetime` and `Decimal` values, which only become the strings the
+        archived copy will carry once they have been through a save and a read.
+        """
+        new_object_change = ObjectChangeFactory.create(time=timezone.now() - timedelta(days=age_in_days), **kwargs)
+        new_object_change.refresh_from_db()
+        return new_object_change
+
+    def run_archive_old_records_job(self, **kwargs):
+        """
+        Run the job against ObjectChange only.
+
+        The threshold and batch size are left unset so that the job resolves them itself using
+        the `get_settings_or_config` fallback in `run()`.
+        """
+        kwargs.setdefault("selected_models_to_archive", ["extras.objectchange"])
+        kwargs.setdefault("dryrun", False)
+
+        return create_job_result_and_run_job(
+            self.JOB_MODULE, self.JOB_CLASS_NAME, username=self.user.username, **kwargs
+        )
+
+    def get_job_log_messages(self, job_result):
+        return list(job_result.job_log_entries.values_list("message", flat=True))
+
+    @staticmethod
+    def is_handle_deleted_object_connected_to_pre_delete_signal():
+        """Whether Nautobot's global change log receiver is currently listening for `pre_delete`."""
+        for receiver_entry in pre_delete.receivers:
+            receiver = receiver_entry[1]
+            resolved_receiver = receiver() if isinstance(receiver, weakref.ReferenceType) else receiver
+            if resolved_receiver is _handle_deleted_object:
+                return True
+        return False
+
+    # --------------------------------------------------------------------------
+    # Tests
+    # --------------------------------------------------------------------------
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_dryrun_reports_without_moving_anything(self):
+        object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(ObjectChange.objects.filter(pk=object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(job_result)))
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_records_older_than_the_threshold_are_archived(self):
+        """Records past the threshold move to the archive; records inside it stay live."""
+        old_object_change = self.make_object_change(age_in_days=90)
+        recent_object_change = self.make_object_change(age_in_days=5)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        # Confirm Old Is Archived
+        self.assertFalse(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertTrue(ArchivedObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        # Confirm Recent Is Not Archived
+        self.assertTrue(ObjectChange.objects.filter(pk=recent_object_change.pk).exists())
+        self.assertFalse(ArchivedObjectChange.objects.filter(pk=recent_object_change.pk).exists())
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_nothing_is_archived_when_every_record_is_inside_the_threshold(self):
+        recent_object_change = self.make_object_change(age_in_days=5)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(ObjectChange.objects.filter(pk=recent_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_no_object_change_record_log_output_exist = any(
+            "No ObjectChange records older than" in message for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_no_object_change_record_log_output_exist)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_every_archived_object_change_field_matches_every_object_change_field(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+
+        archived_object_change = ArchivedObjectChange.objects.get(pk=old_object_change.pk)
+        for field in ArchivedObjectChange._meta.fields:
+            with self.subTest(field=field.name):
+                archived_object_change_field_value = getattr(archived_object_change, field.name)
+                object_change_field_value = getattr(old_object_change, field.name)
+                self.assertEqual(archived_object_change_field_value, object_change_field_value)
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_archival_runs_in_batches_of_the_requested_size(self):
+        # Batching is determined by log output
+        for _ in range(5):
+            self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.assertEqual(ArchivedObjectChange.objects.count(), 5)
+        batch_messages = [message for message in self.get_job_log_messages(job_result) if message.startswith("Batch ")]
+        self.assertEqual(len(batch_messages), 3, batch_messages)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_rerunning_overwrites_rather_than_duplicating(self):
+        """Archiving Object Changes makes the assumption that Object Changes do not change state.
+        The job itself will overwrite a record if it already exists out of simplicity.
+        """
+        old_object_change = self.make_object_change(age_in_days=90)
+        self.assertJobResultStatus(self.run_archive_old_records_job())
+
+        # Stand the record back up under the primary key already in the archive, which is the state an
+        # interrupted run leaves behind.
+        second_round_object_repr = "second round archival"
+        self.make_object_change(age_in_days=90, id=old_object_change.pk, object_repr=second_round_object_repr)
+
+        self.assertJobResultStatus(self.run_archive_old_records_job())
+
+        self.assertEqual(ArchivedObjectChange.objects.filter(pk=old_object_change.pk).count(), 1)
+        self.assertEqual(
+            ArchivedObjectChange.objects.get(pk=old_object_change.pk).object_repr, second_round_object_repr
+        )
+        self.assertFalse(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_a_batch_that_fails_also_fails_the_job_and_leaves_the_live_records(self):
+        """The live record is deleted only after its copy lands, so a failed batch loses nothing."""
+        old_object_change = self.make_object_change(age_in_days=90)
+        archive_failure_message = "Archive Unavailable"
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_process_archive_object_change_batch",
+            side_effect=RuntimeError(archive_failure_message),
+        ):
+            job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_archive_failure_message_exist = any(
+            archive_failure_message in message for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_archive_failure_message_exist)
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_a_batch_that_fails_logs_which_batch_stopped_and_how_much_was_archived(self):
+        for _ in range(4):
+            self.make_object_change(age_in_days=90)
+        archive_failure_message = "Archive Unavailable"
+        archived_count_before_failure = 2
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_process_archive_object_change_batch",
+            side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
+        ):
+            job_result = self.run_archive_old_records_job()
+
+        expected_stopping_message = (
+            f"Stopping at batch 1: {archive_failure_message}. Archived 2 of 4 ObjectChange records before stopping."
+        )
+        self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
+        """
+        `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
+        it is disabled when running the `ArchiveOldRecords` job.
+        """
+        self.make_object_change(age_in_days=90)
+        was_handle_deleted_object_connected_during_archival = []
+
+        def record_whether_receiver_is_connected(*args, **kwargs):
+            was_handle_deleted_object_connected_during_archival.append(
+                self.is_handle_deleted_object_connected_to_pre_delete_signal()
+            )
+            return 0
+
+        self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_archive_object_changes",
+            side_effect=record_whether_receiver_is_connected,
+        ):
+            job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(was_handle_deleted_object_connected_during_archival, [False])
+        self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())

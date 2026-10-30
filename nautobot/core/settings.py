@@ -916,6 +916,19 @@ CONSTANCE_CONFIG = {
         help_text="Allow users to enable request profiling on their login session.",
         field_type=bool,
     ),
+    "ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD": ConstanceConfigItem(
+        default=365,
+        help_text="Default age in days, past which a record is eligible to be archived (365 days is 1 year).\n"
+        "Used by the Archive Old Records system Job when no age threshold is supplied at runtime.",
+        field_type=int,
+    ),
+    "ARCHIVE_MODEL_DEFAULT_BATCH_SIZE": ConstanceConfigItem(
+        default=1000,
+        help_text="Default number of records the Archive Old Records system Job moves per batch.\n"
+        "Each record in a batch is held in memory twice while it is copied, once as the live record and "
+        "once as the archived copy built from it. Reduce this if archival runs out of memory.",
+        field_type=int,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
@@ -1094,6 +1107,10 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+    ],
+    "Record Archival": [
+        "ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD",
+        "ARCHIVE_MODEL_DEFAULT_BATCH_SIZE",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
     "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
