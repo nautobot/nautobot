@@ -12,38 +12,35 @@ from nautobot.extras.signals import _handle_deleted_object
 name = "System Jobs"
 JOB_NAME = "Archive Old Records"
 
-# Archival order matters, used to determine what gets archived first to remove issues with cascading deletions
+# Archival order matters, used to determine what gets archived first to remove concerns about foreign key
+# relationships when archiving
 ARCHIVAL_ORDER = (
     "extras.objectchange",  # Independent
     # --------------------
     "extras.jobresult",  # Parent to JobConsoleEntry, Parent to JobLogEntry
 )
-# TODO: Ask about FileProxy which is dependent on JobResult
 
 # The records that can be archived are displayed in alphabetical order
 # But `ARCHIVAL_ORDER` is the actual order that archival occurs in
 ARCHIVAL_DISPLAY_ORDER = tuple(sorted(ARCHIVAL_ORDER))
 
 
-# TODO: This really isn't ChangeLogRotation, It's ObjectChanges + JobResult + JobConsoleEntry/JobLogEntry
-#       Should either separate these into different jobs or rename this to something like `ArchiveOldRecords` (naming is hard)
+# TODO: Ask if we want to gate this to super users/admins?
 class ArchiveOldRecords(Job):
     """
     Move database records that are past specific age threshold into a warm table.
 
-    This job helps migrate old database records to a seaprate table in order to help optimize performance of database queries.
+    This job helps migrate old database records to a separate table in order to help optimize performance of database queries.
     """
 
     selected_models_to_archive = MultiChoiceVar(
         choices=[(label, label) for label in ARCHIVAL_DISPLAY_ORDER],
-        description="The models whose records are archived. Leave empty to archive all of them.",
+        description="The models whose records are archived.",
         label="Models To Archive",
         required=True,
     )
     archive_age_threshold = IntegerVar(
-        description=(
-            "Records older than this many days are archived. Leave empty to use the ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD setting."
-        ),
+        description="Records older than this many days are archived.",
         label="Archive Age Threshold",
         default=get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD"),
         min_value=1,
@@ -79,11 +76,15 @@ class ArchiveOldRecords(Job):
             model_label for model_label in ARCHIVAL_ORDER if model_label in selected_models
         ]
 
+        archive_age_threshold = archive_age_threshold or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD")
+        archive_batch_size = archive_batch_size or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE")
+
         # Calculated once so that every model is archived against the same instant
         archive_model_threshold_timestamp = timezone.now() - timedelta(days=archive_age_threshold)
 
-        # Nautobot has a global `_handle_deleted_object` registerd to the pre_delete signal
-        # We disable it here because deletions that occur with an archival job does not need it. Also helps with performance.
+        # Nautobot has a global `_handle_deleted_object` registered to the pre_delete signal
+        # We disable it here because deletions that occur with an archival job do not need it
+        # resulting in better performance
         self.logger.debug("Temporarily disconnecting the _handle_deleted_object signal for performance")
         pre_delete.disconnect(_handle_deleted_object)
         try:
@@ -145,7 +146,7 @@ class ArchiveOldRecords(Job):
                 current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
                 self.fail(
-                    "Stopping at batch %d (0-indexed): %s. Archived %d of %d ObjectChange records before stopping.",
+                    "Stopping at batch %d: %s. Archived %d of %d ObjectChange records before stopping.",
                     current_batch,
                     exception,
                     total_archived_object_change_count,
@@ -155,13 +156,15 @@ class ArchiveOldRecords(Job):
 
             total_archived_object_change_count += current_archived_object_change_count
             self.logger.info(
-                "Batch %d (0-indexed): archived %d ObjectChange records", current_batch, current_archived_object_change_count
+                "Batch %d: archived %d ObjectChange records",
+                current_batch,
+                current_archived_object_change_count,
             )
 
             current_batch += 1
 
         self.logger.success(
-            "Archived %d ObjectChange records across %d batches (0-indexed).",
+            "Archived %d ObjectChange records across %d batches.",
             total_archived_object_change_count,
             current_batch,
         )
@@ -169,7 +172,7 @@ class ArchiveOldRecords(Job):
 
     def _process_archive_object_change_batch(self, object_change_batch):
         """
-        Copy one batch into the archive, confirm it landed, then delete the live rows it covers.
+        Copy one batch into the archive, then delete the live rows it covers.
 
         Copy before delete, and not inside one transaction: the archive tables are headed for a database
         of their own, where a single transaction cannot span both sides. A run that dies between the two
@@ -181,23 +184,29 @@ class ArchiveOldRecords(Job):
 
         Returns:
             (int): Records archived and removed from the live table.
-
-        Raises:
-            RuntimeError: If any record in the batch did not reach the archive. The live rows are left in
-                place, so a later run retries them.
         """
         object_changes_to_archive_pks = [object_change.pk for object_change in object_change_batch]
-        new_archived_object_changes = [ArchivedObjectChange.from_object_change(object_change) for object_change in object_change_batch]
+        new_archived_object_changes = [
+            ArchivedObjectChange.from_object_change(object_change) for object_change in object_change_batch
+        ]
 
+        # Only the `id` field is unique, because it is the primary key. Rather than explicitly list
+        # every field to overwrite, we use the metadata fields to determine it. ObjectChange and
+        # ArchivedObjectChange are both not modified after write, so overwriting is performed in
+        # order to guarantee full copies in cases where a previous copy failed.
+        archived_object_change_update_fields = [
+            field.name for field in ArchivedObjectChange._meta.fields if field.name != "id"
+        ]
 
-        # An ObjectChange doesn't change, so it is overwritten if it already exists
         ArchivedObjectChange.objects.bulk_create(
             new_archived_object_changes,
             update_conflicts=True,
+            update_fields=archived_object_change_update_fields,
+            unique_fields=["id"],
         )
 
         deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
         self.logger.debug(
-            "Archived %d and deleted %d live ObjectChange rows", len(archived_object_change_pks), deleted_count
+            "Archived %d and deleted %d live ObjectChange rows", len(object_changes_to_archive_pks), deleted_count
         )
-        return len(archived_object_change_pks)
+        return len(object_changes_to_archive_pks)
