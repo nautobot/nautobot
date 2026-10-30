@@ -1,1 +1,1 @@
-Replaced the Selenium relationship tests with a Playwright `RelationshipsTestCase` and added a `within` argument to the shared `BasePage.panel`.
+Replaced the Selenium relationship tests with a Playwright `RelationshipsTestCase`.

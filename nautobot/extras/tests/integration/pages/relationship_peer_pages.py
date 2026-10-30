@@ -13,22 +13,23 @@ class RelationshipPeerDetailPage(DetailPage):
 
     _RELATIONSHIPS_PANEL = "Relationships"
 
-    def _relationship_panels_showing(self, tab_id, peer_name):
-        """Locator for Relationships panels in *tab_id* that show *peer_name*.
+    def _relationship_rows_showing(self, tab_id, side_label, peer_name):
+        """Locator for rows of the Relationships panel in *tab_id* whose key is *side_label* and whose value shows *peer_name*.
 
-        Matches on the peer rather than on the panel alone: another relationship on the
-        instance can add a Relationships panel this test did not create.
+        Every relationship on the object is a row in the same panel, so the panel's
+        presence alone does not show that this test's association is in it.
         """
-        return self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id)).filter(has_text=peer_name)
+        panel = self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id))
+        return panel.locator("tr").filter(has_text=side_label).filter(has_text=peer_name)
 
-    def expect_relationship_peer(self, tab_id, peer_name):
-        """Assert (auto-retrying) that exactly one Relationships panel on tab *tab_id* shows *peer_name*, and that it is visible."""
-        expect(self._relationship_panels_showing(tab_id, peer_name)).to_be_visible()
+    def expect_relationship_peer(self, tab_id, side_label, peer_name):
+        """Assert (auto-retrying) that exactly one Relationships row on tab *tab_id* shows *side_label* and *peer_name*, and that it is visible."""
+        expect(self._relationship_rows_showing(tab_id, side_label, peer_name)).to_be_visible()
 
-    def expect_no_relationship_peer(self, tab_id, peer_name):
-        """Assert (auto-retrying) that the tab *tab_id* exists and no Relationships panel in it shows *peer_name*."""
+    def expect_no_relationship_peer(self, tab_id, side_label, peer_name):
+        """Assert (auto-retrying) that the tab *tab_id* exists and no Relationships row in it shows *side_label* and *peer_name*."""
         expect(self._tab_pane(tab_id)).to_have_count(1)
-        expect(self._relationship_panels_showing(tab_id, peer_name)).to_have_count(0)
+        expect(self._relationship_rows_showing(tab_id, side_label, peer_name)).to_have_count(0)
 
 
 class ManufacturerDetailPage(RelationshipPeerDetailPage):

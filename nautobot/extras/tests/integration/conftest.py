@@ -97,7 +97,10 @@ def created_note(create_object, created_location):
 
 @pytest.fixture(scope="session")
 def content_type_id(api):
-    """Callable returning the id of the content type named like "dcim.platform", the value its form option submits."""
+    """Callable that returns the id of the content type named like "dcim.platform".
+
+    The id is the value that the form's object type option submits.
+    """
     cache = {}
 
     def _lookup(content_type):
@@ -116,36 +119,6 @@ def content_type_id(api):
 
 
 @pytest.fixture
-def delete_on_teardown(api):
-    """Callable registering records a test creates through the UI, by *endpoint* and *filters*, for deletion on teardown.
-
-    Register before submitting the form. Teardown looks the records up by the filters, so a
-    record is deleted even when the test fails before it reads the new id.
-    """
-    registered = []
-
-    def _register(endpoint, **filters):
-        registered.append((endpoint, filters))
-
-    yield _register
-
-    failures = []
-    for endpoint, filters in reversed(registered):
-        response = api.get(f"/api/{endpoint}", params=filters)
-        if not response.ok:
-            failures.append(f"GET /api/{endpoint} {filters} returned {response.status}: {response.text()[:200]}")
-            continue
-        for record in response.json()["results"]:
-            response = api.delete(f"/api/{endpoint}{record['id']}/")
-            if not response.ok and response.status != 404:
-                failures.append(
-                    f"DELETE /api/{endpoint}{record['id']}/ returned {response.status}: {response.text()[:200]}"
-                )
-    if failures:
-        pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
-
-
-@pytest.fixture
 def created_relationship(create_object):
     """A one-to-one relationship from a manufacturer to a platform, with one association between two test-owned peers.
 
@@ -160,7 +133,9 @@ def created_relationship(create_object):
         key=unique.replace("-", "_").lower(),
         type="one-to-one",
         source_type="dcim.manufacturer",
+        source_label=f"{unique}-source-label",
         destination_type="dcim.platform",
+        destination_label=f"{unique}-destination-label",
     )
     association = create_object(
         "extras/relationship-associations/",

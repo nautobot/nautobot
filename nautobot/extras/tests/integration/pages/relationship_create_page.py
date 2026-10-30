@@ -4,26 +4,20 @@ import re
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import BasePage
+from nautobot.playwright.object_form_page import ObjectFormPage
 
 
-class RelationshipCreatePage(BasePage):
+class RelationshipCreatePage(ObjectFormPage):
     """The Relationship create form, whose script copies the source fields to disabled destination fields for symmetric types."""
 
     ADD_PATH = "/extras/relationships/add/"
 
-    _LABEL = "#id_label"
     _TYPE = "#id_type"
-    _CREATE_BUTTON = "button[name='_create']"
     # The four source/destination field pairs that relationship_form.js keeps in sync, named by field suffix.
     _MIRRORED_FIELDS = ("type", "label", "hidden", "filter")
     # The group is unnamed because expect().to_have_url() passes the pattern to the browser as a
     # JavaScript RegExp, which does not accept Python's (?P<name>...) syntax.
     _DETAIL_URL = re.compile(r"/extras/relationships/([0-9a-f-]{36})/$")
-
-    def navigate(self):
-        """Go to the empty create form."""
-        self._goto(self.ADD_PATH)
 
     def _field(self, side, name):
         """Locator for the *side* ("source" or "destination") field *name* ("type", "label", "hidden" or "filter")."""
@@ -35,7 +29,7 @@ class RelationshipCreatePage(BasePage):
 
     def fill_label(self, label):
         """Type *label*. The form's script fills the key from it."""
-        self.page.locator(self._LABEL).fill(label)
+        self.fill_input("label", label)
 
     def select_type(self, relationship_type):
         """Choose the relationship type by the value of *relationship_type*, e.g. "symmetric-many-to-many"."""
@@ -53,7 +47,7 @@ class RelationshipCreatePage(BasePage):
 
     def submit(self) -> str:
         """Click Create and return the new relationship's id from the detail page it redirects to."""
-        self._click_and_wait_for_navigation(self._CREATE_BUTTON)
+        super().submit()
         expect(self.page).to_have_url(self._DETAIL_URL)
         return self._DETAIL_URL.search(self.page.url).group(1)
 
