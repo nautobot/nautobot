@@ -4,9 +4,11 @@ import json
 import logging
 from pathlib import Path
 from unittest import mock
+import weakref
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.db.models.signals import pre_delete
 from django.test import override_settings
 from django.utils import timezone
 import time_machine
@@ -38,6 +40,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.models.metadata import ObjectMetadata
+from nautobot.extras.signals import _handle_deleted_object
 from nautobot.ipam.models import IPAddress, Namespace
 from nautobot.users.models import ObjectPermission, User
 
@@ -1425,6 +1428,16 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     def job_log_messages(self, job_result):
         return list(job_result.job_log_entries.values_list("message", flat=True))
 
+    @staticmethod
+    def is_handle_deleted_object_connected_to_pre_delete_signal():
+        """Whether Nautobot's global change log receiver is currently listening for `pre_delete`."""
+        for receiver_entry in pre_delete.receivers:
+            receiver = receiver_entry[1]
+            resolved_receiver = receiver() if isinstance(receiver, weakref.ReferenceType) else receiver
+            if resolved_receiver is _handle_deleted_object:
+                return True
+        return False
+
     # --------------------------------------------------------------------------
     # Tests
     # --------------------------------------------------------------------------
@@ -1538,5 +1551,35 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
-        does_archive_failure_message_exist = any(archive_failure_message in message for message in self.job_log_messages(job_result))
+        does_archive_failure_message_exist = any(
+            archive_failure_message in message for message in self.job_log_messages(job_result)
+        )
         self.assertTrue(does_archive_failure_message_exist)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
+        """
+        `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
+        it is disabled when running the `ArchiveOldRecords` job.
+        """
+        self.make_object_change(age_in_days=90)
+        was_handle_deleted_object_connected_during_archival = []
+
+        def record_whether_receiver_is_connected(*args, **kwargs):
+            was_handle_deleted_object_connected_during_archival.append(
+                self.is_handle_deleted_object_connected_to_pre_delete_signal()
+            )
+            return 0
+
+        self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_archive_object_changes",
+            side_effect=record_whether_receiver_is_connected,
+        ):
+            job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(was_handle_deleted_object_connected_during_archival, [False])
+        self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
