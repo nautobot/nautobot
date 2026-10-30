@@ -520,6 +520,11 @@ def register_filter_extensions(filter_extensions, plugin_name):
                     field_name=new_filterform_field_name,
                     field_obj=new_filterform_field,
                 )
+                if model_filterset_class is not None:
+                    model_filterset_class._filter_extension_form_fields = {  # pylint: disable=protected-access
+                        **getattr(model_filterset_class, "_filter_extension_form_fields", {}),
+                        new_filterform_field_name: new_filterform_field,
+                    }
             except AttributeError:
                 logger.error(
                     f"There was a conflict with filter form field `{new_filterform_field_name}`, the custom filter form field was ignored."
