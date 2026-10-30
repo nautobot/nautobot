@@ -20,17 +20,20 @@
             window.nb.select2.initializeSelect2Fields(evt.detail.target);
         });
 
-        // When a lane's parent select (e.g. device, circuit, power panel) changes, clear that
-        // lane's termination select. Select2 doesn't auto-clear an already-selected value just
-        // because its API query params reference a changed sibling; without this the user can
-        // be left looking at a stale termination from the previously-chosen parent.
-        $(document).on("change", "select[name$='_parent']", function () {
-            const m = this.name.match(/^([ab]_conn_\d+)_parent$/);
+        // When a lane's location or parent select (e.g. device, circuit, power panel) changes,
+        // clear the selects below it in that lane. Select2 doesn't auto-clear an already-selected
+        // value just because its API query params reference a changed sibling; without this the
+        // user can be left looking at a stale parent/termination from the previous choice.
+        $(document).on("change", "select[name$='_location'], select[name$='_parent']", function () {
+            const m = this.name.match(/^([ab]_conn_\d+)_(location|parent)$/);
             if (!m) return;
-            const term = document.querySelector(`select[name="${m[1]}_termination"]`);
-            if (term) {
-                window.nb.select2.setSelect2Value(term, null);
-            }
+            const dependents = m[2] === "location" ? ["parent", "termination"] : ["termination"];
+            dependents.forEach((suffix) => {
+                const sel = document.querySelector(`select[name="${m[1]}_${suffix}"]`);
+                if (sel) {
+                    window.nb.select2.setSelect2Value(sel, null);
+                }
+            });
         });
 
         // "Swap A / B" button: rearrange the values across the A and B side lane fields without
@@ -48,13 +51,13 @@
             }
             event.preventDefault();
 
-            // Group all `<side>_conn_<N>_<type|parent|termination>` selects by connector N + side.
+            // Group all `<side>_conn_<N>_<type|location|parent|termination>` selects by connector N + side.
             const selects = document.querySelectorAll(
                 'select[name^="a_conn_"], select[name^="b_conn_"]'
             );
             const groups = {};
             selects.forEach((el) => {
-                const m = el.name.match(/^([ab])_conn_(\d+)_(type|parent|termination)$/);
+                const m = el.name.match(/^([ab])_conn_(\d+)_(type|location|parent|termination)$/);
                 if (!m) return;
                 const [, side, n, suffix] = m;
                 groups[n] = groups[n] || { a: {}, b: {} };
@@ -87,7 +90,7 @@
 
             for (const n of Object.keys(groups)) {
                 const { a, b } = groups[n];
-                for (const suffix of ["type", "parent", "termination"]) {
+                for (const suffix of ["type", "location", "parent", "termination"]) {
                     const aSel = a[suffix];
                     const bSel = b[suffix];
                     if (!aSel || !bSel) continue;
