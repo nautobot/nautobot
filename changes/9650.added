@@ -1,0 +1,1 @@
+Added an optional `within` argument to `nautobot.playwright.base_page.BasePage.panel`, which limits the panel search to the given locator.

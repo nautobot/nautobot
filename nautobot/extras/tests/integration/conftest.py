@@ -93,3 +93,61 @@ def created_note(create_object, created_location):
         assigned_object_id=created_location["id"],
         note=f"{unique_name()} original note",
     )
+
+
+@pytest.fixture(scope="session")
+def content_type_id(api):
+    """Callable that returns the id of the content type named like "dcim.platform".
+
+    The id is the value that the form's object type option submits.
+    """
+    cache = {}
+
+    def _lookup(content_type):
+        if content_type not in cache:
+            app_label, model = content_type.split(".")
+            response = api.get("/api/extras/content-types/", params={"app_label": app_label, "model": model})
+            if not response.ok:
+                pytest.fail(f"Content type lookup for {content_type} returned {response.status}: {response.text()}")
+            results = response.json()["results"]
+            if len(results) != 1:
+                pytest.fail(f"Expected one content type {content_type}, got {len(results)}")
+            cache[content_type] = results[0]["id"]
+        return cache[content_type]
+
+    return _lookup
+
+
+@pytest.fixture
+def created_relationship(create_object):
+    """A one-to-one relationship from a manufacturer to a platform, with one association between two test-owned peers.
+
+    `advanced_ui` starts False, so the association shows on each peer's main tab.
+    """
+    unique = unique_name()
+    manufacturer = create_object("dcim/manufacturers/", name=f"{unique}-manufacturer")
+    platform = create_object("dcim/platforms/", name=f"{unique}-platform")
+    relationship = create_object(
+        "extras/relationships/",
+        label=unique,
+        key=unique.replace("-", "_").lower(),
+        type="one-to-one",
+        source_type="dcim.manufacturer",
+        source_label=f"{unique}-source-label",
+        destination_type="dcim.platform",
+        destination_label=f"{unique}-destination-label",
+    )
+    association = create_object(
+        "extras/relationship-associations/",
+        relationship=relationship["id"],
+        source_type="dcim.manufacturer",
+        source_id=manufacturer["id"],
+        destination_type="dcim.platform",
+        destination_id=platform["id"],
+    )
+    return {
+        "relationship": relationship,
+        "association": association,
+        "manufacturer": manufacturer,
+        "platform": platform,
+    }
