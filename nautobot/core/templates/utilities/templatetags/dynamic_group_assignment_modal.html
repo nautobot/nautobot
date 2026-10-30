@@ -13,7 +13,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
-            <form id="dynamic_group_assignment_form" action="{% url 'extras:dynamicgroup_bulk_assign' %}?"
+            <form id="dynamic_group_assignment_form" action="{% url 'extras:dynamicgroup_bulk_assign' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                   method="post" class="form form-horizontal">
                 <div class="modal-body">
                     {% csrf_token %}

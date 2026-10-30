@@ -55,6 +55,7 @@ from nautobot.core.api.parsers import (
 )
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.choices import ImportModeChoices
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
@@ -100,6 +101,7 @@ from nautobot.extras.models import (
     ExportTemplate,
     FileProxy,
     JobLogEntry,
+    Note,
     RelationshipAssociation,
     Role,
     SavedView,
@@ -3454,6 +3456,107 @@ class MatchKeyTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
+# Import mode (create only, update only)
+# ===========================================================================
+class ImportModeTests(ImportExportJobTestCase):
+    def test_import_mode__create_only_refuses_matched_rows(self):
+        """Create Only creates unmatched rows and refuses matched ones, even on match fields Nautobot doesn't keep unique."""
+        status = self.create_status(color="111111")
+        csv_data = "\n".join(
+            ["name,color,content_types", "test_new_status,222222,dcim.device", "test_other_status,111111,dcim.device"]
+        )
+        job_result = self.run_import(
+            csv_data,
+            match_fields="color",
+            import_mode=ImportModeChoices.CREATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Created 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        self.assertTrue(Status.objects.filter(name="test_new_status").exists())
+        self.assertJobLogEntry(
+            job_result,
+            'Row 2: Existing record "test_update_status" matches on (color); not creating a new one in Create Only mode',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name="test_other_status").exists())
+        status.refresh_from_db()
+        self.assertEqual(status.name, "test_update_status")
+
+    def test_import_mode__create_only_with_default_match_fields(self):
+        """Create Only refuses a row matching on the natural key, rather than letting it update the record."""
+        status = self.create_status(color="111111")
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            import_mode=ImportModeChoices.CREATE,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, 'Row 1: Existing record "test_update_status"', level=LogLevelChoices.LOG_ERROR
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
+    def test_import_mode__update_only_refuses_unmatched_rows(self):
+        """Update Only updates matched rows and refuses unmatched ones rather than creating them."""
+        status = self.create_status(color="111111")
+        csv_data = "\n".join(["name,color", "test_update_status,222222", "test_no_such_status,333333"])
+        job_result = self.run_import(
+            csv_data,
+            match_fields="name",
+            import_mode=ImportModeChoices.UPDATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Updated 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "222222")
+        self.assertJobLogEntry(
+            job_result,
+            "Row 2: No existing record matches on (name); not creating a new one in Update Only mode",
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name="test_no_such_status").exists())
+
+    def test_import_mode__update_only_requires_default_match_fields_in_every_row(self):
+        """Update Only refuses a row lacking the default match key, which Create/Update would treat as a create."""
+        status = self.create_status(color="111111")
+        records = [
+            {"name": "test_id_less_status", "color": "222222", "content_types": ["dcim.device"]},
+            {"id": str(status.pk), "color": "333333"},
+        ]
+        job_result = self.run_import(
+            json.dumps(records),
+            import_format="json",
+            import_mode=ImportModeChoices.UPDATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Updated 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        self.assertJobLogEntry(
+            job_result, "Row 1: `Match field(s) not present in the import data: id`", level=LogLevelChoices.LOG_ERROR
+        )
+        self.assertFalse(Status.objects.filter(name="test_id_less_status").exists())
+
+    def test_import_mode__update_only_requires_match_fields(self):
+        """Update Only refuses, before any row runs, a model that has no match fields to update records by."""
+        job_result = self.run_import(
+            "note\nA note",
+            model=Note,
+            import_mode=ImportModeChoices.UPDATE,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "Update Only mode requires match fields", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists())
+
+
+# ===========================================================================
 # Layer 2 — import format adapters
 # ===========================================================================
 class ImportAdapterTests(ImportExportJobTestCase):
@@ -4272,6 +4375,55 @@ class PermissionTests(ImportExportJobTestCase):
             level=LogLevelChoices.LOG_ERROR,
         )
         self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__icontains="colour").exists())
+
+    def test_perm__import_mode_requires_its_own_permission(self):
+        """Create Only needs add permission and Update Only needs change; the other one alone isn't enough."""
+        self.create_status()
+        cases = (
+            (ImportModeChoices.CREATE, "extras.change_status", "create"),
+            (ImportModeChoices.UPDATE, "extras.add_status", "update"),
+        )
+        for import_mode, permission, verb in cases:
+            with self.subTest(import_mode=import_mode):
+                self.add_permissions(permission)
+                try:
+                    job_result = self.run_import(
+                        "name,color\ntest_update_status,999999",
+                        match_fields="name",
+                        import_mode=import_mode,
+                        username=self.user.username,
+                        expected_status=JobResultStatusChoices.STATUS_FAILURE,
+                    )
+                    self.assertJobLogEntry(
+                        job_result,
+                        f'User "{self.user}" does not have permission to {verb} status objects',
+                        level=LogLevelChoices.LOG_ERROR,
+                    )
+                    self.assertFalse(
+                        JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists()
+                    )
+                finally:
+                    self.remove_permissions(permission)
+
+    def test_perm__create_only_does_not_report_unviewable_collisions(self):
+        """Create Only names a colliding record only if the user may view it; otherwise the create itself fails."""
+        self.add_permissions("extras.add_status")
+        self.add_permissions("extras.view_status", constraints={"color": "ffffff"})
+        status = self.create_status(color="111111")
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            import_mode=ImportModeChoices.CREATE,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Row 1: `name`: `status with this name already exists.`", level=LogLevelChoices.LOG_ERROR
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__contains="Existing record").exists()
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
 
     def test_perm__import_constrained_add(self):
         """Job only creates objects the user has permission to add."""

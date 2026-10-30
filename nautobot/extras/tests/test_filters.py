@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.models import Q
 from django.test import override_settings, RequestFactory, tag
 from django.utils.timezone import now
 
@@ -791,6 +792,25 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.exclude(app_label="extras", model="status"),
+        )
+
+    def test_can_import(self):
+        # With no request user, can't import anything
+        params = {"can_import": True}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        params = {"can_import": False}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        # With user, filter by add or change permission
+        request = self.factory.get("/api/extras/content-types/")
+        request.user = self.user
+        importable = Q(app_label="dcim", model="location") | Q(app_label="extras", model="status")
+        params = {"can_import": True}
+        self.assertQuerySetEqual(
+            self.filterset(params, self.queryset, request=request).qs, self.queryset.filter(importable)
+        )
+        params = {"can_import": False}
+        self.assertQuerySetEqual(
+            self.filterset(params, self.queryset, request=request).qs, self.queryset.exclude(importable)
         )
 
     def test_can_delete(self):

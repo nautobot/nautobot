@@ -6462,6 +6462,26 @@ class JobTestCase(
             self.assertBodyContains(response, "Job is not enabled to be run")
             self.assertFalse(JobResult.objects.filter(name="fail.TestFailJob").exists())
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.views.ScheduledJob.create_schedule")
+    def test_schedule_job_validation_error_shows_on_page(self, mock_create_schedule, _):
+        """A ValidationError raised while scheduling is surfaced on the page instead of raising a 500."""
+        mock_create_schedule.side_effect = ValidationError("Invalid schedule parameters")
+        self.add_permissions("extras.run_job")
+
+        start_time = timezone.now() + timedelta(minutes=5)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "validation-error-test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            self.assertBodyContains(response, "Unable to run or schedule job: Invalid schedule parameters")
+            self.assertFalse(ScheduledJob.objects.filter(name="validation-error-test").exists(), msg=run_url)
+
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
 
@@ -7075,24 +7095,18 @@ class JobButtonRenderingTestCase(TestCase):
 
     def test_task_queue_hidden_input_is_present(self):
         """
-        Ensure that the job button respects the job class' task_queues and the job class default job queue is passed as a hidden form input.
+        Ensure that the job button passes the job's default job queue as a hidden form input, not its first job queue.
         """
-        self.job.job_queues_override = True
-        task_queues = ["overriden_queue", "default", "priority"]
-        for queue in task_queues:
+        for queue in ["overriden_queue", "default", "priority"]:
             JobQueue.objects.get_or_create(name=queue, defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY})
+        self.job.job_queues_override = True
         self.job.task_queues = ["overriden_queue", "default", "priority"]
+        self.job.default_job_queue_override = True
+        self.job.default_job_queue = JobQueue.objects.get(name="priority")
         self.job.save()
-        response = self.client.get(self.location_type.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        job_queues = self.job.job_queues.all()
-        _job_queue = job_queues[0]
-        self.assertIn(f'<input type="hidden" name="_job_queue" value="{_job_queue.pk}">', content, content)
+        # The default job queue must not be the first of the job's queues, or this test can't tell them apart.
+        self.assertNotEqual(self.job.job_queues.first(), self.job.default_job_queue)
 
-        self.job.job_queues_override = False
-        self.job.save()
-        self.job.job_queues.set([])
         response = self.client.get(self.location_type.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
