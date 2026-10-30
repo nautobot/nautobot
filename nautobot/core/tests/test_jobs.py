@@ -1425,7 +1425,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             self.JOB_MODULE, self.JOB_CLASS_NAME, username=self.user.username, **kwargs
         )
 
-    def job_log_messages(self, job_result):
+    def get_job_log_messages(self, job_result):
         return list(job_result.job_log_entries.values_list("message", flat=True))
 
     @staticmethod
@@ -1450,7 +1450,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result)
         self.assertTrue(ObjectChange.objects.filter(pk=object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
-        self.assertTrue(any("Dry Run" in message for message in self.job_log_messages(job_result)))
+        self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(job_result)))
 
     @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_records_older_than_the_threshold_are_archived(self):
@@ -1478,7 +1478,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(ObjectChange.objects.filter(pk=recent_object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         does_no_object_change_record_log_output_exist = any(
-            "No ObjectChange records older than" in message for message in self.job_log_messages(job_result)
+            "No ObjectChange records older than" in message for message in self.get_job_log_messages(job_result)
         )
         self.assertTrue(does_no_object_change_record_log_output_exist)
 
@@ -1511,7 +1511,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result)
         self.assertEqual(ObjectChange.objects.count(), 0)
         self.assertEqual(ArchivedObjectChange.objects.count(), 5)
-        batch_messages = [message for message in self.job_log_messages(job_result) if message.startswith("Batch ")]
+        batch_messages = [message for message in self.get_job_log_messages(job_result) if message.startswith("Batch ")]
         self.assertEqual(len(batch_messages), 3, batch_messages)
 
     @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
@@ -1552,9 +1552,31 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         does_archive_failure_message_exist = any(
-            archive_failure_message in message for message in self.job_log_messages(job_result)
+            archive_failure_message in message for message in self.get_job_log_messages(job_result)
         )
         self.assertTrue(does_archive_failure_message_exist)
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_a_batch_that_fails_logs_which_batch_stopped_and_how_much_was_archived(self):
+        for _ in range(4):
+            self.make_object_change(age_in_days=90)
+        archive_failure_message = "Archive Unavailable"
+        archived_count_before_failure = 2
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_process_archive_object_change_batch",
+            side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
+        ):
+            job_result = self.run_archive_old_records_job()
+
+        expected_stopping_message = (
+            f"Stopping at batch 1: {archive_failure_message}. Archived 2 of 4 ObjectChange records before stopping."
+        )
+        self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
     @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
