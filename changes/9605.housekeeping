@@ -1,0 +1,3 @@
+Replaced the Dynamic Group create and edit Selenium test with Playwright tests that verify the group's member count after refreshing its members.
+Ported the Selenium test for "Update Group Assignment for All" on a filtered device list to Playwright.
+Added a Celery worker to the Playwright CI job so that tests can run jobs started from the UI, such as Refresh Members.
