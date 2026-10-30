@@ -219,6 +219,21 @@ class NavbarFavoritesAddViewTest(TestCase):
             [{"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"}],
         )
 
+    def test_external_link_is_rejected(self):
+        """A favorite link must be relative to an instance, so the form refuses external and scheme URLs."""
+        for link in ["javascript:alert(0)", "https://google.com/", "//evil.example.com/"]:
+            with self.subTest(link=link):
+                response = self.client.post(
+                    reverse("user:navbar_favorites_add"),
+                    data={"link": link, "name": "Devices", "tab_name": ""},
+                    headers={"HX-Request": "true"},
+                )
+                self.assertHttpStatus(response, 400)
+                self.assertEqual(response.headers["HX-Retarget"], "#modal-content-container")
+
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.navbar_favorites, [])
+
 
 class NavbarFavoritesDeleteViewTest(TestCase):
     """Tests for the UserNavbarFavoritesDeleteView."""

@@ -530,3 +530,51 @@ class UserConfigTest(APITestCase):
         self.assertDictEqual(response.data, new_data)
         self.user.refresh_from_db()
         self.assertDictEqual(self.user.config_data, new_data)
+
+    def test_patch_accepts_a_relative_favorite_link(self):
+        """
+        A favorite link relative to an instance is accepted and stored as submitted.
+        """
+        url = reverse("users-api:userconfig-list")
+        favorites = [{"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"}]
+
+        response = self.client.patch(url, data={"navbar_favorites": favorites}, format="json", **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.config_data["navbar_favorites"], favorites)
+
+    def test_patch_rejects_an_external_favorite_link(self):
+        """
+        A favorite link must be relative to an instance, so external and scheme URLs are refused.
+        """
+        url = reverse("users-api:userconfig-list")
+
+        for link in ["javascript:alert(0)", "https://google.com/", "//evil.example.com/"]:
+            with self.subTest(link=link):
+                response = self.client.patch(
+                    url,
+                    data={"navbar_favorites": [{"link": link, "name": "Devices"}]},
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, {})
+
+    def test_patch_rejects_invalid_favorites(self):
+        """
+        Favorites are read as a list of objects on every page render, so anything else is refused.
+        """
+        url = reverse("users-api:userconfig-list")
+
+        for favorites in [{"not": "a list"}, ["not an object"], [{"name": "No link"}]]:
+            with self.subTest(favorites=favorites):
+                response = self.client.patch(
+                    url,
+                    data={"navbar_favorites": favorites},
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, {})
