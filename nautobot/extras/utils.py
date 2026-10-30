@@ -13,6 +13,7 @@ from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
@@ -298,6 +299,14 @@ class FeatureQuery:
         """
         return registry["model_features"][self.feature].items()
 
+    def includes(self, model):
+        """
+        Return whether the given model class or instance supports this feature.
+        """
+        populate_model_features_registry()
+        app_label, model_name = model._meta.label_lower.split(".")
+        return model_name in registry["model_features"].get(self.feature, {}).get(app_label, [])
+
     def get_choices(self):
         """
         Given an extras feature, return a list of 2-tuple of `(model_label, pk)`
@@ -444,6 +453,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": ["_custom_field_data"],
         },
         {
+            "feature_name": "import_export",
+            "field_names": [],
+            "additional_constraints": {"is_import_export_model": True},
+        },
+        {
             "feature_name": "metadata",
             "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
             "additional_constraints": {"is_metadata_associable_model": True},
@@ -481,6 +495,11 @@ def populate_model_features_registry(refresh=False):
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
+
+    # Add the plain Django models that the import/export Jobs also support, in addition to Nautobot's own models
+    for model_class in (Group, ContentType):
+        app_label, model_name = model_class._meta.label_lower.split(".")
+        registry["model_features"]["import_export"].setdefault(app_label, []).append(model_name)
 
     if not registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True

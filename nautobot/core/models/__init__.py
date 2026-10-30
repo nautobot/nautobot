@@ -69,6 +69,7 @@ class BaseModel(models.Model):
     objects = BaseManager.from_queryset(RestrictedQuerySet)()
     is_contact_associable_model = False  # ContactMixin overrides this to default True
     is_dynamic_group_associable_model = False  # DynamicGroupMixin overrides this to default True
+    is_import_export_model = True  # whether the ImportObjects and ExportObjectList system Jobs support this model
     is_metadata_associable_model = True
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True

@@ -4,8 +4,10 @@ import tempfile
 from unittest import mock
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.test import override_settings
 
@@ -18,6 +20,7 @@ from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, 
 from nautobot.extras.models.models import UserSavedViewAssociation
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
+    FeatureQuery,
     get_base_template,
     get_celery_queues,
     get_change_logged_m2m_side_field_names,
@@ -258,6 +261,41 @@ class UtilsTestCase(TestCase):
             original_custom_fields_registry,
             "Registry should be restored to original state",
         )
+
+    def test_import_export_feature(self):
+        """The feature includes Nautobot models plus `auth.Group` and `contenttypes.ContentType`.
+
+        It excludes models from third-party apps such as `constance`, `django_celery_beat`, and `social_django`.
+        """
+        supported = ContentType.objects.filter(FeatureQuery("import_export").get_query())
+        for app_label, model in [("dcim", "device"), ("auth", "group"), ("contenttypes", "contenttype")]:
+            with self.subTest(app_label=app_label, model=model):
+                self.assertTrue(supported.filter(app_label=app_label, model=model).exists())
+        for app_label in ["constance", "django_celery_beat", "social_django"]:
+            with self.subTest(app_label=app_label):
+                self.assertFalse(supported.filter(app_label=app_label).exists())
+
+    def test_import_export_feature_opt_out(self):
+        """A model that sets `is_import_export_model = False` is excluded from the feature."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with mock.patch.object(Device, "is_import_export_model", False):
+            populate_model_features_registry(refresh=True)
+        self.assertFalse(
+            ContentType.objects.filter(
+                FeatureQuery("import_export").get_query(), app_label="dcim", model="device"
+            ).exists()
+        )
+
+    def test_export_templates_models_support_import_export(self):
+        """Check that every model that declares the `export_templates` feature also supports import/export.
+
+        The `ExportObjectList` Job is what renders Export Templates, and it rejects models outside `import_export`.
+        """
+        import_export = FeatureQuery("import_export")
+        for app_label, model_names in FeatureQuery("export_templates").as_dict():
+            for model_name in model_names:
+                with self.subTest(model=f"{app_label}.{model_name}"):
+                    self.assertTrue(import_export.includes(apps.get_model(app_label, model_name)))
 
     def test_get_kubernetes_job_manifest_from_file(self):
         """Manifest from JOB_QUEUE_PATH/{queue_name}/manifest.json is returned."""

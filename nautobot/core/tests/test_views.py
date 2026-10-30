@@ -47,6 +47,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import ExportTemplate, FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import populate_model_features_registry
 from nautobot.users.models import ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -188,6 +189,19 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn("disabled", button)
         self.assertIn('title="You do not have permission to run this Job."', button)
         self.assertNotIn("hx-post", button)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_omitted_for_model_without_import_export_support(self):
+        """A model that sets `is_import_export_model = False` offers neither action, but still offers "add"."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with mock.patch.object(Provider, "is_import_export_model", False):
+            populate_model_features_registry(refresh=True)
+        body = self._provider_list_body()
+
+        self.assertIn('id="add-button"', body)
+        self.assertNotIn('id="actions-dropdown"', body)
+        self.assertNotIn('id="import-button"', body)
+        self.assertNotIn("Export to file", body)
 
 
 class ObjectListViewStickyHeadersTestCase(TestCase):
