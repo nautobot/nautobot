@@ -4,6 +4,7 @@ import os
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
@@ -17,6 +18,7 @@ from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.users.validators import validate_navbar_favorites
 
 __all__ = (
     "AdminGroup",
@@ -82,6 +84,15 @@ class User(BaseModel, AbstractUser):
     class Meta:
         db_table = "auth_user"
         ordering = ["username"]
+
+    def clean(self):
+        super().clean()
+        if not isinstance(self.config_data, dict):
+            raise ValidationError({"config_data": "User configuration must be an object."})
+        try:
+            validate_navbar_favorites(self.config_data.get("navbar_favorites", []))
+        except ValidationError as error:
+            raise ValidationError({"config_data": error.messages}) from error
 
     def has_perm(self, perm, obj=None):
         """

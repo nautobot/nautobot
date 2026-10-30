@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser, Group
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
@@ -13,6 +15,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.validators import validate_navbar_favorites
 
 from . import serializers
 
@@ -98,9 +101,14 @@ class UserConfigViewSet(ViewSet):
         """
         Update the config_data for the currently authenticated User.
         """
-        # TODO: How can we validate this data?
+        # TODO: How can we validate the rest of this data?
         user = request.user
-        user.config_data = deepmerge(user.config_data, request.data)
+        config_data = deepmerge(user.config_data, request.data)
+        try:
+            validate_navbar_favorites(config_data.get("navbar_favorites", []))
+        except DjangoValidationError as error:
+            raise ValidationError({"navbar_favorites": error.messages}) from error
+        user.config_data = config_data
         user.save()
 
         return Response(user.config_data)
