@@ -1,6 +1,6 @@
 """Component for the embedded-action modal of an object create form.
 
-A related-object field on a create form can carry two buttons, "Add a new <model>" and
+A related-object field on a create form can have two buttons, "Add a new <model>" and
 "Search <models>". Each loads a form into the one `#embedded_action_modal` the create form
 renders. Creating an object there, or picking a search result, closes the modal and selects
 that object in the field the button belongs to.
@@ -63,9 +63,7 @@ class EmbeddedModal:
 
     def _open(self, label):
         """Click the parent form button labelled *label* and wait for the modal titled *label*."""
-        button = self.page.locator(self._ACTION_BUTTON.format(label=label))
-        button.scroll_into_view_if_needed()
-        button.click()
+        self.page.locator(self._ACTION_BUTTON.format(label=label)).click()
         self.expect_title(label)
 
     def expect_title(self, text):
@@ -107,6 +105,10 @@ class EmbeddedModal:
         """
         expect(self.root.locator(f"select[name='{name}'] option:checked")).to_have_text(list(labels))
 
+    def expect_not_prefilled(self, name):
+        """Assert (auto-retrying) that the modal select *name* has no option selected."""
+        expect(self.root.locator(f"select[name='{name}'] option:checked")).to_have_count(0)
+
     # -------------------------------------------------------------------------
     # Create
     # -------------------------------------------------------------------------
@@ -122,9 +124,9 @@ class EmbeddedModal:
     def search(self, **filters):
         """Set the search form fields named by *filters*, click Search and wait for the new results.
 
-        A select field is picked by its option text, any other field is typed into. Until the new results replace the
-        old ones, a row picked from the old results is swapped out from under the request it started, and the pick is
-        lost.
+        A select field is picked by its option text, any other field is typed into. If a row from the old results is
+        picked before the new results arrive, HTMX replaces that row while its request is still running, and the pick
+        is lost.
         """
         for name, value in filters.items():
             if self.root.locator(f"select[name='{name}']").count():
@@ -149,7 +151,7 @@ class EmbeddedModal:
         """Pick the one result row showing *text*.
 
         The row's first cell links to the object, so a mouse click could follow the link. The row is a keyboard
-        button: focus it and press Enter.
+        button, so focus it and press Enter.
         """
         row = self.result_rows(text)
         expect(row).to_have_count(1)

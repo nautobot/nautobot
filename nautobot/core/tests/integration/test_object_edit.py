@@ -1,5 +1,6 @@
 """Embedded create and embedded search on an object create form, driven from the Device form's related fields."""
 
+from playwright.sync_api import expect
 import pytest
 
 from nautobot.core.tests.integration.pages.embedded_modal import EmbeddedModal
@@ -18,7 +19,7 @@ def open_device_form(auth_page, base_url):
 
 
 def find_one(api, endpoint, **filters):
-    """The one API record at *endpoint* matching *filters*."""
+    """Return the one API record at *endpoint* that matches *filters*."""
     results = api.get(f"/api/{endpoint}", params=filters).json()["results"]
     assert len(results) == 1, f"Expected one record at /api/{endpoint} matching {filters}, found {len(results)}"
     return results[0]
@@ -37,8 +38,7 @@ class ObjectEditTestCase:
         modal.open_create("tenant")
 
         modal.expect_title("Add a new tenant")
-        modal.field("name").wait_for()
-        assert modal.field("name").input_value() == ""
+        expect(modal.field("name")).to_have_value("")
 
     @pytest.mark.behavioral
     def test_embedded_create_selects_the_new_object(self, auth_page, base_url, api, create_object):
@@ -111,7 +111,7 @@ class ObjectEditTestCase:
         modal.open_search("tenants")
 
         modal.expect_title("Search tenants")
-        modal.expect_prefilled("tenant_group")
+        modal.expect_not_prefilled("tenant_group")
 
     @pytest.mark.behavioral
     def test_embedded_search_filters_the_results(self, auth_page, base_url, created_grouped_tenant):
@@ -122,8 +122,8 @@ class ObjectEditTestCase:
         modal.search(tenant_group=group["name"])
 
         modal.expect_result_total(1)
-        assert modal.result_rows(tenant["name"]).count() == 1
-        assert modal.result_rows(other["name"]).count() == 0
+        expect(modal.result_rows(tenant["name"])).to_have_count(1)
+        expect(modal.result_rows(other["name"])).to_have_count(0)
 
     @pytest.mark.behavioral
     def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, created_grouped_tenant):
