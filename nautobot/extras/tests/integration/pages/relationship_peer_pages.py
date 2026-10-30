@@ -6,7 +6,10 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class RelationshipPeerDetailPage(DetailPage):
-    """A detail view's Relationships panels, on the main tab and the Advanced tab. Subclasses set the path."""
+    """A detail view's Relationships panel, on the main tab or the Advanced tab.
+
+    Subclasses set `DETAIL_PATH` and `VERBOSE_NAME`.
+    """
 
     _RELATIONSHIPS_PANEL = "Relationships"
 

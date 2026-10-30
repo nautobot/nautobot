@@ -38,7 +38,7 @@ class RelationshipsTestCase:
 
     @pytest.mark.behavioral
     def test_relationship_symmetric_form_behavior(self, auth_page, base_url, api, content_type_id, delete_on_teardown):
-        """A symmetric type mirrors the source fields onto disabled destination fields, and the mirrored values persist."""
+        """A symmetric type copies the source fields into the disabled destination fields, and the copies are saved."""
         manufacturer_type = content_type_id("dcim.manufacturer")
         platform_type = content_type_id("dcim.platform")
         label = unique_name()

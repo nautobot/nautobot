@@ -15,9 +15,10 @@ class RelationshipCreatePage(BasePage):
     _LABEL = "#id_label"
     _TYPE = "#id_type"
     _CREATE_BUTTON = "button[name='_create']"
-    # The four source/destination field pairs relationship_form.js keeps in sync, by field suffix.
+    # The four source/destination field pairs that relationship_form.js keeps in sync, named by field suffix.
     _MIRRORED_FIELDS = ("type", "label", "hidden", "filter")
-    # No named group: expect().to_have_url() hands the pattern to JavaScript, which rejects Python's (?P<name>...).
+    # The group is unnamed because expect().to_have_url() passes the pattern to the browser as a
+    # JavaScript RegExp, which does not accept Python's (?P<name>...) syntax.
     _DETAIL_URL = re.compile(r"/extras/relationships/([0-9a-f-]{36})/$")
 
     def navigate(self):
@@ -37,7 +38,7 @@ class RelationshipCreatePage(BasePage):
         self.page.locator(self._LABEL).fill(label)
 
     def select_type(self, relationship_type):
-        """Choose the relationship *type* by its value, e.g. "symmetric-many-to-many"."""
+        """Choose the relationship type by the value of *relationship_type*, e.g. "symmetric-many-to-many"."""
         self.page.locator(self._TYPE).select_option(relationship_type)
 
     def select_object_type(self, side, content_type_id):
