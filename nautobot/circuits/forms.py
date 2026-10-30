@@ -199,7 +199,7 @@ class CircuitBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, N
     pk = forms.ModelMultipleChoiceField(queryset=Circuit.objects.all(), widget=forms.MultipleHiddenInput)
     circuit_type = DynamicModelChoiceField(queryset=CircuitType.objects.all(), required=False)
     provider = DynamicModelChoiceField(queryset=Provider.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     commit_rate = forms.IntegerField(required=False, label="Commit rate (Kbps)")
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
@@ -240,7 +240,7 @@ class CircuitFilterForm(
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(),
         required=False,
-        query_params={"provider": "$provider"},
+        query_params={"sort": "name", "provider": "$provider"},
         to_field_name="name",
         label="Provider Network",
     )
@@ -264,7 +264,9 @@ class CircuitTerminationBulkEditForm(TagsBulkEditFormMixin, LocatableModelBulkEd
         queryset=CircuitTermination.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    provider_network = DynamicModelChoiceField(queryset=ProviderNetwork.objects.all(), required=False)
+    provider_network = DynamicModelChoiceField(
+        queryset=ProviderNetwork.objects.all(), query_params={"sort": "name"}, required=False
+    )
     cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False)
     port_speed = forms.IntegerField(required=False, min_value=0, label="Port Speed (Kbps)")
     upstream_speed = forms.IntegerField(required=False, min_value=0, label="Upstream Speed (Kbps)")
@@ -288,7 +290,7 @@ class CircuitTerminationBulkEditForm(TagsBulkEditFormMixin, LocatableModelBulkEd
 
 class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
     provider_network = DynamicModelChoiceField(
-        queryset=ProviderNetwork.objects.all(), required=False, label="Provider Network"
+        queryset=ProviderNetwork.objects.all(), query_params={"sort": "name"}, required=False, label="Provider Network"
     )
     cloud_network = DynamicModelChoiceField(queryset=CloudNetwork.objects.all(), required=False, label="Cloud Network")
 
@@ -319,9 +321,11 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
 class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
     model = CircuitTermination
     q = forms.CharField(required=False, label="Search")
-    circuit = DynamicModelMultipleChoiceField(queryset=Circuit.objects.all(), to_field_name="cid", required=False)
+    circuit = DynamicModelMultipleChoiceField(
+        queryset=Circuit.objects.all(), query_params={"sort": "cid"}, to_field_name="cid", required=False
+    )
     provider_network = DynamicModelMultipleChoiceField(
-        queryset=ProviderNetwork.objects.all(), to_field_name="name", required=False
+        queryset=ProviderNetwork.objects.all(), query_params={"sort": "name"}, to_field_name="name", required=False
     )
     cloud_network = DynamicModelMultipleChoiceField(
         queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
