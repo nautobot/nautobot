@@ -347,6 +347,20 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_multiple_vpn_tunnel_endpoints(self):
+        """Multiple VPNTunnelEndpoints sourced from the same interface should all appear on the interface detail."""
+        interface = Interface.objects.filter(device__isnull=False, vpn_tunnel_endpoints_src_int__isnull=True).first()
+        vpn_profile = models.VPNProfile.objects.first()
+        endpoint_a = models.VPNTunnelEndpoint.objects.create(source_interface=interface, vpn_profile=vpn_profile)
+        endpoint_b = models.VPNTunnelEndpoint.objects.create(source_interface=interface, vpn_profile=vpn_profile)
+
+        self.add_permissions("dcim.view_interface", "vpn.view_vpntunnelendpoint")
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, endpoint_a.get_absolute_url())
+        self.assertBodyContains(response, endpoint_b.get_absolute_url())
+
 
 class VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors

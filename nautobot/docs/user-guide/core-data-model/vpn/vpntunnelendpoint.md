@@ -10,6 +10,9 @@ Typically, a VPN Tunnel Endpoint is associated with a specific device interface,
 ![VPN Tunnel Endpoint Detail View](../../../media/models/vpn_models_vpntunnelendpoint_detail01_light.png#only-light){ .on-glb }
 ![VPN Tunnel Endpoint Detail View](../../../media/models/vpn_models_vpntunnelendpoint_detail01_dark.png#only-dark){ .on-glb }
 
++/- 3.2.0 "Multiple VPN Tunnel Endpoints from the same source_interface"
+    The relationship to source_interface has been changed to a many-to-many relationship. This allows a single Interface to be assigned to multiple VPN Tunnel Endpoints simultaneously if desired for scenarios such as Hub and Spoke.
+
 Nevertheless, Nautobot users have the flexibility to create VPN Tunnel Endpoints without associating them with a device interface, IP address, or tunnel interface. This allows for greater versatility in defining VPN tunnel endpoints, especially when dealing with terminating equipment which is not owned by the organization. In this case, users can define an endpoint just by manually specifying its terminating FQDN or IP address.
 
 ![VPN Tunnel Endpoint Detail View](../../../media/models/vpn_models_vpntunnelendpoint_detail02_light.png#only-light){ .on-glb }
