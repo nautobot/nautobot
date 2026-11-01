@@ -8,6 +8,12 @@ This document describes all new features and chagnes in Nautobot 3.3.
 
 TODO
 
+#### Configure `REST_API_MAX_DEPTH` If Needed
+
+You may wish to audit your logs of existing REST API `GET` requests to see what values of the `depth` query parameter are being used, as the default maximum value of this parameter has been decreased ([see below](#rest-api-maximum-depth-default)).
+
+If the new default maximum of 2 is too restrictive for your clients' usage, you can configure [`REST_API_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#rest_api_max_depth) to a higher value.
+
 ## Release Overview
 
 ### Added
@@ -17,6 +23,10 @@ TODO
 ### Changed
 
 TODO
+
+#### REST API Maximum `depth` Default
+
+The default maximum value of a REST API `GET` query `depth` parameter has been decreased from 10 to 2, as higher values tend to be extremely expensive to evaluate and are rarely used in practice. If your deployment needs a higher maximum (up to the previous limit of 10), an administrator can configure the new [`REST_API_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#rest_api_max_depth) as needed.
 
 #### Enhanced Export/Import
 
