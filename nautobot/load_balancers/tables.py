@@ -30,6 +30,7 @@ class VirtualServerTable(BaseTable):
     device_redundancy_group = tables.Column(linkify=True)
     cloud_service = tables.Column(linkify=True)
     virtual_chassis = tables.Column(linkify=True)
+    virtual_device_context = tables.Column(linkify=True)
     tenant = TenantColumn()
     health_check_monitor = tables.Column(linkify=True)
     certificate_profiles_count = LinkedCountColumn(
@@ -60,6 +61,7 @@ class VirtualServerTable(BaseTable):
             "device_redundancy_group",
             "cloud_service",
             "virtual_chassis",
+            "virtual_device_context",
             "health_check_monitor",
             "ssl_offload",
             "certificate_profiles_count",
