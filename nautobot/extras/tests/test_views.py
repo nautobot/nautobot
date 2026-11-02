@@ -2010,6 +2010,27 @@ class ContactAssociationTestCase(
         self.assertEqual(contact_association.role.pk, self.form_data["role"])
         self.assertEqual(contact_association.status.pk, self.form_data["status"])
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_contact_or_team_with_custom_field(self):
+        """Test that custom fields on ContactAssociation can be filled in when assigning a contact or team."""
+        custom_field = CustomField.objects.create(
+            key="contact_association_field",
+            label="Contact Association Field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        custom_field.content_types.set([ContentType.objects.get_for_model(ContactAssociation)])
+        self.add_permissions("extras.add_contactassociation")
+
+        url = reverse("extras:object_contact_team_assign")
+        self.assertBodyContains(self.client.get(url), 'name="cf_contact_association_field"')
+
+        data = {**self.form_data, "cf_contact_association_field": "Some value"}
+        self.assertHttpStatus(self.client.post(url, data=post_data(data)), 302)
+        self.assertTrue(
+            ContactAssociation.objects.filter(_custom_field_data__contact_association_field="Some value").exists()
+        )
+
 
 class CustomLinkTestCase(
     ViewTestCases.CreateObjectViewTestCase,
