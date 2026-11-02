@@ -154,7 +154,7 @@ The `region` and `site` fields are being removed in the `filter` data of `Dynami
 
 Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide.
 
-Check out the [Region and Site Related Data Model Migration Guide](../development/apps/migration/model-updates/dcim.md) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
+Check out the [Region and Site Related Data Model Migration Guide](../development/apps/migration/from-v1/model-updates/dcim.md) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 
