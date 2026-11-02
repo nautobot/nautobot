@@ -288,7 +288,7 @@ SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "f
 if SSO_ENABLE_GROUP_SYNC:
     SOCIAL_AUTH_PIPELINE = (
         "social_core.pipeline.social_auth.social_details",
-        "social.core.pipeline.social_auth.social_names",
+        "social_core.pipeline.social_auth.social_names",
         "social_core.pipeline.social_auth.social_uid",
         "social_core.pipeline.social_auth.auth_allowed",
         "social_core.pipeline.social_auth.social_user",
