@@ -342,54 +342,100 @@ class CircuitTerminationTestCase(
 class CircuitSwapTerminationsTestCase(NautobotTestCase):
     def setUp(self):
         super().setUp()
+        provider = Provider.objects.first()
+        self.provider_networks = (
+            ProviderNetwork.objects.create(name="Test Provider Network 1", provider=provider),
+            ProviderNetwork.objects.create(name="Test Provider Network 2", provider=provider),
+        )
+        self.circuit = Circuit.objects.create(
+            cid="Test Circuit",
+            provider=provider,
+            circuit_type=CircuitType.objects.first(),
+            status=Status.objects.get_for_model(Circuit).first(),
+        )
+        self.termination_a = CircuitTermination.objects.create(
+            circuit=self.circuit,
+            provider_network=self.provider_networks[0],
+            term_side=CircuitTerminationSideChoices.SIDE_A,
+        )
+        self.termination_z = CircuitTermination.objects.create(
+            circuit=self.circuit,
+            provider_network=self.provider_networks[1],
+            term_side=CircuitTerminationSideChoices.SIDE_Z,
+        )
+        self.url = reverse("circuits:circuit_terminations_swap", kwargs={"pk": self.circuit.pk})
+
+    def _post_swap(self):
+        return self.client.post(self.url, data=post_data({"confirm": True}))
+
+    def assertSwapped(self, swapped):
+        self.termination_a.refresh_from_db()
+        self.termination_z.refresh_from_db()
+        if swapped:
+            self.assertEqual(self.termination_a.term_side, CircuitTerminationSideChoices.SIDE_Z)
+            self.assertEqual(self.termination_z.term_side, CircuitTerminationSideChoices.SIDE_A)
+        else:
+            self.assertEqual(self.termination_a.term_side, CircuitTerminationSideChoices.SIDE_A)
+            self.assertEqual(self.termination_z.term_side, CircuitTerminationSideChoices.SIDE_Z)
+
+    def test_swap_circuit_termination(self):
         self.user.is_superuser = True
         self.user.save()
 
-    def test_swap_circuit_termination(self):
-        # Set up the required objects:
-        provider = Provider.objects.first()
-        provider_networks = (
-            ProviderNetwork.objects.create(
-                name="Test Provider Network 1",
-                provider=provider,
-            ),
-            ProviderNetwork.objects.create(
-                name="Test Provider Network 2",
-                provider=provider,
-            ),
-        )
-        circuit_type = CircuitType.objects.first()
-        status = Status.objects.get_for_model(Circuit).first()
-        circuit = Circuit.objects.create(
-            cid="Test Circuit",
-            provider=provider,
-            circuit_type=circuit_type,
-            status=status,
-        )
-        CircuitTermination.objects.create(
-            circuit=circuit,
-            provider_network=provider_networks[0],
-            term_side=CircuitTerminationSideChoices.SIDE_A,
-        )
-        CircuitTermination.objects.create(
-            circuit=circuit,
-            provider_network=provider_networks[1],
-            term_side=CircuitTerminationSideChoices.SIDE_Z,
-        )
-        request = {
-            "path": reverse("circuits:circuit_terminations_swap", kwargs={"pk": circuit.pk}),
-            "data": post_data({"confirm": True}),
-        }
-        response = self.client.post(**request)
+        response = self._post_swap()
         self.assertHttpStatus(response, 302)
 
         circuit_termination_a = CircuitTermination.objects.get(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
+            circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_A
         )
         circuit_termination_z = CircuitTermination.objects.get(
-            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
+            circuit=self.circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
         )
 
         # Assert Swap
-        self.assertEqual(circuit_termination_a.provider_network, provider_networks[1])
-        self.assertEqual(circuit_termination_z.provider_network, provider_networks[0])
+        self.assertEqual(circuit_termination_a.provider_network, self.provider_networks[1])
+        self.assertEqual(circuit_termination_z.provider_network, self.provider_networks[0])
+
+    def test_swap_with_required_permissions(self):
+        self.add_permissions("circuits.change_circuit", "circuits.change_circuittermination")
+
+        self.assertHttpStatus(self.client.get(self.url), 200)
+        self.assertHttpStatus(self._post_swap(), 302)
+        self.assertSwapped(True)
+
+    def test_swap_requires_change_circuittermination_permission(self):
+        self.add_permissions("circuits.change_circuit")
+
+        self.assertHttpStatus(self.client.get(self.url), 403)
+        self.assertHttpStatus(self._post_swap(), 403)
+        self.assertSwapped(False)
+
+    def test_swap_requires_change_circuit_permission(self):
+        self.add_permissions("circuits.change_circuittermination")
+
+        self.assertHttpStatus(self.client.get(self.url), 403)
+        self.assertHttpStatus(self._post_swap(), 403)
+        self.assertSwapped(False)
+
+    def test_swap_denied_when_termination_not_permitted(self):
+        """User may change only one of the circuit's terminations, so the swap must not happen."""
+        self.add_permissions("circuits.change_circuit")
+        self.add_permissions("circuits.change_circuittermination", constraints={"pk": str(self.termination_a.pk)})
+
+        self.assertHttpStatus(self.client.get(self.url), 302)
+        self.assertHttpStatus(self._post_swap(), 302)
+        self.assertSwapped(False)
+
+    def test_swap_denied_when_result_violates_constraints(self):
+        """User may change both terminations only while they are on side A/Z respectively; swapping would violate that."""
+        self.add_permissions("circuits.change_circuit")
+        self.add_permissions(
+            "circuits.change_circuittermination",
+            constraints=[
+                {"pk": str(self.termination_a.pk), "term_side": CircuitTerminationSideChoices.SIDE_A},
+                {"pk": str(self.termination_z.pk), "term_side": CircuitTerminationSideChoices.SIDE_Z},
+            ],
+        )
+
+        self.assertHttpStatus(self._post_swap(), 302)
+        self.assertSwapped(False)
