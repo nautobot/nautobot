@@ -191,10 +191,29 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertNotIn("hx-post", button)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_import_and_export_omitted_for_model_without_import_export_support(self):
-        """A model that sets `is_import_export_model = False` offers neither action, but still offers "add"."""
+    def test_import_and_export_each_omitted_for_model_without_that_support(self):
+        """A model that sets `is_importable_model` or `is_exportable_model` to `False` has only the matching action
+        omitted from its list view."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
         self.addCleanup(populate_model_features_registry, refresh=True)
-        with mock.patch.object(Provider, "is_import_export_model", False):
+        for attribute, omitted, offered in (
+            ("is_importable_model", 'id="import-button"', "Export to file"),
+            ("is_exportable_model", "Export to file", 'id="import-button"'),
+        ):
+            with self.subTest(attribute=attribute):
+                with mock.patch.object(Provider, attribute, False):
+                    populate_model_features_registry(refresh=True)
+                body = self._provider_list_body()
+                self.assertIn('id="add-button"', body)
+                self.assertNotIn(omitted, body)
+                self.assertIn(offered, body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_omitted_for_model_without_either_support(self):
+        """For a model that supports neither import nor export, the list view still displays the "Add" button but
+        doesn't render the dropdown caret."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with mock.patch.multiple(Provider, is_exportable_model=False, is_importable_model=False):
             populate_model_features_registry(refresh=True)
         body = self._provider_list_body()
 

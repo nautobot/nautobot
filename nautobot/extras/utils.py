@@ -453,9 +453,14 @@ def populate_model_features_registry(refresh=False):
             "field_names": ["_custom_field_data"],
         },
         {
-            "feature_name": "import_export",
+            "feature_name": "export",
             "field_names": [],
-            "additional_constraints": {"is_import_export_model": True},
+            "additional_constraints": {"is_exportable_model": True},
+        },
+        {
+            "feature_name": "import",
+            "field_names": [],
+            "additional_constraints": {"is_importable_model": True},
         },
         {
             "feature_name": "metadata",
@@ -499,7 +504,8 @@ def populate_model_features_registry(refresh=False):
     # Add the plain Django models that the import/export Jobs also support, in addition to Nautobot's own models
     for model_class in (Group, ContentType):
         app_label, model_name = model_class._meta.label_lower.split(".")
-        registry["model_features"]["import_export"].setdefault(app_label, []).append(model_name)
+        for feature_name in ("export", "import"):
+            registry["model_features"][feature_name].setdefault(app_label, []).append(model_name)
 
     if not registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True

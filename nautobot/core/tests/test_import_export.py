@@ -111,6 +111,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.utils import populate_model_features_registry
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import (
     IPAddress,
@@ -4329,12 +4330,12 @@ class SentinelValueTests(ImportExportJobTestCase):
 # ===========================================================================
 class PermissionTests(ImportExportJobTestCase):
     def test_perm__unsupported_content_type_is_rejected(self):
-        """Neither Job accepts a content-type outside the `import_export` feature, even from a superuser."""
+        """Each Job rejects content-types that its feature (`export`/`import`) doesn't include, even for a superuser."""
         with self.subTest("export"):
             job_result = self.run_export(model=PeriodicTask, expected_status=JobResultStatusChoices.STATUS_FAILURE)
             self.assertJobLogEntry(
                 job_result,
-                "django_celery_beat.periodictask objects do not support import/export",
+                "django_celery_beat.periodictask objects do not support export",
                 level=LogLevelChoices.LOG_ERROR,
             )
             self.assertFalse(job_result.files.exists())
@@ -4346,7 +4347,7 @@ class PermissionTests(ImportExportJobTestCase):
             )
             self.assertJobLogEntry(
                 job_result,
-                "django_celery_beat.periodictask objects do not support import/export",
+                "django_celery_beat.periodictask objects do not support import",
                 level=LogLevelChoices.LOG_ERROR,
             )
             self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
@@ -4360,10 +4361,36 @@ class PermissionTests(ImportExportJobTestCase):
             self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
             self.assertJobLogEntry(
                 job_result,
-                "django_celery_beat.periodictask objects do not support import/export",
+                "django_celery_beat.periodictask objects do not support import",
                 level=LogLevelChoices.LOG_ERROR,
             )
             self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
+
+    def test_perm__each_job_requires_only_its_own_feature(self):
+        """A model that opts out of export can still be imported, and vice versa."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with self.subTest("is_exportable_model = False"):
+            with mock.patch.object(Status, "is_exportable_model", False):
+                populate_model_features_registry(refresh=True)
+            job_result = self.run_export(expected_status=JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result, "extras.status objects do not support export", level=LogLevelChoices.LOG_ERROR
+            )
+            self.assertFalse(job_result.files.exists())
+            self.run_import("name,color,content_types\ntest_status_importable,111111,dcim.device")
+            self.assertTrue(Status.objects.filter(name="test_status_importable").exists())
+        with self.subTest("is_importable_model = False"):
+            with mock.patch.object(Status, "is_importable_model", False):
+                populate_model_features_registry(refresh=True)
+            job_result = self.run_import(
+                "name,color,content_types\ntest_status_unimportable,111111,dcim.device",
+                expected_status=JobResultStatusChoices.STATUS_FAILURE,
+            )
+            self.assertJobLogEntry(
+                job_result, "extras.status objects do not support import", level=LogLevelChoices.LOG_ERROR
+            )
+            self.assertFalse(Status.objects.filter(name="test_status_unimportable").exists())
+            self.assertTrue(self.run_export().files.exists())
 
     def test_perm__export_without_permission(self):
         """Job enforces view permission on the content-type being exported."""

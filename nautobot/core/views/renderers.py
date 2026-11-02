@@ -156,7 +156,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action_buttons is None:
             view.action_buttons = []
         for action in view.action_buttons:
-            if action in ("import", "export") and not FeatureQuery("import_export").includes(queryset.model):
+            if action in ("import", "export") and not FeatureQuery(action).includes(queryset.model):
                 continue
             if action in always_valid_actions or validated_viewname(queryset.model, action) is not None:
                 valid_actions.append(action)

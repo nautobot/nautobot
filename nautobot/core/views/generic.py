@@ -215,7 +215,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         if self.action_buttons is None:
             self.action_buttons = []
         for action in self.action_buttons:
-            if action in ("import", "export") and not FeatureQuery("import_export").includes(self.queryset.model):
+            if action in ("import", "export") and not FeatureQuery(action).includes(self.queryset.model):
                 continue
             if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
                 valid_actions.append(action)
