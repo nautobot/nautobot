@@ -88,7 +88,7 @@ from nautobot.extras.jobs import (
 from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import get_saved_view_or_none
+from nautobot.extras.utils import FeatureQuery, get_saved_view_or_none
 
 name = "System Jobs"
 
@@ -198,6 +198,18 @@ class ExportFieldsStringVar(StringVar):
         return field
 
 
+def _require_feature_support(logger, model, feature):
+    """Abort unless `model` supports `feature`, which is `"export"` or `"import"`.
+
+    The `query_params` of the `content_type` variable only limit the choices that the UI form lists. Without this
+    check, a caller using the REST API or a scheduled Job could pass any content-type, including one for a
+    third-party library's model.
+    """
+    if not FeatureQuery(feature).includes(model):
+        logger.error("%s objects do not support %s", model._meta.label_lower, feature)
+        raise RunJobTaskFailed(f"The requested content-type does not support {feature}")
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects to CSV/JSON/YAML or using an ExportTemplate."""
 
@@ -205,7 +217,10 @@ class ExportObjectList(Job):
         model=ContentType,
         description="Type of objects to export",
         label="Content Type",
-        query_params={"can_view": True},  # not adding "has_serializer": True as it might just support export-templates
+        # The `has_serializer` filter is deliberately left out. A model without a serializer can still be exported
+        # with an Export Template, because that path renders the template from the queryset and doesn't use a
+        # serializer.
+        query_params={"can_view": True, "feature": "export"},
     )
     query_string = StringVar(
         description='Filter parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
@@ -685,6 +700,7 @@ class ExportObjectList(Job):
                 content_type.model,
             )
             raise RunJobTaskFailed("Model not found")
+        _require_feature_support(self.logger, model, "export")
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
         saved_view = self._get_saved_view(query_params)
@@ -741,7 +757,7 @@ class ImportObjects(Job):
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import; defaults to the model the data declares for itself, if any.",
-        query_params={"can_import": True, "has_serializer": True},
+        query_params={"can_import": True, "has_serializer": True, "feature": "import"},
         required=False,
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
@@ -1021,6 +1037,7 @@ class ImportObjects(Job):
                 content_type.model,
             )
             raise RunJobTaskFailed("Model not found")
+        _require_feature_support(self.logger, model, "import")
         try:
             serializer_class = get_serializer_for_model(model)
         except SerializerNotFound:
