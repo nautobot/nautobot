@@ -158,7 +158,7 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
                 self.assertIn("config_data", context.exception.message_dict)
 
     def test_a_non_object_config_is_rejected(self):
-        """Every config read indexes into an object, so the stored value must be one."""
+        """`set_config()`, `clear_config()` and `all_config()` treat `config_data` as a dict, so other types are rejected."""
         self.user.config_data = []
         with self.assertRaises(ValidationError) as context:
             self.user.validated_save()
