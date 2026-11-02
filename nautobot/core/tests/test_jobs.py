@@ -8,6 +8,7 @@ import weakref
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.db.models.signals import pre_delete
 from django.test import override_settings
 from django.utils import timezone
@@ -27,9 +28,13 @@ from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoi
 from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
+    ArchivedJobConsoleEntry,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
     ArchivedObjectChange,
     DynamicGroup,
     ExportTemplate,
+    FileProxy,
     JobConsoleEntry,
     JobLogEntry,
     JobResult,
@@ -1605,3 +1610,360 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result)
         self.assertEqual(was_handle_deleted_object_connected_during_archival, [False])
         self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
+
+
+class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
+    """
+    Test the ArchiveOldRecords system job's handling of JobResult records and their child records.
+
+    The signal disconnect is deliberately not retested here. It is set up once in `run()` for the whole
+    job rather than per model, and `ArchiveOldRecordsObjectChangeTestCase` already covers it.
+    """
+
+    databases = ("default", "job_logs")
+
+    JOB_MODULE = "nautobot.core.jobs.archive"
+    JOB_CLASS_NAME = "ArchiveOldRecords"
+
+    def setUp(self):
+        super().setUp()
+
+        # Remove any left over models that may exist in order to provide a clean environment
+        # for testing. Deleting the parents takes their log and console entries with them.
+        JobResult.objects.all().delete()
+        ArchivedJobResult.objects.all().delete()
+
+    # --------------------------------------------------------------------------
+    # Helpers
+    # --------------------------------------------------------------------------
+    def make_job_result(
+        self,
+        *,
+        age_in_days,
+        log_entry_count=0,
+        console_entry_count=0,
+        status=JobResultStatusChoices.STATUS_SUCCESS,
+        **kwargs,
+    ):
+        """
+        Create a `JobResult` that finished `age_in_days` in the past, with the requested child records.
+
+        The factory scatters its three timestamps randomly across its live history window, so they are
+        overwritten here. Eligibility is decided by `date_done`, which means the test has to own it.
+
+        Reloaded before being returned so that its `JSONField`s hold what the database holds. The factory
+        fills `result` and `task_kwargs` with native Python values, which only become the strings the
+        archived copy will carry once they have been through a save and a read.
+        """
+        finished_timestamp = timezone.now() - timedelta(days=age_in_days)
+
+        new_job_result = JobResultFactory.create(status=status, **kwargs)
+        new_job_result.date_created = finished_timestamp
+        new_job_result.date_started = finished_timestamp
+        new_job_result.date_done = finished_timestamp
+        new_job_result.save()
+
+        for log_entry_index in range(log_entry_count):
+            JobLogEntry.objects.create(
+                job_result=new_job_result,
+                log_level=LogLevelChoices.LOG_INFO,
+                grouping="main",
+                message=f"{new_job_result.name} log entry {log_entry_index}",
+            )
+
+        for console_entry_index in range(console_entry_count):
+            JobConsoleEntry.objects.create(
+                job_result=new_job_result,
+                text=f"{new_job_result.name} console entry {console_entry_index}",
+            )
+
+        new_job_result.refresh_from_db()
+        return new_job_result
+
+    def run_archive_old_records_job(self, **kwargs):
+        """
+        Run the job against JobResult only.
+
+        The threshold and batch size are left unset so that the job resolves them itself using
+        the `get_settings_or_config` fallback in `run()`.
+        """
+        kwargs.setdefault("selected_models_to_archive", ["extras.jobresult"])
+        kwargs.setdefault("dryrun", False)
+
+        return create_job_result_and_run_job(
+            self.JOB_MODULE, self.JOB_CLASS_NAME, username=self.user.username, **kwargs
+        )
+
+    def get_job_log_messages(self, job_result):
+        return list(job_result.job_log_entries.values_list("message", flat=True))
+
+    # --------------------------------------------------------------------------
+    # Tests
+    # --------------------------------------------------------------------------
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_dryrun_reports_without_moving_anything(self):
+        job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
+
+        archive_job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=job_result.pk).exists())
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
+        self.assertEqual(ArchivedJobLogEntry.objects.count(), 0)
+        self.assertEqual(ArchivedJobConsoleEntry.objects.count(), 0)
+        self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(archive_job_result)))
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_job_results_older_than_the_threshold_are_archived(self):
+        """Job results past the threshold move to the archive; job results inside it stay live."""
+        old_job_result = self.make_job_result(age_in_days=90)
+        recent_job_result = self.make_job_result(age_in_days=5)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        # Confirm Old Is Archived
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        # Confirm Recent Is Not Archived
+        self.assertTrue(JobResult.objects.filter(pk=recent_job_result.pk).exists())
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=recent_job_result.pk).exists())
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_nothing_is_archived_when_every_job_result_is_inside_the_threshold(self):
+        recent_job_result = self.make_job_result(age_in_days=5)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=recent_job_result.pk).exists())
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
+        does_no_job_result_record_log_output_exist = any(
+            "No JobResult records older than" in message for message in self.get_job_log_messages(archive_job_result)
+        )
+        self.assertTrue(does_no_job_result_record_log_output_exist)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_log_and_console_entries_move_with_their_job_result(self):
+        """The children are copied before the live parent is deleted, so the cascade takes only live rows."""
+        log_entry_count = 3
+        console_entry_count = 2
+        old_job_result = self.make_job_result(
+            age_in_days=90,
+            log_entry_count=log_entry_count,
+            console_entry_count=console_entry_count,
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        # Confirm The Children Reached The Archive
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), log_entry_count)
+        self.assertEqual(
+            ArchivedJobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), console_entry_count
+        )
+        # Confirm The Live Children Were Cascaded Away With Their Parent
+        self.assertFalse(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).exists())
+        self.assertFalse(JobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).exists())
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_child_entries_are_archived_in_chunks_when_they_outnumber_the_batch_size(self):
+        """
+        A single job result can carry far more children than the parent batch size, so the children are
+        chunked independently.
+
+        The counts straddle the chunk boundary on purpose. Four log entries at a chunk size of two divide
+        evenly, so the last chunk read comes back empty; five console entries do not, so the last chunk is
+        a partial one. Both have to land in full.
+        """
+        log_entry_count = 4
+        console_entry_count = 5
+        old_job_result = self.make_job_result(
+            age_in_days=90,
+            log_entry_count=log_entry_count,
+            console_entry_count=console_entry_count,
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), log_entry_count)
+        self.assertEqual(
+            ArchivedJobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), console_entry_count
+        )
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_every_archived_job_result_field_matches_every_job_result_field(self):
+        """
+        `user_name` is excluded because it has no live counterpart; it is covered by its own test.
+
+        Fields are read by `attname` rather than `name` so that the archive's bare id columns line up with
+        the live record's foreign keys. `ArchivedJobResult.user_id` is a plain UUID column while
+        `JobResult.user` is a relation, and only `attname` names both of them `user_id`.
+        """
+        old_job_result = self.make_job_result(age_in_days=90)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+
+        archived_job_result = ArchivedJobResult.objects.get(pk=old_job_result.pk)
+        for field in ArchivedJobResult._meta.fields:
+            if field.name == "user_name":
+                continue
+            with self.subTest(field=field.name):
+                archived_job_result_field_value = getattr(archived_job_result, field.attname)
+                job_result_field_value = getattr(old_job_result, field.attname)
+                self.assertEqual(archived_job_result_field_value, job_result_field_value)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_archived_user_name_is_denormalized_from_the_live_user(self):
+        """The archive cannot follow a foreign key into the live user table, so the username is copied."""
+        old_job_result = self.make_job_result(age_in_days=90, user=self.user)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        archived_job_result = ArchivedJobResult.objects.get(pk=old_job_result.pk)
+        self.assertEqual(archived_job_result.user_name, self.user.username)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_every_archived_child_entry_field_matches_its_live_entry(self):
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, console_entry_count=1)
+        job_log_entry = JobLogEntry.objects.get(job_result_id=old_job_result.pk)
+        job_console_entry = JobConsoleEntry.objects.get(job_result_id=old_job_result.pk)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+
+        archived_child_entries_by_live_entry = {
+            job_log_entry: ArchivedJobLogEntry.objects.get(pk=job_log_entry.pk),
+            job_console_entry: ArchivedJobConsoleEntry.objects.get(pk=job_console_entry.pk),
+        }
+        for live_entry, archived_entry in archived_child_entries_by_live_entry.items():
+            for field in type(archived_entry)._meta.fields:
+                with self.subTest(model=type(archived_entry).__name__, field=field.name):
+                    self.assertEqual(getattr(archived_entry, field.attname), getattr(live_entry, field.attname))
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_job_results_that_have_not_finished_are_not_archived(self):
+        """
+        A job that is still going has no end time, so a long running one would otherwise be deleted out
+        from under the task that is writing to it. The status check states that requirement a second way.
+        """
+        unfinished_job_result = self.make_job_result(age_in_days=90, status=JobResultStatusChoices.STATUS_STARTED)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=unfinished_job_result.pk).exists())
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=unfinished_job_result.pk).exists())
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_job_results_that_carry_files_are_not_archived(self):
+        """
+        A `FileProxy` is a third cascade child with no archived counterpart, and deleting its job result
+        destroys the stored file along with the row. Those job results are left alone rather than archived
+        with their files silently discarded.
+        """
+        old_job_result = self.make_job_result(age_in_days=90)
+        file_proxy = FileProxy.objects.create(
+            name="output.txt",
+            file=ContentFile(b"job output", name="output.txt"),
+            job_result=old_job_result,
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertTrue(FileProxy.objects.filter(pk=file_proxy.pk).exists())
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_archival_runs_in_batches_of_the_requested_size(self):
+        # Batching is determined by log output
+        job_result_count = 5
+        for _ in range(job_result_count):
+            self.make_job_result(age_in_days=90)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(ArchivedJobResult.objects.count(), job_result_count)
+        batch_messages = [
+            message for message in self.get_job_log_messages(archive_job_result) if message.startswith("Batch ")
+        ]
+        self.assertEqual(len(batch_messages), 3, batch_messages)
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_rerunning_overwrites_rather_than_duplicating(self):
+        """Archiving job results assumes a finished job result no longer changes state.
+
+        The job itself will overwrite a record if it already exists out of simplicity.
+        """
+        old_job_result = self.make_job_result(age_in_days=90)
+        self.assertJobResultStatus(self.run_archive_old_records_job())
+
+        # Stand the record back up under the primary key already in the archive, which is the state an
+        # interrupted run leaves behind.
+        second_round_name = "second round archival"
+        self.make_job_result(age_in_days=90, id=old_job_result.pk, name=second_round_name)
+
+        self.assertJobResultStatus(self.run_archive_old_records_job())
+
+        self.assertEqual(ArchivedJobResult.objects.filter(pk=old_job_result.pk).count(), 1)
+        self.assertEqual(ArchivedJobResult.objects.get(pk=old_job_result.pk).name, second_round_name)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+
+    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
+    def test_a_batch_that_fails_also_fails_the_job_and_leaves_the_live_records(self):
+        """The live record is deleted only after its copy lands, so a failed batch loses nothing."""
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
+        archive_failure_message = "Archive Unavailable"
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_process_archive_job_result_batch",
+            side_effect=RuntimeError(archive_failure_message),
+        ):
+            archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+        self.assertEqual(JobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
+        does_archive_failure_message_exist = any(
+            archive_failure_message in message for message in self.get_job_log_messages(archive_job_result)
+        )
+        self.assertTrue(does_archive_failure_message_exist)
+
+    @override_settings(
+        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
+        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
+    )
+    def test_a_batch_that_fails_logs_which_batch_stopped_and_how_much_was_archived(self):
+        for _ in range(4):
+            self.make_job_result(age_in_days=90)
+        archive_failure_message = "Archive Unavailable"
+        archived_count_before_failure = 2
+
+        with mock.patch.object(
+            ArchiveOldRecords,
+            "_process_archive_job_result_batch",
+            side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
+        ):
+            archive_job_result = self.run_archive_old_records_job()
+
+        expected_stopping_message = (
+            f"Stopping at batch 1: {archive_failure_message}. Archived 2 of 4 JobResult records before stopping."
+        )
+        self.assertIn(expected_stopping_message, self.get_job_log_messages(archive_job_result))

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from itertools import islice
 import math
 
 from django.db.models.signals import pre_delete
@@ -330,29 +331,21 @@ class ArchiveOldRecords(Job):
             (int): Job results archived and removed from the live table.
         """
         job_result_pks = [job_result.pk for job_result in job_result_batch]
+        job_result_pks_count = len(job_result_pks)
 
         archived_job_result_update_fields = [
             field.name for field in ArchivedJobResult._meta.fields if field.name != "id"
         ]
+        new_archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
         ArchivedJobResult.objects.bulk_create(
-            [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch],
+            new_archived_job_results,
             update_conflicts=True,
             update_fields=archived_job_result_update_fields,
             unique_fields=["id"],
         )
 
-        archived_job_log_entry_count = self._archive_job_result_child_records(
-            JobLogEntry.objects.filter(job_result_id__in=job_result_pks),
-            ArchivedJobLogEntry,
-            ArchivedJobLogEntry.from_job_log_entry,
-            batch_size,
-        )
-        archived_job_console_entry_count = self._archive_job_result_child_records(
-            JobConsoleEntry.objects.filter(job_result_id__in=job_result_pks),
-            ArchivedJobConsoleEntry,
-            ArchivedJobConsoleEntry.from_job_console_entry,
-            batch_size,
-        )
+        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
+        archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
 
         deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
         self.logger.debug(
@@ -362,50 +355,88 @@ class ArchiveOldRecords(Job):
             archived_job_console_entry_count,
             deleted_count,
         )
-        return len(job_result_pks)
 
-    def _archive_job_result_child_records(
-        self, child_records, archived_child_model, build_archived_child_record, chunk_size
-    ):
+        return job_result_pks_count
+
+    # --------------------------------------------------------------------------
+    # Job Log Entry
+    # --------------------------------------------------------------------------
+    def _archive_job_log_entry(self, job_result_pks, batch_size):
         """
-        Copy a job result's child records into the archive, a bounded chunk at a time.
+        Copy the job results' `JobLogEntry` records into the archive, a bounded chunk at a time.
 
-        Chunked separately from the parent batch because the children are unbounded: a single job result
-        can carry tens of thousands of log entries, so a batch of parents says nothing about how many
-        children come with it.
+        Chunked separately from the parent batch because the log entries are unbounded: a single job
+        result can carry tens of thousands of them, so a batch of parents says nothing about how many
+        log entries come with it.
 
         Args:
-            child_records (QuerySet): Live child records belonging to the batch's job results.
-            archived_child_model (Model): The archived model the records are copied into.
-            build_archived_child_record (callable): Maps one live record to an unsaved archived record.
-            chunk_size (int): Records to hold in memory and insert at a time.
+            job_result_pks (list of uuid.UUID): Primary keys of the job results whose log entries are archived.
+            batch_size (int): Records to hold in memory and insert at a time.
 
         Returns:
-            (int): Child records copied into the archive.
+            (int): Job log entries copied into the archive.
         """
-        archived_child_update_fields = [field.name for field in archived_child_model._meta.fields if field.name != "id"]
-        archived_child_record_count = 0
-        archived_child_record_chunk = []
+        archived_job_log_entry_update_fields = [
+            field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
+        ]
+        job_log_entries = JobLogEntry.objects.filter(job_result_id__in=job_result_pks)
+        streamed_job_log_entries = job_log_entries.iterator(chunk_size=batch_size)
 
-        for child_record in child_records.iterator(chunk_size=chunk_size):
-            archived_child_record_chunk.append(build_archived_child_record(child_record))
-            if len(archived_child_record_chunk) >= chunk_size:
-                archived_child_model.objects.bulk_create(
-                    archived_child_record_chunk,
-                    update_conflicts=True,
-                    update_fields=archived_child_update_fields,
-                    unique_fields=["id"],
-                )
-                archived_child_record_count += len(archived_child_record_chunk)
-                archived_child_record_chunk = []
+        archived_job_log_entry_count = 0
 
-        if archived_child_record_chunk:
-            archived_child_model.objects.bulk_create(
-                archived_child_record_chunk,
+        while True:
+            job_log_entry_chunk = list(islice(streamed_job_log_entries, batch_size))
+            if not job_log_entry_chunk:
+                break
+            ArchivedJobLogEntry.objects.bulk_create(
+                [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
                 update_conflicts=True,
-                update_fields=archived_child_update_fields,
+                update_fields=archived_job_log_entry_update_fields,
                 unique_fields=["id"],
             )
-            archived_child_record_count += len(archived_child_record_chunk)
+            archived_job_log_entry_count += len(job_log_entry_chunk)
 
-        return archived_child_record_count
+        return archived_job_log_entry_count
+
+    # --------------------------------------------------------------------------
+    # Job Console Entry
+    # --------------------------------------------------------------------------
+    def _archive_job_console_entry(self, job_result_pks, batch_size):
+        """
+        Copy the job results' `JobConsoleEntry` records into the archive, a bounded chunk at a time.
+
+        Chunked separately from the parent batch because the console entries are unbounded: a single job
+        result can carry tens of thousands of them, so a batch of parents says nothing about how many
+        console entries come with it.
+
+        Args:
+            job_result_pks (list of uuid.UUID): Primary keys of the job results whose console entries are archived.
+            batch_size (int): Records to hold in memory and insert at a time.
+
+        Returns:
+            (int): Job console entries copied into the archive.
+        """
+        archived_job_console_entry_update_fields = [
+            field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
+        ]
+        job_console_entries = JobConsoleEntry.objects.filter(job_result_id__in=job_result_pks)
+        streamed_job_console_entries = job_console_entries.iterator(chunk_size=batch_size)
+
+        archived_job_console_entry_count = 0
+
+        while True:
+            job_console_entry_chunk = list(islice(streamed_job_console_entries, batch_size))
+            if not job_console_entry_chunk:
+                break
+            ArchivedJobConsoleEntry.objects.bulk_create(
+                [
+                    ArchivedJobConsoleEntry.from_job_console_entry(job_console_entry)
+                    for job_console_entry in job_console_entry_chunk
+                ],
+                update_conflicts=True,
+                update_fields=archived_job_console_entry_update_fields,
+                unique_fields=["id"],
+            )
+            archived_job_console_entry_count += len(job_console_entry_chunk)
+
+        return archived_job_console_entry_count
