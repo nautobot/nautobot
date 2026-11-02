@@ -2670,8 +2670,9 @@ class ViewTestCases:
                 data.pop(parent_field, None)
 
             parents = list(parent_model.objects.all()[:2])
-            if len(parents) < 2:
-                self.skipTest(f"At least two {parent_model._meta.verbose_name_plural} are required for this test")
+            self.assertEqual(
+                len(parents), 2, f"At least two {parent_model._meta.verbose_name_plural} are required for this test"
+            )
             permitted_parent, hidden_parent = parents
 
             obj_perm = users_models.ObjectPermission(

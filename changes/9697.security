@@ -1,1 +1,1 @@
-Fixed bulk-add component views for Devices and Virtual Machines allowing users to view and add components to parent objects they lacked permission to view.
+Fixed bulk-add component views for Devices, Modules, and Virtual Machines allowing users to view or add components to parent objects they lacked permission to access.

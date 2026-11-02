@@ -4188,6 +4188,9 @@ class BulkComponentCreateUIViewSetMixin:
 
         if "_create" in request.POST:
             form = bulk_component_form(model, request.POST)
+            restrict_form_fields(form, request.user)
+            # Parents must be selectable with the same permission action used to select them above
+            form.fields["pk"].queryset = self.get_queryset()
 
             if form.is_valid():
                 new_components = []

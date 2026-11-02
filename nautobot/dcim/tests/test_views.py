@@ -3468,6 +3468,31 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         children_body = extract_page_body(children_response.content.decode(children_response.charset))
         self.assertIn("Module View Nested Bay", children_body)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_add_component_with_constrained_module_change_permission(self):
+        """Bulk-adding components to modules must reject modules the user is not permitted to change."""
+        permitted_module, unchangeable_module = Module.objects.all()[:2]
+        self.add_permissions("dcim.add_consoleport")
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": permitted_module.pk}, actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Module))
+
+        url = reverse("dcim:module_bulk_add_consoleport")
+        data = {"name_pattern": "Bulk Console Port [1-2]", "_create": ""}
+        new_console_ports = ConsolePort.objects.filter(name__startswith="Bulk Console Port")
+
+        for pk_list in ([unchangeable_module.pk], [permitted_module.pk, unchangeable_module.pk]):
+            with self.subTest(pk_list=pk_list):
+                self.client.post(url, data={**data, "pk": pk_list})
+                self.assertFalse(new_console_ports.exists())
+
+        # A permitted module on its own succeeds, so the rejections above are due to permissions
+        response = self.client.post(url, data={**data, "pk": [permitted_module.pk]})
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(new_console_ports.filter(module=permitted_module).count(), 2)
+        self.assertEqual(new_console_ports.count(), 2)
+
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
