@@ -264,11 +264,11 @@ class UtilsTestCase(TestCase):
             "Registry should be restored to original state",
         )
 
-    def test_export_and_import_features(self):
-        """Each feature includes Nautobot models."""
-        for feature in ("export", "import"):
-            with self.subTest(feature=feature):
-                self.assertTrue(FeatureQuery(feature).includes(Device))
+    def test_import_feature_is_not_empty(self):
+        self.assertTrue(FeatureQuery("import").includes(Device))
+
+    def test_export_feature_is_not_empty(self):
+        self.assertTrue(FeatureQuery("export").includes(Device))
 
     def test_export_and_import_features_exclude_third_party_models(self):
         """Neither feature includes any model of a third-party Django app, except as listed below.

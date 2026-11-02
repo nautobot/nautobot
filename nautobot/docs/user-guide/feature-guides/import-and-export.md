@@ -9,10 +9,7 @@ From any object list view, under the **Actions** menu, there are two available a
 
 These actions are backed by the built-in system Jobs `Export Object List` and `Import Objects` respectively. Because of this, you must have the _run_ permission for these Jobs as well as the appropriate permissions for the object type you are exporting/importing (see [Permissions](#permissions)) in order to perform these actions. Additionally, each time you perform these actions, because they are Job-backed, the action runs asynchronously (allowing for export/import of quite large data sets without running the risk of your browser HTTP request timing out) and produces a Job Result and corresponding log entries.
 
-These Jobs support the object types of Nautobot and of installed Apps, plus user groups. Content types can be exported but not imported. They do not support models that come from third-party libraries Nautobot uses, such as the scheduling records of Celery Beat, and an App may opt some of its own object types out as well. If a Job doesn't support an object type, that type doesn't appear in the Job's **Content Type** choices, and the type's list view doesn't display the matching **Import from file** or **Export to file** action.
-
-+/- 3.3.0
-    Previous versions of these Jobs accepted any content type, including those of third-party libraries.
+These Jobs support the object types of Nautobot and of installed Apps, plus user groups. Content types can be exported but not imported. They do not support models that come from third-party libraries that Nautobot uses, such as the scheduling records of Celery Beat. An App may also opt some of its own object types out as well. If a Job doesn't support an object type, that type doesn't appear in the Job's **Content Type** choices, and the type's list view doesn't display the matching **Import from file** or **Export to file** action.
 
 ## Exporting
 
