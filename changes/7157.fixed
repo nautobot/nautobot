@@ -1,0 +1,1 @@
+Added the read-only `installed_module` field to the ModuleBay REST API.

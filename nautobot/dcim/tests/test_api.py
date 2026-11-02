@@ -3705,6 +3705,30 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
         # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
+    def test_installed_module(self):
+        """Test that the reverse side of `Module.parent_module_bay` is included as a read-only field."""
+        self.add_permissions("dcim.view_modulebay", "dcim.change_modulebay", "dcim.view_module")
+        occupied_module_bay = ModuleBay.objects.filter(installed_module__isnull=False).first()
+        empty_module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
+
+        for depth in (0, 1):
+            with self.subTest(depth=depth):
+                response = self.client.get(self._get_detail_url(occupied_module_bay), {"depth": depth}, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(
+                    response.json()["installed_module"]["id"], str(occupied_module_bay.installed_module.pk)
+                )
+
+                response = self.client.get(self._get_detail_url(empty_module_bay), {"depth": depth}, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertIsNone(response.json()["installed_module"])
+
+        # Installing a module is done from the Module side, so writes to installed_module are ignored
+        data = {"installed_module": occupied_module_bay.installed_module.pk}
+        response = self.client.patch(self._get_detail_url(empty_module_bay), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertFalse(Module.objects.filter(parent_module_bay=empty_module_bay).exists())
+
 
 class CableTypeTest(APIViewTestCases.APIViewTestCase):
     model = CableType
