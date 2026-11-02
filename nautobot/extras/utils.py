@@ -501,10 +501,11 @@ def populate_model_features_registry(refresh=False):
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
 
-    # Add the plain Django models that the import/export Jobs also support, in addition to Nautobot's own models
-    for model_class in (Group, ContentType):
+    # Add the plain Django models that the import/export Jobs also support, in addition to Nautobot's own models.
+    # ContentTypes are created and removed by Django as models are installed, so they may be exported but not imported.
+    for model_class, feature_names in ((Group, ("export", "import")), (ContentType, ("export",))):
         app_label, model_name = model_class._meta.label_lower.split(".")
-        for feature_name in ("export", "import"):
+        for feature_name in feature_names:
             registry["model_features"][feature_name].setdefault(app_label, []).append(model_name)
 
     if not registry.get("populate_model_features_registry_called", False):

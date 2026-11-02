@@ -51,7 +51,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
     If a specific `BaseModel` subclass should not be importable, the model author can define the class attribute `is_importable_model = False` to opt it out, and its list view then no longer shows the "Import" button. Likewise, a model that should not be exportable can define `is_exportable_model = False`, and its list view then no longer shows the "Export" button. Such a model can't be exported with an [Export Template](../../../../user-guide/platform-functionality/exporttemplate.md) either, so it should not declare the `export_templates` feature.
 
 +/- 3.3.0 "Import and export restricted to Nautobot models"
-    The "Import Objects" and "Export Object List" system Jobs now accept only content-types for `BaseModel` subclasses (plus Django's `auth.Group` and `contenttypes.ContentType`), rather than any installed model.
+    The "Import Objects" and "Export Object List" system Jobs now accept only content-types for `BaseModel` subclasses (plus Django's `auth.Group`, and for export only, `contenttypes.ContentType`), rather than any installed model.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

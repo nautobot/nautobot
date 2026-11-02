@@ -265,32 +265,34 @@ class UtilsTestCase(TestCase):
         )
 
     def test_export_and_import_features(self):
-        """Each feature includes Nautobot models plus `auth.Group` and `contenttypes.ContentType`."""
+        """Each feature includes Nautobot models."""
         for feature in ("export", "import"):
-            supported = ContentType.objects.filter(FeatureQuery(feature).get_query())
-            for app_label, model in [("dcim", "device"), ("auth", "group"), ("contenttypes", "contenttype")]:
-                with self.subTest(feature=feature, app_label=app_label, model=model):
-                    self.assertTrue(supported.filter(app_label=app_label, model=model).exists())
+            with self.subTest(feature=feature):
+                self.assertTrue(FeatureQuery(feature).includes(Device))
 
     def test_export_and_import_features_exclude_third_party_models(self):
-        """Neither feature includes any model of a third-party Django app, other than `Group` and `ContentType`.
+        """Neither feature includes any model of a third-party Django app, except as listed below.
 
-        A third-party app is any installed app that is neither part of Nautobot nor a Nautobot App, which includes
-        Django's own `contrib` apps.
+        `auth.Group` supports both features, and `contenttypes.ContentType` supports export only. A third-party app
+        is any installed app that is neither part of Nautobot nor a Nautobot App, which includes Django's own
+        `contrib` apps.
         """
+        supported_features = {Group: ("export", "import"), ContentType: ("export",)}
         checked_app_labels = set()
         for app_config in apps.get_app_configs():
             if app_config.name.startswith("nautobot.") or isinstance(app_config, NautobotAppConfig):
                 continue
             checked_app_labels.add(app_config.label)
             for model in app_config.get_models():
-                if model in (Group, ContentType):
-                    continue
                 for feature in ("export", "import"):
                     with self.subTest(feature=feature, model=model._meta.label_lower):
-                        self.assertFalse(FeatureQuery(feature).includes(model))
+                        self.assertEqual(
+                            FeatureQuery(feature).includes(model), feature in supported_features.get(model, ())
+                        )
         # Fail if the app filter above skipped every app, which would leave the loop nothing to check
-        self.assertLessEqual({"admin", "auth", "constance", "django_celery_beat", "social_django"}, checked_app_labels)
+        self.assertLessEqual(
+            {"admin", "auth", "constance", "contenttypes", "django_celery_beat", "social_django"}, checked_app_labels
+        )
 
     def test_export_and_import_features_opt_out_separately(self):
         """A model that sets `is_exportable_model` or `is_importable_model` to `False` is excluded from that feature
