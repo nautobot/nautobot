@@ -120,31 +120,6 @@ def update_object(api):
 
 
 @pytest.fixture
-def schema_names_to_delete(api):
-    """A list of config context schema names. Every schema with one of these names is deleted on teardown.
-
-    Use it for schemas that a test creates through the UI, because `create_object` deletes
-    only the records that it created. Add the name before submitting the form, so that the
-    schema is deleted even when an assertion fails after the create.
-    """
-    names = []
-    yield names
-
-    failures = []
-    for name in names:
-        response = api.get("/api/extras/config-context-schemas/", params={"name": name})
-        if not response.ok:
-            failures.append(f"GET config context schemas named {name!r} returned {response.status}")
-            continue
-        for record in response.json()["results"]:
-            deleted = api.delete(f"/api/extras/config-context-schemas/{record['id']}/")
-            if not deleted.ok and deleted.status != 404:
-                failures.append(f"DELETE config context schema {record['id']} returned {deleted.status}")
-    if failures:
-        pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
-
-
-@pytest.fixture
 def created_schema_validation_tree(create_object, update_object, status_for, created_device):
     """A config context schema with one valid config context, device and virtual machine bound to it.
 

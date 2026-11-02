@@ -14,15 +14,9 @@ class ConfigContextSchemaDetailPage(DetailPage):
     # An empty panel renders a single placeholder row with one colspan cell.
     _PANEL_DATA_ROWS = "tbody tr:not(:has(td[colspan]))"
     _VALIDATION_STATE_HEADER = "Validation state"
-    _CHECK_ICON = "i.mdi-check-bold"
-    _CROSS_ICON = "i.mdi-close-thick"
-
-    def navigate_to_validation_tab(self, pk):
-        """Go to the Validation tab of the schema with primary key *pk*.
-
-        The tab is a separate view with its own URL, so it is opened by URL rather than by clicking the tab.
-        """
-        self._goto(f"{self.DETAIL_PATH.format(pk=pk)}validation/")
+    # The icons render_boolean draws, with title="Yes" and title="No".
+    _YES_ICON = "i.mdi-check-bold"
+    _NO_ICON = "i.mdi-close-thick"
 
     # -------------------------------------------------------------------------
     # Validation tab
@@ -60,13 +54,13 @@ class ConfigContextSchemaDetailPage(DetailPage):
     def expect_validation_passed(self, panel_title, row_name):
         """Assert (auto-retrying) that *row_name* in panel *panel_title* shows a pass and no error."""
         cell = self._validation_cell(panel_title, row_name)
-        expect(cell.locator(self._CHECK_ICON)).to_have_count(1)
-        expect(cell.locator(self._CROSS_ICON)).to_have_count(0)
+        expect(cell.locator(self._YES_ICON)).to_have_count(1)
+        expect(cell.locator(self._NO_ICON)).to_have_count(0)
         expect(cell).to_have_text("")
 
     def expect_validation_failed(self, panel_title, row_name, message):
         """Assert (auto-retrying) that *row_name* in panel *panel_title* shows a failure with *message*."""
         cell = self._validation_cell(panel_title, row_name)
-        expect(cell.locator(self._CROSS_ICON)).to_have_count(1)
-        expect(cell.locator(self._CHECK_ICON)).to_have_count(0)
+        expect(cell.locator(self._NO_ICON)).to_have_count(1)
+        expect(cell.locator(self._YES_ICON)).to_have_count(0)
         expect(cell).to_contain_text(message)

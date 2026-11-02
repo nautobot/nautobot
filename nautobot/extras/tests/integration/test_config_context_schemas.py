@@ -66,11 +66,11 @@ class ConfigContextSchemaTestCase:
     """Creating config context schemas through the add form, and the pass/fail states on the Validation tab."""
 
     @pytest.mark.behavioral
-    def test_create_valid_config_context_schema(self, auth_page, base_url, api, schema_names_to_delete):
+    def test_create_valid_config_context_schema(self, auth_page, base_url, api, create_object):
         """A valid schema submitted from the list's Add button is created and opens on its detail view."""
         name = unique_name()
         description = unique_name("ZZZ-description")
-        schema_names_to_delete.append(name)
+        create_object.track("extras/config-context-schemas/", name=name)
 
         schemas = ConfigContextSchemasPage(auth_page, base_url)
         schemas.navigate()
@@ -93,13 +93,11 @@ class ConfigContextSchemaTestCase:
         assert records[0]["description"] == description
 
     @pytest.mark.behavioral
-    def test_create_invalid_config_context_schema_bad_jsonschema_type(
-        self, auth_page, base_url, api, schema_names_to_delete
-    ):
+    def test_create_invalid_config_context_schema_bad_jsonschema_type(self, auth_page, base_url, api, create_object):
         """A schema that the jsonschema library rejects redisplays the form with the error and the submitted input."""
         name = unique_name()
-        # Add the name for teardown in case a jsonschema upgrade starts to accept this schema.
-        schema_names_to_delete.append(name)
+        # Tracked so teardown deletes the schema if a jsonschema upgrade starts to accept it.
+        create_object.track("extras/config-context-schemas/", name=name)
 
         form = ConfigContextSchemaFormPage(auth_page, base_url)
         form.navigate()
@@ -115,10 +113,10 @@ class ConfigContextSchemaTestCase:
         assert schemas_named(api, name) == [], "A rejected schema should not be created"
 
     @pytest.mark.behavioral
-    def test_create_invalid_config_context_schema_non_object(self, auth_page, base_url, api, schema_names_to_delete):
+    def test_create_invalid_config_context_schema_non_object(self, auth_page, base_url, api, create_object):
         """A schema that is not an object with properties is rejected with Nautobot's own message."""
         name = unique_name()
-        schema_names_to_delete.append(name)
+        create_object.track("extras/config-context-schemas/", name=name)
 
         form = ConfigContextSchemaFormPage(auth_page, base_url)
         form.navigate()
@@ -135,7 +133,8 @@ class ConfigContextSchemaTestCase:
         """Each panel lists its one bound object, and that object passes."""
         tree = created_schema_validation_tree
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
-        detail.navigate_to_validation_tab(tree["schema"]["id"])
+        detail.navigate(tree["schema"]["id"])
+        detail.open_tab("validation")
 
         for panel, row_name in validation_rows(tree).items():
             detail.expect_validation_rows(panel, [row_name])
@@ -150,7 +149,8 @@ class ConfigContextSchemaTestCase:
         update_object("extras/config-context-schemas/", tree["schema"]["id"], data_schema=RETYPED_SCHEMA)
 
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
-        detail.navigate_to_validation_tab(tree["schema"]["id"])
+        detail.navigate(tree["schema"]["id"])
+        detail.open_tab("validation")
 
         for panel, row_name in validation_rows(tree).items():
             detail.expect_validation_rows(panel, [row_name])
@@ -166,7 +166,8 @@ class ConfigContextSchemaTestCase:
         update_object("dcim/devices/", tree["device"]["id"], local_config_context_data=RETYPED_COMPLIANT_DATA)
 
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
-        detail.navigate_to_validation_tab(tree["schema"]["id"])
+        detail.navigate(tree["schema"]["id"])
+        detail.open_tab("validation")
 
         rows = validation_rows(tree)
         for panel, row_name in rows.items():
@@ -184,7 +185,8 @@ class ConfigContextSchemaTestCase:
         update_object("extras/config-context-schemas/", tree["schema"]["id"], data_schema=REQUIRED_SCHEMA)
 
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
-        detail.navigate_to_validation_tab(tree["schema"]["id"])
+        detail.navigate(tree["schema"]["id"])
+        detail.open_tab("validation")
 
         for panel, row_name in validation_rows(tree).items():
             detail.expect_validation_rows(panel, [row_name])
