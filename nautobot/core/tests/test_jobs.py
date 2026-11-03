@@ -1579,7 +1579,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             job_result = self.run_archive_old_records_job()
 
         expected_stopping_message = (
-            f"Stopping at batch 1: {archive_failure_message}. Archived 2 of 4 ObjectChange records before stopping."
+            f"Stopping at batch 1: {archive_failure_message}. Archived 2 ObjectChange records before stopping."
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
@@ -1964,6 +1964,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             archive_job_result = self.run_archive_old_records_job()
 
         expected_stopping_message = (
-            f"Stopping at batch 1: {archive_failure_message}. Archived 2 of 4 JobResult records before stopping."
+            f"Stopping at batch 1: {archive_failure_message}. Archived 2 JobResult records before stopping."
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(archive_job_result))

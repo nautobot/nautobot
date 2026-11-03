@@ -83,9 +83,9 @@ class ArchiveOldRecords(Job):
         dryrun=True,
     ):
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
-        dependency_sorted_models_to_archive = [
-            model_label for model_label in ARCHIVAL_ORDER if model_label in selected_models
-        ]
+
+        archived_object_change_count = 0
+        archived_job_results_count = 0
 
         archive_age_threshold = archive_age_threshold or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD")
         archive_batch_size = archive_batch_size or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE")
@@ -100,12 +100,20 @@ class ArchiveOldRecords(Job):
         pre_delete.disconnect(_handle_deleted_object)
         try:
             if "extras.objectchange" in selected_models:
-                self._archive_object_changes(archive_model_threshold_timestamp, archive_batch_size, dryrun)
+                archived_object_change_count = self._archive_object_changes(
+                    archive_model_threshold_timestamp, archive_batch_size, dryrun
+                )
             if "extras.jobresult" in selected_models:
-                self._archive_job_results(archive_model_threshold_timestamp, archive_batch_size, dryrun)
+                archived_job_results_count = self._archive_job_results(
+                    archive_model_threshold_timestamp, archive_batch_size, dryrun
+                )
         finally:
             self.logger.debug("Re-connecting the _handle_deleted_object signal")
             pre_delete.connect(_handle_deleted_object)
+
+        total_archived_models_count = archived_object_change_count + archived_job_results_count
+
+        return total_archived_models_count
 
     # --------------------------------------------------------------------------
     # Object Change
@@ -127,15 +135,9 @@ class ArchiveOldRecords(Job):
         """
         object_changes_to_archive = ObjectChange.objects.filter(time__lt=threshold_timestamp).order_by("time")
 
-        object_change_count = object_changes_to_archive.count()
-
-        if not object_change_count:
-            self.logger.info("No ObjectChange records older than %s", threshold_timestamp)
-            return 0
-
-        total_batch_count = math.ceil(object_change_count / batch_size)
-
         if dryrun:
+            object_change_count = object_changes_to_archive.count()
+            total_batch_count = math.ceil(object_change_count / batch_size)
             self.logger.warning(
                 "%s Dry Run: %d ObjectChange records in batches of %d for a total of %d operations would be archived.",
                 JOB_NAME,
@@ -148,7 +150,7 @@ class ArchiveOldRecords(Job):
         total_archived_object_change_count = 0
         current_batch = 0
 
-        while current_batch < total_batch_count:
+        while True:
             # Re-sliced rather than paged with an offset: each batch's rows are deleted before the next
             # slice is taken, so the front of the queryset is always the next batch. An offset would skip
             # records as the table shrinks underneath it.
@@ -160,11 +162,10 @@ class ArchiveOldRecords(Job):
                 current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
                 self.fail(
-                    "Stopping at batch %d: %s. Archived %d of %d ObjectChange records before stopping.",
+                    "Stopping at batch %d: %s. Archived %d ObjectChange records before stopping.",
                     current_batch,
                     exception,
                     total_archived_object_change_count,
-                    object_change_count,
                 )
                 return total_archived_object_change_count
 
@@ -177,11 +178,16 @@ class ArchiveOldRecords(Job):
 
             current_batch += 1
 
+        if not total_archived_object_change_count:
+            self.logger.info("No ObjectChange records older than %s", threshold_timestamp)
+            return 0
+
         self.logger.success(
             "Archived %d ObjectChange records across %d batches.",
             total_archived_object_change_count,
             current_batch,
         )
+
         return total_archived_object_change_count
 
     def _process_archive_object_change_batch(self, object_change_batch):
@@ -251,22 +257,20 @@ class ArchiveOldRecords(Job):
             (int): Job results archived, or on a dry run the count a real run would archive.
         """
         # Only job results that are done can be archived
-        job_results_to_archive = JobResult.objects.filter(
-            date_done__lt=threshold_timestamp,
-            status__in=JobResultStatusChoices.READY_STATES,
-            # TODO: Add optional flag to include files, otherwise default to leaving the JobResult unarchived
-            files__isnull=True,
-    ).select_related("user").order_by("date_done")
-
-        job_result_count = job_results_to_archive.count()
-
-        if not job_result_count:
-            self.logger.info("No JobResult records older than %s", threshold_timestamp)
-            return 0
-
-        total_batch_count = math.ceil(job_result_count / batch_size)
+        job_results_to_archive = (
+            JobResult.objects.filter(
+                date_done__lt=threshold_timestamp,
+                status__in=JobResultStatusChoices.READY_STATES,
+                # TODO: Add optional flag to include files, otherwise default to leaving the JobResult unarchived
+                files__isnull=True,
+            )
+            .select_related("user")
+            .order_by("date_done")
+        )
 
         if dryrun:
+            job_result_count = job_results_to_archive.count()
+            total_batch_count = math.ceil(job_result_count / batch_size)
             self.logger.warning(
                 "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived.",
                 JOB_NAME,
@@ -279,7 +283,7 @@ class ArchiveOldRecords(Job):
         total_archived_job_result_count = 0
         current_batch = 0
 
-        while current_batch < total_batch_count:
+        while True:
             job_result_batch = list(job_results_to_archive[:batch_size])
             if not job_result_batch:
                 break
@@ -288,11 +292,10 @@ class ArchiveOldRecords(Job):
                 current_archived_job_result_count = self._process_archive_job_result_batch(job_result_batch, batch_size)
             except Exception as exception:
                 self.fail(
-                    "Stopping at batch %d: %s. Archived %d of %d JobResult records before stopping.",
+                    "Stopping at batch %d: %s. Archived %d JobResult records before stopping.",
                     current_batch,
                     exception,
                     total_archived_job_result_count,
-                    job_result_count,
                 )
                 return total_archived_job_result_count
 
@@ -304,6 +307,10 @@ class ArchiveOldRecords(Job):
             )
 
             current_batch += 1
+
+        if not total_archived_job_result_count:
+            self.logger.info("No JobResult records older than %s", threshold_timestamp)
+            return 0
 
         self.logger.success(
             "Archived %d JobResult records across %d batches.",
