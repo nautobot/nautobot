@@ -41,6 +41,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
+from nautobot.dcim.forms import LocationFilterForm
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -702,12 +703,15 @@ class SearchContentTypeView(TestCase):
         self.assertEqual(rendered_fields[-1], "q")
 
     def test_search_content_type_renders_no_q_field_when_filter_form_has_none(self):
-        response = self.client.get(
-            reverse("search_content_type", kwargs={"content_type": "dcim.rackgroup"}), headers={"HX-Request": "true"}
-        )
+        base_fields_without_q = {name: field for name, field in LocationFilterForm.base_fields.items() if name != "q"}
+        with mock.patch.object(LocationFilterForm, "base_fields", base_fields_without_q):
+            response = self.client.get(
+                reverse("search_content_type", kwargs={"content_type": "dcim.location"}),
+                headers={"HX-Request": "true"},
+            )
         self.assertHttpStatus(response, 200)
         rendered_fields = re.findall(r'id="embedded_id_([^"]+)"', response.content.decode(response.charset))
-        self.assertIn("parent", rendered_fields)
+        self.assertIn("location_type", rendered_fields)
         self.assertNotIn("q", rendered_fields)
 
     def test_search_content_type_with_initial_value(self):
