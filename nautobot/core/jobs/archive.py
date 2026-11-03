@@ -99,11 +99,10 @@ class ArchiveOldRecords(Job):
         self.logger.debug("Temporarily disconnecting the `_handle_deleted_object` signal for performance")
         pre_delete.disconnect(_handle_deleted_object)
         try:
-            for model_label in dependency_sorted_models_to_archive:
-                if model_label == "extras.objectchange":
-                    self._archive_object_changes(archive_model_threshold_timestamp, archive_batch_size, dryrun)
-                elif model_label == "extras.jobresult":
-                    self._archive_job_results(archive_model_threshold_timestamp, archive_batch_size, dryrun)
+            if "extras.objectchange" in selected_models:
+                self._archive_object_changes(archive_model_threshold_timestamp, archive_batch_size, dryrun)
+            if "extras.jobresult" in selected_models:
+                self._archive_job_results(archive_model_threshold_timestamp, archive_batch_size, dryrun)
         finally:
             self.logger.debug("Re-connecting the _handle_deleted_object signal")
             pre_delete.connect(_handle_deleted_object)
