@@ -18,7 +18,8 @@ from nautobot.playwright.helpers import unique_name
 def created_grouped_tenant(create_object):
     """A tenant group with one tenant in it, plus a tenant outside it, all created for this test.
 
-    The Tenant filter form has no name filter in Core, so a search narrows to an owned tenant by its group.
+    Core's Tenant filter form has no name-contains field, and its Search field (`q`) is not rendered in the embedded
+    search modal (`inc/search_panel.html` skips it), so a search narrows to the owned tenant by its group.
     """
     group = create_object("tenancy/tenant-groups/", name=unique_name())
     tenant = create_object("tenancy/tenants/", name=unique_name(), tenant_group=group["id"])

@@ -55,8 +55,8 @@ class EmbeddedModal:
     def open_search(self, verbose_name_plural):
         """Click "Search *verbose_name_plural*" on the parent form and wait for the first results to load.
 
-        Waiting for the results matters: a search submitted while the initial request is in flight can be overwritten
-        by its response.
+        Wait for the first results before returning. A search submitted while the first request is still running can be
+        overwritten by that request's response.
         """
         self._open(f"Search {verbose_name_plural}")
         expect(self.root.locator(self._RESULTS_TABLE)).to_be_attached()
@@ -144,7 +144,7 @@ class EmbeddedModal:
         return rows.filter(has_text=text) if text else rows
 
     def expect_result_total(self, count):
-        """Assert (auto-retrying) that the results report *count* matches in all, across every page."""
+        """Assert (auto-retrying) that the results report *count* results in total, across every page."""
         expect(self.root.locator(self._RESULTS_INFO)).to_have_text(re.compile(rf"\bof {count}\s*$"))
 
     def select_result(self, text):

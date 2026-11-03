@@ -20,7 +20,9 @@ def open_device_form(auth_page, base_url):
 
 def find_one(api, endpoint, **filters):
     """Return the one API record at *endpoint* that matches *filters*."""
-    results = api.get(f"/api/{endpoint}", params=filters).json()["results"]
+    response = api.get(f"/api/{endpoint}", params=filters)
+    assert response.ok, f"GET /api/{endpoint} returned {response.status}: {response.text()[:200]}"
+    results = response.json()["results"]
     assert len(results) == 1, f"Expected one record at /api/{endpoint} matching {filters}, found {len(results)}"
     return results[0]
 
