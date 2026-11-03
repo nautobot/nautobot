@@ -16,7 +16,7 @@
             hx-vals="{ &quot;per_page&quot;: 20 }"
             id="object_embedded_search_form"
         >
-            {% include 'inc/search_panel.html' with exclude_html_form=True %}
+            {% include 'inc/search_panel.html' with exclude_html_form=True include_q_field=True %}
             <div class="nb-form-sticky-footer mb-0 mx-n16 px-16 rounded-bottom">
                 <button class="btn btn-primary" type="submit">
                     <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
