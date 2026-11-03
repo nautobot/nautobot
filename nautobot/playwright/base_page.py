@@ -42,9 +42,9 @@ def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True)
 
 
 def select2_filter_search(page, field_name, search=""):
-    """Open the Select2 filter field named *field_name* and type *search*, leaving the dropdown open.
+    """Click the Select2 filter field named *field_name* and type *search* into its search box.
 
-    See `select2_filter_pick` for how these fields render.
+    The dropdown stays open, so its options can be checked or picked afterwards.
     """
     page.locator(f"select[name='{field_name}'] + span.select2-container").first.click()
     # Scope to the open dropdown: list views keep every filter field's Select2 search

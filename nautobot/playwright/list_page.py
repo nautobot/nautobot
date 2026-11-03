@@ -46,7 +46,8 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
-    # The options of the open Select2 dropdown. Its "No results found" message is an option too.
+    # Options and the "No results found" message in the open Select2 dropdown. The message
+    # also carries the option class, so count options by their text.
     _OPEN_DROPDOWN_OPTIONS = ".select2-container--open .select2-results__option"
     _OPEN_DROPDOWN_MESSAGE = ".select2-container--open .select2-results__message"
     # The table-configuration drawer and its toolbar button. The drawer's id is derived
@@ -308,15 +309,15 @@ class ListPage(BasePage):
         select2_filter_pick(self.page, field_name, search=value, pick_text=value, exact=exact)
 
     def search_filter_options(self, field_name, search):
-        """Type *search* into the drawer's Select2 filter field named *field_name*, leaving its options open."""
+        """Open the drawer's filter field named *field_name* and type *search*, leaving its dropdown open."""
         select2_filter_search(self.page, field_name, search)
 
     def expect_filter_option_count(self, text, count):
-        """Assert (auto-retrying) that the open filter dropdown lists *count* options containing *text*."""
+        """Assert (auto-retrying) that the open dropdown has exactly *count* options containing *text*."""
         expect(self.page.locator(self._OPEN_DROPDOWN_OPTIONS).filter(has_text=text)).to_have_count(count)
 
     def expect_no_filter_options(self):
-        """Assert (auto-retrying) that the open filter dropdown shows "No results found"."""
+        """Assert (auto-retrying) that the open dropdown shows "No results found"."""
         expect(self.page.locator(self._OPEN_DROPDOWN_MESSAGE)).to_have_text("No results found")
 
     def apply_filters(self):

@@ -1,30 +1,35 @@
-"""Tags filter on list views: the dropdown offers only the tags that apply to the listed model (#4216)."""
+"""Tests that a list view's Tags filter only offers tags that apply to that list's model (#4216)."""
 
 import pytest
 
 from nautobot.circuits.tests.integration.pages.providers_page import ProvidersPage
 from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
 
+# Number of options select2.js loads per page in a filter dropdown.
+SELECT2_PAGE_SIZE = 50
+
 
 class TagFilterTestCase:
-    """The Tags field of the list-view filter drawer."""
+    """Tags filter dropdown on the Providers and Locations list views."""
 
     @pytest.mark.behavioral
     def test_tag_matching_content_type(self, auth_page, base_url, created_provider_tags):
-        """The Providers Tags filter lists provider tags, the first 50 only until more are loaded."""
+        """Searching the Tags filter on Providers shows a full first page of the provider tags, without the last one."""
         prefix = created_provider_tags["prefix"]
+        tags = created_provider_tags["tags"]
+        assert len(tags) > SELECT2_PAGE_SIZE, "The fixture must create more tags than fit on one page"
         providers = ProvidersPage(auth_page, base_url)
         providers.navigate()
         providers.open_filter_drawer()
 
         providers.search_filter_options("tags", prefix)
 
-        providers.expect_filter_option_count(prefix, 50)
-        providers.expect_filter_option_count(f"{prefix} 51", 0)
+        providers.expect_filter_option_count(prefix, SELECT2_PAGE_SIZE)
+        providers.expect_filter_option_count(tags[-1]["name"], 0)
 
     @pytest.mark.behavioral
     def test_tag_not_matching_content_type(self, auth_page, base_url, created_provider_tags):
-        """The Locations Tags filter does not list tags that apply only to providers."""
+        """Searching the Tags filter on Locations finds none of the provider-only tags."""
         prefix = created_provider_tags["prefix"]
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
