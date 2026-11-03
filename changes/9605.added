@@ -1,0 +1,1 @@
+Added `DetailPage.click_edit()`, `ListPage.select_all_rows()`, `ListPage.select_all_matching()` and the `restore_page_size` fixture to `nautobot.playwright`.

@@ -198,8 +198,8 @@ class ListPage(BasePage):
         Page links are HTMX swaps that replace the table, so rows checked on one page are
         gone on the next and cannot add up to a selection. This is the only way to select
         past the first page. The header checkbox reveals the box, and the box's checkbox
-        enables its buttons. Both land a tick late, because the checkbox handler dispatches
-        its events from a setTimeout.
+        enables its buttons. Both change one tick after the click, because the checkbox
+        handler dispatches its events from a setTimeout.
         """
         self.select_all_rows()
         box = self.page.locator(self._SELECT_ALL_BOX)

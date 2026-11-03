@@ -19,7 +19,8 @@ class DynamicGroupDetailPage(DetailPage):
     MEMBERS_API_PATH = "/api/extras/dynamic-groups/{pk}/members/?limit=1"
 
     # The Members tab label contains a count badge, which is rendered only when the count is not zero.
-    _MEMBERS_TAB_BADGE = "a[role='tab'][aria-controls='members'] span.badge"
+    # When the tab strip overflows, tabs.js clones the list and hides the original, so match the visible link.
+    _MEMBERS_TAB_BADGE = "a[role='tab'][aria-controls='members']:visible span.badge"
     # "Refresh Members" is a JobButton that asks for confirmation. Its `data-bs-target` contains the id of
     # the modal (the id includes the JobButton pk), and the modal's submit button runs the job.
     _REFRESH_MEMBERS_BUTTON = "button[data-bs-toggle='modal']:has-text('Refresh Members')"
