@@ -1,0 +1,1 @@
+Fixed the REST API ignoring a `namespace` given when updating an existing IP Address or IP Address Range; the object is now moved into that Namespace and its parent Prefix re-resolved, as the edit form already does.

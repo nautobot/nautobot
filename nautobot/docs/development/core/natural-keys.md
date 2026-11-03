@@ -119,21 +119,46 @@ class MyUnnaturalModel(BaseModel):
     natural_key = AttributeRemover()
 ```
 
-### Natural Keys and Import Match Fields
+### Natural Keys and Export/Import Match Fields
 
-When [importing](../../user-guide/feature-guides/import-and-export.md#match-fields), a model's natural key also serves as its default match fields, reduced to the serializer fields its lookups start from: a natural key of `name`, `tenant__name` and `location__name` makes the match fields `name`, `tenant` and `location`, and a natural key of `pk` makes them `id`.
+When [exporting and importing records](../../user-guide/feature-guides/import-and-export.md), a model's natural key also serves as the basis for its default declared [match fields](../../user-guide/feature-guides/import-and-export.md#match-fields) in an export. The natural-key field names are translated to the serializer fields any lookups start from: for example, a natural key of `name`, `tenant__name` and `location__name` makes the default match fields `name`, `tenant` and `location`.
 
-If your model's natural key includes a field that its REST API serializer doesn't read or write directly, such as a `@property` or a field the serializer only accepts as part of another, declare the match fields on the serializer instead, as `Meta.import_match_fields`:
+#### Overriding the Default Match Fields
+
+If the model's database-level natural key differs from the REST API serializer's fields that should be used for lookup on import, you can declare on the serializer a `Meta.import_match_fields` attribute to override the above default. For example, `IPAddress.natural_key_field_names = ["parent__namespace", "host"]`, but `IPAddressSerializer` has `namespace` and `address` fields instead. In this case we must declare `IPAddressSerializer.Meta.import_match_fields = ["namespace", "address"]` as an override.
+
+#### Overriding Matching Behavior
+
+Each import match field must be a writable field of the serializer that holds a single value. By default, an import matches existing records by passing each such field's value to the model queryset's `filter()` under the field's own name, so the queryset must accept that argument. Where it doesn't, the serializer has two ways to override this default behavior:
+
+- A serializer can define `Meta.related_field_query_paths` to specify mappings between serializer related fields and their equivalent queryset filters. For example, the IP Address serializer matches partly on the serializer field `namespace`, which needs to be mapped back to the database lookup `parent__namespace`, so we must declare `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`. This mapping also applies on export, where it allows the `namespace` field to be exported as its natural-key lookups (`namespace__name`) and declared as a match field.
+- A serializer can override `get_import_match_filter(field_name, value)` in cases where the previous option is insufficient, for example where the serializer field's _value_ also needs to be transformed in some way. Again, the IP Address serializer is an example of this, where it needs to transform a provided `address` value (`netaddr.IPNetwork("10.0.0.1/24")`) to its `host` value alone (`netaddr.IPAddress("10.0.0.1")`) for a proper query lookup.
+
+!!! warning
+    Any override to `get_import_match_filter()` must handle the possibility that `value` is `None`, as it is called
+    this way when validating match fields, including when determining a model's default match fields during export
+    and import.
+
+#### Avoiding Conflicts Between Fields
+
+Finally, in cases where the default (all-fields) export would include fields that contain derived values or are otherwise redundant with the preferred natural-key fields, a serializer can additionally define `Meta.derived_fields_omitted_from_default_export`, which is a list of field names that are omitted from the default export, but can still be explicitly selected for inclusion if desired. The IP Address serializer again provides an example here - because the serializer `parent` field derives its value from the natural-key `namespace` and `address` fields on an import, it would be undesirable to include this field in the default export since a change to the `namespace` would invalidate the `parent` and vice versa. Therefore, `IPAddressSerializer.Meta.derived_fields_omitted_from_default_export` is declared as `["parent"]`.
+
+#### Worked Example
+
+Putting all of the above together, the relevant parts of `IPAddressSerializer` look like this:
 
 ```python
 class IPAddressSerializer(NautobotModelSerializer):
     class Meta:
         model = IPAddress
         fields = "__all__"
-        # The natural key's `host` is written as part of `address`, and `parent__namespace` as part of `parent`
-        import_match_fields = ["address", "parent"]
+        # The natural key's `parent__namespace` is written as `namespace`, and `host` as part of `address`
+        import_match_fields = ["namespace", "address"]
+        related_field_query_paths = {"namespace": "parent__namespace"}
+        derived_fields_omitted_from_default_export = ["parent"]
+
+    def get_import_match_filter(self, field_name, value):
+        if field_name == "address":
+            return {"host": value.ip if value is not None else None}
+        return super().get_import_match_filter(field_name, value)
 ```
-
-Each match field must be a writable field of the serializer that holds a single value, and the model's queryset must accept that field's value as a `filter()` argument.
-
-The natural key is the fallback, not the first choice: an import whose records include `id` matches on `id`, whatever the model, unless match fields are given explicitly. A model whose natural key can't be matched on, and that doesn't declare `import_match_fields`, can therefore still be updated by an import that includes `id`, and is otherwise only ever created.

@@ -203,6 +203,47 @@ class NaturalKeyRepresentationMixin:
         """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
         return self._for_import_export or self._is_csv_request()
 
+    def _get_fields_omitted_from_export(self):
+        """Return the serializer fields that an import/export (by default, including all such fields) should omit.
+
+        This always returns an empty set when this serializer isn't being used for import/export, when it's a nested
+        serializer, or when a specific set of "export_fields" (overriding the default) has been provided in the context.
+
+        This also returns an empty set by default even when the above conditions are _not_ met; however,
+        a serializer can declare `Meta.derived_fields_omitted_from_default_export` if it has fields that contain a
+        writable value that can be derived from other fields and is not relevant to a default export.
+
+        One example is the IPAddress serializer's `parent` field, which is computed from its `namespace` and `host`
+        if not explicitly stated. Omitting this field from the default export is desirable because a change to the
+        `namespace` (rather than an explicit change of `parent`) is the more common use case when updating an
+        IPAddress via import/export.
+        """
+        if not self._for_import_export or self.is_nested or self.context.get("export_fields"):
+            return set()
+        return set(getattr(self.Meta, "derived_fields_omitted_from_default_export", ()))
+
+    def _get_query_path_for_field_path(self, lookup_field):
+        """Translate a serializer-field path to the equivalent ORM query path.
+
+        By default these are identical, but if this serializer contains related-object fields that are derived in some
+        way, it can declare a `Meta.related_field_query_paths` dict which provides a mapping of values to override
+        the default behavior.
+
+        One example is the IPAddress serializer's `namespace` field, which is a `property` rather than an actual
+        foreign key on the IPAddress model, but corresponds to a database lookup through the model's `parent` foreign
+        key.
+        This serializer therefore declares `Meta.related_field_query_paths = {"namespace": "parent__namespace"}`.
+
+        Examples:
+            >>> IPAddressSerializer()._get_query_path_for_field_path("namespace__name")
+            'parent__namespace__name'
+        """
+        head, separator, rest = lookup_field.partition("__")
+        query_paths = getattr(self.Meta, "related_field_query_paths", {})
+        if head in query_paths:
+            return f"{query_paths[head]}{separator}{rest}"
+        return lookup_field
+
     def _resolve_lookup_field(self, lookup_field):
         """Get the model field that a `__`-separated natural-key lookup ultimately refers to.
 
@@ -210,7 +251,7 @@ class NaturalKeyRepresentationMixin:
             >>> self._resolve_lookup_field("device__location__name")
             <django.db.models.fields.CharField: name>
         """
-        *field_names, lookup = lookup_field.split("__")
+        *field_names, lookup = self._get_query_path_for_field_path(lookup_field).split("__")
         model = self.Meta.model
         for field_component in field_names:
             model = model._meta.get_field(field_component).remote_field.model
@@ -232,7 +273,7 @@ class NaturalKeyRepresentationMixin:
         # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
         output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
 
-        *field_names, _lookup = lookup_field.split("__")
+        *field_names, _lookup = self._get_query_path_for_field_path(lookup_field).split("__")
         field_name = "__".join(field_names)
         return field_name, output_field
 
@@ -271,11 +312,12 @@ class NaturalKeyRepresentationMixin:
 
             # Since VarbinaryIPField cant be cast into CharField we would have to set the output_field as
             # `VarbinaryIPField`
+            query_path = self._get_query_path_for_field_path(lookup_field)
             when_case = {
                 f"{field_name}__isnull": False,
-                "then": models.F(lookup_field)
+                "then": models.F(query_path)
                 if output_field == VarbinaryIPField
-                else Cast(models.F(lookup_field), models.CharField()),
+                else Cast(models.F(query_path), models.CharField()),
             }
             case_query[lookup_field] = models.Case(
                 models.When(**when_case),
@@ -345,8 +387,8 @@ class NaturalKeyRepresentationMixin:
         export_fields = self.context.get("export_fields") if not self.is_nested else None
         selected_heads = {path.split("__", 1)[0] for path in export_fields} if export_fields else None
         # NOTE: one-to-many fields field are ignored in csv export
-        fields = [
-            field
+        relations = [
+            (field.name, field.related_model)
             for field in model._meta.get_fields()
             if field.is_relation
             and not field.many_to_many
@@ -354,20 +396,25 @@ class NaturalKeyRepresentationMixin:
             # Ignore GenericRel since its `fk` and `content_type` would be used.
             and not isinstance(field, GenericRel)
         ]
+        relations.extend(
+            (name, self._resolve_lookup_field(f"{name}__pk").model)
+            for name in getattr(self.Meta, "related_field_query_paths", {})
+        )
+        omitted_fields = self._get_fields_omitted_from_export()
         # Get each related field model's natural_key_fields and prepend field name
-        for field in fields:
+        for name, related_model in relations:
+            if name in omitted_fields:
+                continue
             if selected_heads is not None:
-                if field.name not in selected_heads:
+                if name not in selected_heads:
                     continue
                 # Nested paths (e.g. `device_type__manufacturer__name`) are exported as named; the relation's
                 # natural key is added only if the bare relation is selected too.
-                field_lookups.extend(path for path in export_fields if path.startswith(f"{field.name}__"))
-                if field.name not in export_fields:
+                field_lookups.extend(path for path in export_fields if path.startswith(f"{name}__"))
+                if name not in export_fields:
                     continue
             # A relation with no natural-key lookups (ContentType, Group) keeps its default representation.
-            field_lookups.extend(
-                f"{field.name}__{lookup}" for lookup in natural_key_lookups_for(field.related_model) or ()
-            )
+            field_lookups.extend(f"{name}__{lookup}" for lookup in natural_key_lookups_for(related_model) or ())
         # A nested path may repeat one of the natural key's lookups.
         return list(dict.fromkeys(field_lookups))
 
@@ -504,6 +551,42 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
     def is_nested(self):
         """Return whether this is a nested serializer."""
         return getattr(self.Meta, "is_nested", False)
+
+    def get_import_match_filter(self, field_name, value):
+        """For a given field and value, get the queryset filter that import can use to find a matching, existing record.
+
+        By default, this uses `self._get_query_path_for_field_path()` (and any per-serializer override it requests
+        by defining `Meta.related_field_query_paths`, if needed) to get the queryset filter lookup to use,
+        which in most cases is sufficient:
+
+            >>> IPAddressSerializer().get_import_match_filter("description", "Hello world")
+            {'description': 'Hello world'}
+
+        Because `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`:
+
+            >>> IPAddressSerializer().get_import_match_filter("namespace", global_namespace)
+            {'parent__namespace': <Namespace: Global>}
+
+        Override this method when the *value* needs to be transformed somehow to satisfy the queryset filter.
+        One example override is in the IPAddress serializer, which is often given an `address` value as a match field,
+        but ideally wants to match existing IPAddress records by the `host` portion alone. Thus, it overrides this
+        method to behave as follows for this special case:
+
+            >>> IPAddressSerializer().get_import_match_filter("address", netaddr.IPNetwork("10.0.0.1/24"))
+            {'host': netaddr.IPAddress('10.0.0.1')}
+
+        Important: any override *must* safely handle the possibility that `value` may be `None`, because this method
+        is called with `None` when validating match fields, including when determining a model's default match fields
+        during export and import.
+
+        Args:
+            field_name (str): The name of a match field of this serializer.
+            value (Any): The record's value for the field, as returned by the field's `to_internal_value()`, or None.
+
+        Returns:
+            (dict): Filter parameter(s) and corresponding value(s) to filter the model's queryset on.
+        """
+        return {self._get_query_path_for_field_path(self.fields[field_name].source.replace(".", "__")): value}
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
@@ -654,7 +737,10 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
             def scalar(value):
                 return constants.CSV_NULL_TYPE if (value is None and self._is_csv_request()) else value
 
+            omitted_fields = self._get_fields_omitted_from_export()
             for key, value in data.items():
+                if key in omitted_fields:
+                    continue
                 field = self.fields.get(key)
                 if isinstance(field, serializers.ManyRelatedField) and isinstance(
                     field.child_relation, NautobotHyperlinkedRelatedField

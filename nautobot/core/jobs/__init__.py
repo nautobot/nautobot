@@ -434,16 +434,21 @@ class ExportObjectList(Job):
         covers every match field (otherwise a re-import couldn't resolve the key): a related match field is
         covered by selecting it whole, or by selecting every lookup of the related model's natural key.
         """
-        match_fields = import_utils.natural_key_match_fields(model, get_serializer_for_model(model))
+        serializer_class = get_serializer_for_model(model)
+        match_fields = import_utils.natural_key_match_fields(model, serializer_class)
         if match_fields is None:
             return None
         if export_field_paths is not None:
+            query_paths = getattr(serializer_class.Meta, "related_field_query_paths", {})
             for match_field in match_fields:
                 if match_field in export_field_paths:
                     continue
+                related_model = model
                 try:
-                    related_model = model._meta.get_field(match_field).related_model
-                except FieldDoesNotExist:
+                    for part in query_paths.get(match_field, match_field).split("__"):
+                        related_model = related_model._meta.get_field(part).related_model
+                except (AttributeError, FieldDoesNotExist):
+                    # Not a model field, or a path through a field that isn't a relation
                     return None
                 related_lookups = natural_key_lookups_for(related_model)
                 if related_lookups is None:
@@ -550,6 +555,11 @@ class ExportObjectList(Job):
             for field in model._meta.fields
             if field.is_relation and (selected_heads is None or field.name in selected_heads)
         ]
+        fk_field_names.extend(
+            query_path
+            for name, query_path in getattr(serializer_class.Meta, "related_field_query_paths", {}).items()
+            if selected_heads is None or name in selected_heads
+        )
         if fk_field_names:
             queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
 
