@@ -2,6 +2,7 @@ from datetime import timedelta
 from itertools import islice
 import math
 
+from django.db import transaction
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
@@ -73,6 +74,8 @@ class ArchiveOldRecords(Job):
         description = "This job will migrate the specified Model records to a separate table in order to enhance performance of the existing database."
         has_sensitive_variables = False
         dryrun_default = True
+        soft_time_limit = 60
+        time_limit = 66
 
     def run(  # pylint: disable=arguments-differ
         self,
@@ -189,12 +192,7 @@ class ArchiveOldRecords(Job):
 
     def _process_archive_object_change_batch(self, object_change_batch):
         """
-        Copy one batch into the archive, then delete the live rows it covers.
-
-        Copy before delete, and not inside one transaction: the archive tables are headed for a database
-        of their own, where a single transaction cannot span both sides. A run that dies between the two
-        leaves the record in both places, which the next run resolves, because the archived copy keeps the
-        primary key it had live. Deleting first would lose the record outright.
+        Copy one batch into the archive and delete the live rows it covers, both in one transaction.
 
         Args:
             object_change_batch (list of ObjectChange): Live `ObjectChange` records to archive.
@@ -215,14 +213,15 @@ class ArchiveOldRecords(Job):
             field.name for field in ArchivedObjectChange._meta.fields if field.name != "id"
         ]
 
-        ArchivedObjectChange.objects.bulk_create(
-            new_archived_object_changes,
-            update_conflicts=True,
-            update_fields=archived_object_change_update_fields,
-            unique_fields=["id"],
-        )
+        with transaction.atomic():
+            ArchivedObjectChange.objects.bulk_create(
+                new_archived_object_changes,
+                update_conflicts=True,
+                update_fields=archived_object_change_update_fields,
+                unique_fields=["id"],
+            )
 
-        deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
+            deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
         self.logger.debug(
             "Archived %d and deleted %d live ObjectChange rows", len(object_changes_to_archive_pks), deleted_count
         )
@@ -326,6 +325,9 @@ class ArchiveOldRecords(Job):
         So parents are copied, then children, then the live parents are deleted and the cascade clears the
         live children along with them.
 
+        The copy and the delete are one transaction, so a batch either moves completely or not at all.
+        No live record is deleted without its archived copy committed alongside it.
+
         Args:
             job_result_batch (list of JobResult): Live `JobResult` records to archive.
             batch_size (int): Chunk size for copying the children, which are unbounded per parent.
@@ -340,17 +342,21 @@ class ArchiveOldRecords(Job):
             field.name for field in ArchivedJobResult._meta.fields if field.name != "id"
         ]
         new_archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
-        ArchivedJobResult.objects.bulk_create(
-            new_archived_job_results,
-            update_conflicts=True,
-            update_fields=archived_job_result_update_fields,
-            unique_fields=["id"],
-        )
 
-        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
-        archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
+        # Parent, children and the delete together, so a batch either moves completely or not at all.
+        with transaction.atomic():
+            ArchivedJobResult.objects.bulk_create(
+                new_archived_job_results,
+                update_conflicts=True,
+                update_fields=archived_job_result_update_fields,
+                unique_fields=["id"],
+            )
 
-        deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
+            archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
+            archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
+
+            deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
+
         self.logger.debug(
             "Archived %d job results with %d log entries and %d console entries, and deleted %d live rows",
             len(job_result_pks),
