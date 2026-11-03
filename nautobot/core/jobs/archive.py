@@ -5,7 +5,6 @@ import math
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
-from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import DryRunVar, IntegerVar, Job, MultiChoiceVar
 from nautobot.extras.models import (
@@ -53,18 +52,19 @@ class ArchiveOldRecords(Job):
     archive_age_threshold = IntegerVar(
         description="Records older than this many days are archived.",
         label="Archive Age Threshold",
-        default=get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD"),
+        default=365,
         min_value=1,
         required=True,
     )
     archive_batch_size = IntegerVar(
         description=(
-            "Number of records to move for each batch in the archival step. Leave empty to use the ARCHIVE_MODEL_DEFAULT_BATCH_SIZE setting. Lower it if the archival task runs out of memory."
+            "Number of records to move for each batch in the archival step. "
+            "Lower it if the archival task runs out of memory."
         ),
         label="Archive Batch Size",
-        default=get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE"),
+        default=1000,
         min_value=1,
-        required=False,
+        required=True,
     )
     dryrun = DryRunVar(description="Report what would be archived without moving anything.")
 
@@ -86,9 +86,6 @@ class ArchiveOldRecords(Job):
 
         archived_object_change_count = 0
         archived_job_results_count = 0
-
-        archive_age_threshold = archive_age_threshold or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD")
-        archive_batch_size = archive_batch_size or get_settings_or_config("ARCHIVE_MODEL_DEFAULT_BATCH_SIZE")
 
         # Calculated once so that every model is archived against the same instant
         archive_model_threshold_timestamp = timezone.now() - timedelta(days=archive_age_threshold)

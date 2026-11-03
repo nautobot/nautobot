@@ -10,7 +10,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.db.models.signals import pre_delete
-from django.test import override_settings
 from django.utils import timezone
 import time_machine
 import yaml
@@ -1383,6 +1382,12 @@ class UpdateCustomFieldChoiceDataTest(TransactionTestCase):
             self.job.run()
 
 
+ARCHIVE_AGE_THRESHOLD_IN_DAYS = 30
+ARCHIVE_BATCH_SIZE = 1000
+
+SMALL_ARCHIVE_BATCH_SIZE = 2
+
+
 class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     """
     Test the ArchiveOldRecords system job's handling of ObjectChange records.
@@ -1420,10 +1425,12 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         """
         Run the job against ObjectChange only.
 
-        The threshold and batch size are left unset so that the job resolves them itself using
-        the `get_settings_or_config` fallback in `run()`.
+        The threshold and batch size are passed on every run. `run()` has no setting to fall back on,
+        so leaving them out hands it `None` rather than a default.
         """
         kwargs.setdefault("selected_models_to_archive", ["extras.objectchange"])
+        kwargs.setdefault("archive_age_threshold", ARCHIVE_AGE_THRESHOLD_IN_DAYS)
+        kwargs.setdefault("archive_batch_size", ARCHIVE_BATCH_SIZE)
         kwargs.setdefault("dryrun", False)
 
         return create_job_result_and_run_job(
@@ -1446,7 +1453,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     # --------------------------------------------------------------------------
     # Tests
     # --------------------------------------------------------------------------
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_dryrun_reports_without_moving_anything(self):
         object_change = self.make_object_change(age_in_days=90)
 
@@ -1457,7 +1463,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(job_result)))
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_records_older_than_the_threshold_are_archived(self):
         """Records past the threshold move to the archive; records inside it stay live."""
         old_object_change = self.make_object_change(age_in_days=90)
@@ -1473,7 +1478,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(ObjectChange.objects.filter(pk=recent_object_change.pk).exists())
         self.assertFalse(ArchivedObjectChange.objects.filter(pk=recent_object_change.pk).exists())
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_nothing_is_archived_when_every_record_is_inside_the_threshold(self):
         recent_object_change = self.make_object_change(age_in_days=5)
 
@@ -1487,7 +1491,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertTrue(does_no_object_change_record_log_output_exist)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_every_archived_object_change_field_matches_every_object_change_field(self):
         old_object_change = self.make_object_change(age_in_days=90)
 
@@ -1502,16 +1505,12 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
                 object_change_field_value = getattr(old_object_change, field.name)
                 self.assertEqual(archived_object_change_field_value, object_change_field_value)
 
-    @override_settings(
-        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
-        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
-    )
     def test_archival_runs_in_batches_of_the_requested_size(self):
         # Batching is determined by log output
         for _ in range(5):
             self.make_object_change(age_in_days=90)
 
-        job_result = self.run_archive_old_records_job()
+        job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
         self.assertJobResultStatus(job_result)
         self.assertEqual(ObjectChange.objects.count(), 0)
@@ -1519,7 +1518,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         batch_messages = [message for message in self.get_job_log_messages(job_result) if message.startswith("Batch ")]
         self.assertEqual(len(batch_messages), 3, batch_messages)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_rerunning_overwrites_rather_than_duplicating(self):
         """Archiving Object Changes makes the assumption that Object Changes do not change state.
         The job itself will overwrite a record if it already exists out of simplicity.
@@ -1540,7 +1538,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertFalse(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_a_batch_that_fails_also_fails_the_job_and_leaves_the_live_records(self):
         """The live record is deleted only after its copy lands, so a failed batch loses nothing."""
         old_object_change = self.make_object_change(age_in_days=90)
@@ -1561,10 +1558,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertTrue(does_archive_failure_message_exist)
 
-    @override_settings(
-        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
-        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
-    )
     def test_a_batch_that_fails_logs_which_batch_stopped_and_how_much_was_archived(self):
         for _ in range(4):
             self.make_object_change(age_in_days=90)
@@ -1576,14 +1569,13 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             "_process_archive_object_change_batch",
             side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
         ):
-            job_result = self.run_archive_old_records_job()
+            job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
         expected_stopping_message = (
             f"Stopping at batch 1: {archive_failure_message}. Archived 2 ObjectChange records before stopping."
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
         """
         `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
@@ -1684,10 +1676,12 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         Run the job against JobResult only.
 
-        The threshold and batch size are left unset so that the job resolves them itself using
-        the `get_settings_or_config` fallback in `run()`.
+        The threshold and batch size are passed on every run. `run()` has no setting to fall back on,
+        so leaving them out hands it `None` rather than a default.
         """
         kwargs.setdefault("selected_models_to_archive", ["extras.jobresult"])
+        kwargs.setdefault("archive_age_threshold", ARCHIVE_AGE_THRESHOLD_IN_DAYS)
+        kwargs.setdefault("archive_batch_size", ARCHIVE_BATCH_SIZE)
         kwargs.setdefault("dryrun", False)
 
         return create_job_result_and_run_job(
@@ -1700,7 +1694,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
     # --------------------------------------------------------------------------
     # Tests
     # --------------------------------------------------------------------------
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_dryrun_reports_without_moving_anything(self):
         job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
 
@@ -1713,7 +1706,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(ArchivedJobConsoleEntry.objects.count(), 0)
         self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(archive_job_result)))
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_job_results_older_than_the_threshold_are_archived(self):
         """Job results past the threshold move to the archive; job results inside it stay live."""
         old_job_result = self.make_job_result(age_in_days=90)
@@ -1729,7 +1721,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertTrue(JobResult.objects.filter(pk=recent_job_result.pk).exists())
         self.assertFalse(ArchivedJobResult.objects.filter(pk=recent_job_result.pk).exists())
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_nothing_is_archived_when_every_job_result_is_inside_the_threshold(self):
         recent_job_result = self.make_job_result(age_in_days=5)
 
@@ -1743,7 +1734,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
         self.assertTrue(does_no_job_result_record_log_output_exist)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_log_and_console_entries_move_with_their_job_result(self):
         """The children are copied before the live parent is deleted, so the cascade takes only live rows."""
         log_entry_count = 3
@@ -1766,10 +1756,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertFalse(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).exists())
         self.assertFalse(JobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).exists())
 
-    @override_settings(
-        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
-        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
-    )
     def test_child_entries_are_archived_in_chunks_when_they_outnumber_the_batch_size(self):
         """
         A single job result can carry far more children than the parent batch size, so the children are
@@ -1787,7 +1773,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             console_entry_count=console_entry_count,
         )
 
-        archive_job_result = self.run_archive_old_records_job()
+        archive_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
         self.assertJobResultStatus(archive_job_result)
         self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), log_entry_count)
@@ -1795,7 +1781,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             ArchivedJobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), console_entry_count
         )
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_every_archived_job_result_field_matches_every_job_result_field(self):
         """
         `user_name` is excluded because it has no live counterpart; it is covered by its own test.
@@ -1819,7 +1804,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
                 job_result_field_value = getattr(old_job_result, field.attname)
                 self.assertEqual(archived_job_result_field_value, job_result_field_value)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_archived_user_name_is_denormalized_from_the_live_user(self):
         """The archive cannot follow a foreign key into the live user table, so the username is copied."""
         old_job_result = self.make_job_result(age_in_days=90, user=self.user)
@@ -1830,7 +1814,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         archived_job_result = ArchivedJobResult.objects.get(pk=old_job_result.pk)
         self.assertEqual(archived_job_result.user_name, self.user.username)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_every_archived_child_entry_field_matches_its_live_entry(self):
         old_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, console_entry_count=1)
         job_log_entry = JobLogEntry.objects.get(job_result_id=old_job_result.pk)
@@ -1849,7 +1832,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
                 with self.subTest(model=type(archived_entry).__name__, field=field.name):
                     self.assertEqual(getattr(archived_entry, field.attname), getattr(live_entry, field.attname))
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_job_results_that_have_not_finished_are_not_archived(self):
         """
         A job that is still going has no end time, so a long running one would otherwise be deleted out
@@ -1863,7 +1845,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertTrue(JobResult.objects.filter(pk=unfinished_job_result.pk).exists())
         self.assertFalse(ArchivedJobResult.objects.filter(pk=unfinished_job_result.pk).exists())
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_job_results_that_carry_files_are_not_archived(self):
         """
         A `FileProxy` is a third cascade child with no archived counterpart, and deleting its job result
@@ -1884,17 +1865,13 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertFalse(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
         self.assertTrue(FileProxy.objects.filter(pk=file_proxy.pk).exists())
 
-    @override_settings(
-        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
-        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
-    )
     def test_archival_runs_in_batches_of_the_requested_size(self):
         # Batching is determined by log output
         job_result_count = 5
         for _ in range(job_result_count):
             self.make_job_result(age_in_days=90)
 
-        archive_job_result = self.run_archive_old_records_job()
+        archive_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
         self.assertJobResultStatus(archive_job_result)
         self.assertEqual(ArchivedJobResult.objects.count(), job_result_count)
@@ -1903,7 +1880,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         ]
         self.assertEqual(len(batch_messages), 3, batch_messages)
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_rerunning_overwrites_rather_than_duplicating(self):
         """Archiving job results assumes a finished job result no longer changes state.
 
@@ -1923,7 +1899,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(ArchivedJobResult.objects.get(pk=old_job_result.pk).name, second_round_name)
         self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
 
-    @override_settings(ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30)
     def test_a_batch_that_fails_also_fails_the_job_and_leaves_the_live_records(self):
         """The live record is deleted only after its copy lands, so a failed batch loses nothing."""
         old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
@@ -1946,10 +1921,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
         self.assertTrue(does_archive_failure_message_exist)
 
-    @override_settings(
-        ARCHIVE_MODEL_DEFAULT_AGE_THRESHOLD=30,
-        ARCHIVE_MODEL_DEFAULT_BATCH_SIZE=2,
-    )
     def test_a_batch_that_fails_logs_which_batch_stopped_and_how_much_was_archived(self):
         for _ in range(4):
             self.make_job_result(age_in_days=90)
@@ -1961,7 +1932,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             "_process_archive_job_result_batch",
             side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
         ):
-            archive_job_result = self.run_archive_old_records_job()
+            archive_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
         expected_stopping_message = (
             f"Stopping at batch 1: {archive_failure_message}. Archived 2 JobResult records before stopping."
