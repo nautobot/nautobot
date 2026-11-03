@@ -4172,8 +4172,8 @@ class BulkComponentCreateUIViewSetMixin:
         component_create_form = get_form_for_model(model)
 
         # Are we editing *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.get_queryset().only("pk")).qs]
+        if request.POST.get("_all") and self.filterset_class is not None:
+            pk_list = [obj.pk for obj in self.filterset_class(request.GET, self.get_queryset().only("pk")).qs]
         else:
             pk_list = request.POST.getlist("pk")
 
