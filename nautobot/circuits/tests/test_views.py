@@ -439,3 +439,30 @@ class CircuitSwapTerminationsTestCase(NautobotTestCase):
 
         self.assertHttpStatus(self._post_swap(), 302)
         self.assertSwapped(False)
+
+    def test_swap_single_termination_moves_to_other_side(self):
+        self.add_permissions("circuits.change_circuit", "circuits.change_circuittermination")
+        self.termination_z.delete()
+
+        self.assertHttpStatus(self._post_swap(), 302)
+        self.termination_a.refresh_from_db()
+        self.assertEqual(self.termination_a.term_side, CircuitTerminationSideChoices.SIDE_Z)
+
+        self.assertHttpStatus(self._post_swap(), 302)
+        self.termination_a.refresh_from_db()
+        self.assertEqual(self.termination_a.term_side, CircuitTerminationSideChoices.SIDE_A)
+
+    def test_swap_circuit_without_terminations_redirects(self):
+        self.add_permissions("circuits.change_circuit", "circuits.change_circuittermination")
+        self.circuit.circuit_terminations.all().delete()
+
+        for response in (self.client.get(self.url), self._post_swap()):
+            self.assertHttpStatus(response, 302)
+            self.assertRedirects(response, self.circuit.get_absolute_url(), fetch_redirect_response=False)
+
+    def test_swap_without_confirmation_rerenders_form(self):
+        self.add_permissions("circuits.change_circuit", "circuits.change_circuittermination")
+
+        response = self.client.post(self.url, data={})
+        self.assertHttpStatus(response, 200)
+        self.assertSwapped(False)
