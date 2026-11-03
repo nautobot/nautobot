@@ -47,6 +47,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import ExportTemplate, FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import populate_model_features_registry
 from nautobot.users.models import ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -188,6 +189,38 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn("disabled", button)
         self.assertIn('title="You do not have permission to run this Job."', button)
         self.assertNotIn("hx-post", button)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_each_omitted_for_model_without_that_support(self):
+        """A model that sets `is_importable_model` or `is_exportable_model` to `False` has only the matching action
+        omitted from its list view."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        for attribute, omitted, offered in (
+            ("is_importable_model", 'id="import-button"', "Export to file"),
+            ("is_exportable_model", "Export to file", 'id="import-button"'),
+        ):
+            with self.subTest(attribute=attribute):
+                with mock.patch.object(Provider, attribute, False):
+                    populate_model_features_registry(refresh=True)
+                body = self._provider_list_body()
+                self.assertIn('id="add-button"', body)
+                self.assertNotIn(omitted, body)
+                self.assertIn(offered, body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_omitted_for_model_without_either_support(self):
+        """For a model that supports neither import nor export, the list view still displays the "Add" button but
+        doesn't render the dropdown caret."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with mock.patch.multiple(Provider, is_exportable_model=False, is_importable_model=False):
+            populate_model_features_registry(refresh=True)
+        body = self._provider_list_body()
+
+        self.assertIn('id="add-button"', body)
+        self.assertNotIn('id="actions-dropdown"', body)
+        self.assertNotIn('id="import-button"', body)
+        self.assertNotIn("Export to file", body)
 
 
 class ObjectListViewStickyHeadersTestCase(TestCase):
