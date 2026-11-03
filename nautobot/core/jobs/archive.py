@@ -96,7 +96,7 @@ class ArchiveOldRecords(Job):
         # Nautobot has a global `_handle_deleted_object` registered to the pre_delete signal
         # We disable it here because deletions that occur with an archival job do not need it
         # resulting in better performance
-        self.logger.debug("Temporarily disconnecting the _handle_deleted_object signal for performance")
+        self.logger.debug("Temporarily disconnecting the `_handle_deleted_object` signal for performance")
         pre_delete.disconnect(_handle_deleted_object)
         try:
             for model_label in dependency_sorted_models_to_archive:
