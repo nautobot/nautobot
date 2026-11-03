@@ -47,6 +47,7 @@ from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import ExportTemplate, FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import populate_model_features_registry
 from nautobot.users.models import ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -188,6 +189,72 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn("disabled", button)
         self.assertIn('title="You do not have permission to run this Job."', button)
         self.assertNotIn("hx-post", button)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_each_omitted_for_model_without_that_support(self):
+        """A model that sets `is_importable_model` or `is_exportable_model` to `False` has only the matching action
+        omitted from its list view."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        for attribute, omitted, offered in (
+            ("is_importable_model", 'id="import-button"', "Export to file"),
+            ("is_exportable_model", "Export to file", 'id="import-button"'),
+        ):
+            with self.subTest(attribute=attribute):
+                with mock.patch.object(Provider, attribute, False):
+                    populate_model_features_registry(refresh=True)
+                body = self._provider_list_body()
+                self.assertIn('id="add-button"', body)
+                self.assertNotIn(omitted, body)
+                self.assertIn(offered, body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_import_and_export_omitted_for_model_without_either_support(self):
+        """For a model that supports neither import nor export, the list view still displays the "Add" button but
+        doesn't render the dropdown caret."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with mock.patch.multiple(Provider, is_exportable_model=False, is_importable_model=False):
+            populate_model_features_registry(refresh=True)
+        body = self._provider_list_body()
+
+        self.assertIn('id="add-button"', body)
+        self.assertNotIn('id="actions-dropdown"', body)
+        self.assertNotIn('id="import-button"', body)
+        self.assertNotIn("Export to file", body)
+
+
+class ObjectListViewStickyHeadersTestCase(TestCase):
+    """Covers whether the `sticky_headers` argument adds `nb-table-sticky-headers` to the rendered `<table>` in list views."""
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_list_view_tables_mark_headers_sticky(self):
+        """Both list view implementations render a `<table>` that has the `nb-table-sticky-headers` class.
+
+        `NautobotHTMLRenderer.construct_table` builds the table for `circuits:provider_list`, and
+        `ObjectListView.get` builds the table for `dcim:console_connections_list`. The two methods create
+        their tables independently, so their output can diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertHttpStatus(response, 200)
+                body = extract_page_body(response.content.decode(response.charset))
+                self.assertRegex(body, r"<table[^>]*nb-table-sticky-headers")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_htmx_table_fragment_marks_headers_sticky(self):
+        """The HTMX table fragment renders a `<table>` that has the `nb-table-sticky-headers` class.
+
+        `components/htmx/list_view_table.html` includes `panel_table.html` independently of the initial
+        response, so the two can diverge.
+        """
+        self.add_permissions("circuits.view_provider", "dcim.view_consoleport")
+        for url_name in ("circuits:provider_list", "dcim:console_connections_list"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name), headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertRegex(response.content.decode(response.charset), r"<table[^>]*nb-table-sticky-headers")
 
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
@@ -1781,6 +1848,14 @@ class TestObjectDetailView(TestCase):
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
         self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    def test_detail_view_table_panels_are_not_sticky(self):
+        """A detail view renders its object table panel without `nb-table-sticky-headers`."""
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertRegex(body, r"<table")
+        self.assertNotIn("nb-table-sticky-headers", body)
 
     @override_settings(PAGINATE_COUNT=5)
     def test_object_table_panel(self):

@@ -47,7 +47,12 @@ from nautobot.core.utils import lookup
 from nautobot.core.views.mixins import NautobotViewSetMixin, ObjectOverviewViewMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ModularComponentModel
 from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
-from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
+from nautobot.extras import (
+    choices as extras_choices,
+    models as extras_models,
+    querysets as extras_querysets,
+    utils as extras_utils,
+)
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.jobs import JobResult
@@ -1448,7 +1453,11 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             content = utils.extract_page_body(response.content.decode(response.charset))
             view = self.get_list_view()
-            if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
+            if (
+                view
+                and "import" in (getattr(view, "action_buttons", None) or ())
+                and extras_utils.FeatureQuery("import").includes(self.model)
+            ):
                 # Check if import button is present due to user permissions
                 self.assertIn('id="import-button"', content)
             else:

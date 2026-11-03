@@ -860,6 +860,17 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
 }
 
 /*
+ * Focus Not Obscured (WCAG 2.4.11, AA). A sticky table header covers a focused element that the browser scrolls to
+ * the top of the page, so this rule reserves scroll padding equal to the height of the header row. The rule sets the
+ * padding on the root element rather than on a scroll container, because only list views use sticky headers, and
+ * list views always scroll the entire page. The value is calculated from the same variables as the table header, so
+ * the padding stays equal to the header height when those variables change.
+ */
+:root:has(.nb-table-sticky-headers) {
+  scroll-padding-block-start: calc($table-cell-padding-y * 2 + $line-height-base * $font-size-base + $table-border-width); /* 37.125px */
+}
+
+/*
  * Skip link (bypass block, WCAG 2.4.1)
  *
  * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
@@ -1040,6 +1051,27 @@ $table-variants: (
       }
     }
   }
+}
+
+.nb-table-sticky-headers > thead:not(caption) > tr > th {
+  /*
+   * Under `border-collapse: collapse` cell borders belong to a higher-level table border grid, so they stay behind
+   * when a sticky header scrolls away from its original placement. To compensate, the bottom border is removed and
+   * redrawn as an inset box shadow (added on top of Bootstrap's default table cell box shadow). The bottom padding
+   * is enlarged by the same width to give back the space the border originally occupied.
+   */
+  border-block-end-width: 0;
+  box-shadow:
+    inset 0 calc(#{$table-border-width} * -1) 0 0 var(--#{$prefix}table-border-color),
+    inset 0 0 0 9999px var(--#{$prefix}table-bg-state, var(--#{$prefix}table-bg-type, var(--#{$prefix}table-accent-bg)));
+  inset-block-start: 0;
+  padding-block-end: calc($table-cell-padding-y + $table-border-width);
+  position: sticky;
+  z-index: 1;
+}
+
+.table-responsive:has(.nb-table-sticky-headers) {
+  overflow-y: clip; /* Pairs with Bootstrap's `overflow-x: auto` to remove the vertical scroll and enable table sticky headers. */
 }
 
 .nb-table-headings th {
@@ -1578,7 +1610,7 @@ textarea {
 
 /* Cards */
 .card {
-  overflow: hidden; /* Fix border-radii for card content. */
+  overflow: clip; /* Fix border-radii for card content. Must be `clip`, as `hidden` would break table sticky headers. */
   margin-bottom: map.get($spacers, 16);  /* Default to mb-16 equivalent */
 
   /* When card content is collapsed prevent card bottom border duplication by entirely removing `border-bottom` from card header. */
