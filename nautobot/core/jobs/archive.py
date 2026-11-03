@@ -257,7 +257,7 @@ class ArchiveOldRecords(Job):
             status__in=JobResultStatusChoices.READY_STATES,
             # TODO: Add optional flag to include files, otherwise default to leaving the JobResult unarchived
             files__isnull=True,
-        ).order_by("date_done")
+    ).select_related("user").order_by("date_done")
 
         job_result_count = job_results_to_archive.count()
 
