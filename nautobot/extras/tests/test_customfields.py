@@ -29,7 +29,7 @@ from nautobot.core.utils.cache import construct_cache_key, request_cache
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
-from nautobot.dcim.models import Device, Location, LocationType, Rack
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.context_managers import web_request_context
@@ -1556,6 +1556,92 @@ class CustomFieldDataAPITest(APITestCase):
         )
         response = self.client.post(self.list_url, csvdata, content_type="text/csv", **self.header)
         self.assertContains(response, "Invalid choice", status_code=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomFieldMultipartAPITest(APITestCase):
+    """Regression tests for custom_fields on multipart/form-data upload endpoints (issue #9645)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        device_type_ct = ContentType.objects.get_for_model(DeviceType)
+        cls.cf_text = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Multipart Example",
+            key="multipart_example",
+        )
+        cls.cf_text.validated_save()
+        cls.cf_text.content_types.set([device_type_ct])
+
+        cls.manufacturer, _ = Manufacturer.objects.get_or_create(name="Multipart Test Manufacturer")
+        cls.list_url = reverse("dcim-api:devicetype-list")
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions(
+            "dcim.add_devicetype",
+            "dcim.view_devicetype",
+            "dcim.change_devicetype",
+            "dcim.view_manufacturer",
+        )
+        self.manufacturer, _ = Manufacturer.objects.get_or_create(name="Multipart Test Manufacturer")
+
+    def _unique_model_name(self):
+        return f"Multipart CF {uuid.uuid4()}"
+
+    def _post_device_type(self, extra_fields):
+        data = {
+            "manufacturer": str(self.manufacturer.pk),
+            "model": self._unique_model_name(),
+            **extra_fields,
+        }
+        return self.client.post(self.list_url, data, format="multipart", **self.header)
+
+    def test_multipart_custom_fields_json_string(self):
+        response = self._post_device_type(
+            {"custom_fields": json.dumps({self.cf_text.key: "hello"})},
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["custom_fields"][self.cf_text.key], "hello")
+
+    def test_multipart_custom_fields_cf_prefix(self):
+        response = self._post_device_type({f"cf_{self.cf_text.key}": "from-cf-prefix"})
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["custom_fields"][self.cf_text.key], "from-cf-prefix")
+
+    def test_multipart_custom_fields_dotted_and_bracket_keys(self):
+        response = self._post_device_type(
+            {
+                f"custom_fields.{self.cf_text.key}": "dotted",
+            },
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["custom_fields"][self.cf_text.key], "dotted")
+
+        response = self._post_device_type(
+            {
+                f"custom_fields[{self.cf_text.key}]": "bracketed",
+            },
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["custom_fields"][self.cf_text.key], "bracketed")
+
+    def test_multipart_invalid_custom_fields_json_returns_400(self):
+        response = self._post_device_type({"custom_fields": "not-valid-json"})
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_multipart_patch_custom_fields_json_string(self):
+        create_response = self._post_device_type({})
+        self.assertHttpStatus(create_response, status.HTTP_201_CREATED)
+        detail_url = reverse("dcim-api:devicetype-detail", kwargs={"pk": create_response.data["id"]})
+
+        response = self.client.patch(
+            detail_url,
+            {"custom_fields": json.dumps({self.cf_text.key: "patched"})},
+            format="multipart",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["custom_fields"][self.cf_text.key], "patched")
 
 
 @tag("example_app")
