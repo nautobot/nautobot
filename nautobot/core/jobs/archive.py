@@ -2,7 +2,7 @@ from datetime import timedelta
 from itertools import islice
 import math
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
@@ -218,7 +218,8 @@ class ArchiveOldRecords(Job):
                 new_archived_object_changes,
                 update_conflicts=True,
                 update_fields=archived_object_change_update_fields,
-                unique_fields=["id"],
+                # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+                unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
             )
 
             deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
@@ -355,7 +356,8 @@ class ArchiveOldRecords(Job):
                 new_archived_job_results,
                 update_conflicts=True,
                 update_fields=archived_job_result_update_fields,
-                unique_fields=["id"],
+                # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+                unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
             )
 
         archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
@@ -415,7 +417,8 @@ class ArchiveOldRecords(Job):
                     [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
                     update_conflicts=True,
                     update_fields=archived_job_log_entry_update_fields,
-                    unique_fields=["id"],
+                    # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+                    unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
                 )
                 JobLogEntry.objects.filter(pk__in=[job_log_entry.pk for job_log_entry in job_log_entry_chunk]).delete()
 
@@ -467,7 +470,8 @@ class ArchiveOldRecords(Job):
                     ],
                     update_conflicts=True,
                     update_fields=archived_job_console_entry_update_fields,
-                    unique_fields=["id"],
+                    # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+                    unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
                 )
                 JobConsoleEntry.objects.filter(
                     pk__in=[job_console_entry.pk for job_console_entry in job_console_entry_chunk]
