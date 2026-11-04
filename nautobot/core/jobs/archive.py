@@ -392,7 +392,7 @@ class ArchiveOldRecords(Job):
 
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose log entries are archived.
-            batch_size (int): Records to hold in memory, insert and delete at a time.
+            batch_size (int): Number of log entries to load into memory, copy into the archive, and delete per chunk.
 
         Returns:
             (int): Job log entries archived and removed from the live table.
