@@ -1,4 +1,3 @@
-import contextlib
 from datetime import date
 import io
 import json
@@ -4080,7 +4079,7 @@ class CustomFieldDefensiveCoverage(TestCase):
             update_custom_field_choice_data(uuid.uuid4(), "old", "new")
 
     def test_update_choice_data_select_no_matches(self):
-        """UPDATE SELECT: no objects have old_value — prints to stderr, returns True."""
+        """UPDATE SELECT: no objects have old_value — logs debug, returns True."""
         cf = CustomField.objects.create(
             label="sel-no-match",
             type=CustomFieldTypeChoices.TYPE_SELECT,
@@ -4093,12 +4092,14 @@ class CustomFieldDefensiveCoverage(TestCase):
 
         Location.objects.filter(pk=self.location.pk).update(_custom_field_data={cf.key: "ValidA"})
 
-        stderr_buf = io.StringIO()
-        with contextlib.redirect_stderr(stderr_buf):
+        with self.assertLogs("nautobot.extras.customfields", level="DEBUG") as cm:
             result = update_custom_field_choice_data(cf.pk, "NonExistentValue", "ValidA")
         self.assertTrue(result)
-        self.assertIn(
-            f"No location objects had value 'NonExistentValue' for custom field `{cf.key}`.", stderr_buf.getvalue()
+        self.assertTrue(
+            any(
+                f"No location objects had value 'NonExistentValue' for custom field `{cf.key}`." in msg
+                for msg in cm.output
+            )
         )
 
         self.location.refresh_from_db()
