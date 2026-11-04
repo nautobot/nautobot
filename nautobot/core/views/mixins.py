@@ -1703,6 +1703,9 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                         for obj in selected_objects:
                             obj.new_name = pattern.sub(replace, obj.name, timeout=timeout)
                             renamed_pks.append(obj.pk)
+                    except regex.error as e:
+                        form.add_error("replace", f"Invalid regex: {e}")
+                        return self._render_form_response(request, form, selected_objects)
                     except TimeoutError:
                         form.add_error(
                             "find",
