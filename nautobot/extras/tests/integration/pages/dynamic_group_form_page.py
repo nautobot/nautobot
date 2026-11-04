@@ -36,6 +36,12 @@ class DynamicGroupFormPage(ObjectFormPage):
         expect(self.page.locator(f"select[name='filter-{field_name}'] option:checked", has_text=value)).to_have_count(1)
 
     def save(self):
-        """Submit the edit form and assert that it redirected away from the form."""
+        """Submit the edit form and assert that the server accepted it.
+
+        Unlike `submit()`, this always expects success: an accepted form redirects to the
+        detail view, and a rejected one is redisplayed at its `/edit/` URL. Only the edit form
+        reaches this method (the test opens it with `click_edit`), so `/edit/` is the only URL
+        to check. `create()` checks the add form's redirect through the pk in the URL.
+        """
         self.submit()
         self.expect_url_lacks("/edit/")
