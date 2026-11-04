@@ -1,5 +1,4 @@
 from datetime import timedelta
-from itertools import islice
 import math
 
 from django.db import connection, transaction
@@ -151,9 +150,6 @@ class ArchiveOldRecords(Job):
         current_batch = 0
 
         while True:
-            # Re-sliced rather than paged with an offset: each batch's rows are deleted before the next
-            # slice is taken, so the front of the queryset is always the next batch. An offset would skip
-            # records as the table shrinks underneath it.
             object_change_batch = list(object_changes_to_archive[:batch_size])
             if not object_change_batch:
                 break
@@ -403,12 +399,11 @@ class ArchiveOldRecords(Job):
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
         ]
         job_log_entries = JobLogEntry.objects.filter(job_result_id__in=job_result_pks)
-        streamed_job_log_entries = job_log_entries.iterator(chunk_size=batch_size)
 
         archived_job_log_entry_count = 0
 
         while True:
-            job_log_entry_chunk = list(islice(streamed_job_log_entries, batch_size))
+            job_log_entry_chunk = list(job_log_entries[:batch_size])
             if not job_log_entry_chunk:
                 break
 
@@ -453,12 +448,11 @@ class ArchiveOldRecords(Job):
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
         job_console_entries = JobConsoleEntry.objects.filter(job_result_id__in=job_result_pks)
-        streamed_job_console_entries = job_console_entries.iterator(chunk_size=batch_size)
 
         archived_job_console_entry_count = 0
 
         while True:
-            job_console_entry_chunk = list(islice(streamed_job_console_entries, batch_size))
+            job_console_entry_chunk = list(job_console_entries[:batch_size])
             if not job_console_entry_chunk:
                 break
 
