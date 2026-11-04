@@ -703,7 +703,8 @@ class SearchContentTypeView(TestCase):
         self.assertEqual(rendered_fields[-1], "q")
 
     def test_search_content_type_renders_no_q_field_when_filter_form_has_none(self):
-        base_fields_without_q = {name: field for name, field in LocationFilterForm.base_fields.items() if name != "q"}
+        base_fields = LocationFilterForm.base_fields  # pylint: disable=no-member
+        base_fields_without_q = {name: field for name, field in base_fields.items() if name != "q"}
         with mock.patch.object(LocationFilterForm, "base_fields", base_fields_without_q):
             response = self.client.get(
                 reverse("search_content_type", kwargs={"content_type": "dcim.location"}),
