@@ -1,0 +1,1 @@
+Added the `CHANGELOG_LEGACY_OBJECT_DATA` setting, controlling whether a change record stores the pre-1.3 `object_data`.

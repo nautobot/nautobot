@@ -7352,6 +7352,18 @@ class ObjectChangeTestCase(TestCase):
             self.assertIn(label, content)
             self.assertIn(f'<div class="collapse" id="{body_id}">', content)
 
+    def test_objectchange_without_legacy_snapshot_omits_the_object_data_panel(self):
+        """A record written with `CHANGELOG_LEGACY_OBJECT_DATA` off has only the v2 snapshot to show."""
+        objectchange = ObjectChange.objects.first()
+        objectchange.object_data = None
+        objectchange.save()
+
+        response = self.client.get(objectchange.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="object-data"', content)
+        self.assertIn('<div class="collapse" id="object-data-v2">', content)
+
 
 class ObjectMetadataTestCase(
     ViewTestCases.CreateObjectViewTestCase,
