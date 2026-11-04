@@ -214,7 +214,8 @@ class ArchiveOldRecords(Job):
                 new_archived_object_changes,
                 update_conflicts=True,
                 update_fields=archived_object_change_update_fields,
-                # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+                # PostgreSQL needs the conflict column named. MySQL's ON DUPLICATE KEY UPDATE cannot name one,
+                # so unique_fields must be empty there.
                 unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
             )
 
