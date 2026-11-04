@@ -434,10 +434,10 @@ class ArchiveOldRecords(Job):
         result can carry tens of thousands of them, so a batch of parents says nothing about how many
         console entries come with it.
 
-        Each chunk is copied and deleted in one transaction, committed before the next chunk is read. A
-        run that dies part way through therefore leaves the chunks it finished already archived and gone
-        from the live table, and the next run reads only what is left instead of working through records
-        it has already moved.
+        Each chunk is copied and deleted in one transaction, which commits before the next chunk is read.
+        If a run stops part way through, the chunks that it finished are already in the archive and no
+        longer in the live table, so the next run reads only the console entries that are still live
+        instead of processing entries that it has already moved.
 
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose console entries are archived.
