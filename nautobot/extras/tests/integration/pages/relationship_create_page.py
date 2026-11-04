@@ -75,6 +75,6 @@ class RelationshipCreatePage(ObjectFormPage):
             expect(self._field("destination", name)).to_be_disabled()
 
     def expect_destination_enabled(self):
-        """Assert (auto-retrying) that every mirrored destination field is enabled."""
+        """Assert (auto-retrying) that every destination field that the script copies from the source is enabled."""
         for name in self._MIRRORED_FIELDS:
             expect(self._field("destination", name)).to_be_enabled()
