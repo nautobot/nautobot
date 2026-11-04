@@ -16,8 +16,8 @@ class RelationshipsTestCase:
         manufacturer = created_relationship["manufacturer"]
         platform = created_relationship["platform"]
         relationship = created_relationship["relationship"]
-        # Each peer's page, with the label of its side of the relationship and the other peer's name.
-        # The manufacturer is the source, so its page shows the source label.
+        # Each tuple contains a peer's detail page, the peer's id, the label of the peer's side of the
+        # relationship, and the other peer's name. The manufacturer is the source, so its page shows the source label.
         peers = (
             (
                 ManufacturerDetailPage(auth_page, base_url),
