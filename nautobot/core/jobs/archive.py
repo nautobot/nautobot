@@ -22,12 +22,17 @@ from nautobot.extras.signals import _handle_deleted_object
 name = "System Jobs"
 JOB_NAME = "Archive Old Records"
 
+OBJECT_CHANGE_LABEL = "extras.objectchange"
+JOB_RESULT_LABEL = "extras.jobresult"
+JOB_LOG_ENTRY_LABEL = "extras.joblogentry"
+JOB_CONSOLE_ENTRY_LABEL = "extras.jobconsoleentry"
+
 # Archival order matters, used to determine what gets archived first to remove concerns about foreign key
 # relationships when archiving
 ARCHIVAL_ORDER = (
-    "extras.objectchange",  # Independent
+    OBJECT_CHANGE_LABEL,  # Independent
     # --------------------
-    "extras.jobresult",  # Parent to JobConsoleEntry, Parent to JobLogEntry
+    JOB_RESULT_LABEL,  # Parent to JobConsoleEntry, Parent to JobLogEntry
 )
 
 # The records that can be archived are displayed in alphabetical order
@@ -84,10 +89,25 @@ class ArchiveOldRecords(Job):
         archive_batch_size=None,
         dryrun=True,
     ):
+        """
+        Archive the selected models' records that are older than the age threshold.
+
+        Returns:
+            (dict): Archived record count keyed by model label, for example
+                `{"extras.objectchange": 12, "extras.jobresult": 3, "extras.joblogentry": 40,
+                "extras.jobconsoleentry": 7}`. Every archivable model is present, so a model that this run
+                was not asked to archive reports 0 rather than being absent.
+        """
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
 
-        archived_object_change_count = 0
-        archived_job_results_count = 0
+        # Seeded with every archivable model, not just the selected ones, so that a caller can read any
+        # model's count without first checking what the run was asked to do.
+        archived_record_counts = {
+            OBJECT_CHANGE_LABEL: 0,
+            JOB_RESULT_LABEL: 0,
+            JOB_LOG_ENTRY_LABEL: 0,
+            JOB_CONSOLE_ENTRY_LABEL: 0,
+        }
 
         # Calculated once so that every model is archived against the same instant
         archive_model_threshold_timestamp = timezone.now() - timedelta(days=archive_age_threshold)
@@ -98,21 +118,21 @@ class ArchiveOldRecords(Job):
         self.logger.debug("Temporarily disconnecting the `_handle_deleted_object` signal for performance")
         pre_delete.disconnect(_handle_deleted_object)
         try:
-            if "extras.objectchange" in selected_models:
-                archived_object_change_count = self._archive_object_changes(
+            if OBJECT_CHANGE_LABEL in selected_models:
+                archived_object_change_counts = self._archive_object_changes(
                     archive_model_threshold_timestamp, archive_batch_size, dryrun
                 )
-            if "extras.jobresult" in selected_models:
-                archived_job_results_count = self._archive_job_results(
+                archived_record_counts.update(archived_object_change_counts)
+            if JOB_RESULT_LABEL in selected_models:
+                archived_job_result_counts = self._archive_job_results(
                     archive_model_threshold_timestamp, archive_batch_size, dryrun
                 )
+                archived_record_counts.update(archived_job_result_counts)
         finally:
             self.logger.debug("Re-connecting the _handle_deleted_object signal")
             pre_delete.connect(_handle_deleted_object)
 
-        total_archived_models_count = archived_object_change_count + archived_job_results_count
-
-        return total_archived_models_count
+        return archived_record_counts
 
     # --------------------------------------------------------------------------
     # Object Change
@@ -130,7 +150,8 @@ class ArchiveOldRecords(Job):
             dryrun (bool): Report what would move without moving anything.
 
         Returns:
-            (int): Records archived, or on a dry run the count a real run would archive.
+            (dict): Archived record count keyed by model label, or on a dry run the count a real run
+                would archive. Always carries the `extras.objectchange` key.
         """
         object_changes_to_archive = ObjectChange.objects.filter(time__lt=threshold_timestamp).order_by("time")
 
@@ -144,7 +165,7 @@ class ArchiveOldRecords(Job):
                 batch_size,
                 total_batch_count,
             )
-            return object_change_count
+            return {OBJECT_CHANGE_LABEL: object_change_count}
 
         total_archived_object_change_count = 0
         current_batch = 0
@@ -163,7 +184,7 @@ class ArchiveOldRecords(Job):
                     exception,
                     total_archived_object_change_count,
                 )
-                return total_archived_object_change_count
+                return {OBJECT_CHANGE_LABEL: total_archived_object_change_count}
 
             total_archived_object_change_count += current_archived_object_change_count
             self.logger.info(
@@ -176,7 +197,7 @@ class ArchiveOldRecords(Job):
 
         if not total_archived_object_change_count:
             self.logger.info("No ObjectChange records older than %s", threshold_timestamp)
-            return 0
+            return {OBJECT_CHANGE_LABEL: 0}
 
         self.logger.success(
             "Archived %d ObjectChange records across %d batches.",
@@ -184,7 +205,7 @@ class ArchiveOldRecords(Job):
             current_batch,
         )
 
-        return total_archived_object_change_count
+        return {OBJECT_CHANGE_LABEL: total_archived_object_change_count}
 
     def _process_archive_object_change_batch(self, object_change_batch):
         """
@@ -248,7 +269,9 @@ class ArchiveOldRecords(Job):
             dryrun (bool): Report what would move without moving anything.
 
         Returns:
-            (int): Job results archived, or on a dry run the count a real run would archive.
+            (dict): Archived record counts keyed by model label, or on a dry run the counts a real run
+                would archive. Always carries the `extras.jobresult`, `extras.joblogentry` and
+                `extras.jobconsoleentry` keys.
         """
         # Only job results that are done can be archived
         job_results_to_archive = (
@@ -264,17 +287,32 @@ class ArchiveOldRecords(Job):
 
         if dryrun:
             job_result_count = job_results_to_archive.count()
+            # The children are counted too, so that a dry run names the same models a real run moves
+            # instead of reporting zero for records it would in fact archive.
+            job_log_entry_count = JobLogEntry.objects.filter(job_result__in=job_results_to_archive).count()
+            job_console_entry_count = JobConsoleEntry.objects.filter(job_result__in=job_results_to_archive).count()
             total_batch_count = math.ceil(job_result_count / batch_size)
             self.logger.warning(
-                "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived.",
+                "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived, "
+                "along with %d JobLogEntry and %d JobConsoleEntry records.",
                 JOB_NAME,
                 job_result_count,
                 batch_size,
                 total_batch_count,
+                job_log_entry_count,
+                job_console_entry_count,
             )
-            return job_result_count
+            return {
+                JOB_RESULT_LABEL: job_result_count,
+                JOB_LOG_ENTRY_LABEL: job_log_entry_count,
+                JOB_CONSOLE_ENTRY_LABEL: job_console_entry_count,
+            }
 
-        total_archived_job_result_count = 0
+        archived_job_result_counts = {
+            JOB_RESULT_LABEL: 0,
+            JOB_LOG_ENTRY_LABEL: 0,
+            JOB_CONSOLE_ENTRY_LABEL: 0,
+        }
         current_batch = 0
 
         while True:
@@ -283,36 +321,39 @@ class ArchiveOldRecords(Job):
                 break
 
             try:
-                current_archived_job_result_count = self._process_archive_job_result_batch(job_result_batch, batch_size)
+                current_batch_counts = self._process_archive_job_result_batch(job_result_batch, batch_size)
             except Exception as exception:
                 self.fail(
                     "Stopping at batch %d: %s. Archived %d JobResult records before stopping.",
                     current_batch,
                     exception,
-                    total_archived_job_result_count,
+                    archived_job_result_counts[JOB_RESULT_LABEL],
                 )
-                return total_archived_job_result_count
+                return archived_job_result_counts
 
-            total_archived_job_result_count += current_archived_job_result_count
+            archived_job_result_counts[JOB_RESULT_LABEL] += current_batch_counts[JOB_RESULT_LABEL]
+            archived_job_result_counts[JOB_LOG_ENTRY_LABEL] += current_batch_counts[JOB_LOG_ENTRY_LABEL]
+            archived_job_result_counts[JOB_CONSOLE_ENTRY_LABEL] += current_batch_counts[JOB_CONSOLE_ENTRY_LABEL]
+
             self.logger.info(
                 "Batch %d: archived %d JobResult records",
                 current_batch,
-                current_archived_job_result_count,
+                current_batch_counts[JOB_RESULT_LABEL],
             )
 
             current_batch += 1
 
-        if not total_archived_job_result_count:
+        if not archived_job_result_counts[JOB_RESULT_LABEL]:
             self.logger.info("No JobResult records older than %s", threshold_timestamp)
-            return 0
+            return archived_job_result_counts
 
         self.logger.success(
             "Archived %d JobResult records across %d batches.",
-            total_archived_job_result_count,
+            archived_job_result_counts[JOB_RESULT_LABEL],
             current_batch,
         )
 
-        return total_archived_job_result_count
+        return archived_job_result_counts
 
     def _process_archive_job_result_batch(self, job_result_batch, batch_size):
         """
@@ -337,7 +378,7 @@ class ArchiveOldRecords(Job):
             batch_size (int): Chunk size for copying the children, which are unbounded per parent.
 
         Returns:
-            (int): Job results archived and removed from the live table.
+            (dict): Archived record counts for this batch, keyed by model label.
         """
         job_result_pks = [job_result.pk for job_result in job_result_batch]
         job_result_pks_count = len(job_result_pks)
@@ -371,7 +412,11 @@ class ArchiveOldRecords(Job):
             deleted_count,
         )
 
-        return job_result_pks_count
+        return {
+            JOB_RESULT_LABEL: job_result_pks_count,
+            JOB_LOG_ENTRY_LABEL: archived_job_log_entry_count,
+            JOB_CONSOLE_ENTRY_LABEL: archived_job_console_entry_count,
+        }
 
     # --------------------------------------------------------------------------
     # Job Log Entry

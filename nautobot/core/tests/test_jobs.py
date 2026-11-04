@@ -1478,6 +1478,25 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(ObjectChange.objects.filter(pk=recent_object_change.pk).exists())
         self.assertFalse(ArchivedObjectChange.objects.filter(pk=recent_object_change.pk).exists())
 
+    def test_the_job_returns_a_count_for_every_archivable_model(self):
+        """A model the run was not asked to archive reports 0 rather than being absent from the result."""
+        self.make_object_change(age_in_days=90)
+        self.make_object_change(age_in_days=90)
+        self.make_object_change(age_in_days=5)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(
+            job_result.result,
+            {
+                "extras.objectchange": 2,
+                "extras.jobresult": 0,
+                "extras.joblogentry": 0,
+                "extras.jobconsoleentry": 0,
+            },
+        )
+
     def test_nothing_is_archived_when_every_record_is_inside_the_threshold(self):
         recent_object_change = self.make_object_change(age_in_days=5)
 
@@ -1588,7 +1607,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             was_handle_deleted_object_connected_during_archival.append(
                 self.is_handle_deleted_object_connected_to_pre_delete_signal()
             )
-            return 0
+            return {"extras.objectchange": 0}
 
         self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
 
@@ -1755,6 +1774,49 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         # Confirm The Live Children Were Cascaded Away With Their Parent
         self.assertFalse(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).exists())
         self.assertFalse(JobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).exists())
+
+    def test_the_job_counts_child_entries_under_their_own_model_labels(self):
+        """The children are reported separately from their parent rather than folded into its count."""
+        log_entry_count = 3
+        console_entry_count = 2
+        self.make_job_result(age_in_days=90, log_entry_count=log_entry_count, console_entry_count=console_entry_count)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(
+            archive_job_result.result,
+            {
+                "extras.objectchange": 0,
+                "extras.jobresult": 1,
+                "extras.joblogentry": log_entry_count,
+                "extras.jobconsoleentry": console_entry_count,
+            },
+        )
+
+    def test_a_dry_run_counts_the_children_it_would_archive(self):
+        """A dry run reports the same models a real run moves, so the children are counted rather than zeroed."""
+        log_entry_count = 3
+        console_entry_count = 2
+        old_job_result = self.make_job_result(
+            age_in_days=90, log_entry_count=log_entry_count, console_entry_count=console_entry_count
+        )
+
+        archive_job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(
+            archive_job_result.result,
+            {
+                "extras.objectchange": 0,
+                "extras.jobresult": 1,
+                "extras.joblogentry": log_entry_count,
+                "extras.jobconsoleentry": console_entry_count,
+            },
+        )
+        # Counted, but left where they were.
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
 
     def test_child_entries_are_archived_in_chunks_when_they_outnumber_the_batch_size(self):
         """
@@ -1978,11 +2040,16 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             self.make_job_result(age_in_days=90)
         archive_failure_message = "Archive Unavailable"
         archived_count_before_failure = 2
+        archived_counts_before_failure = {
+            "extras.jobresult": archived_count_before_failure,
+            "extras.joblogentry": 0,
+            "extras.jobconsoleentry": 0,
+        }
 
         with mock.patch.object(
             ArchiveOldRecords,
             "_process_archive_job_result_batch",
-            side_effect=[archived_count_before_failure, RuntimeError(archive_failure_message)],
+            side_effect=[archived_counts_before_failure, RuntimeError(archive_failure_message)],
         ):
             archive_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
 
