@@ -377,7 +377,10 @@ class ViewTestCases:
             self.user.save()
             instance = self._get_queryset().first()
             detail_url = instance.get_absolute_url()
-            url_info = [{"url": detail_url, "htmx_only": False}, *self._get_detail_extra_action_urls(detail_url).values()]
+            url_info = [
+                {"url": detail_url, "htmx_only": False},
+                *self._get_detail_extra_action_urls(detail_url).values(),
+            ]
 
             for info in url_info:
                 with self.subTest(url=info["url"]):
