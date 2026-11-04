@@ -2796,6 +2796,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     )
 
             job_form = job_class.as_form(initial=initial)
+            restrict_form_fields(job_form, request.user)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
         except RuntimeError as err:
@@ -2811,6 +2812,9 @@ class JobUIViewSet(NautobotUIViewSet):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        if job_form is not None:
+            # Object variables only accept objects that the user may view
+            restrict_form_fields(job_form, request.user)
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
 
@@ -2818,6 +2822,7 @@ class JobUIViewSet(NautobotUIViewSet):
         if self.request.headers.get("HX-Request", False) and request.POST.get("render_job_form"):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
+            restrict_form_fields(job_form, request.user)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
             if self._resolve_enable_scheduling(request, job_model):
                 schedule_form = forms.JobScheduleForm(initial=initial_form_data)

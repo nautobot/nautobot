@@ -82,7 +82,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         htmx_trigger = request.headers.get("HX-Trigger", None)
         is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
-        if view.action in ["list", "notes", "changelog"]:
+        if view.action in ["list", "notes", "changelog", "data_compliance"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 self.saved_view = None
@@ -118,6 +118,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     )
                 )
                 table = table_class(data=objectchanges, orderable=False)
+            elif view.action == "data_compliance":
+                obj = kwargs.get("object")
+                table = table_class(obj.associated_data_compliance.restrict(request.user, "view"), user=request.user)
 
             # Apply the request context
             paginate = {
@@ -275,6 +278,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance)
             elif view.action == "changelog":
                 table = self.construct_table(view, object=instance, content_type=content_type)
+            elif view.action == "data_compliance":
+                table = self.construct_table(view, object=instance)
 
         context = {
             "content_type": content_type,

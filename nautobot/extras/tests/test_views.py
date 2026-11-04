@@ -480,6 +480,12 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
             "denial_message": "updated denial message",
         }
 
+    def setUp(self):
+        super().setUp()
+        # `form_data` and `update_data` reference approver groups, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make
+        # viewable
+        self.add_permissions("auth.view_group")
+
     def test_delete_stage_definition_blocked_when_pending_workflow_exists(self):
         """Deleting stage definition should fail if pending workflows exist."""
         self.add_permissions("extras.delete_approvalworkflowstagedefinition")
@@ -2003,6 +2009,27 @@ class ContactAssociationTestCase(
         self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
         self.assertEqual(contact_association.role.pk, self.form_data["role"])
         self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_contact_or_team_with_custom_field(self):
+        """Test that custom fields on ContactAssociation can be filled in when assigning a contact or team."""
+        custom_field = CustomField.objects.create(
+            key="contact_association_field",
+            label="Contact Association Field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        custom_field.content_types.set([ContentType.objects.get_for_model(ContactAssociation)])
+        self.add_permissions("extras.add_contactassociation")
+
+        url = reverse("extras:object_contact_team_assign")
+        self.assertBodyContains(self.client.get(url), 'name="cf_contact_association_field"')
+
+        data = {**self.form_data, "cf_contact_association_field": "Some value"}
+        self.assertHttpStatus(self.client.post(url, data=post_data(data)), 302)
+        self.assertTrue(
+            ContactAssociation.objects.filter(_custom_field_data__contact_association_field="Some value").exists()
+        )
 
 
 class CustomLinkTestCase(
@@ -6313,6 +6340,26 @@ class JobTestCase(
 
             errors = extract_form_failures(response.content.decode(response.charset))
             self.assertEqual(errors, ["var: This field is required."])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_with_unviewable_object_var(self, _):
+        """An object variable can't be given an object the user may not view, though the form can be crafted to."""
+        job_model = Job.objects.get_for_class_path("object_vars.TestObjectVars")
+        job_model.enabled = True
+        job_model.validated_save()
+        visible_role = Role.objects.create(name="Visible Job Role")
+        hidden_role = Role.objects.create(name="Hidden Job Role")
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_role", constraints={"name": visible_role.name})
+
+        data = {**self.data_run_immediately, "role": hidden_role.pk, "roles": [visible_role.pk]}
+        job_result_count = JobResult.objects.filter(job_model=job_model).count()
+        response = self.client.post(reverse("extras:job_run", kwargs={"pk": job_model.pk}), data)
+        self.assertHttpStatus(response, 200)
+        errors = extract_form_failures(response.content.decode(response.charset))
+        self.assertEqual(errors, ["role: Select a valid choice. That choice is not one of the available choices."])
+        self.assertEqual(JobResult.objects.filter(job_model=job_model).count(), job_result_count)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     @mock.patch("nautobot.extras.models.mixins.ApprovableModelMixin.begin_approval_workflow")

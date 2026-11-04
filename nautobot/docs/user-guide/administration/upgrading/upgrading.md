@@ -61,11 +61,11 @@ See [Upgrading from Nautobot v2](from-v2/index.md). In general we would recommen
 
 ## Update Prerequisites to Required Versions
 
-Nautobot v3.0.0 and later requires the following:
+Nautobot v3.2.9 and later requires the following:
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
-| Python     | 3.10            |
+| Python     | 3.11            |
 | PostgreSQL | 14.0¹           |
 | Redis      | 4.0             |
 
@@ -85,8 +85,14 @@ As with all dependencies, we would recommend that you follow usual industry best
 --- 2.4.20 "Dropped support for Python 3.9"
     Support for Python 3.9 was removed.
 
+--- 2.4.46 "Dropped support for Python 3.10"
+    Support for Python 3.10 was removed.
+
 --- 3.1.0
     - Support for versions of PostgreSQL older than 14.0 was removed.
+
+--- 3.2.9 "Dropped support for Python 3.10"
+    Support for Python 3.10 was removed.
 
 Nautobot v1.1.0 and later can optionally support the following:
 

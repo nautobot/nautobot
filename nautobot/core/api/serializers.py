@@ -29,11 +29,13 @@ from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedFiel
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     get_brief_representation,
+    get_request_with_user,
     nested_serializer_factory,
     user_can_view_object,
 )
 from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
+from nautobot.core.models.querysets import restrict_queryset, restrict_related_lookups
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.utils.lookup import get_route_for_model
@@ -631,13 +633,8 @@ class ValidatedModelSerializer(BaseModelSerializer):
                 qs = ct_model.objects
                 # Layer view permission on top of the existence check when we have an authenticated
                 # request; programmatic use without a request still gets the existence check.
-                if (
-                    "request" in self.context
-                    and self.context["request"]
-                    and self.context["request"].user
-                    and hasattr(qs, "restrict")
-                ):
-                    qs = qs.restrict(self.context["request"].user, "view")
+                if request := get_request_with_user(self.context):
+                    qs = restrict_queryset(qs, request.user)
                 try:
                     qs.get(pk=fk)
                 except ObjectDoesNotExist as e:
@@ -666,7 +663,11 @@ class WritableNestedSerializer(BaseModelSerializer):
     """
 
     def get_queryset(self):
-        return self.Meta.model.objects
+        """The objects that may be referenced, limited to those the requesting user (if any) may view."""
+        queryset = self.Meta.model.objects
+        if request := get_request_with_user(self.context):
+            queryset = restrict_queryset(queryset, request.user)
+        return queryset
 
     def to_internal_value(self, data):
         if data is None:
@@ -684,6 +685,11 @@ class WritableNestedSerializer(BaseModelSerializer):
                     del params[field_name]
 
             queryset = self.get_queryset()
+            if request := get_request_with_user(self.context):
+                try:
+                    queryset = restrict_related_lookups(queryset, params, request)
+                except ValueError as e:
+                    raise ValidationError(str(e)) from e
             try:
                 return queryset.get(**params)
             except ObjectDoesNotExist:

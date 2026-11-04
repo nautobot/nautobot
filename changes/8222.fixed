@@ -1,1 +1,0 @@
-Fixed the Virtual Server REST API incorrectly requiring the `protocol` field.

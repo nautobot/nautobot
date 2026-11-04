@@ -1,1 +1,0 @@
-Fixed App metric functions being registered and evaluated during `nautobot-server migrate` and `post_upgrade` even when `METRICS_ENABLED` is `False`.

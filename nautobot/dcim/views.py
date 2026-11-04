@@ -1133,8 +1133,10 @@ class RackUIViewSet(NautobotUIViewSet):
 
         if self.action == "retrieve":
             # Get 0U and child devices located within the rack
-            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-                "device_type__manufacturer"
+            nonracked_devices = (
+                Device.objects.restrict(request.user, "view")
+                .filter(rack=instance, position__isnull=True)
+                .select_related("device_type__manufacturer")
             )
             nonracked_devices_table = tables.DeviceTable(nonracked_devices)
             paginate = {

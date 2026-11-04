@@ -1799,6 +1799,24 @@ properties:
     items:
       type: "integer"
     type: "array"
+  PERSISTENT_CACHE_TIMEOUT:
+    default: null
+    description: >-
+      The number of seconds before Nautobot's persistent caches expire.
+      When unset (`None`), these caches never expire and are refreshed only when their underlying data changes.
+    details: |-
+      Nautobot caches some frequently used, rarely changed data indefinitely and clears those caches whenever the
+      underlying data changes. This includes the custom fields, computed fields, relationships, metadata types,
+      and data validation rules that apply to each model, the choices for each select-type custom field, the Git
+      repositories that provide each type of content, and the maximum depth of each tree model.
+
+      Setting this to a number of seconds makes those cache entries also expire on their own. This is a safety net
+      for the rare case where a request reads the data while another request is still committing a change to it,
+      which can leave stale data in the cache until the next change. Most deployments can leave this unset; a
+      lower value means stale data is corrected sooner, at the cost of more frequent database queries.
+    environment_variable: "NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"
+    type: "integer"
+    version_added: "3.2.9"
   PLUGINS:
     default: []
     description: >-

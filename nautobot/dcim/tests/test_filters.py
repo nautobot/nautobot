@@ -3392,6 +3392,21 @@ class CableTypeTestCase(FilterTestCases.FilterTestCase):
                 CableType.objects.filter(a_connectors=F("b_connectors")),
             )
 
+    def test_is_multi_connector(self):
+        # The factory only produces multi-connector types; add a single-connector one so both branches match.
+        CableType.objects.create(name="Single connector 1x1", a_connectors=1, b_connectors=1, total_lanes=1)
+        multi_connector = Q(a_connectors__gt=1) | Q(b_connectors__gt=1)
+        with self.subTest("is_multi_connector: True"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_multi_connector": True}, self.queryset).qs,
+                CableType.objects.filter(multi_connector),
+            )
+        with self.subTest("is_multi_connector: False"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_multi_connector": False}, self.queryset).qs,
+                CableType.objects.exclude(multi_connector),
+            )
+
     def test_is_shuffle(self):
         with self.subTest("is_shuffle: True"):
             self.assertQuerySetEqualAndNotEmpty(

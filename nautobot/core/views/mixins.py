@@ -59,6 +59,7 @@ from nautobot.core.views.utils import (
     import_csv_helper,
     prepare_cloned_fields,
 )
+from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
@@ -498,6 +499,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             return NoteTable
         elif self.action == "changelog":
             return ObjectChangeTable
+        elif self.action == "data_compliance":
+            return DataComplianceTableTab
 
         if self.table_class is None:
             raise NotImplementedError(
@@ -1599,11 +1602,22 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
 class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     """
     UI Mixin for a DataCompliance to show up for a given object.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
     """
+
+    base_template: Optional[str] = None
 
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
-        return Response({})
+        model = self.get_queryset().model
+        data = {
+            "base_template": get_base_template(self.base_template, model),
+            "active_tab": "data_compliance",
+        }
+        return Response(data)
 
 
 class ObjectBulkRenameViewMixin(NautobotViewSetMixin):

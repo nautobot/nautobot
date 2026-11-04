@@ -104,6 +104,11 @@ KNOWN_N_PLUS_ONE = {
     # causes per-instance lookups when resolving the associated_object GenericForeignKey back to the concrete
     # model. Same root cause and fix approach as associated_object_metadata above.
     "static_group_association_set",
+    # TODO: GenericRelation to DataCompliance (via BaseModel.associated_data_compliance) loads each related object's
+    # `object_id` and `content_type` with a separate query, as graphene-django-optimizer leaves them out of the
+    # prefetch's `only()`. Exposed by the example app's data compliance rules, which create DataCompliance records
+    # whenever the test fixtures are generated.
+    "associated_data_compliance",
 }
 
 

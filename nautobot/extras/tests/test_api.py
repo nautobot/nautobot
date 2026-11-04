@@ -19,7 +19,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
 from nautobot.core.testing.utils import disable_warnings, get_deletable_objects
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -2604,6 +2604,8 @@ class JobTest(
             "var3": False,
             "var4": device_role.pk,
         }
+        # `var4` is an object variable, which only accepts objects the user may view
+        self.add_permissions("extras.view_role")
 
     @classmethod
     def setUpTestData(cls):
@@ -2674,6 +2676,15 @@ class JobTest(
         self.client.delete(url, **self.header)
         # assert Job still exists
         self.assertTrue(self._get_queryset().filter(name=job_name).exists())
+
+    def test_list_jobs_avoids_job_queues_n_plus_one(self):
+        """Serializing the jobs list must not query each Job's queues separately."""
+        self.add_permissions("extras.view_job")
+        self.assertGreater(Job.objects.count(), 10)
+        url = reverse("extras-api:job-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
     def test_get_job_variables(self):
         """Test the job/<pk>/variables API endpoint."""
@@ -3347,6 +3358,23 @@ class JobTest(
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {"errors": {"var5": ["Job data contained an unknown property"]}})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_run_job_with_unviewable_object(self):
+        """An object variable can't be given an object the user may not view, which is reported as nonexistent."""
+        self.add_permissions("extras.run_job")
+        self.remove_permissions("extras.view_role")
+        hidden_role = Role.objects.create(name="Hidden Job Role")
+        self.add_permissions("extras.view_role", constraints={"name": "Visible Job Role"})
+        url = self.get_run_url()
+
+        def errors_for(role_pk):
+            data = {"data": {**self.job_proper_data, "var4": str(role_pk)}}
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            return response.data
+
+        self.assertEqual(errors_for(hidden_role.pk), errors_for(uuid.uuid4()))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_run_job_with_missing_data(self):
@@ -4722,6 +4750,34 @@ class ScheduledJobTest(
             start_time=now(),
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_dry_run_requires_permission_to_view_the_scheduled_job(self):
+        """A scheduled job the user may not view can't be dry-run, and is reported as nonexistent."""
+        job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        job_model.enabled = True
+        job_model.validated_save()
+        owner = User.objects.create(username="scheduled-job-owner")
+        scheduled_jobs = {
+            name: ScheduledJob.objects.create(
+                name=name,
+                task="dry_run.TestDryRun",
+                job_model=job_model,
+                interval=JobExecutionType.TYPE_FUTURE,
+                user=owner,
+                start_time=now() + timedelta(days=1),
+            )
+            for name in ("Visible Scheduled Job", "Hidden Scheduled Job")
+        }
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob", constraints={"name": "Visible Scheduled Job"})
+
+        def dry_run(name):
+            url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": scheduled_jobs[name].pk})
+            return self.client.post(url, format="json", **self.header)
+
+        self.assertHttpStatus(dry_run("Hidden Scheduled Job"), status.HTTP_404_NOT_FOUND)
+        self.assertHttpStatus(dry_run("Visible Scheduled Job"), status.HTTP_200_OK)
+
 
 class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
     model = MetadataType
@@ -5076,6 +5132,11 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
             assigned_object_type=self.location_ct,
             assigned_object_id=self.location1.pk,
         )
+
+    def test_get_put_round_trip(self):
+        # The round-tripped note is another user's, whom `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable
+        self.add_permissions("users.view_user")
+        super().test_get_put_round_trip()
 
 
 class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):

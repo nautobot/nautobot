@@ -1,0 +1,1 @@
+Fixed the "Non-Racked Devices" table on the Rack detail view displaying devices that the user did not have permission to view.
