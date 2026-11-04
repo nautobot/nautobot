@@ -1,4 +1,4 @@
-"""Relationships: where an association shows on its peers' detail views, and the create form's symmetric-type behavior."""
+"""Test where a relationship association is displayed on the detail views of its two peers, and how the Relationship create form handles symmetric types."""
 
 import pytest
 
