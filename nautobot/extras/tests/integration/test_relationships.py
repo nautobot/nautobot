@@ -8,7 +8,7 @@ from nautobot.playwright.helpers import unique_name
 
 
 class RelationshipsTestCase:
-    """Relationship association placement and the Relationship create form."""
+    """Test which detail-view tab displays a relationship association, and test the Relationship create form."""
 
     @pytest.mark.behavioral
     def test_relationship_advanced_ui(self, auth_page, base_url, api, created_relationship):
