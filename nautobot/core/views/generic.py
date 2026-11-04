@@ -1227,6 +1227,8 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                         try:
                             for obj in selected_objects:
                                 obj.new_name = pattern.sub(replace, obj.name, timeout=timeout)
+                        except regex.error as e:
+                            form.add_error("replace", f"Invalid regex: {e}")
                         except TimeoutError:
                             form.add_error(
                                 "find",
