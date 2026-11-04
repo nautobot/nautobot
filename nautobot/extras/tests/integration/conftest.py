@@ -120,7 +120,7 @@ def content_type_id(api):
 
 @pytest.fixture
 def created_relationship(create_object):
-    """A one-to-one relationship from a manufacturer to a platform, with one association between two test-owned peers.
+    """A one-to-one relationship from a manufacturer to a platform, with one association between a manufacturer and a platform that this fixture creates.
 
     `advanced_ui` starts False, so the association shows on each peer's main tab.
     """
