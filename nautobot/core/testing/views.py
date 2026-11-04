@@ -377,12 +377,16 @@ class ViewTestCases:
             self.user.save()
             instance = self._get_queryset().first()
             detail_url = instance.get_absolute_url()
-            urls = [detail_url, *self._get_detail_extra_action_urls(detail_url).values()]
+            url_info = [
+                {"url": detail_url, "htmx_only": False},
+                *self._get_detail_extra_action_urls(detail_url).values(),
+            ]
 
-            for url in urls:
-                with self.subTest(url=url):
-                    response = self.client.get(url)
-                    if url == detail_url:
+            for info in url_info:
+                with self.subTest(url=info["url"]):
+                    headers = {"HX-Request": "true"} if info["htmx_only"] else {}
+                    response = self.client.get(info["url"], headers=headers)
+                    if info["url"] == detail_url:
                         self.assertHttpStatus(response, 200)
                     elif response.status_code != 200:
                         continue
@@ -391,18 +395,23 @@ class ViewTestCases:
                         query = parse_qs(urlsplit(html.unescape(href)).query, keep_blank_values=True)
                         if any(not return_url.startswith("/") for return_url in query.get("return_url", [])):
                             invalid_links.append(href)
-                    self.assertEqual(invalid_links, [], f"Links on {url} have a return_url without a path")
+                    self.assertEqual(invalid_links, [], f"Links on {info['url']} have a return_url without a path")
 
         @staticmethod
         def _get_detail_extra_action_urls(detail_url):
-            """Map each GET extra action of the viewset serving `detail_url` (its tabs) to that action's URL."""
+            """
+            For the viewset for `detail_url`, map each GET detail extra action name to the action's `url` and `htmx_only`.
+            """
             match = resolve(detail_url)
             view_class = getattr(match.func, "cls", None)
             if view_class is None or not hasattr(view_class, "get_extra_actions"):
                 return {}
             route_prefix = f"{match.namespace}:{match.url_name}"
             return {
-                extra_action.__name__: reverse(f"{route_prefix}_{extra_action.url_name}", kwargs=match.kwargs)
+                extra_action.__name__: {
+                    "url": reverse(f"{route_prefix}_{extra_action.url_name}", kwargs=match.kwargs),
+                    "htmx_only": extra_action.kwargs.get("htmx_only", False),
+                }
                 for extra_action in view_class.get_extra_actions()
                 if extra_action.detail and "get" in extra_action.mapping
             }
@@ -424,14 +433,16 @@ class ViewTestCases:
 
             app_label, model_name = self.model._meta.app_label, self.model._meta.model_name
             detail_templates = {f"{app_label}/{model_name}_retrieve.html", f"{app_label}/{model_name}.html"}
-            for action, url in self._get_detail_extra_action_urls(detail_url).items():
-                with self.subTest(action=action):
-                    response = self.client.get(url)
-                    self.assertHttpStatus(response, 200)
+            for action_name, info in self._get_detail_extra_action_urls(detail_url).items():
+                with self.subTest(action=action_name):
+                    headers = {"HX-Request": "true"} if info["htmx_only"] else {}
+                    response = self.client.get(info["url"], headers=headers)
+                    if response.status_code != 200:
+                        continue
                     # Only the top-level template matters; e.g. `generic/object_notes.html` extends the detail template
                     # as its base on purpose and overrides the content block.
                     self.assertNotIn(
-                        response.templates[0].name, detail_templates, f"{url} renders the `retrieve` template"
+                        response.templates[0].name, detail_templates, f"{info['url']} renders the `retrieve` template"
                     )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
@@ -480,7 +491,7 @@ class ViewTestCases:
                         ]
                         required_permissions += action_func.kwargs.get("custom_view_additional_permissions", [])
 
-                    headers = {"HX-Request": "true"} if action_func.url_name == "overview" else {}
+                    headers = {"HX-Request": "true"} if action_func.kwargs.get("htmx_only", False) else {}
 
                     try:
                         url = self._get_url(action_func.url_name, instance)

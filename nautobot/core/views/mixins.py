@@ -406,6 +406,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
     # custom view attributes used for permission checks and handling
     custom_view_base_action = None
     custom_view_additional_permissions = None
+    # Does this action only serve partial HTML fragments via HTMX, and reject non-HTMX requests?
+    htmx_only = False
 
     @staticmethod
     def instantiate_if_needed(attr, default_cls):
@@ -1631,7 +1633,7 @@ class ObjectOverviewViewMixin(NautobotViewSetMixin):
     overview_html = None
     overview_template_name = None
 
-    @drf_action(detail=True, custom_view_base_action="view")
+    @drf_action(detail=True, custom_view_base_action="view", htmx_only=True)
     def overview(self, request, *args, **kwargs):
         if request.headers.get("HX-Request", False):
             # Number of columns to skip and span, as sent by the toggle's `hx-vals`, defaulted when unusable
