@@ -349,7 +349,7 @@ class ArchiveOldRecords(Job):
         ]
         new_archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
 
-        # Parent, children and the delete together, so a batch either moves completely or not at all.
+        # Copy the parents first so that the archived children's foreign keys resolve. Each step commits on its own.
         with transaction.atomic():
             ArchivedJobResult.objects.bulk_create(
                 new_archived_job_results,
