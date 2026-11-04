@@ -49,7 +49,7 @@ def refresh_datasource_content(model_name, record, user, job_result, delete=Fals
     # callbacks will result in this task "failing successfully" by raising an
     # exception.
     failure_logs = job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_ERROR)
-    if job_result.use_job_logs_db:
+    if job_result.uses_job_logs_connection:
         failure_logs = failure_logs.using(JOB_LOGS)
     if failure_logs.exists():
         msg = f"Failed to refresh data provided by {record}. Please see logs."

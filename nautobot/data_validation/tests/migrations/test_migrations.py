@@ -385,7 +385,7 @@ class DVEToDataValidationMigrationTestCase(MigratorTestCase):
             _create_tables_mysql()
             _populate_tables_mysql(ContentType, DeviceType, VLAN)
         else:
-            raise ValueError(f"Unknown/unsupported database vendor {connection.vendor}")
+            self.skipTest(f"Database vendor {connection.vendor} is not supported by this test")
 
     def tearDown(self):
         super().tearDown()
@@ -433,7 +433,7 @@ class DataValidationToDVEMigrationTestCase(MigratorTestCase):
             _delete_tables_mysql()
             _create_tables_mysql()
         else:
-            raise ValueError(f"Unknown/unsupported database vendor {connection.vendor}")
+            self.skipTest(f"Database vendor {connection.vendor} is not supported by this test")
 
         ContentType = self.old_state.apps.get_model("contenttypes", "contenttype")
         DeviceType = self.old_state.apps.get_model("dcim", "devicetype")
