@@ -60,6 +60,12 @@ class ListPage(BasePage):
     _SELECT_ALL_BOX = "#select_all_box"
     _SELECT_ALL_CHECKBOX = "#select_all_box #select_all"
     _EDIT_ALL = "#select_all_box button[name='_edit']"
+    # In the select-all box, so it is enabled only once every matching record is selected. Rendered,
+    # with its modal, on every list whose model can be statically assigned to a dynamic group.
+    _UPDATE_GROUP_ASSIGNMENT_FOR_ALL = "#update_dynamic_groups_for_all"
+    _ASSIGNMENT_MODAL = "#dynamic_group_assignment_modal"
+    _ADD_TO_GROUPS = "select[name='add_to_groups']"
+    _ASSIGNMENT_APPLY = "#dynamic_group_assignment_form button[type='submit']"
     # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
@@ -207,6 +213,21 @@ class ListPage(BasePage):
         expect(box.locator("label")).to_contain_text(re.compile(rf"\ball {expected} "))
         self.page.locator(self._SELECT_ALL_CHECKBOX).check()
         expect(self.page.locator(self._EDIT_ALL)).to_be_enabled()
+
+    def assign_all_matching_to_group(self, group_name):
+        """Click "Update Group Assignment for All", add the selection to the group *group_name*, and apply.
+
+        Call `select_all_matching` first: the button is disabled until the select-all box is checked.
+        """
+        self.page.locator(self._UPDATE_GROUP_ASSIGNMENT_FOR_ALL).click()
+        expect(self.page.locator(self._ASSIGNMENT_MODAL)).to_be_visible()
+        self.page.locator(f"{self._ADD_TO_GROUPS} + span.select2-container").click()
+        # Select2 sizes this multi-select's search box while the modal is still hidden, so the box
+        # has no width and Playwright will not fill it. The click focuses it, so type instead.
+        self.page.keyboard.type(group_name)
+        self.page.locator(".select2-dropdown").get_by_text(group_name, exact=True).click()
+        expect(self.page.locator(f"{self._ADD_TO_GROUPS} option:checked", has_text=group_name)).to_have_count(1)
+        self._click_and_wait_for_navigation(self._ASSIGNMENT_APPLY)
 
     def click_edit_selected(self):
         """Click Edit Selected and wait for the bulk edit form to load."""

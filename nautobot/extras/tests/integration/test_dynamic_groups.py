@@ -3,9 +3,9 @@
 import pytest
 
 from nautobot.dcim.tests.integration.pages.device_detail_page import DeviceDetailPage
-from nautobot.extras.tests.integration.pages.device_group_assignment_page import DeviceGroupAssignmentPage
-from nautobot.extras.tests.integration.pages.dynamic_group_create_page import DynamicGroupFormPage
+from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
 from nautobot.extras.tests.integration.pages.dynamic_group_detail_page import DynamicGroupDetailPage
+from nautobot.extras.tests.integration.pages.dynamic_group_form_page import DynamicGroupFormPage
 from nautobot.playwright.helpers import unique_name
 
 
@@ -77,7 +77,7 @@ class DynamicGroupTestCase:
     ):
         """Update Group Assignment for All, on a filtered device list, assigns only the filtered devices."""
         first_devices = created_device_set["first_devices"]
-        devices = DeviceGroupAssignmentPage(auth_page, base_url)
+        devices = DevicesPage(auth_page, base_url)
         # One device per page, so the select-all box renders and the selection spans every page.
         devices.navigate(per_page=1)
         devices.open_filter_drawer()
