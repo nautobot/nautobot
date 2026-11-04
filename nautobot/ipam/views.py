@@ -1105,7 +1105,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         # cannot merge/delete IPAddresses the user has no object-level permission for.
         collapsed_ips = self.get_queryset().restrict(request.user, "delete").filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
-        operation_invalid = len(collapsed_ips) < 2
+        operation_invalid = collapsed_ips.count() < 2
         # Check if there are at least two IP addresses for us to merge
         # and if the skip button is pressed instead.
         if "_skip" not in request.POST and not operation_invalid:
@@ -1253,6 +1253,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(collapsed_ips, request, e)
+                    return redirect(self.get_return_url(request))
+                except IPAddress.DoesNotExist:
+                    messages.error(request, "Merge failed due to object-level permissions violation")
                     return redirect(self.get_return_url(request))
                 except IntegrityError as e:
                     # A collapsed IP is still referenced by a DEFERRABLE INITIALLY DEFERRED FK (e.g. a

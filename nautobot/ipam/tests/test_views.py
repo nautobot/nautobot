@@ -2052,8 +2052,8 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         num_before = IPAddress.objects.count()
         # Point a custom-field source at an IP that is not among the merge candidates.
         merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(external_ip.pk)}
-        with self.assertRaises(IPAddress.DoesNotExist):
-            self.client.post(self.merge_url, data=post_data(merge_data))
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
         # Nothing was merged or deleted.
         self.assertEqual(num_before, IPAddress.objects.count())
 
