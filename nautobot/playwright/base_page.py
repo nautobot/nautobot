@@ -69,8 +69,9 @@ class BasePage:
     # The footer opens the theme modal for a logged-in user. Each choice is a <dt> name and a <dd> button.
     _THEME_MODAL_BUTTON = "#btn-theme-modal"
     _THEME_MODAL = "#theme_modal"
-    _THEME_CHOICE_NAMES = "#theme_modal dl dt"
-    _THEME_CHOICE_BUTTON = "#theme_modal button[data-nb-theme]"
+    # Looked up inside the theme modal.
+    _THEME_CHOICE_NAMES = "dl dt"
+    _THEME_CHOICE_BUTTON = "button[data-nb-theme]"
     _THEME_MODAL_CANCEL = "#dismiss-modal-theme"
     # Bootstrap adds a backdrop to <body> while a modal is open.
     _MODAL_BACKDROP = ".modal-backdrop"
@@ -166,33 +167,38 @@ class BasePage:
     # Theme modal
     # -------------------------------------------------------------------------
 
+    def theme_modal(self):
+        """Locator for the theme modal."""
+        return self.page.locator(self._THEME_MODAL)
+
     def open_theme_modal(self):
         """Click the theme button in the footer."""
         self.page.locator(self._THEME_MODAL_BUTTON).click()
 
     def cancel_theme_modal(self):
         """Click the theme modal's Cancel button."""
-        self.page.locator(self._THEME_MODAL_CANCEL).click()
+        self.theme_modal().locator(self._THEME_MODAL_CANCEL).click()
 
-    def expect_theme_modal(self, is_open):
-        """Assert (auto-retrying) that the page's one theme modal is open with a backdrop, or closed without one."""
-        modal = self.page.locator(self._THEME_MODAL)
-        expect(modal).to_have_count(1)
-        if is_open:
-            expect(modal).to_be_visible()
-            expect(self.page.locator(self._MODAL_BACKDROP)).to_have_count(1)
-        else:
-            expect(modal).to_be_hidden()
-            expect(self.page.locator(self._MODAL_BACKDROP)).to_have_count(0)
+    def expect_theme_modal_open(self):
+        """Assert (auto-retrying) that the page has one theme modal and it is open, with a backdrop."""
+        expect(self.theme_modal()).to_have_count(1)
+        expect(self.theme_modal()).to_be_visible()
+        expect(self.page.locator(self._MODAL_BACKDROP)).to_have_count(1)
+
+    def expect_theme_modal_closed(self):
+        """Assert (auto-retrying) that the page has one theme modal and it is closed, with no backdrop."""
+        expect(self.theme_modal()).to_have_count(1)
+        expect(self.theme_modal()).to_be_hidden()
+        expect(self.page.locator(self._MODAL_BACKDROP)).to_have_count(0)
 
     def expect_theme_choices(self, names):
         """Assert (auto-retrying) that the theme modal offers exactly *names*, in order."""
-        expect(self.page.locator(self._THEME_CHOICE_NAMES)).to_have_text(names)
+        expect(self.theme_modal().locator(self._THEME_CHOICE_NAMES)).to_have_text(names)
 
     def expect_selected_theme(self, theme):
         """Assert (auto-retrying) that only the *theme* button (`light`, `dark` or `system`) is highlighted."""
         for class_name in ("border", "border-primary"):
-            highlighted = self.page.locator(f"{self._THEME_CHOICE_BUTTON}.{class_name}")
+            highlighted = self.theme_modal().locator(f"{self._THEME_CHOICE_BUTTON}.{class_name}")
             expect(highlighted).to_have_count(1)
             expect(highlighted).to_have_attribute("data-nb-theme", theme)
 
