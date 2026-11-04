@@ -74,8 +74,8 @@ class ArchiveOldRecords(Job):
         description = "This job will migrate the specified Model records to a separate table in order to enhance performance of the existing database."
         has_sensitive_variables = False
         dryrun_default = True
-        soft_time_limit = 60
-        time_limit = 66
+        soft_time_limit = 600
+        time_limit = 660
 
     def run(  # pylint: disable=arguments-differ
         self,
@@ -321,12 +321,18 @@ class ArchiveOldRecords(Job):
         Copy one batch of job results and their children into the archive, then delete the live parents.
 
         The order is forced by the schema. An archived child's foreign key needs its archived parent to
-        exist already, and deleting a live parent cascades its live children away before they can be read.
-        So parents are copied, then children, then the live parents are deleted and the cascade clears the
-        live children along with them.
+        exist already, so the parents are copied first. The children are then moved a chunk at a time,
+        and the live parents are deleted last, once their children are already gone.
 
-        The copy and the delete are one transaction, so a batch either moves completely or not at all.
-        No live record is deleted without its archived copy committed alongside it.
+        No step spans the whole batch. The parent copy, each chunk of children, and the parent delete
+        each commit on their own, which is what makes an interrupted run resumable: whatever was archived
+        has already left the live table, so the next run starts from the first chunk that did not make it
+        rather than working through the job result again. Re-copying a parent costs nothing, because the
+        archived copy keeps the primary key it had live and is overwritten rather than duplicated.
+
+        The children are chunked because one job result can carry tens of thousands of entries, so the
+        parent batch size says nothing about how much work a batch is. Committing per chunk bounds the
+        transaction as well as the memory.
 
         Args:
             job_result_batch (list of JobResult): Live `JobResult` records to archive.
@@ -352,9 +358,10 @@ class ArchiveOldRecords(Job):
                 unique_fields=["id"],
             )
 
-            archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
-            archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
+        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
+        archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
 
+        with transaction.atomic():
             deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
 
         self.logger.debug(
@@ -372,18 +379,23 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     def _archive_job_log_entry(self, job_result_pks, batch_size):
         """
-        Copy the job results' `JobLogEntry` records into the archive, a bounded chunk at a time.
+        Move the job results' `JobLogEntry` records into the archive, a bounded chunk at a time.
 
         Chunked separately from the parent batch because the log entries are unbounded: a single job
         result can carry tens of thousands of them, so a batch of parents says nothing about how many
         log entries come with it.
 
+        Each chunk is copied and deleted in one transaction, committed before the next chunk is read. A
+        run that dies part way through therefore leaves the chunks it finished already archived and gone
+        from the live table, and the next run reads only what is left instead of working through records
+        it has already moved.
+
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose log entries are archived.
-            batch_size (int): Records to hold in memory and insert at a time.
+            batch_size (int): Records to hold in memory, insert and delete at a time.
 
         Returns:
-            (int): Job log entries copied into the archive.
+            (int): Job log entries archived and removed from the live table.
         """
         archived_job_log_entry_update_fields = [
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
@@ -397,12 +409,16 @@ class ArchiveOldRecords(Job):
             job_log_entry_chunk = list(islice(streamed_job_log_entries, batch_size))
             if not job_log_entry_chunk:
                 break
-            ArchivedJobLogEntry.objects.bulk_create(
-                [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
-                update_conflicts=True,
-                update_fields=archived_job_log_entry_update_fields,
-                unique_fields=["id"],
-            )
+
+            with transaction.atomic():
+                ArchivedJobLogEntry.objects.bulk_create(
+                    [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
+                    update_conflicts=True,
+                    update_fields=archived_job_log_entry_update_fields,
+                    unique_fields=["id"],
+                )
+                JobLogEntry.objects.filter(pk__in=[job_log_entry.pk for job_log_entry in job_log_entry_chunk]).delete()
+
             archived_job_log_entry_count += len(job_log_entry_chunk)
 
         return archived_job_log_entry_count
@@ -412,18 +428,23 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     def _archive_job_console_entry(self, job_result_pks, batch_size):
         """
-        Copy the job results' `JobConsoleEntry` records into the archive, a bounded chunk at a time.
+        Move the job results' `JobConsoleEntry` records into the archive, a bounded chunk at a time.
 
         Chunked separately from the parent batch because the console entries are unbounded: a single job
         result can carry tens of thousands of them, so a batch of parents says nothing about how many
         console entries come with it.
 
+        Each chunk is copied and deleted in one transaction, committed before the next chunk is read. A
+        run that dies part way through therefore leaves the chunks it finished already archived and gone
+        from the live table, and the next run reads only what is left instead of working through records
+        it has already moved.
+
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose console entries are archived.
-            batch_size (int): Records to hold in memory and insert at a time.
+            batch_size (int): Records to hold in memory, insert and delete at a time.
 
         Returns:
-            (int): Job console entries copied into the archive.
+            (int): Job console entries archived and removed from the live table.
         """
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
@@ -437,15 +458,21 @@ class ArchiveOldRecords(Job):
             job_console_entry_chunk = list(islice(streamed_job_console_entries, batch_size))
             if not job_console_entry_chunk:
                 break
-            ArchivedJobConsoleEntry.objects.bulk_create(
-                [
-                    ArchivedJobConsoleEntry.from_job_console_entry(job_console_entry)
-                    for job_console_entry in job_console_entry_chunk
-                ],
-                update_conflicts=True,
-                update_fields=archived_job_console_entry_update_fields,
-                unique_fields=["id"],
-            )
+
+            with transaction.atomic():
+                ArchivedJobConsoleEntry.objects.bulk_create(
+                    [
+                        ArchivedJobConsoleEntry.from_job_console_entry(job_console_entry)
+                        for job_console_entry in job_console_entry_chunk
+                    ],
+                    update_conflicts=True,
+                    update_fields=archived_job_console_entry_update_fields,
+                    unique_fields=["id"],
+                )
+                JobConsoleEntry.objects.filter(
+                    pk__in=[job_console_entry.pk for job_console_entry in job_console_entry_chunk]
+                ).delete()
+
             archived_job_console_entry_count += len(job_console_entry_chunk)
 
         return archived_job_console_entry_count

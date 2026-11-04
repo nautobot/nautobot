@@ -1781,6 +1781,58 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             ArchivedJobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), console_entry_count
         )
 
+    def test_an_interrupted_child_archival_resumes_from_where_it_stopped(self):
+        """
+        Each chunk of children is copied and deleted in one committed transaction, which is what lets a
+        failed run be picked up rather than repeated.
+
+        The failure is injected into the third chunk, so two chunks have already committed when it
+        raises. What the second run must not do is work through those two again, and what neither run
+        may do is lose a record in between: every entry is either archived or still live at all times.
+        """
+        log_entry_count = 10
+        failing_chunk_number = 3
+        committed_chunk_count = failing_chunk_number - 1
+        archive_failure_message = "Archive Unavailable"
+
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=log_entry_count)
+
+        attempted_chunk_count = 0
+        unpatched_bulk_create = ArchivedJobLogEntry.objects.bulk_create
+
+        def fail_on_the_third_chunk(*args, **kwargs):
+            nonlocal attempted_chunk_count
+            attempted_chunk_count += 1
+            if attempted_chunk_count == failing_chunk_number:
+                raise RuntimeError(archive_failure_message)
+            return unpatched_bulk_create(*args, **kwargs)
+
+        with mock.patch.object(ArchivedJobLogEntry.objects, "bulk_create", side_effect=fail_on_the_third_chunk):
+            interrupted_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
+
+        self.assertJobResultStatus(interrupted_job_result, JobResultStatusChoices.STATUS_FAILURE)
+
+        archived_before_the_failure = ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count()
+        still_live_after_the_failure = JobLogEntry.objects.filter(job_result_id=old_job_result.pk).count()
+        # The chunks that committed are in the archive and gone from the live table; the rest are untouched.
+        self.assertEqual(archived_before_the_failure, committed_chunk_count * SMALL_ARCHIVE_BATCH_SIZE)
+        self.assertEqual(archived_before_the_failure + still_live_after_the_failure, log_entry_count)
+        # The parent survives, so its remaining children are still reachable on the next run.
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+
+        resumed_job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
+
+        self.assertJobResultStatus(resumed_job_result)
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), log_entry_count)
+        self.assertFalse(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).exists())
+        # The count the second run reports is the remainder, not the whole job result over again.
+        expected_resumed_message = f"Archived 1 job results with {still_live_after_the_failure} log entries"
+        resumed_job_log_messages = self.get_job_log_messages(resumed_job_result)
+        self.assertTrue(
+            any(expected_resumed_message in message for message in resumed_job_log_messages),
+            resumed_job_log_messages,
+        )
+
     def test_every_archived_job_result_field_matches_every_job_result_field(self):
         """
         `user_name` is excluded because it has no live counterpart; it is covered by its own test.
