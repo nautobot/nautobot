@@ -14,7 +14,7 @@ class RelationshipPeerDetailPage(DetailPage):
     _RELATIONSHIPS_PANEL = "Relationships"
 
     def _relationship_rows_showing(self, tab_id, side_label, peer_name):
-        """Locator for rows of the Relationships panel in *tab_id* whose key is *side_label* and whose value shows *peer_name*.
+        """Locator for the rows of the Relationships panel in tab *tab_id* whose text contains both *side_label* and *peer_name*.
 
         Every relationship on the object is a row in the same panel, so the panel's
         presence alone does not show that this test's association is in it.
