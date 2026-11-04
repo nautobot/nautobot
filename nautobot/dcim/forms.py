@@ -4732,6 +4732,7 @@ class CableForm(NautobotModelForm):
                 "connector": conn["connector"],
                 "lanes": conn["lanes"],
                 "type_field": self[meta["type_field"]],
+                "location_field": self[meta["location_field"]],
                 "parent_field": self[meta["parent_field"]],
                 "term_field": self[meta["term_field"]],
             }

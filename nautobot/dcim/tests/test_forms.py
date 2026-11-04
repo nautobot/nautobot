@@ -903,30 +903,37 @@ class CableTerminationFieldSetTestCase(TestCase):
             CableTerminationFieldSet().get_fields("test", term_type="not_a_real_type")
 
     def test_get_fields_default_shape(self):
-        """With no args, get_fields() returns three fields plus a meta dict for the Interface default."""
+        """With no args, get_fields() returns four fields plus a meta dict for the Interface default."""
         result = CableTerminationFieldSet().get_fields("a_conn_1")
         self.assertEqual(set(result.keys()), {"fields", "initial", "meta"})
         self.assertEqual(
             set(result["fields"].keys()),
-            {"a_conn_1_type", "a_conn_1_parent", "a_conn_1_termination"},
+            {"a_conn_1_type", "a_conn_1_location", "a_conn_1_parent", "a_conn_1_termination"},
         )
         # The type field initial reflects the auto-detected default.
         self.assertEqual(result["initial"]["a_conn_1_type"], "interface")
         # The parent field's queryset model defaults to Device (interface is Device-parented).
         self.assertIs(result["fields"]["a_conn_1_parent"].queryset.model, Device)
-        # No existing termination means no parent/term pre-population.
+        # The location field narrows the parent dropdown and is limited to device-capable locations.
+        self.assertIs(result["fields"]["a_conn_1_location"].queryset.model, Location)
+        self.assertEqual(result["fields"]["a_conn_1_location"].query_params["content_type"], "dcim.device")
+        self.assertEqual(result["fields"]["a_conn_1_parent"].query_params["location"], "$a_conn_1_location")
+        # No existing termination means no location/parent/term pre-population.
+        self.assertNotIn("a_conn_1_location", result["initial"])
         self.assertNotIn("a_conn_1_parent", result["initial"])
         self.assertNotIn("a_conn_1_termination", result["initial"])
         # Meta carries the resolved term_type and field-name mapping.
         self.assertEqual(result["meta"]["term_type"], "interface")
         self.assertEqual(result["meta"]["type_field"], "a_conn_1_type")
+        self.assertEqual(result["meta"]["location_field"], "a_conn_1_location")
         self.assertEqual(result["meta"]["parent_field"], "a_conn_1_parent")
         self.assertEqual(result["meta"]["term_field"], "a_conn_1_termination")
 
     def test_get_fields_prepopulates_from_existing_term(self):
-        """An existing termination pre-fills parent and termination initial values."""
+        """An existing termination pre-fills location, parent and termination initial values."""
         result = CableTerminationFieldSet().get_fields("a_conn_1", existing_term=self.interface)
         self.assertEqual(result["initial"]["a_conn_1_type"], "interface")
+        self.assertEqual(result["initial"]["a_conn_1_location"], self.device.location.pk)
         self.assertEqual(result["initial"]["a_conn_1_parent"], self.device.pk)
         self.assertEqual(result["initial"]["a_conn_1_termination"], self.interface.pk)
 
