@@ -41,6 +41,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
+from nautobot.dcim.forms import LocationFilterForm
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -689,7 +690,30 @@ class SearchContentTypeView(TestCase):
         )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<label for="embedded_id_q">Search:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_renders_q_field_last(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertHttpStatus(response, 200)
+        rendered_fields = re.findall(r'id="embedded_id_([^"]+)"', response.content.decode(response.charset))
+        self.assertIn("q", rendered_fields)
+        self.assertEqual(rendered_fields[-1], "q")
+
+    def test_search_content_type_renders_no_q_field_when_filter_form_has_none(self):
+        base_fields = LocationFilterForm.base_fields  # pylint: disable=no-member
+        base_fields_without_q = {name: field for name, field in base_fields.items() if name != "q"}
+        with mock.patch.object(LocationFilterForm, "base_fields", base_fields_without_q):
+            response = self.client.get(
+                reverse("search_content_type", kwargs={"content_type": "dcim.location"}),
+                headers={"HX-Request": "true"},
+            )
+        self.assertHttpStatus(response, 200)
+        rendered_fields = re.findall(r'id="embedded_id_([^"]+)"', response.content.decode(response.charset))
+        self.assertIn("location_type", rendered_fields)
+        self.assertNotIn("q", rendered_fields)
 
     def test_search_content_type_with_initial_value(self):
         location_type = LocationType.objects.create(name="Test Location Type")
@@ -1154,6 +1178,15 @@ class FilterFormsTestCase(TestCase):
 
         response = self.client.get(reverse("circuits:circuit_list"))
         self.assertBodyContains(response, filter_tabs, html=True)
+
+    def test_filter_form_drawer_does_not_render_q_field(self):
+        """Assert the filter form drawer omits the `q` field, which only the object embedded search form renders."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(reverse("dcim:location_list"))
+        self.assertHttpStatus(response, 200)
+        rendered_fields = re.findall(r'id="id_([^"]+)"', extract_page_body(response.content.decode(response.charset)))
+        self.assertIn("location_type", rendered_fields)
+        self.assertNotIn("q", rendered_fields)
 
     def test_filtering_on_custom_select_filter_field(self):
         """Assert CustomField select and multiple select fields can be filtered using multiple entries"""
