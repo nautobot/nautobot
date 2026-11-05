@@ -389,9 +389,7 @@ class ViewTestCases:
 
         @staticmethod
         def _get_detail_extra_action_urls(detail_url):
-            """
-            For the viewset for `detail_url`, map each GET detail extra action name to the action's `url` and `htmx_only`.
-            """
+            """Map each GET extra action of the viewset serving `detail_url` (its tabs) to that action's URL."""
             match = resolve(detail_url)
             view_class = getattr(match.func, "cls", None)
             if view_class is None or not hasattr(view_class, "get_extra_actions"):
