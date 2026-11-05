@@ -1857,7 +1857,7 @@ $nb-toast-variants: (
 
 .nb-tag-link {
   $nb-tag-link-min-height: 1.5rem; /* 24px, required to comply with WCAG 2.2 SC 2.5.8 Target Size (Minimum) */
-  $nb-tag-link-line-height: $line-height-base * $font-size-base; /* 20.125px, used in negative margin to prevent tag link margin box from exceeding its line height. */
+  $nb-tag-link-line-height: $line-height-base * $font-size-base; /* 20.125px. The negative `margin-block` below uses this value so that the tag link's margin box is no taller than the line height. */
   $nb-tag-link-padding-block: ($nb-tag-link-min-height - $badge-font-size - $badge-padding-y * 2) * 0.5; /* 3px */
 
   display: inline-flex;
