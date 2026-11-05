@@ -609,12 +609,10 @@ class JobTransactionTest(TransactionTestCase):
         )
         self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
         instance = Job.objects.get(job_class_name=job_class_to_test)
         self.assertEqual(instance.description, job_description)
         self.assertEqual(instance.default_job_queue, default_job_queue)
@@ -653,12 +651,10 @@ class JobTransactionTest(TransactionTestCase):
         )
         self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
 
         instance = Job.objects.get(job_class_name=job_class_to_test)
         self.assertEqual(instance.description, job_description)
@@ -821,7 +817,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 3, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
@@ -839,7 +835,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 3, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
@@ -857,7 +853,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 3, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
@@ -875,7 +871,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 3, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
@@ -893,7 +889,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 2, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
@@ -910,7 +906,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 2, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
@@ -927,7 +923,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 2, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
@@ -944,7 +940,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 2, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
