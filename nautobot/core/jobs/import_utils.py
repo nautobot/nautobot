@@ -74,21 +74,31 @@ def _is_queryset_lookup(queryset, lookup):
 
 
 def _get_match_filter(serializer, field, value):
-    """Return the queryset filter for one match field, from `serializer.get_import_match_filter()` if it exists."""
+    """
+    Return the queryset filter for one match field, from `serializer.get_import_match_filter()` if it exists.
+
+    Args:
+        serializer (ModelSerializer): The serializer instance to query, if possible
+        field (str): The name of a specific serializer field
+        value (Any): The value of the serializer field for a given record
+
+    Returns:
+        (dict): ORM `filter()` parameter(s) and their corresponding value(s) to filter the serializer's model by.
+    """
     if hasattr(serializer, "get_import_match_filter"):
         return serializer.get_import_match_filter(field, value)
     # The serializer isn't derived from `BaseModelSerializer` (for example, `CablePathSerializer`),
     # so filter on the field's source directly.
-    return {serializer.fields[field].source.replace(".", "__"): value}
+    return {serializer.fields[field].source.replace(".", LOOKUP_SEP): value}
 
 
-def _is_sensitive_lookup(model, lookup):
+def _does_lookup_contain_sensitive_field(model, lookup):
     """Whether `lookup` ends on a field that its model declares in `sensitive_fields`.
 
     Example:
-        >>> _is_sensitive_lookup(User, "password")
+        >>> _does_lookup_contain_sensitive_field(User, "password")
         True
-        >>> _is_sensitive_lookup(IPAddress, "parent__namespace")
+        >>> _does_lookup_contain_sensitive_field(IPAddress, "parent__namespace")
         False
     """
     *relations, field_name = lookup.split(LOOKUP_SEP)
@@ -131,7 +141,7 @@ def _unusable_match_fields(match_fields, serializer):
             continue
         lookups = _get_match_filter(serializer, field, None)
         if not all(_is_queryset_lookup(queryset, lookup) for lookup in lookups) or any(
-            _is_sensitive_lookup(model, lookup) for lookup in lookups
+            _does_lookup_contain_sensitive_field(model, lookup) for lookup in lookups
         ):
             unusable.append(field)
     return unusable
@@ -160,7 +170,7 @@ def natural_key_match_fields(model, serializer_class):
             return None
         match_fields = []
         for lookup in lookups:
-            head = _row_key(lookup.split("__", 1)[0])
+            head = _row_key(lookup.split(LOOKUP_SEP, 1)[0])
             if head not in match_fields:
                 match_fields.append(head)
     if _unusable_match_fields(match_fields, _match_serializer(serializer_class)):
@@ -333,7 +343,7 @@ def change_snapshot(serializer_class, instance):
         key: value
         for key, value in serializer.data.items()
         # A related field is exported as its natural-key lookups (`location__name`), named for the field
-        if not getattr(fields.get(key.split("__", 1)[0]), "read_only", False)
+        if not getattr(fields.get(key.split(LOOKUP_SEP, 1)[0]), "read_only", False)
     }
 
 
@@ -378,7 +388,7 @@ def format_change_diff(before, changed, sensitive_fields=(), write_only_fields=(
 
     def display(field, value):
         # A relation's natural-key lookup reads CSV_NO_OBJECT, whatever the import format, when it has no object
-        if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
+        if value is None or value == "" or (LOOKUP_SEP in field and value == CSV_NO_OBJECT):
             return "∅"
         if isinstance(value, (list, dict)):
             value = json.dumps(value, default=str, ensure_ascii=False)

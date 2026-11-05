@@ -9,6 +9,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
 from django.db import models
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related_descriptors import ManyToManyDescriptor, ReverseManyToOneDescriptor
 from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
@@ -141,7 +142,7 @@ class OptInFieldsMixin:
             # so that mixin-injected fields (tags, custom_fields, ...) are restricted as well.
             export_fields = self.context.get("export_fields")
             if export_fields and not getattr(self, "is_nested", False):
-                selected_heads = {path.split("__", 1)[0] for path in export_fields}
+                selected_heads = {path.split(LOOKUP_SEP, 1)[0] for path in export_fields}
                 if any(head.startswith("cf_") for head in selected_heads):
                     selected_heads.add("custom_fields")
                 fields = {name: field for name, field in fields.items() if name in selected_heads}
@@ -217,10 +218,17 @@ class NaturalKeyRepresentationMixin:
         if not explicitly stated. Omitting this field from the default export is desirable because a change to the
         `namespace` (rather than an explicit change of `parent`) is the more common use case when updating an
         IPAddress via import/export.
+
+        Returns:
+            (set): Either an empty set or the set of field names in `Meta.derived_fields_omitted_from_default_export`.
         """
-        if not self._for_import_export or self.is_nested or self.context.get("export_fields"):
-            return set()
-        return set(getattr(self.Meta, "derived_fields_omitted_from_default_export", ()))
+        omitted_fields = []
+        # Are we a non-nested export serializer at all?
+        if self._for_import_export and not self.is_nested:
+            # Were no explicit export_fields specified, which would take precedence over the default?
+            if not self.context.get("export_fields"):
+                omitted_fields = getattr(self.Meta, "derived_fields_omitted_from_default_export", [])
+        return set(omitted_fields)
 
     def _get_query_path_for_field_path(self, lookup_field):
         """Translate a serializer-field path to the equivalent ORM query path.
@@ -237,8 +245,14 @@ class NaturalKeyRepresentationMixin:
         Examples:
             >>> IPAddressSerializer()._get_query_path_for_field_path("namespace__name")
             'parent__namespace__name'
+
+        Args:
+            lookup_field (str): A serializer field lookup, such as "name" or "namespace__name".
+
+        Returns:
+            (str): The equivalent ORM query path, such as "name" or "parent__namespace__name".
         """
-        head, separator, rest = lookup_field.partition("__")
+        head, separator, rest = lookup_field.partition(LOOKUP_SEP)
         query_paths = getattr(self.Meta, "related_field_query_paths", {})
         if head in query_paths:
             return f"{query_paths[head]}{separator}{rest}"
@@ -251,7 +265,8 @@ class NaturalKeyRepresentationMixin:
             >>> self._resolve_lookup_field("device__location__name")
             <django.db.models.fields.CharField: name>
         """
-        *field_names, lookup = self._get_query_path_for_field_path(lookup_field).split("__")
+        query_path = self._get_query_path_for_field_path(lookup_field)
+        *field_names, lookup = query_path.split(LOOKUP_SEP)
         model = self.Meta.model
         for field_component in field_names:
             model = model._meta.get_field(field_component).remote_field.model
@@ -273,8 +288,9 @@ class NaturalKeyRepresentationMixin:
         # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
         output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
 
-        *field_names, _lookup = self._get_query_path_for_field_path(lookup_field).split("__")
-        field_name = "__".join(field_names)
+        query_path = self._get_query_path_for_field_path(lookup_field)
+        *field_names, _lookup = query_path.split(LOOKUP_SEP)
+        field_name = LOOKUP_SEP.join(field_names)
         return field_name, output_field
 
     def _build_query_case_for_natural_key_field_lookup(self, lookups):
@@ -368,24 +384,32 @@ class NaturalKeyRepresentationMixin:
         retrieves the natural_key_field_lookups for each related model, and prepends the field name
         to create a list of field lookups.
 
+        Returns:
+            (list): ORM field lookups (query paths) for the natural keys of relevant related models.
+
         Examples:
-            >>> # Example usage on Device
-            >>> self._get_related_fields_natural_key_field_lookups()
+            >>> DeviceSerializer()._get_related_fields_natural_key_field_lookups()
             [
-                "tenant__name",
-                "status__name",
+                "parent_bay__device__name",
+                "parent_bay__device__tenant__name",
+                "parent_bay__device_location_name",
+                ...
                 "role__name",
+                "tenant__name",
+                "platform__name",
                 "location__name",
                 "location__parent__name",
                 "location__parent__parent__name"
                 ...
+                "primary_ip4__parent__namespace__name",
+                "primary_ip4__host",
+                ...
             ]
-
         """
         model = self.Meta.model
         field_lookups = []
         export_fields = self.context.get("export_fields") if not self.is_nested else None
-        selected_heads = {path.split("__", 1)[0] for path in export_fields} if export_fields else None
+        selected_heads = {path.split(LOOKUP_SEP, 1)[0] for path in export_fields} if export_fields else None
         # NOTE: one-to-many fields field are ignored in csv export
         relations = [
             (field.name, field.related_model)
@@ -396,16 +420,22 @@ class NaturalKeyRepresentationMixin:
             # Ignore GenericRel since its `fk` and `content_type` would be used.
             and not isinstance(field, GenericRel)
         ]
+        # Serializers can specify `Meta.related_field_query_paths` for serializer relation fields that require
+        # a different ORM query path to resolve the releated model. Add those special cases to the relations list:
         relations.extend(
             (name, self._resolve_lookup_field(f"{name}__pk").model)
             for name in getattr(self.Meta, "related_field_query_paths", {})
         )
+        # In some cases (see `_get_fields_omitted_from_export()`) we may want to omit some fields from the export,
+        # even in the "default" case where `export_fields` is None.
         omitted_fields = self._get_fields_omitted_from_export()
         # Get each related field model's natural_key_fields and prepend field name
         for name, related_model in relations:
             if name in omitted_fields:
+                # Implicitly excluded from the export
                 continue
             if selected_heads is not None:
+                # Explicit `export_fields` was supplied, so skip over fields that aren't included in that list.
                 if name not in selected_heads:
                     continue
                 # Nested paths (e.g. `device_type__manufacturer__name`) are exported as named; the relation's
@@ -586,7 +616,7 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
         Returns:
             (dict): Filter parameter(s) and corresponding value(s) to filter the model's queryset on.
         """
-        return {self._get_query_path_for_field_path(self.fields[field_name].source.replace(".", "__")): value}
+        return {self._get_query_path_for_field_path(self.fields[field_name].source.replace(".", LOOKUP_SEP)): value}
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):
