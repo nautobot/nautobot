@@ -1401,6 +1401,9 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     def setUp(self):
         super().setUp()
 
+        # The job refuses to run without this, because archiving deletes the records it copies.
+        self.add_permissions("extras.delete_objectchange")
+
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing
         ObjectChange.objects.all().delete()
@@ -1595,6 +1598,22 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
+    def test_a_user_without_delete_permission_fails_the_job(self):
+        """`restrict()` alone would archive nothing and still report success, so the job asks outright."""
+        self.user.object_permissions.clear()
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_permission_message_exist = any(
+            "does not have permission to delete ObjectChange records" in message
+            for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_permission_message_exist)
+
     def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
         """
         `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
@@ -1638,6 +1657,10 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
 
     def setUp(self):
         super().setUp()
+
+        # The job refuses to run without this, because archiving deletes the records it copies. The child
+        # entries need no permission of their own; they go wherever their job result goes.
+        self.add_permissions("extras.delete_jobresult")
 
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing. Deleting the parents takes their log and console entries with them.
@@ -1945,6 +1968,24 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             for field in type(archived_entry)._meta.fields:
                 with self.subTest(model=type(archived_entry).__name__, field=field.name):
                     self.assertEqual(getattr(archived_entry, field.attname), getattr(live_entry, field.attname))
+
+    def test_a_user_without_delete_permission_fails_the_job(self):
+        """`restrict()` alone would archive nothing and still report success, so the job asks outright."""
+        self.user.object_permissions.clear()
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
+        # The children are still live too, because nothing was deleted.
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+        does_permission_message_exist = any(
+            "does not have permission to delete JobResult records" in message
+            for message in self.get_job_log_messages(archive_job_result)
+        )
+        self.assertTrue(does_permission_message_exist)
 
     def test_job_results_that_have_not_finished_are_not_archived(self):
         """

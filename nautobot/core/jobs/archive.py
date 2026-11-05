@@ -1,6 +1,7 @@
 from datetime import timedelta
 import math
 
+from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
 from django.db.models.signals import pre_delete
 from django.utils import timezone
@@ -100,6 +101,19 @@ class ArchiveOldRecords(Job):
         """
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
 
+        # `restrict()` is used in object select during the run of this job, however it only narrows
+        # each queryset to the records this user may delete. And, it does this silently. A user with
+        # no delete permission gets an empty queryset and would be a successful run.
+        # Permissions are checked up front in order to loudly fail for a clearer user experience
+        if self.user is None:
+            raise PermissionDenied(f"{JOB_NAME} deletes records and requires a user, but this run has none")
+        if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.delete_objectchange"):
+            self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
+            raise PermissionDenied("User does not have delete permissions for ObjectChange records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobresult"):
+            self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
+            raise PermissionDenied("User does not have delete permissions for JobResult records")
+
         archived_record_counts = {
             OBJECT_CHANGE_LABEL: 0,
             JOB_RESULT_LABEL: 0,
@@ -151,7 +165,9 @@ class ArchiveOldRecords(Job):
             (dict): Archived record count keyed by model label, or on a dry run the count a real run
                 would archive. Always carries the `extras.objectchange` key.
         """
-        object_changes_to_archive = ObjectChange.objects.filter(time__lt=threshold_timestamp).order_by("time")
+        object_changes_to_archive = (
+            ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=threshold_timestamp).order_by("time")
+        )
 
         if dryrun:
             object_change_count = object_changes_to_archive.count()
@@ -238,7 +254,9 @@ class ArchiveOldRecords(Job):
                 unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
             )
 
-            deleted_count, _ = ObjectChange.objects.filter(pk__in=object_changes_to_archive_pks).delete()
+            deleted_count, _ = (
+                ObjectChange.objects.restrict(self.user, "delete").filter(pk__in=object_changes_to_archive_pks).delete()
+            )
         self.logger.debug(
             "Archived %d and deleted %d live ObjectChange rows", len(object_changes_to_archive_pks), deleted_count
         )
@@ -273,7 +291,8 @@ class ArchiveOldRecords(Job):
         """
         # Only job results that are done can be archived
         job_results_to_archive = (
-            JobResult.objects.filter(
+            JobResult.objects.restrict(self.user, "delete")
+            .filter(
                 date_done__lt=threshold_timestamp,
                 status__in=JobResultStatusChoices.READY_STATES,
                 # TODO: Add optional flag to include files, otherwise default to leaving the JobResult unarchived
@@ -398,7 +417,7 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
         archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
 
-        deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
+        deleted_count, _ = JobResult.objects.restrict(self.user, "delete").filter(pk__in=job_result_pks).delete()
 
         self.logger.debug(
             "Archived %d job results with %d log entries and %d console entries, and deleted %d live rows",
@@ -414,7 +433,7 @@ class ArchiveOldRecords(Job):
             JOB_CONSOLE_ENTRY_LABEL: archived_job_console_entry_count,
         }
 
-        return archival_result_count
+        return archived_job_result_count
 
     # --------------------------------------------------------------------------
     # Job Log Entry
@@ -442,6 +461,10 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_update_fields = [
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
         ]
+        # `job_result_pks` came from a queryset already filtered by the user who is running this. The
+        # returned query set is what `JobResults` they are allowed to delete. This means the available
+        # set of `JobResults` that is used to filter here have already been filtered with respect to user
+        # permission and that the filter does not need to be performed again.
         job_log_entries = JobLogEntry.objects.filter(job_result_id__in=job_result_pks)
 
         archived_job_log_entry_count = 0
@@ -491,6 +514,10 @@ class ArchiveOldRecords(Job):
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
+        # `job_result_pks` came from a queryset already filtered by the user who is running this. The
+        # returned query set is what `JobResults` they are allowed to delete. This means the available
+        # set of `JobResults` that is used to filter here have already been filtered with respect to user
+        # permission and that the filter does not need to be performed again.
         job_console_entries = JobConsoleEntry.objects.filter(job_result_id__in=job_result_pks)
 
         archived_job_console_entry_count = 0
