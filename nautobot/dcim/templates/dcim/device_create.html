@@ -148,6 +148,10 @@
             const software_image_url = '{% url 'dcim-api:softwareimagefile-list' %}';
 
             const getSelectField = (name) => $(`select${window.nb.form.getFieldAutoId('{{ form.auto_id }}', name)}`);
+            const selectedText = (name) => getSelectField(name).find(':selected')[0].text;
+
+            // Option text comes from user-editable names, so it is only ever inserted as text.
+            const boldText = (text) => window.nb.utils.createElement('b', {className: 'text-nowrap'}, text);
 
             function retrieve_software_images(software_version_id, device_type_id) {
                 $.when(
@@ -156,14 +160,15 @@
                 ).then(
                     (device_type_images, default_image) => {
                         if (default_image[0].count == 0 && device_type_images[0].count == 0) {
-                            software_version_image_description.innerHTML = `
-                                No software images found for device type <b class="text-nowrap">${getSelectField('device_type').find(':selected')[0].text}</b>
-                            `;
+                            software_version_image_description.replaceChildren(
+                                'No software images found for device type ', boldText(selectedText('device_type')),
+                            );
                         } else if (device_type_images[0].count == 0) {
-                            software_version_image_description.innerHTML = `
-                                Software version <b class="text-nowrap">${getSelectField('software_version').find(':selected')[0].text}</b> provides no software images
-                                for device type <b class="text-nowrap">${getSelectField('device_type').find(':selected')[0].text}</b>. The default image is:
-                            `;
+                            software_version_image_description.replaceChildren(
+                                'Software version ', boldText(selectedText('software_version')),
+                                ' provides no software images for device type ', boldText(selectedText('device_type')),
+                                '. The default image is:',
+                            );
 
                             let li = document.createElement('li');
                             let a = document.createElement('a');
@@ -175,10 +180,11 @@
                             software_version_image_list.appendChild(li);
 
                         } else {
-                            software_version_image_description.innerHTML = `
-                                Software version <b class="text-nowrap">${getSelectField('software_version').find(':selected')[0].text}</b> provides the following software images
-                                for device type <b class="text-nowrap">${getSelectField('device_type').find(':selected')[0].text}</b>:
-                            `;
+                            software_version_image_description.replaceChildren(
+                                'Software version ', boldText(selectedText('software_version')),
+                                ' provides the following software images for device type ', boldText(selectedText('device_type')),
+                                ':',
+                            );
 
                             for (result of device_type_images[0].results) {
                                 let li = document.createElement('li');

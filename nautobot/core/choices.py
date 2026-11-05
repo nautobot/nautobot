@@ -181,6 +181,30 @@ class NautobotEditionChoices(ChoiceSet):
 
 
 #
+# Import mode
+#
+
+
+class ImportModeChoices(ChoiceSet):
+    """How the `ImportObjects` system Job treats records that do or don't match an existing object.
+
+    - `CREATE_UPDATE`: a record that matches an existing object updates it; any other record creates a new object.
+    - `CREATE`: every record creates a new object; a record that matches an existing object is an error.
+    - `UPDATE`: every record updates the existing object it matches; a record that matches none is an error.
+    """
+
+    CREATE_UPDATE = "create_update"
+    CREATE = "create"
+    UPDATE = "update"
+
+    CHOICES = (
+        (CREATE_UPDATE, "Create/Update"),
+        (CREATE, "Create Only"),
+        (UPDATE, "Update Only"),
+    )
+
+
+#
 # Button color choices
 #
 

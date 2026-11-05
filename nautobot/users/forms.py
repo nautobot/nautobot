@@ -11,6 +11,7 @@ from nautobot.core.forms import BootstrapMixin, DateTimePicker, MultiValueCharFi
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.utils import serialize_user_without_config_and_views
+from nautobot.users.validators import validate_relative_url
 
 from .models import Token
 
@@ -76,7 +77,7 @@ class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class NavbarFavoritesAddForm(BootstrapMixin, forms.Form):
-    link = forms.CharField(label="Link")
+    link = forms.CharField(label="Link", validators=[validate_relative_url])
     name = forms.CharField(label="Name")
     tab_name = forms.CharField(required=False)
 

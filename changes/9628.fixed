@@ -1,1 +1,0 @@
-Fixed canceled Jobs still running when they were canceled while waiting in a busy Celery queue.

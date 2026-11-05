@@ -518,6 +518,9 @@ class ContentTypeFilterSet(BaseFilterSet):
     can_change = django_filters.BooleanFilter(method="_can_change", label="User can change objects of this type")
     can_delete = django_filters.BooleanFilter(method="_can_delete", label="User can delete objects of this type")
     can_view = django_filters.BooleanFilter(method="_can_view", label="User can view objects of this type")
+    can_import = django_filters.BooleanFilter(
+        method="_can_import", label="User can add and/or change objects of this type"
+    )
     has_serializer = django_filters.BooleanFilter(
         method="_has_serializer", label="A REST API serializer exists for this type"
     )
@@ -549,6 +552,17 @@ class ContentTypeFilterSet(BaseFilterSet):
 
     def _can_view(self, queryset, name, value):
         return self._can_action(queryset, name, value, action="view")
+
+    def _can_import(self, queryset, name, value):
+        if not self.request or not self.request.user:
+            return queryset.none() if value else queryset
+        user = self.request.user
+
+        def importable(ct):
+            return user.has_perm(f"{ct.app_label}.add_{ct.model}") or user.has_perm(f"{ct.app_label}.change_{ct.model}")
+
+        ct_pks = [ct.pk for ct in queryset if value == importable(ct)]
+        return queryset.filter(pk__in=ct_pks)
 
     def _has_serializer(self, queryset, name, value):
         ct_pks = []

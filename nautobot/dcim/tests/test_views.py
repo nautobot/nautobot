@@ -158,7 +158,10 @@ def create_test_device(name):
     """
     Convenience method for creating a Device (e.g. for component testing).
     """
-    location_type, _ = LocationType.objects.get_or_create(name="Campus")
+    device_ct = ContentType.objects.get_for_model(Device)
+    location_type, created = LocationType.objects.get_or_create(name="Campus")
+    if created:
+        location_type.content_types.add(device_ct)
     location_status = Status.objects.get_for_model(Location).first()
     location, _ = Location.objects.get_or_create(
         name="Test Location 1", location_type=location_type, status=location_status
@@ -166,7 +169,6 @@ def create_test_device(name):
     manufacturer, _ = Manufacturer.objects.get_or_create(name="Manufacturer 1")
     devicetype, _ = DeviceType.objects.get_or_create(model="Device Type 1", manufacturer=manufacturer)
     devicerole, _ = Role.objects.get_or_create(name="Device Role")
-    device_ct = ContentType.objects.get_for_model(Device)
     devicerole.content_types.add(device_ct)
     devicestatus = Status.objects.get_for_model(Device).first()
     device = Device.objects.create(
@@ -178,6 +180,33 @@ def create_test_device(name):
     )
 
     return device
+
+
+def create_test_module_type_component_templates(module_type):
+    """
+    Convenience method for creating one of each component template on a ModuleType, so that its views
+    (and those of any Module of this type created afterward) render component tables with rows.
+    """
+    ConsolePortTemplate.objects.create(module_type=module_type, name="Console Port Template 1")
+    ConsoleServerPortTemplate.objects.create(module_type=module_type, name="Console Server Port Template 1")
+    power_port_template = PowerPortTemplate.objects.create(module_type=module_type, name="Power Port Template 1")
+    PowerOutletTemplate.objects.create(
+        module_type=module_type, name="Power Outlet Template 1", power_port_template=power_port_template
+    )
+    InterfaceTemplate.objects.create(
+        module_type=module_type, name="Interface Template 1", type=InterfaceTypeChoices.TYPE_1GE_FIXED
+    )
+    rear_port_template = RearPortTemplate.objects.create(
+        module_type=module_type, name="Rear Port Template 1", type=PortTypeChoices.TYPE_8P8C, positions=1
+    )
+    FrontPortTemplate.objects.create(
+        module_type=module_type,
+        name="Front Port Template 1",
+        type=PortTypeChoices.TYPE_8P8C,
+        rear_port_template=rear_port_template,
+        rear_port_position=1,
+    )
+    ModuleBayTemplate.objects.create(module_type=module_type, name="Module Bay Template 1", position="1")
 
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
@@ -1441,11 +1470,12 @@ class ModuleTypeTestCase(
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
 
-        ModuleType.objects.create(
+        module_type = ModuleType.objects.create(
             model="Test Module Type 1",
             manufacturer=manufacturers[0],
             comments="test comment",
         )
+        create_test_module_type_component_templates(module_type)
         ModuleType.objects.create(
             model="Test Module Type 2",
             manufacturer=manufacturers[0],
@@ -1489,6 +1519,25 @@ class ModuleTypeTestCase(
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn("0.45 Kilograms", content)
+
+    def test_detail_component_table_action_buttons_have_correct_return_url(self):
+        """Assert that a component template's edit/delete buttons return to the correct tab of the ModuleType view."""
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.view_interfacetemplate",
+            "dcim.change_interfacetemplate",
+            "dcim.delete_interfacetemplate",
+        )
+        interface_template = InterfaceTemplate.objects.get(module_type__model="Test Module Type 1")
+        module_type = interface_template.module_type
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        return_url = f"{module_type.get_absolute_url()}%3Ftab=interfaces"
+        for action in ("edit", "delete"):
+            action_url = reverse(f"dcim:interfacetemplate_{action}", kwargs={"pk": interface_template.pk})
+            self.assertIn(f'href="{action_url}?return_url={return_url}"', content)
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has both import options (single-record YAML/JSON link, multi-record
@@ -2542,7 +2591,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Prefix.objects.create(prefix="1.1.1.1/24", namespace=namespace, status=cls.prefix_status)
         Prefix.objects.create(prefix="2.2.2.2/24", namespace=namespace, status=cls.prefix_status)
         Prefix.objects.create(prefix="3.3.3.3/24", namespace=namespace, status=cls.prefix_status)
-        ipaddresses = (
+        cls.ipaddresses = (
             IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace, status=cls.ipaddr_status),
             IPAddress.objects.create(address="2.2.2.2/32", namespace=namespace, status=cls.ipaddr_status),
             IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace, status=cls.ipaddr_status),
@@ -2556,7 +2605,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Interface.objects.create(device=cls.devices[0], name="Interface A3", status=intf_status, role=intf_role),
         )
 
-        for device, ipaddress in zip(cls.devices, ipaddresses):
+        for device, ipaddress in zip(cls.devices, cls.ipaddresses):
             RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
             ).validated_save()
@@ -2631,6 +2680,46 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[1].pk,
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
+
+    def test_primary_ip_queries_do_not_grow_with_device_count(self):
+        """Rendering the default primary IP column must not add queries per device."""
+        self.add_permissions("dcim.view_device")
+        namespace = self.ipaddresses[0].parent.namespace
+        Prefix.objects.create(prefix="2001:db8::/64", namespace=namespace, status=self.prefix_status)
+        for index, (device, ipaddress) in enumerate(zip(self.devices, self.ipaddresses), start=1):
+            interface = Interface.objects.create(
+                device=device,
+                name="Loopback0",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=self.interfaces[0].status,
+            )
+            device.primary_ip4 = ipaddress
+            device.primary_ip6 = IPAddress.objects.create(
+                address=f"2001:db8::{index}/128", namespace=namespace, status=self.ipaddr_status
+            )
+            interface.ip_addresses.add(device.primary_ip4, device.primary_ip6)
+            device.validated_save()
+
+        url = self._get_url("list")
+        for prefer_ipv4 in (True, False):
+            with self.subTest(prefer_ipv4=prefer_ipv4), override_config(PREFER_IPV4=prefer_ipv4):
+                # Warm shared caches before comparing fully rendered HTMX requests.
+                self.client.get(url, {"per_page": 1}, headers={"HX-Request": "true"})
+                query_counts = []
+                for count in range(1, len(self.devices) + 1):
+                    with CaptureQueriesContext(connection) as queries:
+                        response = self.client.get(url, {"per_page": count}, headers={"HX-Request": "true"})
+                    query_counts.append(len(queries))
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/list_view_table.html")
+                    self.assertEqual(len(response.context["table"].page), count)
+                    for row in response.context["table"].page.object_list:
+                        address = row.record.primary_ip
+                        self.assertContains(
+                            response, f'<a href="{address.get_absolute_url()}">{address}</a>', html=True
+                        )
+
+                self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
 
     def _build_device_bay_chain(self, parent_count):
         """Create a parent->child DeviceBay chain and return (devices, bays)."""
@@ -3281,6 +3370,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ModuleType.objects.create(model="Module Type 1", manufacturer=manufacturer),
             ModuleType.objects.create(model="Module Type 2", manufacturer=manufacturer),
         )
+        create_test_module_type_component_templates(moduletypes[0])
 
         moduleroles = Role.objects.get_for_model(Module)[:2]
 
@@ -3385,8 +3475,8 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:module_interfaces", kwargs={"pk": module.pk})
         response = self.client.get(url)
-        # Assert that "Add IP address" appears for each of the three interfaces
-        self.assertBodyContains(response, "Add IP address", count=3)
+        # Assert that "Add IP address" appears for each of the module's interfaces
+        self.assertBodyContains(response, "Add IP address", count=module.interfaces.count())
 
     def test_module_interface_assign_ipaddress(self):
         module = Module.objects.first()
@@ -3461,8 +3551,13 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):
-        module = Module.objects.filter(module_bays__isnull=True).first()
         status_active = Status.objects.get_for_model(Module).first()
+        # The seeded modules get bays from their type's templates; this one's type has none, so it starts with no bays.
+        module = Module.objects.create(
+            module_type=ModuleType.objects.get(model="Module Type 2"),
+            location=Module.objects.first().location,
+            status=status_active,
+        )
 
         # A bay on this module, containing a submodule that itself has a nested bay.
         bay = ModuleBay.objects.create(parent_module=module, name="Module View Bay A")
@@ -5705,6 +5800,26 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         breakout_body = self.client.get(breakout_cable.get_absolute_url()).content.decode()
         for marker in breakout_only_markers:
             self.assertIn(marker, breakout_body, msg=f"Breakout cable detail missing expected {marker!r}")
+
+    def test_cable_detail_view_shows_connectors_for_symmetric_multi_connector_cable(self):
+        """A 2x2 cable (multi-connector, not a breakout) shows connector labels on its detail page."""
+        self.add_permissions("dcim.view_cable")
+        symmetric_type = CableType.objects.create(name="Cable View 2x2", a_connectors=2, b_connectors=2, total_lanes=2)
+        self.assertFalse(symmetric_type.is_breakout)
+        interface_a, interface_b = Interface.objects.filter(cable_termination__isnull=True).exclude(
+            type__in=NONCONNECTABLE_IFACE_TYPES
+        )[:2]
+        cable = Cable.objects.create(
+            termination_a=interface_a,
+            termination_b=interface_b,
+            cable_type=symmetric_type,
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        body = self.client.get(cable.get_absolute_url()).content.decode()
+
+        for marker in (">A1<", ">B1<", "2A &rarr; 2B"):
+            self.assertIn(marker, body, msg=f"Symmetric cable detail missing expected {marker!r}")
 
     def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
         """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""
