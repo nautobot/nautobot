@@ -100,8 +100,12 @@ def instrument():
         # the IDs by adding e.g. %(otelTraceID)s to their own formatters.
         LoggingInstrumentor().instrument(tracer_provider=provider, inject_trace_context=True)
 
-    db_instrumentor = _db_instrumentor_for_engine(nautobot_config.DATABASES["default"]["ENGINE"])
-    db_instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+    if "mysql" in nautobot_config.DATABASES["default"]["ENGINE"]:
+        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
+
+        MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+    else:
+        Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
 
     # getattr with a default (unlike the direct reads above) so a hand-rolled nautobot_config.py that
     # predates this setting still works; settings.py always defines it, so the default only covers overrides.
@@ -124,25 +128,9 @@ def instrument():
     _instrumented = True
 
 
-def _db_instrumentor_for_engine(engine):
-    """Return the OpenTelemetry DB instrumentor class for the database `engine` string.
-
-    The mysqlclient instrumentor is imported lazily inside this function (only when MySQL is the engine)
-    because its package runs `import MySQLdb` at import time, which errors when `mysqlclient` is not installed.
-    """
-    if "mysql" in engine:
-        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
-
-        return MySQLClientInstrumentor
-
-    return Psycopg2Instrumentor
-
-
 def uninstrument():
     """Test cleanup helper - remove the OpenTelemetry instrumentation previously applied by instrument()."""
     global _instrumented
-    if not _instrumented:
-        return
 
     nautobot_config = sys.modules[
         "nautobot_config"
@@ -164,8 +152,15 @@ def uninstrument():
         RedisInstrumentor(),
         CeleryInstrumentor(),
         LoggingInstrumentor(),
-        _db_instrumentor_for_engine(nautobot_config.DATABASES["default"]["ENGINE"])(),
+        Psycopg2Instrumentor(),
     ]:
+        if instrumentor.is_instrumented_by_opentelemetry:
+            instrumentor.uninstrument()
+
+    if "opentelemetry.instrumentation.mysqlclient" in sys.modules:
+        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
+
+        instrumentor = MySQLClientInstrumentor()
         if instrumentor.is_instrumented_by_opentelemetry:
             instrumentor.uninstrument()
 
@@ -265,10 +260,11 @@ def install_exporters(config=None):
 def uninstall_exporters():
     """Test cleanup helper - remove the OpenTelemetry exporters previously applied by install_exporters()."""
     global _exporters_installed
-    if not _exporters_installed:
-        return
 
     # TODO: clean up the trace exporters as well?
+
+    if metrics._internal._METER_PROVIDER is not None:
+        metrics._internal._METER_PROVIDER.shutdown()
 
     metrics._internal._METER_PROVIDER = None
     metrics._internal._METER_PROVIDER_SET_ONCE._done = False
