@@ -2623,6 +2623,8 @@ class ViewTestCases:
                     "path": url,
                     "data": utils.post_data({"pk": data["virtual_machine"]}),
                 }
+            parent_model = resolve(url).func.view_class.parent_model
+            self.add_permissions(f"{parent_model._meta.app_label}.change_{parent_model._meta.model_name}")
             self.assertHttpStatus(self.client.post(**request), 200)
 
             # Post to the device-bulk-add or virtualmachine-bulk-add form to create records
@@ -2675,9 +2677,9 @@ class ViewTestCases:
                 parent_model = view_func.cls.queryset.model
                 action = view_func.initkwargs.get("custom_view_base_action") or "view"
             else:
-                # `generic.BulkComponentCreateView` subclass
+                # `generic.BulkComponentCreateView` subclass, which selects parents the user can change
                 parent_model = view_func.view_class.parent_model
-                action = "view"
+                action = "change"
 
             data = (self.bulk_add_data or self.bulk_create_data).copy()
             parent_pks = [
