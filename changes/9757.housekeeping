@@ -1,0 +1,2 @@
+Ported the home page and navigation menu tests from Selenium to Playwright, including the home page tests for a user with limited permissions and for collapsing panels.
+Dropped the Selenium test for hiding empty navigation menu tabs and groups, because it registers menu items inside the server process, which a browser test cannot do.
