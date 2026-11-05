@@ -461,11 +461,7 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_update_fields = [
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
         ]
-        # `job_result_pks` came from a queryset already filtered by the user who is running this. The
-        # returned query set is what `JobResults` they are allowed to delete. This means the available
-        # set of `JobResults` that is used to filter here have already been filtered with respect to user
-        # permission and that the filter does not need to be performed again.
-        job_log_entries = JobLogEntry.objects.filter(job_result_id__in=job_result_pks)
+        job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(job_result_id__in=job_result_pks)
 
         archived_job_log_entry_count = 0
 
@@ -514,11 +510,7 @@ class ArchiveOldRecords(Job):
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
-        # `job_result_pks` came from a queryset already filtered by the user who is running this. The
-        # returned query set is what `JobResults` they are allowed to delete. This means the available
-        # set of `JobResults` that is used to filter here have already been filtered with respect to user
-        # permission and that the filter does not need to be performed again.
-        job_console_entries = JobConsoleEntry.objects.filter(job_result_id__in=job_result_pks)
+        job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result_id__in=job_result_pks)
 
         archived_job_console_entry_count = 0
 
