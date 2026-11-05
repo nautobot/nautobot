@@ -23,6 +23,12 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from nautobot import __version__
 from nautobot.core.utils.module_loading import import_string_optional
 
+try:
+    from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
+except ImportError:
+    # can happen if mysqlclient is not installed, which is permissible as it's an optional Nautobot dependency
+    MySQLClientInstrumentor = None
+
 logger = logging.getLogger(__name__)
 
 # True after instrument() has enabled instrumentation; uninstrument() resets it to False.
@@ -68,9 +74,7 @@ def instrument():
 
     # Resolve to the loaded config registered by load_settings(); honors nautobot_config.py overrides
     # (e.g. OTEL_EXPORTER_OTLP_ENDPOINT), unlike the base nautobot.core.settings module.
-    nautobot_config = sys.modules[
-        "nautobot_config"
-    ]  # runtime module registered by load_settings(), only available here
+    nautobot_config = sys.modules["nautobot_config"]
 
     resource = Resource(attributes={SERVICE_NAME: "nautobot", SERVICE_VERSION: __version__})
     # Cap span attribute value length so large values (e.g. GraphQL queries) don't bloat spans. The OTEL
@@ -101,9 +105,10 @@ def instrument():
         LoggingInstrumentor().instrument(tracer_provider=provider, inject_trace_context=True)
 
     if "mysql" in nautobot_config.DATABASES["default"]["ENGINE"]:
-        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
-
-        MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+        if MySQLClientInstrumentor is not None:
+            MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+        else:
+            logger.error("mysql DB engine selected but unable to import MySQLClientInstrumentor??")  # pragma: nocover
     else:
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
 
@@ -129,12 +134,10 @@ def instrument():
 
 
 def uninstrument():
-    """Test cleanup helper - remove the OpenTelemetry instrumentation previously applied by instrument()."""
+    """TEST-ONLY cleanup helper - remove the OpenTelemetry instrumentation previously applied by instrument()."""
     global _instrumented
 
-    nautobot_config = sys.modules[
-        "nautobot_config"
-    ]  # runtime module registered by load_settings(), only available here
+    nautobot_config = sys.modules["nautobot_config"]
 
     for path in getattr(nautobot_config, "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", []):
         try:
@@ -146,26 +149,25 @@ def uninstrument():
         except Exception:
             logger.warning("Could not load or instantiate OTEL instrumentor %s.", path)
 
-    for instrumentor in [
+    instrumentors = [
         DjangoInstrumentor(),
         RequestsInstrumentor(),
         RedisInstrumentor(),
         CeleryInstrumentor(),
         LoggingInstrumentor(),
         Psycopg2Instrumentor(),
-    ]:
+    ]
+    if MySQLClientInstrumentor is not None:
+        instrumentors.append(MySQLClientInstrumentor())
+
+    for instrumentor in instrumentors:
         if instrumentor.is_instrumented_by_opentelemetry:
             instrumentor.uninstrument()
 
-    if "opentelemetry.instrumentation.mysqlclient" in sys.modules:
-        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
-
-        instrumentor = MySQLClientInstrumentor()
-        if instrumentor.is_instrumented_by_opentelemetry:
-            instrumentor.uninstrument()
-
+    # Based on opentelemetry-test-utils opentelemetry.test.globals_test.reset_trace_globals()
     trace._TRACER_PROVIDER = None
     trace._TRACER_PROVIDER_SET_ONCE._done = False
+    trace._PROXY_TRACER_PROVIDER = trace.ProxyTracerProvider()
 
     _instrumented = False
 
@@ -258,7 +260,7 @@ def install_exporters(config=None):
 
 
 def uninstall_exporters():
-    """Test cleanup helper - remove the OpenTelemetry exporters previously applied by install_exporters()."""
+    """TEST-ONLY cleanup helper - remove the OpenTelemetry exporters previously applied by install_exporters()."""
     global _exporters_installed
 
     # TODO: clean up the trace exporters as well?
@@ -266,7 +268,9 @@ def uninstall_exporters():
     if metrics._internal._METER_PROVIDER is not None:
         metrics._internal._METER_PROVIDER.shutdown()
 
+    # Based on opentelemetry-test-utils opentelemetry.test.globals_test.reset_metrics_globals()
     metrics._internal._METER_PROVIDER = None
     metrics._internal._METER_PROVIDER_SET_ONCE._done = False
+    metrics._internal._PROXY_METER_PROVIDER = metrics._internal._ProxyMeterProvider()
 
     _exporters_installed = False
