@@ -100,8 +100,6 @@ class ArchiveOldRecords(Job):
         """
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
 
-        # Seeded with every archivable model, not just the selected ones, so that a caller can read any
-        # model's count without first checking what the run was asked to do.
         archived_record_counts = {
             OBJECT_CHANGE_LABEL: 0,
             JOB_RESULT_LABEL: 0,
@@ -389,20 +387,18 @@ class ArchiveOldRecords(Job):
         new_archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
 
         # Copy the parents first so that the archived children's foreign keys resolve. Each step commits on its own.
-        with transaction.atomic():
-            ArchivedJobResult.objects.bulk_create(
-                new_archived_job_results,
-                update_conflicts=True,
-                update_fields=archived_job_result_update_fields,
-                # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
-                unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
-            )
+        ArchivedJobResult.objects.bulk_create(
+            new_archived_job_results,
+            update_conflicts=True,
+            update_fields=archived_job_result_update_fields,
+            # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
+            unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
+        )
 
         archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
         archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
 
-        with transaction.atomic():
-            deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
+        deleted_count, _ = JobResult.objects.filter(pk__in=job_result_pks).delete()
 
         self.logger.debug(
             "Archived %d job results with %d log entries and %d console entries, and deleted %d live rows",
@@ -412,11 +408,13 @@ class ArchiveOldRecords(Job):
             deleted_count,
         )
 
-        return {
+        archived_job_result_count = {
             JOB_RESULT_LABEL: job_result_pks_count,
             JOB_LOG_ENTRY_LABEL: archived_job_log_entry_count,
             JOB_CONSOLE_ENTRY_LABEL: archived_job_console_entry_count,
         }
+
+        return archival_result_count
 
     # --------------------------------------------------------------------------
     # Job Log Entry
