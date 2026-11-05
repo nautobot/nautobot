@@ -11,12 +11,11 @@ from playwright.sync_api import expect, Page
 
 
 def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
-    """Type-and-pick in an API-backed Select2 filter field, addressed by field *name*.
+    """Type-and-pick in an API-backed Select2 field, addressed by field *name*.
 
-    Filter fields use the `nautobot-select2-api` pattern: the widget renders an
-    anonymous `<span class="select2-container">` adjacent to the hidden `<select>`
-    (there is no `#select2-<id>-container` element to click, unlike create/edit
-    forms). Options load via AJAX from the REST API, so `select_option()` cannot see
+    Filter fields and create/edit form fields use the `nautobot-select2-api` pattern.
+    The widget renders a `<span class="select2-container">` next to the hidden
+    `<select>`. Options load via AJAX from the REST API, so `select_option()` cannot see
     them; the reliable gesture is click the container, type into the open dropdown's
     search field, then click the matching result.
 

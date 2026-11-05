@@ -9,7 +9,7 @@
                     <div class="card{% if token.is_expired %} border-danger{% endif %}">
                         <div class="card-header nb-text-none{% if token.is_expired %} bg-danger-subtle border-danger text-body{% endif %}">
                             <div class="d-print-none float-end">
-                                <a class="btn btn-sm btn-success" data-clipboard-target="#token_{{ token.pk }}">
+                                <a class="btn btn-sm btn-success" data-clipboard-text="{{ token.key }}">
                                     <span class="mdi mdi-content-copy me-4" aria-hidden="true"></span><!--
                                     -->Copy</a>
                                 {% if perms.users.change_token %}
@@ -26,7 +26,9 @@
                                 {% endif %}
                             </div>
                             <span aria-hidden="true" class="mdi mdi-key"></span>
-                            <samp><span id="token_{{ token.pk }}">{{ token.key }}</span></samp>
+                            {% comment %}Obscure the leading token string characters with asterisks (*).{% endcomment %}
+                            <span class="visually-hidden">Token ending in {{ token.key|slice:"28:" }}</span>
+                            <samp aria-hidden="true">{% for char in token.key|make_list %}{% if forloop.counter0 < 28 %}*{% else %}{{ char }}{% endif %}{% endfor %}</samp>
                             {% if token.is_expired %}
                                 <span class="badge bg-danger">Expired</span>
                             {% endif %}

@@ -2,9 +2,10 @@
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
 `tests/integration/conftest.py` files build thin named fixtures on top of
-`create_object`. The `created_*` fixtures that more than one app needs (a location tree, a
-device and its manufacturer) are defined here. Run `pytest --fixtures nautobot/<app>/tests/integration`
-to list every available fixture with its location.
+`create_object`. The fixtures that more than one app needs (a location tree, a location,
+a manufacturer, a device type, a role and a device) are defined here. Run
+`pytest --fixtures nautobot/<app>/tests/integration` to list every available fixture
+with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
 runs against any Nautobot it can reach over HTTP. The defaults match the
@@ -153,7 +154,12 @@ def create_object(api):
 
         parent = create_object("dcim/locations/", name=name, location_type=lt["id"], status=status_id)
 
-    Objects are deleted in reverse creation order at teardown. A 404 is expected and
+    For an object the test creates through the UI, call `track` before the UI action.
+    Teardown deletes every object matching the filters:
+
+        create_object.track("dcim/devices/", name=name)
+
+    Objects are deleted in the reverse of the order they were created or tracked. A 404 is expected and
     ignored, since a child may already have been removed by a parent's cascade delete.
     Any other failing status is collected and reported once every delete has been
     attempted, so a server error during cleanup is visible without leaking the records
@@ -169,13 +175,31 @@ def create_object(api):
         created.append((endpoint, record["id"]))
         return record
 
+    def _track(endpoint, **filters):
+        if not filters:
+            pytest.fail(
+                f"create_object.track({endpoint!r}) needs at least one filter, or teardown deletes every record."
+            )
+        created.append((endpoint, filters))
+
+    _create.track = _track
     yield _create
 
     failures = []
-    for endpoint, pk in reversed(created):
-        response = api.delete(f"/api/{endpoint}{pk}/")
-        if not response.ok and response.status != 404:
-            failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
+    # Each entry is a created object's id or a tracked object's filters.
+    for endpoint, target in reversed(created):
+        if isinstance(target, dict):
+            response = api.get(f"/api/{endpoint}", params=target)
+            if not response.ok:
+                failures.append(f"GET /api/{endpoint} returned {response.status}: {response.text()[:200]}")
+                continue
+            pks = [record["id"] for record in response.json()["results"]]
+        else:
+            pks = [target]
+        for pk in pks:
+            response = api.delete(f"/api/{endpoint}{pk}/")
+            if not response.ok and response.status != 404:
+                failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
     if failures:
         pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
 
@@ -234,47 +258,78 @@ def created_location_tree(create_object, status_for):
 
 
 @pytest.fixture
+def restore_page_size(api):
+    """Put the user's saved list page size back after a test that sets `?per_page=`.
+
+    Nautobot saves every `?per_page=` it serves to the user's config, so a test that
+    forces a small page would leave every later test paging that small. The config
+    endpoint deep-merges dicts, so merging the old `pagination` dict back would keep the
+    forced `per_page`. Writing `null` first replaces the dict, then writing the old dict
+    (empty if the user had none) replaces the `null`. It must end as a dict: Nautobot
+    cannot save a page size under a `null`. Assumes the API token belongs to the user
+    the browser logs in as, which the development bootstrap gives.
+    """
+    response = api.get("/api/users/config/")
+    if not response.ok:
+        pytest.fail(f"GET /api/users/config/ returned {response.status}: {response.text()}")
+    saved = response.json().get("pagination") or {}
+
+    yield
+
+    for pagination in (None, saved):
+        response = api.patch("/api/users/config/", data={"pagination": pagination})
+        if not response.ok:
+            pytest.fail(f"PATCH /api/users/config/ returned {response.status}: {response.text()}")
+
+
+@pytest.fixture
 def created_manufacturer(create_object):
     """A manufacturer owned by this test."""
     return create_object("dcim/manufacturers/", name=unique_name())
 
 
 @pytest.fixture
-def created_device(create_object, status_for, created_manufacturer):
-    """A device owned by this test, with its own location type, location, device type and role.
-
-    Also returns the related records. The device's API response gives only their id and
-    URL, and the tests need their names.
-    """
+def created_location(create_object, status_for):
+    """A location created for this test, in a location type that allows devices."""
     unique = unique_name()
-    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
     location_type = create_object("dcim/location-types/", name=f"{unique}-location-type", content_types=["dcim.device"])
-    location = create_object(
+    return create_object(
         "dcim/locations/",
         name=f"{unique}-location",
         location_type=location_type["id"],
         status=status_for("dcim.location")["id"],
     )
-    device_type = create_object(
-        "dcim/device-types/",
-        model=f"{unique}-model",
-        manufacturer=created_manufacturer["id"],
-    )
-    role = create_object("extras/roles/", name=f"{unique}-role", content_types=["dcim.device"])
+
+
+@pytest.fixture
+def created_device_type(create_object, created_manufacturer):
+    """A device type created for this test."""
+    return create_object("dcim/device-types/", model=f"{unique_name()}-model", manufacturer=created_manufacturer["id"])
+
+
+@pytest.fixture
+def created_role(create_object):
+    """A role created for this test that allows devices."""
+    return create_object("extras/roles/", name=f"{unique_name()}-role", content_types=["dcim.device"])
+
+
+@pytest.fixture
+def created_device(create_object, status_for, created_location, created_device_type, created_role):
+    """A device created for this test, plus its related records, since the device record has only their ids."""
     status = status_for("dcim.device")
     device = create_object(
         "dcim/devices/",
-        name=unique,
-        location=location["id"],
-        device_type=device_type["id"],
-        role=role["id"],
+        name=unique_name(),
+        location=created_location["id"],
+        device_type=created_device_type["id"],
+        role=created_role["id"],
         status=status["id"],
     )
     return {
         "device": device,
-        "location": location,
-        "device_type": device_type,
-        "role": role,
+        "location": created_location,
+        "device_type": created_device_type,
+        "role": created_role,
         "status": status,
     }
 

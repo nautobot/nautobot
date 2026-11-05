@@ -27,21 +27,21 @@ ENDPOINT_MODELS = (
 
 
 def expected_path_counts_by_cable_type():
-    """How many CablePaths each origin on a breakout cable should have, keyed by cable type.
+    """How many CablePaths each origin on a multi-connector cable should have, keyed by cable type.
 
-    An origin on a breakout cable gets one CablePath per *distinct* opposite-side connector its own
-    connector maps to via the cable type's lane mapping (see `create_cablepath`), whether or not
-    each of those lanes is actually connected. A standard (non-breakout) cable always yields exactly
+    An origin on a multi-connector cable gets one CablePath per *distinct* opposite-side connector
+    its own connector maps to via the cable type's lane mapping (see `create_cablepath`), whether or
+    not each of those lanes is actually connected. A single-connector cable always yields exactly
     one path per origin, so those cable types are omitted here and handled with a simple "has any
     path" check instead.
 
     Returns:
         dict: `{cable_type_pk: {(cable_end, connector): expected_distinct_peer_connector_count}}`,
-            containing only breakout cable types.
+            containing only multi-connector cable types.
     """
     counts = {}
     for cable_type in CableType.objects.all():
-        if not cable_type.is_breakout:
+        if not cable_type.is_multi_connector:
             continue
         # (cable_end, connector) -> set of distinct connectors on the opposite end it maps to.
         peer_connectors = {}
@@ -100,9 +100,9 @@ class Command(BaseCommand):
                 self.stdout.write((self.style.SUCCESS(f"  Deleted {deleted_count} paths")))
 
         if not options["force"]:
-            # Precompute the expected path count per breakout cable type so the non-force filter below
-            # can skip fully-traced breakout origins as well as fully-traced standard ones.
-            expected_breakout_counts = expected_path_counts_by_cable_type()
+            # Precompute the expected path count per multi-connector cable type so the non-force filter
+            # below can skip fully-traced multi-connector origins as well as fully-traced standard ones.
+            expected_multi_connector_counts = expected_path_counts_by_cable_type()
 
         # Retrace paths
         for model in ENDPOINT_MODELS:
@@ -112,13 +112,13 @@ class Command(BaseCommand):
                 #
                 # Compare each origin's existing path count against how many it *should* have. A
                 # standard cable expects exactly one path, so any origin with zero paths needs
-                # retracing. A breakout origin expects one path per fan-out lane (per its cable
-                # type's mapping), so it needs retracing whenever it has fewer than that — this is
-                # what catches a breakout that's only *partially* traced. Fully-traced origins of
-                # either kind are skipped.
+                # retracing. A multi-connector origin expects one path per mapped opposite-side
+                # connector (per its cable type's mapping), so it needs retracing whenever it has
+                # fewer than that — this is what catches a cable that's only *partially* traced.
+                # Fully-traced origins of either kind are skipped.
                 origins = origins.annotate(num_paths=Count("cable_paths", distinct=True))
                 needs_retrace = Q(num_paths=0)
-                for cable_type_pk, expected_by_key in expected_breakout_counts.items():
+                for cable_type_pk, expected_by_key in expected_multi_connector_counts.items():
                     for (cable_end, connector), expected in expected_by_key.items():
                         needs_retrace |= Q(
                             cable_termination__cable__cable_type=cable_type_pk,

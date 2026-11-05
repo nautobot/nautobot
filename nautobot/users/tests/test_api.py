@@ -122,6 +122,8 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     def test_update_object(self):
         """Add validation that a partial update can change the password if requested."""
+        # `update_data` references a group, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable
+        self.add_permissions("auth.view_group")
         user = self._get_queryset().first()
         super().test_update_object()
         user.refresh_from_db()
@@ -454,6 +456,24 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             constraints={"name": "TEST100"},
         )
 
+    # Each of these tests references users and groups, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable.
+
+    def test_create_object(self):
+        self.add_permissions("users.view_user", "auth.view_group")
+        super().test_create_object()
+
+    def test_bulk_create_objects(self):
+        self.add_permissions("users.view_user", "auth.view_group")
+        super().test_bulk_create_objects()
+
+    def test_update_object(self):
+        # Granted under a name that sorts last, rather than through `add_permissions()`: the test updates the first
+        # ObjectPermission by name, and updating this one would revoke the very permissions it grants.
+        permission = ObjectPermission.objects.create(name="zz view users and groups", actions=["view"])
+        permission.users.add(self.user)
+        permission.object_types.add(ContentType.objects.get_for_model(User), ContentType.objects.get_for_model(Group))
+        super().test_update_object()
+
     # TODO: Unskip after resolving #2908, #2909
     @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
     def test_list_objects_ascending_ordered(self):
@@ -510,3 +530,51 @@ class UserConfigTest(APITestCase):
         self.assertDictEqual(response.data, new_data)
         self.user.refresh_from_db()
         self.assertDictEqual(self.user.config_data, new_data)
+
+    def test_patch_accepts_a_relative_favorite_link(self):
+        """
+        A favorite link relative to an instance is accepted and stored as submitted.
+        """
+        url = reverse("users-api:userconfig-list")
+        favorites = [{"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"}]
+
+        response = self.client.patch(url, data={"navbar_favorites": favorites}, format="json", **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.config_data["navbar_favorites"], favorites)
+
+    def test_patch_rejects_an_external_favorite_link(self):
+        """
+        A favorite link must be relative to an instance, so external and scheme URLs are refused.
+        """
+        url = reverse("users-api:userconfig-list")
+
+        for link in ["javascript:alert(0)", "https://google.com/", "//evil.example.com/"]:
+            with self.subTest(link=link):
+                response = self.client.patch(
+                    url,
+                    data={"navbar_favorites": [{"link": link, "name": "Devices"}]},
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, {})
+
+    def test_patch_rejects_invalid_favorites(self):
+        """
+        Favorites are read as a list of objects on every page render, so anything else is refused.
+        """
+        url = reverse("users-api:userconfig-list")
+
+        for favorites in [{"not": "a list"}, ["not an object"], [{"name": "No link"}]]:
+            with self.subTest(favorites=favorites):
+                response = self.client.patch(
+                    url,
+                    data={"navbar_favorites": favorites},
+                    format="json",
+                    **self.header,
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, {})

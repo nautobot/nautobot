@@ -73,7 +73,7 @@
 {% endblock content %}
 
 {% block javascript %}
-    <script src="{{ redoc_standalone }}"></script>
+    <script src="{% static 'dist/redoc/redoc.standalone.js' %}"></script>
     {% if settings %}
         <script>
             const redocSettings = {{ settings|safe }};

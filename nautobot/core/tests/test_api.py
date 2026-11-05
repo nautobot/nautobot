@@ -776,7 +776,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
             },
         }
         url = reverse("ipam-api:vlan-list")
-        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status")
+        # The lookup passes through the VLAN groups' locations, so the user must be able to view those too
+        self.add_permissions("ipam.add_vlan", "ipam.view_vlangroup", "extras.view_status", "dcim.view_location")
 
         with testing.disable_warnings("django.request"):
             response = self.client.post(url, data, format="json", **self.header)

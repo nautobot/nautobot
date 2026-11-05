@@ -60,6 +60,10 @@ class DetailPage(BasePage):
         """Assert (auto-retrying) that this model's Edit button is rendered."""
         expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
 
+    def click_edit(self):
+        """Click this model's Edit button and wait for the edit form to load."""
+        self._click_and_wait_for_navigation(self._EDIT_BUTTON)
+
     # -------------------------------------------------------------------------
     # Tabs
     # -------------------------------------------------------------------------

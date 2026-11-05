@@ -1419,6 +1419,66 @@ class CablePathTestCase(TestCase):
         )
         self.assertFalse(cp.is_split, msg=f"Lane-side mid-path breakout should traverse, not split; got {cp}")
 
+    def test_207d_symmetric_multi_connector_fanout_one_path_per_mapped_connector(self):
+        """
+        A 2x2 cable whose four lanes cross-connect every A connector to every B connector is
+        multi-connector but not a breakout (`is_breakout` is False). Each origin still fans out to two
+        far connectors, so it must get one CablePath per mapped far connector, exactly like a breakout
+        trunk, and `interface_connections()` must list each of the four connections once.
+
+        [IF_a1] --+          +-- [IF_b1]
+                  | C1 (2x2) |
+        [IF_a2] --+          +-- [IF_b2]
+        """
+        mesh_type = CableType(
+            name="Test 2x2 cross-connect",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=4,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+                {"a_connector": 2, "a_position": 1, "b_connector": 1, "b_position": 2},
+                {"a_connector": 2, "a_position": 2, "b_connector": 2, "b_position": 2},
+            ],
+        )
+        mesh_type.validated_save()
+        self.assertFalse(mesh_type.is_breakout)
+
+        a1 = Interface.objects.create(device=self.device, name="Mesh A1", status=self.interface_status)
+        a2 = Interface.objects.create(device=self.device, name="Mesh A2", status=self.interface_status)
+        b1 = Interface.objects.create(device=self.device, name="Mesh B1", status=self.interface_status)
+        b2 = Interface.objects.create(device=self.device, name="Mesh B2", status=self.interface_status)
+        cable = Cable(termination_a=a1, termination_b=b1, cable_type=mesh_type, status=self.status)
+        cable.save()
+        cable.add_termination(a2, "A", connector=2)
+        cable.add_termination(b2, "B", connector=2)
+
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        far_side = {a1: (b1, b2), a2: (b1, b2), b1: (a1, a2), b2: (a1, a2)}
+        for origin, (far_connector_1, far_connector_2) in far_side.items():
+            with self.subTest(origin=origin.name):
+                paths = CablePath.objects.filter(origin_type=interface_ct, origin_id=origin.pk)
+                self.assertEqual(paths.count(), 2)
+                self.assertEqual(paths.get(peer_connector=1).destination, far_connector_1)
+                self.assertEqual(paths.get(peer_connector=2).destination, far_connector_2)
+                for path in paths:
+                    self.assertFalse(path.is_split)
+                    self.assertTrue(path.origin_fans_out)
+                    self.assertTrue(path.destination_fans_out)
+
+        connections = {frozenset((path.origin.pk, path.destination.pk)) for path in CablePath.interface_connections()}
+        self.assertEqual(CablePath.interface_connections().count(), 4)
+        self.assertEqual(
+            connections,
+            {
+                frozenset((a1.pk, b1.pk)),
+                frozenset((a1.pk, b2.pk)),
+                frozenset((a2.pk, b1.pk)),
+                frozenset((a2.pk, b2.pk)),
+            },
+        )
+
     def test_208_single_path_via_circuit(self):
         """
         [IF1] --C1-- [CT1A] [CT1Z] --C2-- [IF2]
@@ -2663,6 +2723,37 @@ class TracePathsCommandTestCase(TestCase):
         self.assertIn("Finished.", output)
         self.assertEqual(self.trunk_paths(trunk).count(), 4)
         self.assertEqual(set(self.trunk_paths(trunk).values_list("peer_connector", flat=True)), {1, 2, 3, 4})
+
+    def test_fills_in_missing_lanes_on_symmetric_multi_connector_cable(self):
+        """A plain run must fill in a missing lane on a 2x2 cable that is multi-connector but not a breakout."""
+        mesh_type = CableType(
+            name="trace-mesh-type",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=4,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+                {"a_connector": 2, "a_position": 1, "b_connector": 1, "b_position": 2},
+                {"a_connector": 2, "a_position": 2, "b_connector": 2, "b_position": 2},
+            ],
+        )
+        mesh_type.validated_save()
+        a1 = Interface.objects.create(device=self.device, name="trace-mesh-a1", status=self.interface_status)
+        b1 = Interface.objects.create(device=self.device, name="trace-mesh-b1", status=self.interface_status)
+        Cable(termination_a=a1, termination_b=b1, cable_type=mesh_type, status=self.cable_status).save()
+        a1_paths = CablePath.objects.filter(origin_type=self.interface_ct, origin_id=a1.pk)
+        self.assertEqual(set(a1_paths.values_list("peer_connector", flat=True)), {1, 2})
+
+        # Simulate inconsistent data: the lane to B connector 2 never got traced. The origin still
+        # has one path, so a zero-paths check alone would wrongly skip it.
+        a1_paths.filter(peer_connector=2).delete()
+        self.assertEqual(a1_paths.count(), 1)
+
+        output = self.run_command()
+
+        self.assertIn("Finished.", output)
+        self.assertEqual(set(a1_paths.values_list("peer_connector", flat=True)), {1, 2})
 
     # --- Resilience to inconsistent / incorrect existing data -----------------------------------
 

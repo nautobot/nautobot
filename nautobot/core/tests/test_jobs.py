@@ -7,6 +7,7 @@ from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 import time_machine
 import yaml
@@ -14,7 +15,7 @@ import yaml
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
-from nautobot.core.jobs import DeleteCustomFieldData, UpdateCustomFieldChoiceData
+from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -25,6 +26,8 @@ from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
+    Job,
+    JobButton,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -187,6 +190,25 @@ class ExportObjectListTest(TransactionTestCase):
         yaml_data = job_result.files.first().file.read().decode("utf-8")
         data = yaml.safe_load(yaml_data)
         self.assertEqual(data["manufacturer"], "Cisco")
+
+    def test_object_var_lookup_must_be_permitted(self):
+        """An `ObjectVar` given as a dict of attributes (as the REST API accepts) may only use permitted lookups.
+
+        Otherwise, whether the Job is accepted would reveal data such as another user's API token, reached here
+        through the users of the object permissions for a content type.
+        """
+        content_type = ContentType.objects.get_for_model(Status)
+        self.assertEqual(
+            ExportObjectList.deserialize_data({"content_type": {"app_label": "extras", "model": "status"}}),
+            {"content_type": content_type},
+        )
+        for lookup in (
+            {"app_label": "extras", "model__startswith": "stat"},
+            {"app_label": "extras", "model": "status", "object_permissions__users__tokens__key__startswith": "a"},
+        ):
+            with self.subTest(lookup=lookup):
+                with self.assertRaisesRegex(ValidationError, "is not a permitted lookup"):
+                    ExportObjectList.deserialize_data({"content_type": lookup})
 
 
 class LogsCleanupTestCase(TransactionTestCase):
@@ -1158,6 +1180,25 @@ class RefreshDynamicGroupCacheJobButtonReceiverTestCase(TransactionTestCase):
         self.assertEqual(0, dg.count)
 
     def test_failure_on_non_dg(self):
+        """The job's buttons only apply to dynamic groups, so any other object is refused before the job sees it."""
+        job_result = create_job_result_and_run_job(
+            self.job_module,
+            self.job_name,
+            object_model_name="extras.status",
+            object_pk=Status.objects.first().pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, "No enabled job button for this job applies to extras.status objects")
+
+    def test_failure_on_non_dg_with_a_button(self):
+        """Should a button nonetheless apply the job to another type of object, the job itself refuses it."""
+        job_button = JobButton.objects.create(
+            name="Refresh Statuses",
+            text="Refresh",
+            job=Job.objects.get_for_class_path(f"{self.job_module}.{self.job_name}"),
+        )
+        job_button.content_types.add(ContentType.objects.get_for_model(Status))
         job_result = create_job_result_and_run_job(
             self.job_module,
             self.job_name,

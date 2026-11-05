@@ -4,9 +4,11 @@ from unittest import mock
 
 from django import forms as django_forms
 from django.apps import apps as django_apps
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.http import QueryDict
-from django.test import tag
+from django.test import override_settings, tag
 from django.urls import reverse
 from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
@@ -368,6 +370,36 @@ class AddFieldToFormClassTest(testing.TestCase):
                 "ports",
                 django_forms.CharField(required=False, label="Added Field Description"),
             )
+
+
+class RestrictFormFieldsTest(testing.TestCase):
+    """`restrict_form_fields()` limits every field's choices to the objects the user may view."""
+
+    class TestForm(django_forms.Form):
+        status = django_forms.ModelChoiceField(queryset=extras_models.Status.objects.all())
+        user = django_forms.ModelChoiceField(queryset=get_user_model().objects.all())
+        group = django_forms.ModelChoiceField(queryset=Group.objects.all())
+        content_type = django_forms.ModelChoiceField(queryset=ContentType.objects.all())
+
+    def setUp(self):
+        super().setUp()
+        self.visible_group = Group.objects.create(name="Visible Group")
+        self.hidden_group = Group.objects.create(name="Hidden Group")
+        self.other_user = get_user_model().objects.create(username="other-user")
+        self.add_permissions("auth.view_group", constraints={"name": "Visible Group"})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_form_fields(self):
+        form = self.TestForm()
+        forms.restrict_form_fields(form, self.user)
+        self.assertFalse(form.fields["status"].queryset.exists())  # No permission to view statuses at all
+        self.assertQuerySetEqual(form.fields["user"].queryset, [self.user])  # A user may always view themselves
+        self.assertQuerySetEqual(
+            form.fields["group"].queryset.filter(pk__in=[self.visible_group.pk, self.hidden_group.pk]),
+            [self.visible_group],
+        )
+        # Any user may view content types
+        self.assertEqual(form.fields["content_type"].queryset.count(), ContentType.objects.count())
 
 
 class DynamicModelChoiceFieldTest(testing.TestCase):

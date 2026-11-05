@@ -1197,6 +1197,12 @@ class CableToCableTermination(BaseModel):
     row, enforced via a CheckConstraint.
     """
 
+    # Deleting a Cable cascades to at most `2 * CABLE_BREAKOUT_MAX_CONNECTORS` rows (32),
+    # so its disconnected terminations can afford a change record each.
+    # TODO 4.0: remove once `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` gates cascade change logging; see
+    # `nautobot.extras.signals._handle_deleted_m2m_through_object`.
+    m2m_change_logged_cascade_sides = ("cable",)
+
     cable = models.ForeignKey(
         to="dcim.Cable",
         on_delete=models.CASCADE,
@@ -1500,9 +1506,9 @@ class CablePath(BaseModel):
         (canonicalizing the trunk onto one side) and the reverse fan-out rows are dropped, while
         point-to-point connections keep a single canonical direction:
 
-        - `origin_fans_out=True` — a trunk-origin lane; keep all N.
-        - `destination_fans_out=True` — a reverse fan-out row (its far endpoint is the trunk); drop it.
-        - Otherwise point-to-point; keep the single canonical direction (`origin_id < destination_id`).
+        - `origin_fans_out=True` only — a trunk-origin lane; keep all N.
+        - `destination_fans_out=True` only — a reverse fan-out row (its far endpoint is the trunk); drop it.
+        - Otherwise (both flags equal) keep the single canonical direction (`origin_id < destination_id`).
 
         Both flags are stored (see `from_origin`), so this is a plain indexed column filter with no
         per-row subqueries. Rows are ordered so a trunk's lanes are consecutive. Shared by the UI
@@ -1517,8 +1523,11 @@ class CablePath(BaseModel):
                 destination_type__model="interface",
             )
             .filter(
-                models.Q(origin_fans_out=True)
-                | (models.Q(destination_fans_out=False) & models.Q(origin_id__lt=models.F("destination_id")))
+                models.Q(origin_fans_out=True, destination_fans_out=False)
+                | (
+                    models.Q(origin_fans_out=models.F("destination_fans_out"))
+                    & models.Q(origin_id__lt=models.F("destination_id"))
+                )
             )
             .order_by("origin_type", "origin_id", "peer_connector")
             .prefetch_related(
@@ -1534,10 +1543,10 @@ class CablePath(BaseModel):
 
         Args:
             origin: The PathEndpoint to trace from.
-            peer_connector: For breakout-origin paths, the cable-peer-side connector to follow on
-                the first hop. Defaults to 1, which is the only valid value for non-breakout
-                cables. Stamped onto the returned CablePath so its identity matches the lane it
-                represents.
+            peer_connector: For multi-connector-origin paths, the cable-peer-side connector to
+                follow on the first hop. Defaults to 1, which is the only valid value for
+                single-connector cables. Stamped onto the returned CablePath so its identity matches
+                the lane it represents.
         """
         if origin is None or origin.cable is None:
             return None
@@ -1572,9 +1581,9 @@ class CablePath(BaseModel):
 
             # Follow the cable to its far-end termination
             path.append(object_to_path_node(node.cable))
-            if first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
-                # Origin sits on a breakout cable. Look up the peer at the requested connector —
-                # may be None for disconnected lanes (path is split).
+            if first_hop and node.breakout_fans_out():
+                # Origin's connector maps to several far connectors. Look up the peer at the requested
+                # connector — may be None for disconnected lanes (path is split).
                 peer_termination = node.get_cable_peer(peer_connector=peer_connector)
                 if peer_termination is None:
                     is_split = True

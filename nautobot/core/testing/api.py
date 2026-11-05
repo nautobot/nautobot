@@ -141,7 +141,7 @@ class APITestCase(views.ModelTestCase):
 
     def get_change_logged_m2m_side_objects(self, instance):
         """If self.model is an explicit M2M through model, return the non-null, change-logged objects it associates."""
-        side_field_names = extras_utils.get_change_logged_m2m_through_side_field_names().get(self.model, ())
+        side_field_names = extras_utils.get_change_logged_m2m_side_field_names(self.model)
         side_objects = []
         for field_name in side_field_names:
             side_object = getattr(instance, field_name, None)
@@ -957,6 +957,9 @@ class APIViewTestCases:
             produced. That mismatch is a property of each model's serializer, so it wants testing per
             model rather than on whichever one a hand-written test happened to pick.
             """
+            for feature in ("export", "import"):
+                if not extras_utils.FeatureQuery(feature).includes(self.model):
+                    self.skipTest(f"{self.model._meta.label_lower} does not support {feature}")
             if hasattr(self, "get_deletable_object"):
                 instance = self.get_deletable_object()
             else:
