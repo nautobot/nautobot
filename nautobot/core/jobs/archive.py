@@ -257,7 +257,7 @@ class ArchiveOldRecords(Job):
             deleted_count, _ = (
                 ObjectChange.objects.restrict(self.user, "delete").filter(pk__in=object_changes_to_archive_pks).delete()
             )
-        self.logger.debug(
+        self.logger.error(
             "Archived %d and deleted %d live ObjectChange rows", len(object_changes_to_archive_pks), deleted_count
         )
         return len(object_changes_to_archive_pks)
