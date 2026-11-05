@@ -151,6 +151,8 @@ def created_relationship(create_object):
         "manufacturer": manufacturer,
         "platform": platform,
     }
+
+
 @pytest.fixture
 def created_device_set(create_object, status_for, created_device):
     """Devices owned by this test, split across two locations of their own.
