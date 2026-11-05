@@ -153,7 +153,8 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
     def test_postgres_engine_instruments_psycopg2(self):
         """A PostgreSQL DATABASES engine must instrument psycopg2, not mysqlclient."""
         with patch("nautobot.core.cli.opentelemetry.Psycopg2Instrumentor") as mock_psycopg2:
-            # instrument() imports this lazily inside the function, so patch it at its source module.
+            # instrument() calls _db_instrumentor_for_engine(), which imports this class inside the function,
+            # so patch the class in its source module.
             with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
                 with patch.dict(
                     "sys.modules",
@@ -172,7 +173,8 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
     def test_mysql_engine_instruments_mysqlclient(self):
         """A MySQL DATABASES engine must instrument mysqlclient, not psycopg2."""
         with patch("nautobot.core.cli.opentelemetry.Psycopg2Instrumentor") as mock_psycopg2:
-            # instrument() imports this lazily inside the function, so patch it at its source module.
+            # instrument() calls _db_instrumentor_for_engine(), which imports this class inside the function,
+            # so patch the class in its source module.
             with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
                 with patch.dict(
                     "sys.modules",
