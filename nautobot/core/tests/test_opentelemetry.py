@@ -38,9 +38,12 @@ from nautobot.dcim.models import Location
 
 try:
     import MySQLdb  # noqa: F401  # mysqlclient C-extension; only present on the MySQL CI job
+    from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 
     _MYSQLCLIENT_AVAILABLE = True
 except ImportError:
+    MySQLClientInstrumentor = None
+
     _MYSQLCLIENT_AVAILABLE = False
 
 
@@ -55,8 +58,8 @@ def _db_instrumentor_for_engine(engine):
     `import MySQLdb` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
     """
     if "mysql" in engine:
-        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
-
+        if MySQLClientInstrumentor is None:
+            raise RuntimeError("MySQLClientInstrumentor is missing - maybe test should be skipped?")  # pragma: nocover
         return MySQLClientInstrumentor
     return Psycopg2Instrumentor
 
@@ -152,9 +155,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
     def test_postgres_engine_instruments_psycopg2(self):
         """A PostgreSQL DATABASES engine must instrument psycopg2, not mysqlclient."""
         with patch("nautobot.core.cli.opentelemetry.Psycopg2Instrumentor") as mock_psycopg2:
-            # instrument() calls _db_instrumentor_for_engine(), which imports this class inside the function,
-            # so patch the class in its source module.
-            with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
+            with patch("nautobot.core.cli.opentelemetry.MySQLClientInstrumentor") as mock_mysql:
                 with patch.dict(
                     "sys.modules",
                     {
@@ -172,9 +173,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
     def test_mysql_engine_instruments_mysqlclient(self):
         """A MySQL DATABASES engine must instrument mysqlclient, not psycopg2."""
         with patch("nautobot.core.cli.opentelemetry.Psycopg2Instrumentor") as mock_psycopg2:
-            # instrument() calls _db_instrumentor_for_engine(), which imports this class inside the function,
-            # so patch the class in its source module.
-            with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
+            with patch("nautobot.core.cli.opentelemetry.MySQLClientInstrumentor") as mock_mysql:
                 with patch.dict(
                     "sys.modules",
                     {
