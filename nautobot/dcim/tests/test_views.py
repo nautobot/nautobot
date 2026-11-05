@@ -4550,7 +4550,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         )
         relationship.validated_save()
 
-        self.add_permissions("dcim.add_interface")
+        self.add_permissions("dcim.add_interface", "dcim.change_device")
 
         # Single-component add (ComponentCreateView): the required `cr_*` field exists only on the
         # model form, so leaving it empty previously raised ValueError from form.add_error.
