@@ -17,26 +17,30 @@ class JobResultTest(SeleniumTestCase):
         self.login_as_superuser()
 
     def assert_result_data_fits_panel(self, result):
-        """Check the rendered JSON and its actual dimensions, including after highlighting."""
+        """Check the complete JSON and its layout before or after syntax highlighting."""
         code = self.browser.find_by_css("#main .attr-table pre code").first
         self.assertEqual(json.loads(code["textContent"]), result)
         dimensions = self.browser.evaluate_script(
             """(() => {
                 const code = document.querySelector('#main .attr-table pre code');
-                const table = code.closest('table');
+                const pre = code.closest('pre');
+                const table = pre.closest('table');
                 const panel = table.closest('.card');
                 const textRange = document.createRange();
                 textRange.selectNodeContents(code);
+                const codeWidth = code.clientWidth;
                 return {
-                    codeWidth: code.clientWidth,
-                    codeScrollWidth: code.scrollWidth,
+                    preOverflow: pre.scrollWidth - pre.clientWidth,
+                    // Highlighted code can scroll separately. Inline code has no client width.
+                    codeOverflow: codeWidth > 0 ? code.scrollWidth - codeWidth : 0,
                     tableRight: table.getBoundingClientRect().right,
                     panelRight: panel.getBoundingClientRect().right,
                     textRight: Math.max(...Array.from(textRange.getClientRects(), rect => rect.right)),
                 };
             })()"""
         )
-        self.assertLessEqual(dimensions["codeScrollWidth"], dimensions["codeWidth"] + 1)
+        self.assertLessEqual(dimensions["preOverflow"], 1, "The result <pre> has horizontal overflow")
+        self.assertLessEqual(dimensions["codeOverflow"], 1, "The result <code> has horizontal overflow")
         self.assertLessEqual(dimensions["tableRight"], dimensions["panelRight"] + 1)
         self.assertLessEqual(dimensions["textRight"], dimensions["panelRight"] + 1)
 
