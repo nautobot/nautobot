@@ -208,6 +208,7 @@ def get_expected_menu_item_name(view_model) -> str:
     name_map = {
         "Approval Workflow Definitions": "Workflow Definitions",
         "Approval Workflow Stages": "Approval Dashboard",
+        "Archived Object Changes": "Archived Change Log",
         "Controller Managed Device Groups": "Device Groups",
         "Object Changes": "Change Log",
         "Min Max Validation Rules": "Min/Max Rules",

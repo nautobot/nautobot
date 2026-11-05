@@ -1200,6 +1200,8 @@ class ObjectsTablePanel(Panel):
                 "table (table_class, table_filter, table_attribute, distinct, select_related_fields, "
                 "prefetch_related_fields, order_by_fields, hide_hierarchy_ui)."
             )
+        if not (self.context_table_key or self.table_class):
+            raise ValueError("Either `context_table_key` or `table_class` must be specified.")  # pragma: no cover
         if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         # A subclass that overrides `get_table_data_queryset()` supplies its own data source and so

@@ -208,6 +208,15 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
+                        link="extras:archivedjobresult_list",
+                        name="Archived Job Results",
+                        weight=450,
+                        permissions=[
+                            "extras.view_archivedjobresult",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
                         link="extras:jobhook_list",
                         name="Job Hooks",
                         weight=500,
@@ -274,6 +283,15 @@ menu_items = (
                         weight=100,
                         permissions=[
                             "extras.view_objectchange",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="extras:archivedobjectchange_list",
+                        name="Archived Change Log",
+                        weight=200,
+                        permissions=[
+                            "extras.view_archivedobjectchange",
                         ],
                         buttons=(),
                     ),
