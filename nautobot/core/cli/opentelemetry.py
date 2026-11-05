@@ -25,12 +25,12 @@ from nautobot.core.utils.module_loading import import_string_optional
 
 logger = logging.getLogger(__name__)
 
-# Set once instrument() has enabled instrumentation.
+# True after instrument() has enabled instrumentation; uninstrument() resets it to False.
 _instrumented = False
 
-# Set once install_exporters() has attached the OTLP/console exporters, so repeated post-fork hook
+# True after install_exporters() has attached the OTLP/console exporters, so repeated post-fork hook
 # calls (uWSGI @postfork + a non-forking fallback, or multiple Celery children in one process) don't
-# double-register span processors / meter providers.
+# double-register span processors / meter providers. uninstall_exporters() resets it to False.
 _exporters_installed = False
 
 
@@ -125,14 +125,10 @@ def instrument():
 
 
 def _db_instrumentor_for_engine(engine):
-    """Return the DB instrumentor class matching `engine`, mirroring `instrument()` in opentelemetry.py.
+    """Return the OpenTelemetry DB instrumentor class for the database `engine` string.
 
-    Production selects the instrumentor with the same `"mysql" in engine` test, so tests read the live
-    `settings.DATABASES` engine to instrument/uninstrument the backend the suite is actually running against
-    (e.g. CI's dedicated MySQL job), rather than hardcoding Psycopg2.
-
-    The mysqlclient instrumentor is imported lazily (only in the MySQL branch) because its package runs
-    `import MySQLdb` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
+    The mysqlclient instrumentor is imported lazily inside this function (only when MySQL is the engine)
+    because its package runs `import MySQLdb` at import time, which errors when `mysqlclient` is not installed.
     """
     if "mysql" in engine:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
