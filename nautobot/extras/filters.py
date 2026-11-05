@@ -67,6 +67,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -657,6 +660,78 @@ class ApprovalWorkflowDefinitionFilterSet(NautobotFilterSet):
 
         model = ApprovalWorkflowDefinition
         fields = "__all__"
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "grouping": "icontains",
+            "message": "icontains",
+            "log_level": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ArchivedJobLogEntry
+        fields = [
+            "id",
+            "absolute_url",
+            "created",
+            "grouping",
+            "job_result_id",
+            "log_level",
+            "log_object",
+            "message",
+        ]
+
+
+class ArchivedJobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
+    q = SearchFilter(filter_predicates={"name": "icontains"})
+
+    status = MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+
+    class Meta:
+        model = ArchivedJobResult
+        fields = [
+            "id",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "status",
+        ]
+
+
+class ArchivedObjectChangeFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "user_name": "icontains",
+            "object_repr": "icontains",
+        },
+    )
+    change_context = MultipleChoiceFilter(label="Change Context", choices=ObjectChangeEventContextChoices)
+    change_context_detail = MultiValueCharFilter(label="Change Context Detail")
+
+    class Meta:
+        model = ArchivedObjectChange
+        fields = [
+            "id",
+            "user_name",
+            "change_context",
+            "change_context_detail",
+            "request_id",
+            "action",
+            "changed_object_type_id",
+            "changed_object_id",
+            "object_repr",
+            "time",
+        ]
 
 
 #

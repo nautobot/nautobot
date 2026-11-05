@@ -65,6 +65,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -1005,6 +1008,23 @@ class ApprovalWorkflowStageTest(
         nested_user = response.data["responses"][0]["user"]
         self.assertEqual(nested_user["object_type"], "users.user")
         self.assertEqual(nested_user["id"], self.user.pk)
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedJobLogEntry
+
+
+class ArchivedJobResultTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedJobResult
+
+
+class ArchivedObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedObjectChange
 
 
 #

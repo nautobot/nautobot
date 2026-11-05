@@ -54,6 +54,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -1200,6 +1203,31 @@ class ObjectChangeSerializer(BaseModelSerializer):
             return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.changed_object, "changed_object")
         except SerializerNotFound:
             return obj.object_repr
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedObjectChangeSerializer(ObjectChangeSerializer):
+    class Meta(ObjectChangeSerializer.Meta):
+        model = ArchivedObjectChange
+
+
+# Not inheriting from JobResultSerializer because it's easier to start from baseline and add what we need,
+# rather than removing the `files` field from JobResultSerializer.
+class ArchivedJobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
+    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+
+    class Meta:
+        model = ArchivedJobResult
+        fields = "__all__"
+
+
+class ArchivedJobLogEntrySerializer(JobLogEntrySerializer):
+    class Meta(JobLogEntrySerializer.Meta):
+        model = ArchivedJobLogEntry
 
 
 #

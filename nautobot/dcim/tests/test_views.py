@@ -115,6 +115,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.tables import DeviceModuleBayTable
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.dcim.views import (
     CableCreateView,
@@ -2975,7 +2976,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         module.parent_module_bay = root1
         module.validated_save()
 
-        panel = DeviceUIViewSet.DeviceModuleBaysTablePanel(weight=100)
+        panel = DeviceUIViewSet.DeviceModuleBaysTablePanel(weight=100, table_class=DeviceModuleBayTable)
         request = RequestFactory().get(reverse("dcim:device_modulebays", kwargs={"pk": device.pk}))
         request.user = self.user
 

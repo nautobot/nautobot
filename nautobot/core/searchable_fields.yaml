@@ -457,6 +457,21 @@ extras:
     - state
     name: Approval Workflow Stage Response
   - fields:
+    - grouping
+    - id
+    - log_level
+    - message
+    name: Archived Job Log Entry
+  - fields:
+    - id
+    - name
+    name: Archived Job Result
+  - fields:
+    - id
+    - object_repr
+    - user_name
+    name: Archived Object Change
+  - fields:
     - content_type__app_label
     - content_type__model
     - description

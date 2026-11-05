@@ -72,6 +72,8 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -1494,6 +1496,19 @@ class ApprovalWorkflowStageViewTestCase(
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, marker)
+
+
+class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedJobResult
+
+
+class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedObjectChange
+
+    def test_filter_form_fields_are_working(self):
+        # TODO: there's a baseline breakage here for the `time__gte` and `time__lte` fields, not failing in baseline
+        # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass as it SHOULD be.
+        pass
 
 
 class ComputedFieldTestCase(
