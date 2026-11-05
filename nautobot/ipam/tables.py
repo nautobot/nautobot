@@ -661,7 +661,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         verbose_name="",
     )
 
-    # The serializer gives the Namespace directly, rather than through the parent Prefix's natural key
+    # Map this column to the serializer's own `namespace` field instead of to a path through its `parent` field
     column_serializer_field_overrides = {"parent__namespace": "namespace"}
 
     def render_pk(self, value, record):

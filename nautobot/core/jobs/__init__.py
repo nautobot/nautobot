@@ -448,7 +448,7 @@ class ExportObjectList(Job):
                     for part in query_paths.get(match_field, match_field).split("__"):
                         related_model = related_model._meta.get_field(part).related_model
                 except (AttributeError, FieldDoesNotExist):
-                    # Not a model field, or a path through a field that isn't a relation
+                    # The match field isn't a model field, or its query path passes through a non-relation field
                     return None
                 related_lookups = natural_key_lookups_for(related_model)
                 if related_lookups is None:

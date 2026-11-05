@@ -343,7 +343,7 @@ class IPAddressSerializer(NamespaceParentedModelSerializerMixin, NautobotModelSe
     class Meta:
         model = IPAddress
         fields = "__all__"
-        # The natural key's `parent__namespace` is written as `namespace`, and `host` as part of `address`
+        # The `namespace` field represents the natural key's `parent__namespace`, and `address` contains its `host`
         import_match_fields = ["namespace", "address"]
         related_field_query_paths = {"namespace": "parent__namespace"}
         derived_fields_omitted_from_default_export = ["parent"]
@@ -384,7 +384,7 @@ class IPAddressRangeSerializer(
     class Meta:
         model = IPAddressRange
         fields = "__all__"
-        # The natural key's `parent__namespace` is written as `namespace`, and `start_host` as `start_address`
+        # The `namespace` field represents the natural key's `parent__namespace`, and `start_address` its `start_host`
         import_match_fields = ["namespace", "start_address"]
         related_field_query_paths = {"namespace": "parent__namespace"}
         derived_fields_omitted_from_default_export = ["parent"]

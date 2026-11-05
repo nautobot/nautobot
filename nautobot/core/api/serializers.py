@@ -204,7 +204,7 @@ class NaturalKeyRepresentationMixin:
         return self._for_import_export or self._is_csv_request()
 
     def _get_fields_omitted_from_export(self):
-        """Return the serializer fields that an import/export (by default, including all such fields) should omit.
+        """Return the serializer fields that a default export (one with no "export_fields" selection) leaves out.
 
         This always returns an empty set when this serializer isn't being used for import/export, when it's a nested
         serializer, or when a specific set of "export_fields" (overriding the default) has been provided in the context.
@@ -555,9 +555,9 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
     def get_import_match_filter(self, field_name, value):
         """For a given field and value, get the queryset filter that import can use to find a matching, existing record.
 
-        By default, this uses `self._get_query_path_for_field_path()` (and any per-serializer override it requests
-        by defining `Meta.related_field_query_paths`, if needed) to get the queryset filter lookup to use,
-        which in most cases is sufficient:
+        By default, this method passes the field's source to `self._get_query_path_for_field_path()`, which replaces it
+        with the database lookup that the serializer maps it to in `Meta.related_field_query_paths`, if there is one.
+        The result is used as the filter lookup, which is sufficient in most cases:
 
             >>> IPAddressSerializer().get_import_match_filter("description", "Hello world")
             {'description': 'Hello world'}
