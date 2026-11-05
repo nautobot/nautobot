@@ -12,7 +12,7 @@ from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, Valida
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
-from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 from django.http.response import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
@@ -279,8 +279,19 @@ class ModelViewSetMixin:
                     model_field = model._meta.get_field(field_instance.source)
                 except FieldDoesNotExist:
                     continue
-                if isinstance(model_field, ForeignKey):
+                # A reverse one-to-one (e.g. Device.parent_bay) is single-valued like a ForeignKey, and select_related()
+                # can join it the same way.
+                if isinstance(model_field, (ForeignKey, OneToOneRel)):
                     select_fields.append(field_instance.source)
+                    if isinstance(field_instance, drf_serializers.ModelSerializer):
+                        # A nested serializer renders every field of the related object, once for each row. If one of
+                        # those fields is a reverse one-to-one relation (e.g. Device.parent_bay), the related row has no
+                        # column for it, so the select_related() on the foreign key does not fetch it. Add that relation
+                        # to select_fields so that the list query joins it too.
+                        select_fields.extend(
+                            f"{field_instance.source}__{lookup}"
+                            for lookup in self._reverse_one_to_one_lookups(field_instance, model_field.related_model)
+                        )
 
         # Prefetch deeper relations needed for this object's natural key (e.g. for `natural_slug`) to avoid N+1 queries.
         try:
@@ -304,6 +315,21 @@ class ModelViewSetMixin:
             queryset = maybe_prefetch_related(queryset, prefetch_fields)
 
         return queryset
+
+    @staticmethod
+    def _reverse_one_to_one_lookups(serializer, model):
+        """Return the sources of the fields in `serializer` that are reverse one-to-one relations on `model`."""
+        lookups = []
+        for field_instance in serializer.fields.values():
+            if field_instance.write_only or field_instance.source == "*" or "." in field_instance.source:
+                continue
+            try:
+                model_field = model._meta.get_field(field_instance.source)
+            except FieldDoesNotExist:
+                continue
+            if isinstance(model_field, OneToOneRel):
+                lookups.append(field_instance.source)
+        return lookups
 
     def restrict_queryset(self, request, *args, **kwargs):
         """

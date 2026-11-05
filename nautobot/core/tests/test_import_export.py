@@ -29,6 +29,7 @@ from django.db import IntegrityError
 from django.http import QueryDict
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
+from django_celery_beat.models import PeriodicTask
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 import yaml
@@ -55,6 +56,7 @@ from nautobot.core.api.parsers import (
 )
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.choices import ImportModeChoices
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
@@ -65,6 +67,7 @@ from nautobot.core.testing import (
     TestCase as NautobotTestCase,
     TransactionTestCase,
 )
+from nautobot.core.testing.utils import temporarily_sensitive_fields
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
@@ -92,12 +95,15 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import (
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStageDefinition,
     Contact,
     ContactAssociation,
     CustomField,
     ExportTemplate,
     FileProxy,
     JobLogEntry,
+    Note,
     RelationshipAssociation,
     Role,
     SavedView,
@@ -105,6 +111,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
+from nautobot.extras.utils import populate_model_features_registry
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import (
     IPAddress,
@@ -3198,16 +3205,19 @@ class CoreUpsertTests(ImportExportJobTestCase):
 
     def test_core_upsert__sensitive_field__update(self):
         """A changed sensitive field is logged as changed, without either of its values."""
-        old_key, new_key = "a" * 40, "b" * 40
-        token = Token.objects.create(user=self.user, key=old_key)
-        job_result = self.run_import(f"id,key\n{token.pk},{new_key}", model=Token)
-        self.assertImport(job_result, updated=1)
-        token.refresh_from_db()
-        self.assertEqual(token.key, new_key)
+        old_value, new_value = "old sensitive value", "new sensitive value"
+        status = self.create_status()
+        status.description = old_value
+        status.save()
+        with temporarily_sensitive_fields(Status, "description"):
+            job_result = self.run_import(f"id,description\n{status.pk},{new_value}")
+            self.assertImport(job_result, updated=1)
+            status.refresh_from_db()
+            self.assertEqual(status.description, new_value)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn("`key`: (redacted) → (redacted)", entry.message)
-        self.assertNotIn(old_key, entry.message)
-        self.assertNotIn(new_key, entry.message)
+        self.assertIn("`description`: (redacted) → (redacted)", entry.message)
+        self.assertNotIn(old_value, entry.message)
+        self.assertNotIn(new_value, entry.message)
 
     def test_core_upsert__write_only_field__update(self):
         """A row that sets only a write-only field is an update, not unchanged, as its old value can't be compared."""
@@ -3449,6 +3459,107 @@ class MatchKeyTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "Row 1: `manufacturer`:", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__icontains="Match field").exists())
         self.assertFalse(DeviceType.objects.filter(model="Unmatched DT").exists())
+
+
+# ===========================================================================
+# Import mode (create only, update only)
+# ===========================================================================
+class ImportModeTests(ImportExportJobTestCase):
+    def test_import_mode__create_only_refuses_matched_rows(self):
+        """Create Only creates unmatched rows and refuses matched ones, even on match fields Nautobot doesn't keep unique."""
+        status = self.create_status(color="111111")
+        csv_data = "\n".join(
+            ["name,color,content_types", "test_new_status,222222,dcim.device", "test_other_status,111111,dcim.device"]
+        )
+        job_result = self.run_import(
+            csv_data,
+            match_fields="color",
+            import_mode=ImportModeChoices.CREATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Created 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        self.assertTrue(Status.objects.filter(name="test_new_status").exists())
+        self.assertJobLogEntry(
+            job_result,
+            'Row 2: Existing record "test_update_status" matches on (color); not creating a new one in Create Only mode',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name="test_other_status").exists())
+        status.refresh_from_db()
+        self.assertEqual(status.name, "test_update_status")
+
+    def test_import_mode__create_only_with_default_match_fields(self):
+        """Create Only refuses a row matching on the natural key, rather than letting it update the record."""
+        status = self.create_status(color="111111")
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            import_mode=ImportModeChoices.CREATE,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, 'Row 1: Existing record "test_update_status"', level=LogLevelChoices.LOG_ERROR
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
+    def test_import_mode__update_only_refuses_unmatched_rows(self):
+        """Update Only updates matched rows and refuses unmatched ones rather than creating them."""
+        status = self.create_status(color="111111")
+        csv_data = "\n".join(["name,color", "test_update_status,222222", "test_no_such_status,333333"])
+        job_result = self.run_import(
+            csv_data,
+            match_fields="name",
+            import_mode=ImportModeChoices.UPDATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Updated 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "222222")
+        self.assertJobLogEntry(
+            job_result,
+            "Row 2: No existing record matches on (name); not creating a new one in Update Only mode",
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name="test_no_such_status").exists())
+
+    def test_import_mode__update_only_requires_default_match_fields_in_every_row(self):
+        """Update Only refuses a row lacking the default match key, which Create/Update would treat as a create."""
+        status = self.create_status(color="111111")
+        records = [
+            {"name": "test_id_less_status", "color": "222222", "content_types": ["dcim.device"]},
+            {"id": str(status.pk), "color": "333333"},
+        ]
+        job_result = self.run_import(
+            json.dumps(records),
+            import_format="json",
+            import_mode=ImportModeChoices.UPDATE,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Updated 1 status object(s) from 2 row(s) of data", level=LogLevelChoices.LOG_INFO
+        )
+        self.assertJobLogEntry(
+            job_result, "Row 1: `Match field(s) not present in the import data: id`", level=LogLevelChoices.LOG_ERROR
+        )
+        self.assertFalse(Status.objects.filter(name="test_id_less_status").exists())
+
+    def test_import_mode__update_only_requires_match_fields(self):
+        """Update Only refuses, before any row runs, a model that has no match fields to update records by."""
+        job_result = self.run_import(
+            "note\nA note",
+            model=Note,
+            import_mode=ImportModeChoices.UPDATE,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "Update Only mode requires match fields", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists())
 
 
 # ===========================================================================
@@ -4218,6 +4329,69 @@ class SentinelValueTests(ImportExportJobTestCase):
 # Permissions
 # ===========================================================================
 class PermissionTests(ImportExportJobTestCase):
+    def test_perm__unsupported_content_type_is_rejected(self):
+        """Each Job rejects content-types that its feature (`export`/`import`) doesn't include, even for a superuser."""
+        with self.subTest("export"):
+            job_result = self.run_export(model=PeriodicTask, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support export",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(job_result.files.exists())
+        with self.subTest("import"):
+            job_result = self.run_import(
+                "name,task\ntest_task,nautobot.foo",
+                model=PeriodicTask,
+                expected_status=JobResultStatusChoices.STATUS_FAILURE,
+            )
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support import",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
+        with self.subTest("import, with the content-type declared by the data"):
+            job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs",
+                "ImportObjects",
+                csv_data="model: django_celery_beat.periodictask\nrecords:\n  - name: test_task\n    task: nautobot.foo",
+                import_format="yaml",
+            )
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result,
+                "django_celery_beat.periodictask objects do not support import",
+                level=LogLevelChoices.LOG_ERROR,
+            )
+            self.assertFalse(PeriodicTask.objects.filter(name="test_task").exists())
+
+    def test_perm__each_job_requires_only_its_own_feature(self):
+        """A model that opts out of export can still be imported, and vice versa."""
+        self.addCleanup(populate_model_features_registry, refresh=True)
+        with self.subTest("is_exportable_model = False"):
+            with mock.patch.object(Status, "is_exportable_model", False):
+                populate_model_features_registry(refresh=True)
+            job_result = self.run_export(expected_status=JobResultStatusChoices.STATUS_FAILURE)
+            self.assertJobLogEntry(
+                job_result, "extras.status objects do not support export", level=LogLevelChoices.LOG_ERROR
+            )
+            self.assertFalse(job_result.files.exists())
+            self.run_import("name,color,content_types\ntest_status_importable,111111,dcim.device")
+            self.assertTrue(Status.objects.filter(name="test_status_importable").exists())
+        with self.subTest("is_importable_model = False"):
+            with mock.patch.object(Status, "is_importable_model", False):
+                populate_model_features_registry(refresh=True)
+            job_result = self.run_import(
+                "name,color,content_types\ntest_status_unimportable,111111,dcim.device",
+                expected_status=JobResultStatusChoices.STATUS_FAILURE,
+            )
+            self.assertJobLogEntry(
+                job_result, "extras.status objects do not support import", level=LogLevelChoices.LOG_ERROR
+            )
+            self.assertFalse(Status.objects.filter(name="test_status_unimportable").exists())
+            self.assertTrue(self.run_export().files.exists())
+
     def test_perm__export_without_permission(self):
         """Job enforces view permission on the content-type being exported."""
         job_result = self.run_export(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)
@@ -4270,6 +4444,55 @@ class PermissionTests(ImportExportJobTestCase):
             level=LogLevelChoices.LOG_ERROR,
         )
         self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__icontains="colour").exists())
+
+    def test_perm__import_mode_requires_its_own_permission(self):
+        """Create Only needs add permission and Update Only needs change; the other one alone isn't enough."""
+        self.create_status()
+        cases = (
+            (ImportModeChoices.CREATE, "extras.change_status", "create"),
+            (ImportModeChoices.UPDATE, "extras.add_status", "update"),
+        )
+        for import_mode, permission, verb in cases:
+            with self.subTest(import_mode=import_mode):
+                self.add_permissions(permission)
+                try:
+                    job_result = self.run_import(
+                        "name,color\ntest_update_status,999999",
+                        match_fields="name",
+                        import_mode=import_mode,
+                        username=self.user.username,
+                        expected_status=JobResultStatusChoices.STATUS_FAILURE,
+                    )
+                    self.assertJobLogEntry(
+                        job_result,
+                        f'User "{self.user}" does not have permission to {verb} status objects',
+                        level=LogLevelChoices.LOG_ERROR,
+                    )
+                    self.assertFalse(
+                        JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists()
+                    )
+                finally:
+                    self.remove_permissions(permission)
+
+    def test_perm__create_only_does_not_report_unviewable_collisions(self):
+        """Create Only names a colliding record only if the user may view it; otherwise the create itself fails."""
+        self.add_permissions("extras.add_status")
+        self.add_permissions("extras.view_status", constraints={"color": "ffffff"})
+        status = self.create_status(color="111111")
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            import_mode=ImportModeChoices.CREATE,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Row 1: `name`: `status with this name already exists.`", level=LogLevelChoices.LOG_ERROR
+        )
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__contains="Existing record").exists()
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
 
     def test_perm__import_constrained_add(self):
         """Job only creates objects the user has permission to add."""
@@ -4348,6 +4571,128 @@ class PermissionTests(ImportExportJobTestCase):
         )
         status.refresh_from_db()
         self.assertEqual(status.color, "111111")
+
+
+class ImportRelatedObjectPermissionTests(ImportExportJobTestCase):
+    """An import may reference only related objects the importing user may view."""
+
+    def setUp(self):
+        super().setUp()
+        self.rack = self.create_rack_reservation().rack
+        self.own_tenant = Tenant.objects.create(name="Own Tenant")
+        Tenant.objects.create(name="Hidden Tenant")
+        self.add_permissions("dcim.add_rackreservation", "dcim.view_rack")
+        self.add_permissions("tenancy.view_tenant", constraints={"name": "Own Tenant"})
+
+    def import_reservation(self, csv_columns, expected_status):
+        """Import a reservation of units on the rack for the test user, as them, with the given extra columns.
+
+        The test user has no permission to view users, but may always reference themselves.
+        """
+        header = ",".join(["rack__id", "units", "user__username", "description", *csv_columns])
+        values = ",".join([str(self.rack.pk), "9", self.user.username, "Imported Reservation", *csv_columns.values()])
+        return self.run_import(
+            f"{header}\n{values}",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=expected_status,
+        )
+
+    def test_perm__unviewable_related_object_cannot_be_referenced(self):
+        self.import_reservation({"tenant__name": "Hidden Tenant"}, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__viewable_related_object_can_be_referenced(self):
+        """A positive control for the test above, which would also pass if every reference were refused."""
+        self.import_reservation({"tenant__name": "Own Tenant"}, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(RackReservation.objects.get(description="Imported Reservation").tenant, self.own_tenant)
+
+    def test_perm__unviewable_related_object_is_reported_as_nonexistent(self):
+        """The error must not depend on whether the referenced object exists, or the import becomes an oracle."""
+
+        def error_for(tenant_name):
+            job_result = self.import_reservation({"tenant__name": tenant_name}, JobResultStatusChoices.STATUS_FAILURE)
+            message = JobLogEntry.objects.get(
+                job_result=job_result, log_level=LogLevelChoices.LOG_ERROR, message__startswith="Row 1"
+            ).message
+            return message.replace(tenant_name, "X")
+
+        self.assertEqual(error_for("Hidden Tenant"), error_for("No Such Tenant"))
+
+    def test_perm__location_may_be_identified_through_an_unviewable_parent(self):
+        """A Location's natural key names its parent, which identifies it even where the parent may not be viewed.
+
+        This is how an export identifies a Location, so a file exported by a user who may view only some Locations
+        must still import.
+        """
+        parent_type = LocationType.objects.create(name="Perm Parent Type")
+        child_type = LocationType.objects.create(name="Perm Child Type", parent=parent_type)
+        child_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Hidden Parent", location_type=parent_type, status=location_status)
+        child = Location.objects.create(
+            name="Visible Child", location_type=child_type, parent=parent, status=location_status
+        )
+        rack_status = Status.objects.get_for_model(Rack).first()
+        self.add_permissions("dcim.add_rack", "extras.view_status")
+        self.add_permissions("dcim.view_location", constraints={"name": "Visible Child"})
+
+        self.run_import(
+            f"name,status__name,location__name,location__parent__name\n"
+            f"Imported Rack,{rack_status.name},{child.name},{parent.name}",
+            model=Rack,
+            username=self.user.username,
+        )
+        self.assertEqual(Rack.objects.get(name="Imported Rack").location, child)
+
+    def test_perm__related_object_lookup_must_be_permitted(self):
+        """A column naming a lookup such as `__startswith` is refused, as the REST API refuses it."""
+        job_result = self.run_import(
+            "rack__name__startswith,units,user__username,description\n"
+            f"Perm,9,{self.user.username},Imported Reservation",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "is not a permitted lookup", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__unviewable_user_cannot_be_referenced(self):
+        """`users.User` has no `restrict()`, which `WritableSerializerMixin` has relied on to apply permissions."""
+        self.run_import(
+            f"rack__id,units,user__username,description\n{self.rack.pk},9,reservation-owner,Imported Reservation",
+            model=RackReservation,
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertFalse(RackReservation.objects.filter(description="Imported Reservation").exists())
+
+    def test_perm__unviewable_group_cannot_be_referenced(self):
+        """`auth.Group` has no `restrict()`, and `GroupField` (here, an approver group) applies permissions itself."""
+        workflow = ApprovalWorkflowDefinition.objects.create(
+            name="Perm Workflow", model_content_type=ContentType.objects.get_for_model(Rack), weight=0
+        )
+        Group.objects.create(name="Visible Group")
+        Group.objects.create(name="Hidden Group")
+        self.add_permissions("extras.add_approvalworkflowstagedefinition", "extras.view_approvalworkflowdefinition")
+        self.add_permissions("auth.view_group", constraints={"name": "Visible Group"})
+
+        for group_name, expected_status in (
+            ("Hidden Group", JobResultStatusChoices.STATUS_FAILURE),
+            ("Visible Group", JobResultStatusChoices.STATUS_SUCCESS),
+        ):
+            with self.subTest(group_name=group_name):
+                self.run_import(
+                    "approval_workflow_definition,sequence,name,min_approvers,approver_group\n"
+                    f"{workflow.pk},100,Stage for {group_name},1,{group_name}",
+                    model=ApprovalWorkflowStageDefinition,
+                    username=self.user.username,
+                    expected_status=expected_status,
+                )
+                self.assertEqual(
+                    ApprovalWorkflowStageDefinition.objects.filter(name=f"Stage for {group_name}").exists(),
+                    expected_status == JobResultStatusChoices.STATUS_SUCCESS,
+                )
 
 
 # ===========================================================================

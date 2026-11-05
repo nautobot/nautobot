@@ -2,7 +2,9 @@
 
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.utils.timezone import now
+from rest_framework import status
 
 from nautobot.core.jobs import BulkDeleteObjects, ExportObjectList
 from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
@@ -503,6 +505,49 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
         if len(instances) < 3:
             self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
         return instances
+
+    # Each of these tests references an approver group, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable.
+
+    def test_create_object(self):
+        self.add_permissions("auth.view_group")
+        super().test_create_object()
+
+    def test_bulk_create_objects(self):
+        self.add_permissions("auth.view_group")
+        super().test_bulk_create_objects()
+
+    def test_update_object(self):
+        self.add_permissions("auth.view_group")
+        super().test_update_object()
+
+    def test_get_put_round_trip(self):
+        self.add_permissions("auth.view_group")
+        super().test_get_put_round_trip()
+
+    def test_recreate_object_csv(self):
+        self.add_permissions("auth.view_group")
+        super().test_recreate_object_csv()
+
+    def test_recreate_object_document(self):
+        self.add_permissions("auth.view_group")
+        super().test_recreate_object_document()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_approver_group_permission_constraints(self):
+        """An approver group may be referenced only if the user may view it."""
+        self.add_permissions(
+            "extras.add_approvalworkflowstagedefinition", "extras.view_approvalworkflowstagedefinition"
+        )
+        self.add_permissions("auth.view_group", constraints={"name": self.approver_group_2.name})
+        url = self._get_list_url()
+
+        response = self.client.post(url, self.create_data[0], format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("approver_group", response.data)
+
+        response = self.client.post(url, self.create_data[1], format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["approver_group"], self.approver_group_2.name)
 
 
 class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

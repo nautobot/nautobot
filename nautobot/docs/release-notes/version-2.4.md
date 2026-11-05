@@ -281,6 +281,67 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 
+## v2.4.45 (2026-10-27)
+
+### Security in v2.4.45
+
+- [GHSA-gpjq-54xp-rrj5](https://github.com/nautobot/nautobot/security/advisories/GHSA-gpjq-54xp-rrj5) - Fixed a stored XSS vulnerability when rendering custom field labels and choice values on the Import Objects page.
+- [GHSA-hjmc-4p4r-6fhx](https://github.com/nautobot/nautobot/security/advisories/GHSA-hjmc-4p4r-6fhx) - Fixed the `Import Objects` system Job allowing imported objects to reference related objects that the importing user did not have permission to view, which also revealed whether such objects existed.
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Fixed Job object variables, and the objects that job button receivers act on, accepting objects that the user submitting the job did not have permission to view, which also revealed whether such objects existed.
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Fixed the REST API's dry run of a scheduled job not enforcing the constraints of the requesting user's permission to view scheduled jobs.
+- [GHSA-5qqh-654x-4g4q](https://github.com/nautobot/nautobot/security/advisories/GHSA-5qqh-654x-4g4q) - Fixed a stored XSS vulnerability when rendering device type and software version names in the software image summary on the Device, Virtual Machine and Inventory Item forms.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Fixed the REST API and the `Import Objects` system Job allowing objects to reference users and groups that the requesting user did not have permission to view.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Fixed web UI forms accepting users and groups that the requesting user did not have permission to view.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Fixed `WritableNestedSerializer` and `SerializedPKRelatedField`, as used by App serializers, accepting related objects that the requesting user did not have permission to view.
+- [GHSA-37vj-5gff-ww9c](https://github.com/nautobot/nautobot/security/advisories/GHSA-37vj-5gff-ww9c) - Fixed related objects in REST API requests, `Import Objects` data, and Job inputs being looked up by attributes that could reveal data the requesting user did not have permission to view, including other users' API tokens.
+- [#9606](https://github.com/nautobot/nautobot/issues/9606) - Changed the IP address merge tool to require the `ipam.add_ipaddress` and `ipam.delete_ipaddress` permissions in addition to `ipam.change_ipaddress`.
+- [#9606](https://github.com/nautobot/nautobot/issues/9606) - Fixed the IP address merge tool not enforcing object-level `add`, `change`, and `delete` permission constraints on the IP addresses it merges and creates.
+- [#9640](https://github.com/nautobot/nautobot/issues/9640) - Updated dependency `certifi` to `2026.10.23` to mitigate several security vulnerabilities. As this is not a direct dependency, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#9640](https://github.com/nautobot/nautobot/issues/9640) - Updated dependency `gitpython` to `~3.2.1` to mitigate CVE-2026-114145.
+- [#9644](https://github.com/nautobot/nautobot/issues/9644) - Fixed the REST API `available-vlans` endpoint of VLAN groups revealing the existence and name of another VLAN group that the requesting user did not have permission to view.
+- [#9687](https://github.com/nautobot/nautobot/issues/9687) - Updated dependency `pillow` (only for Python 3.11 and later) to `^13.0.0` to mitigate multiple vulnerabilities. Note that version 13 of `pillow` does not support Python 3.10, which is nearing end-of-life; while Nautobot _currently_ continues to support Python 3.10, it is not possible to mitigate this and other security vulnerabilities while remaining on Python 3.10. Installations on Python 3.10 are strongly encouraged to update to a newer supported version of Python at the earliest opportunity.
+- [#9699](https://github.com/nautobot/nautobot/issues/9699) - Updated dependency `djangorestframework` to `~3.17.2` to mitigate CVE-2026-73228 and CVE-2026-73229.
+
+### Added in v2.4.45
+
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Added `restrict_queryset()` to `nautobot.apps.models`, to restrict any queryset, including of users and groups, to the objects that a user has permission to act on.
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Added `mock_wsgi_request()` to `nautobot.apps.utils`, to construct a minimal request, such as to carry a user, outside of handling an actual HTTP request.
+- [#9660](https://github.com/nautobot/nautobot/issues/9660) - Added `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` setting to exclude selected sides of many-to-many association models from automatic change logging, for improved performance when an object has many associations.
+
+### Changed in v2.4.45
+
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Changed Job object variables to accept, in the Job form and the REST API, only objects that the user submitting the job has permission to view.
+- [GHSA-mw4m-fgfr-qc98](https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98) - Changed job button receivers to act only on objects of a type that one of their enabled job buttons applies to; App tests that run a job button receiver directly may need to create a `JobButton` for that job and content type.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Changed the REST API and the `Import Objects` system Job to require `users.view_user` permission to reference a user other than the requesting user, and `auth.view_group` permission to reference a group; App tests based on `APIViewTestCases` whose data references other users or groups may need to grant these permissions, as `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not cover them.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Changed `WritableNestedSerializer` and `SerializedPKRelatedField`, as used by App serializers, to accept only related objects that the requesting user has permission to view.
+- [GHSA-rg7h-q6c5-hr4h](https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h) - Changed `restrict_form_fields()` to also restrict users and groups to those that the user has permission to view, a user always being permitted to view themselves; as for any other related object, editing an object in the web UI therefore requires permission to view the users and groups it references, and App tests based on `ViewTestCases` whose form data references other users or groups may likewise need to grant these permissions.
+- [GHSA-37vj-5gff-ww9c](https://github.com/nautobot/nautobot/security/advisories/GHSA-37vj-5gff-ww9c) - Changed the lookup of a related object by attributes, in the REST API and the `Import Objects` system Job, to accept only exact matches on its fields and forward relations, and to match through other related objects only where the requesting user may view them or the attributes are part of the object's natural key.
+- [GHSA-37vj-5gff-ww9c](https://github.com/nautobot/nautobot/security/advisories/GHSA-37vj-5gff-ww9c) - Changed Job object variables given as a dictionary of attributes, such as when running a Job through the REST API, to accept only exact matches on the object's fields and forward relations.
+
+### Fixed in v2.4.45
+
+- [#9418](https://github.com/nautobot/nautobot/issues/9418) - Fixed circular import between DCIM, IPAM, and Circuits during startup that caused Circuits navigation menu items to be missing.
+- [#9486](https://github.com/nautobot/nautobot/issues/9486) - Fixed the "Edit", "Delete", "Connect", and similar buttons in tables on some object detail views and tabs generating a `return_url` that was missing the path of the current page.
+- [#9606](https://github.com/nautobot/nautobot/issues/9606) - Fixed the IP address merge tool's change log entries for `Device` and `VirtualMachine` objects showing an empty primary IP instead of the merged IP address.
+- [#9606](https://github.com/nautobot/nautobot/issues/9606) - Fixed the IP address merge tool recording the merged IP address as updated rather than created when tags were selected.
+- [#9656](https://github.com/nautobot/nautobot/issues/9656) - Fixed the IP address merge tool returning a server error when a `Device` or `VirtualMachine` fails validation.
+- [#9656](https://github.com/nautobot/nautobot/issues/9656) - Fixed the IP address merge tool listing IP addresses outside the user's `delete` permission constraints.
+- [#9663](https://github.com/nautobot/nautobot/issues/9663) - Fixed examples on the Constance configuration page rendering on a single line instead of as formatted JSON.
+
+### Dependencies in v2.4.45
+
+- [#9570](https://github.com/nautobot/nautobot/issues/9570) - Updated development dependency `pymarkdownlnt` to `~0.9.40`.
+
+### Documentation in v2.4.45
+
+- [#9570](https://github.com/nautobot/nautobot/issues/9570) - Updated developer documentation about changelog fragment best practices.
+- [#9606](https://github.com/nautobot/nautobot/issues/9606) - Documented the special permission behaviors of the IP address merge tool in the permissions guide and the IP address merge tool guide.
+
+### Housekeeping in v2.4.45
+
+- [#9486](https://github.com/nautobot/nautobot/issues/9486) - Added a test that checks that every link with a `return_url` on an object's detail view and its tabs points back to a valid path.
+- [#9570](https://github.com/nautobot/nautobot/issues/9570) - Updated `invoke markdownlint` to also include changelog fragments not yet added to the docs.
+
 ## v2.4.44 (2026-10-13)
 
 ### Security in v2.4.44
@@ -298,6 +359,10 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Documentation in v2.4.44
 
 - [#9582](https://github.com/nautobot/nautobot/issues/9582) - Updated `SECURITY.md` to remove outdated instructions for sending security reports.
+
+### Dependencies in v2.4.44
+
+- [#9618](https://github.com/nautobot/nautobot/issues/9618) - Pinned dependency `drf-spectacular-sidecar` to `~2026.9.1`.
 
 ### Housekeeping in v2.4.44
 

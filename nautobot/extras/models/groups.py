@@ -24,6 +24,7 @@ from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
+from nautobot.core.utils.requests import is_single_choice_field
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
@@ -588,12 +589,25 @@ class DynamicGroup(PrimaryModel):
             if self.filter:
                 raise ValidationError({"filter": "Filter can only be set for groups of type `dynamic-filter`."})
         else:
+            from nautobot.extras.filter_mixins_customfields import CustomFieldJSONFilter  # avoid circular import
+
+            # `is_valid()` does not reject a list given to a filter that takes one value. A boolean filter
+            # raises TypeError, and any other filter treats the list as text. A JSON custom field is skipped
+            # because a list is one JSON value.
+            empty_filterset = self.filterset_class()  # pylint: disable=not-callable
+            listed = sorted(
+                name
+                for name, value in self.filter.items()
+                if isinstance(value, (list, tuple))
+                and name in empty_filterset.filters
+                and not isinstance(empty_filterset.filters[name], CustomFieldJSONFilter)
+                and is_single_choice_field(empty_filterset, name)
+            )
+            if listed:
+                raise ValidationError({"filter": f"These filters take one value, not a list: {', '.join(listed)}"})
+
             # Validate against the filterset's internal form validation.
             filterset = self.filterset_class(self.filter)  # pylint: disable=not-callable
-            # TODO: the below is more generous than one might expect. For example, passing a list of strings ["foo"]
-            # to a (single-input) CharFilter will quietly normalize the list to a string '["foo"]' instead of reporting
-            # any failure of is_valid(). We've had cases of such "should be invalid but isn't caught" DynamicGroups causing
-            # exceptions when trying to evaluate their membership; it would be good to be stricter here instead!
             if not filterset.is_valid():
                 raise ValidationError(filterset.errors)
 
