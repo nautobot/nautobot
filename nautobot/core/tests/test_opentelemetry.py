@@ -32,7 +32,6 @@ from silk.middleware import SilkyMiddleware
 from nautobot.core import settings as core_settings, testing
 from nautobot.core.celery import install_otel_exporters, install_otel_exporters_beat
 import nautobot.core.cli.opentelemetry as otel_module
-from nautobot.core.cli.opentelemetry import install_exporters, instrument, uninstall_exporters, uninstrument
 from nautobot.core.logging import enable_otel_log_correlation, OtelTraceContextFilter
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
 from nautobot.dcim.models import Location
@@ -92,13 +91,13 @@ def _fake_otel_config(**overrides):
 
 class OpenTelemetryTestMixin:
     def setUp(self):
-        uninstall_exporters()
-        uninstrument()
+        otel_module.uninstall_exporters()
+        otel_module.uninstrument()
         super().setUp()
 
     def tearDown(self):
-        uninstall_exporters()
-        uninstrument()
+        otel_module.uninstall_exporters()
+        otel_module.uninstrument()
         super().tearDown()
 
 
@@ -111,7 +110,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
         # because it runs before django.setup(), so django.conf.settings is not configured and
         # override_settings() would have no effect here. Replace the whole sys.modules entry with a fake.
         with patch.dict("sys.modules", {"nautobot_config": _fake_otel_config()}):
-            instrument()
+            otel_module.instrument()
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
 
@@ -136,7 +135,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
                 "nautobot.core.cli.opentelemetry.trace.set_tracer_provider",
                 side_effect=_capture,
             ):
-                instrument()
+                otel_module.instrument()
         return captured["provider"]
 
     def test_span_attribute_length_limit_applied(self):
@@ -164,7 +163,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
                         )
                     },
                 ):
-                    instrument()
+                    otel_module.instrument()
 
         mock_psycopg2.return_value.instrument.assert_called_once()
         mock_mysql.return_value.instrument.assert_not_called()
@@ -184,7 +183,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
                         )
                     },
                 ):
-                    instrument()
+                    otel_module.instrument()
 
         mock_mysql.return_value.instrument.assert_called_once()
         mock_psycopg2.return_value.instrument.assert_not_called()
@@ -202,7 +201,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
                 "sys.modules",
                 {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=True)},
             ):
-                instrument()
+                otel_module.instrument()
 
         mock_logging.return_value.instrument.assert_called_once()
         _, kwargs = mock_logging.return_value.instrument.call_args
@@ -217,7 +216,7 @@ class InstrumentFunctionTest(OpenTelemetryTestMixin, testing.TestCase):
                 "sys.modules",
                 {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=False)},
             ):
-                instrument()
+                otel_module.instrument()
 
         mock_logging.return_value.instrument.assert_not_called()
 
@@ -348,8 +347,8 @@ class InstrumentExporterBranchTest(OpenTelemetryTestMixin, testing.TestCase):
 
     def _install(self, **overrides):
         """Call install_exporters() with a fake config carrying the requested OTEL_* overrides."""
-        uninstall_exporters()
-        install_exporters(config=_fake_otel_config(**overrides))
+        otel_module.uninstall_exporters()
+        otel_module.install_exporters(config=_fake_otel_config(**overrides))
 
     def test_otlp_trace_exporter_skipped_when_endpoint_unset(self):
         """The OTLP trace exporter must be skipped (with a warning) when the endpoint is empty."""
@@ -429,7 +428,7 @@ class InstrumentExporterBranchTest(OpenTelemetryTestMixin, testing.TestCase):
                             )
                         },
                     ):
-                        instrument()
+                        otel_module.instrument()
         mock_span.assert_not_called()
         mock_metric.assert_not_called()
 
@@ -439,9 +438,9 @@ class InstrumentExporterBranchTest(OpenTelemetryTestMixin, testing.TestCase):
             config = _fake_otel_config(
                 OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317"
             )
-            install_exporters(config=config)
-            install_exporters(config=config)
-            install_exporters(config=config)
+            otel_module.install_exporters(config=config)
+            otel_module.install_exporters(config=config)
+            otel_module.install_exporters(config=config)
 
         mock_exporter.assert_called_once()
 
@@ -584,6 +583,7 @@ class APITraceGenerationTest(OpenTelemetryTestMixin, testing.APITestCase):
 
     def tearDown(self):
         self.client.handler.load_middleware()
+        DjangoInstrumentor().uninstrument()
         self._env_patcher.stop()
         super().tearDown()
 
@@ -1157,7 +1157,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
                     )
                 },
             ):
-                instrument()
+                otel_module.instrument()
 
         instrumentor_cls.assert_called_once()
         instance.instrument.assert_called_once()
@@ -1179,7 +1179,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
                     )
                 },
             ):
-                instrument()
+                otel_module.instrument()
 
         instance.instrument.assert_not_called()
 
@@ -1194,7 +1194,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
             },
         ):
             with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                instrument()  # must not raise
+                otel_module.instrument()  # must not raise
 
         self.assertTrue(
             any("nonexistent.module.DoesNotExist" in message for message in logs.output),
@@ -1218,7 +1218,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
                 },
             ):
                 with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                    instrument()  # must not raise
+                    otel_module.instrument()  # must not raise
 
         self.assertTrue(
             any("fake_otel_pkg.FakeInstrumentor" in message for message in logs.output),
@@ -1228,7 +1228,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
     def test_empty_setting_is_noop(self):
         """With no extra instrumentors configured, instrument() completes and sets a provider."""
         with patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=[])}):
-            instrument()
+            otel_module.instrument()
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
 
@@ -1239,7 +1239,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
             {"nautobot_config": _fake_otel_config(NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["NoDotHere"])},
         ):
             with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                instrument()  # must not raise
+                otel_module.instrument()  # must not raise
 
         self.assertTrue(
             any("NoDotHere" in message for message in logs.output),
@@ -1265,7 +1265,7 @@ class ExtraInstrumentorsTest(OpenTelemetryTestMixin, testing.TestCase):
                 },
             ):
                 with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING"):
-                    instrument()
+                    otel_module.instrument()
 
         good_cls.assert_called_once()
         good_instance.instrument.assert_called_once()
