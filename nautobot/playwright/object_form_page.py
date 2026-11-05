@@ -42,5 +42,12 @@ class ObjectFormPage(BasePage):
         select2_filter_pick(self.page, field_name, search=search or record["display"], pick_text=record["display"])
 
     def submit(self):
-        """Click Create or Update and wait for the next page to load."""
+        """Click Create or Update and wait for the next page to load.
+
+        This does not check whether the server accepted the form. The next page is the new or
+        updated object on success, or the same form redisplayed with errors on failure, and
+        tests rely on both (e.g. test_accessibility.py submits an invalid form and then calls
+        `expect_validation_errors`). Subclasses that expect success should check the outcome
+        themselves.
+        """
         self._click_and_wait_for_navigation(self._SUBMIT_BUTTON)
