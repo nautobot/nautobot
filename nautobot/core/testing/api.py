@@ -957,6 +957,9 @@ class APIViewTestCases:
             produced. That mismatch is a property of each model's serializer, so it wants testing per
             model rather than on whichever one a hand-written test happened to pick.
             """
+            for feature in ("export", "import"):
+                if not extras_utils.FeatureQuery(feature).includes(self.model):
+                    self.skipTest(f"{self.model._meta.label_lower} does not support {feature}")
             if hasattr(self, "get_deletable_object"):
                 instance = self.get_deletable_object()
             else:

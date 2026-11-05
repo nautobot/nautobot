@@ -9,7 +9,9 @@
     {% endfor %}
     {% for field in filter_form.visible_fields %}
         {% if field.name == "q" %}
+            {% if not include_q_field %}
                 <!--  Skip q field -->
+            {% endif %}
         {% else %}
             <div class="nb-form-group">
                 {% if field|widget_type == 'checkboxinput' %}
@@ -21,6 +23,16 @@
             </div>
         {% endif %}
     {% endfor %}
+    {% if include_q_field %}
+        {% for field in filter_form.visible_fields %}
+            {% if field.name == "q" %}
+                <div class="nb-form-group">
+                    {{ field.label_tag }}
+                    {{ field }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 </div>
 {% if not exclude_html_form %}
     <div class="justify-content-between mb-n20 nb-form-sticky-footer">
