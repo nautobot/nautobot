@@ -173,6 +173,8 @@ def created_provider_tags(create_object):
         for index in range(1, PROVIDER_TAG_COUNT + 1)
     ]
     return {"prefix": prefix, "tags": tags}
+
+
 @pytest.fixture(scope="session")
 def require_celery_worker(api):
     """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.
