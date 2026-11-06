@@ -30,16 +30,24 @@ def get_job_results(request):
 
 def get_changelog(request):
     """Callback function to collect changelog for panel."""
-    return ObjectChange.objects.restrict(request.user, "view").only(
-        "id",
-        "action",
-        "changed_object",
-        "changed_object_id",
-        "changed_object_type",
-        "object_repr",
-        "user_name",
-        "time",
-    )[:15]
+    return (
+        ObjectChange.objects.restrict(request.user, "view")
+        # The panel displays each row's `changed_object`, which is a GenericForeignKey over `changed_object_type`.
+        # Without these two calls, the page runs extra queries on every row to load the content type and the changed
+        # object. prefetch_related() loads the changed objects with one query for each content type.
+        .select_related("changed_object_type")
+        .prefetch_related("changed_object")
+        .only(
+            "id",
+            "action",
+            "changed_object",
+            "changed_object_id",
+            "changed_object_type",
+            "object_repr",
+            "user_name",
+            "time",
+        )[:15]
+    )
 
 
 layout = (
