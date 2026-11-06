@@ -39,7 +39,7 @@ USAGE = """%(prog)s --help
 logger = logging.getLogger(__name__)
 
 
-def ensure_storage_directories(settings_module):
+def ensure_storage_directories_exist(settings_module):
     """Ensure that the various storage directories needed by Django and by Nautobot itself exist on the filesystem."""
     os.makedirs(settings_module.GIT_ROOT, exist_ok=True)
     os.makedirs(settings_module.JOBS_ROOT, exist_ok=True)
@@ -80,7 +80,7 @@ def _preprocess_settings(settings_module, config_path):
     #
     # Storage directories
     #
-    ensure_storage_directories(settings_module)
+    ensure_storage_directories_exist(settings_module)
 
     #
     # Databases

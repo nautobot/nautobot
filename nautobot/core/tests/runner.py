@@ -20,7 +20,7 @@ from django.test.runner import _init_worker, DiscoverRunner, ParallelTestSuite
 from django.test.utils import get_unique_databases_and_mirrors, NullTimeKeeper, override_settings
 
 from nautobot.core.celery import app, setup_nautobot_job_logging
-from nautobot.core.cli import ensure_storage_directories
+from nautobot.core.cli import ensure_storage_directories_exist
 from nautobot.core.settings_funcs import parse_redis_connection
 
 
@@ -50,7 +50,7 @@ def isolate_environment(worker_id=1):
         STATIC_ROOT=str(sub_directory / "static"),
     ).enable()
 
-    ensure_storage_directories(settings)
+    ensure_storage_directories_exist(settings)
 
 
 def init_worker_with_unique_cache(*args, **kwargs):

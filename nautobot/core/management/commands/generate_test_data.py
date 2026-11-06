@@ -470,7 +470,12 @@ Type 'yes' to continue, or 'no' to cancel: """
 
                 call_command(
                     "dumpdata",
-                    all=True,  # important, as otherwise the dynamic-group members caches will be omitted by default!
+                    # Without `all=True`, dumpdata uses the default `objects` manager for each model.
+                    # `StaticGroupAssociation.objects`, in particular, filters out the automatically-managed records
+                    # that are used to cache DynamicGroup membership information, so without `all=True` the dumped
+                    # fixture_file would omit those records entirely. Specifying `all=True` bypasses this manager and
+                    # ensures that **all** records are included in the fixture_file.
+                    all=True,
                     exclude=["auth.permission"],
                     format="json",
                     indent=2,
