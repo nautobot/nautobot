@@ -192,7 +192,7 @@ class BasePage:
         expect(self.page.locator(self._MODAL_BACKDROP)).to_have_count(0)
 
     def expect_theme_choices(self, names):
-        """Assert (auto-retrying) that the theme modal offers exactly *names*, in order."""
+        """Assert (auto-retrying) that the theme modal lists exactly *names*, in order."""
         expect(self.theme_modal().locator(self._THEME_CHOICE_NAMES)).to_have_text(names)
 
     def expect_selected_theme(self, theme):
