@@ -1439,6 +1439,17 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         model = ModuleBay
         fields = "__all__"
         validators = []
+        extra_kwargs = {
+            "installed_module": {"read_only": True},
+        }
+
+    def get_field_names(self, declared_fields, info):
+        """
+        As installed_module is the reverse side of a OneToOneField, DRF can handle it but it isn't auto-included.
+        """
+        fields = list(super().get_field_names(declared_fields, info))
+        self.extend_field_names(fields, "installed_module")
+        return fields
 
     def validate(self, attrs):
         """Validate device and module field constraints for module bay."""
