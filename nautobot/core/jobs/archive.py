@@ -107,12 +107,24 @@ class ArchiveOldRecords(Job):
         # Permissions are checked up front in order to loudly fail for a clearer user experience
         if self.user is None:
             raise PermissionDenied(f"{JOB_NAME} deletes records and requires a user, but this run has none")
+        # ----------------------------------------
+        # ObjectChange
         if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
             raise PermissionDenied("User does not have delete permissions for ObjectChange records")
+        # ----------------------------------------
+        # JobResult/JobConsoleEntry/JobLogEntry
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobresult"):
             self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobResult records")
+        # Cannot select JobConsoleEntry or JobLogEntry in the UI. These are derived from the selection
+        # of JobResult
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobconsoleentry"):
+            self.logger.error('User "%s" does not have permission to delete JobConsoleEntry records', self.user)
+            raise PermissionDenied("User does not have delete permissions for JobConsoleEntry records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_joblogentry"):
+            self.logger.error('User "%s" does not have permission to delete JobLogEntry records', self.user)
+            raise PermissionDenied("User does not have delete permissions for JobLogEntry records")
 
         archived_record_counts = {
             OBJECT_CHANGE_LABEL: 0,
@@ -254,13 +266,29 @@ class ArchiveOldRecords(Job):
                 unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
             )
 
-            deleted_count, _ = (
+            _, deleted_counts_by_model = (
                 ObjectChange.objects.restrict(self.user, "delete").filter(pk__in=object_changes_to_archive_pks).delete()
             )
-        self.logger.error(
-            "Archived %d and deleted %d live ObjectChange rows", len(object_changes_to_archive_pks), deleted_count
+
+        archived_object_change_count = len(object_changes_to_archive_pks)
+        # Django's QuerySet.delete() returns a 2-tuple
+        # (total_rows_deleted, {model_label: rows_deleted_for_that_model})
+        # Instead of checking rows deleted we confirm the model count deleted
+        object_change_deleted_count = deleted_counts_by_model.get(ObjectChange._meta.label, 0)
+
+        self.logger.debug(
+            "Archived %d and deleted %d live ObjectChange rows",
+            archived_object_change_count,
+            object_change_deleted_count,
         )
-        return len(object_changes_to_archive_pks)
+        if archived_object_change_count != object_change_deleted_count:
+            self.logger.error(
+                "%d ObjectChange models were archived, but only %d were deleted.",
+                archived_object_change_count,
+                object_change_deleted_count,
+            )
+
+        return archived_object_change_count
 
     # --------------------------------------------------------------------------
     # Job Results
@@ -306,8 +334,16 @@ class ArchiveOldRecords(Job):
             job_result_count = job_results_to_archive.count()
             # The children are counted too, so that a dry run names the same models a real run moves
             # instead of reporting zero for records it would in fact archive.
-            job_log_entry_count = JobLogEntry.objects.filter(job_result__in=job_results_to_archive).count()
-            job_console_entry_count = JobConsoleEntry.objects.filter(job_result__in=job_results_to_archive).count()
+            # Restricted like the real path below, so the dry run does not promise to archive entries that
+            # a real run would not be allowed to see.
+            job_log_entry_count = (
+                JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive).count()
+            )
+            job_console_entry_count = (
+                JobConsoleEntry.objects.restrict(self.user, "delete")
+                .filter(job_result__in=job_results_to_archive)
+                .count()
+            )
             total_batch_count = math.ceil(job_result_count / batch_size)
             self.logger.warning(
                 "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived, "
@@ -403,11 +439,11 @@ class ArchiveOldRecords(Job):
         archived_job_result_update_fields = [
             field.name for field in ArchivedJobResult._meta.fields if field.name != "id"
         ]
-        new_archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
+        archived_job_results = [ArchivedJobResult.from_job_result(job_result) for job_result in job_result_batch]
 
         # Copy the parents first so that the archived children's foreign keys resolve. Each step commits on its own.
         ArchivedJobResult.objects.bulk_create(
-            new_archived_job_results,
+            archived_job_results,
             update_conflicts=True,
             update_fields=archived_job_result_update_fields,
             # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
@@ -417,15 +453,27 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
         archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
 
-        deleted_count, _ = JobResult.objects.restrict(self.user, "delete").filter(pk__in=job_result_pks).delete()
+        _, deleted_counts_by_model = (
+            JobResult.objects.restrict(self.user, "delete").filter(pk__in=job_result_pks).delete()
+        )
+        # Django's QuerySet.delete() returns a 2-tuple
+        # (total_rows_deleted, {model_label: rows_deleted_for_that_model})
+        # Instead of checking rows deleted we confirm the model count deleted
+        job_result_deleted_count = deleted_counts_by_model.get(JobResult._meta.label, 0)
 
         self.logger.debug(
             "Archived %d job results with %d log entries and %d console entries, and deleted %d live rows",
-            len(job_result_pks),
+            job_result_pks_count,
             archived_job_log_entry_count,
             archived_job_console_entry_count,
-            deleted_count,
+            job_result_deleted_count,
         )
+        if job_result_pks_count != job_result_deleted_count:
+            self.logger.error(
+                "%d JobResult models were archived, but only %d were deleted.",
+                job_result_pks_count,
+                job_result_deleted_count,
+            )
 
         archived_job_result_count = {
             JOB_RESULT_LABEL: job_result_pks_count,
@@ -478,7 +526,9 @@ class ArchiveOldRecords(Job):
                     # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
                     unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
                 )
-                JobLogEntry.objects.filter(pk__in=[job_log_entry.pk for job_log_entry in job_log_entry_chunk]).delete()
+                JobLogEntry.objects.restrict(self.user, "delete").filter(
+                    pk__in=[job_log_entry.pk for job_log_entry in job_log_entry_chunk]
+                ).delete()
 
             archived_job_log_entry_count += len(job_log_entry_chunk)
 
@@ -510,7 +560,9 @@ class ArchiveOldRecords(Job):
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
-        job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result_id__in=job_result_pks)
+        job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
+            job_result_id__in=job_result_pks
+        )
 
         archived_job_console_entry_count = 0
 
@@ -530,7 +582,7 @@ class ArchiveOldRecords(Job):
                     # Postgres requires a named conflict target; MySQL has no slot for one and rejects it.
                     unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
                 )
-                JobConsoleEntry.objects.filter(
+                JobConsoleEntry.objects.restrict(self.user, "delete").filter(
                     pk__in=[job_console_entry.pk for job_console_entry in job_console_entry_chunk]
                 ).delete()
 

@@ -23,7 +23,12 @@ from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
-from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.choices import (
+    DynamicGroupTypeChoices,
+    JobResultStatusChoices,
+    LogLevelChoices,
+    MetadataTypeDataTypeChoices,
+)
 from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
@@ -43,7 +48,7 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.extras.models.metadata import ObjectMetadata
+from nautobot.extras.models.metadata import MetadataType, ObjectMetadata
 from nautobot.extras.signals import _handle_deleted_object
 from nautobot.ipam.models import IPAddress, Namespace
 from nautobot.users.models import ObjectPermission, User
@@ -1614,6 +1619,37 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertTrue(does_permission_message_exist)
 
+    def test_records_deleted_alongside_an_object_change_are_not_a_discrepancy(self):
+        """
+        `delete()` reports a total across every model it touched, not only the one being archived.
+
+        An ObjectChange takes its ObjectMetadata with it, so a check written against that total would
+        report a mismatch on a run where nothing is actually wrong.
+        """
+        old_object_change = self.make_object_change(age_in_days=90)
+        metadata_type = MetadataType.objects.create(
+            name="Archive Discrepancy Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        object_change_content_type = ContentType.objects.get_for_model(ObjectChange)
+        metadata_type.content_types.set([object_change_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=object_change_content_type,
+            assigned_object_id=old_object_change.pk,
+            scoped_fields=["change_context_detail"],
+            _value="probe",
+        )
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(ArchivedObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        # Asserted on the level rather than the wording, so rephrasing the message cannot hide a regression.
+        error_messages = list(
+            job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_ERROR).values_list("message", flat=True)
+        )
+        self.assertEqual(error_messages, [])
+
     def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
         """
         `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
@@ -1661,6 +1697,8 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         # The job refuses to run without this, because archiving deletes the records it copies. The child
         # entries need no permission of their own; they go wherever their job result goes.
         self.add_permissions("extras.delete_jobresult")
+        self.add_permissions("extras.delete_joblogentry")
+        self.add_permissions("extras.delete_jobconsoleentry")
 
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing. Deleting the parents takes their log and console entries with them.
@@ -1983,6 +2021,70 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
         does_permission_message_exist = any(
             "does not have permission to delete JobResult records" in message
+            for message in self.get_job_log_messages(archive_job_result)
+        )
+        self.assertTrue(does_permission_message_exist)
+
+    def test_records_deleted_alongside_a_job_result_are_not_a_discrepancy(self):
+        """
+        `delete()` reports a total across every model it touched, not only the one being archived.
+
+        A job result takes its ObjectMetadata with it, so a check written against that total would
+        report a mismatch on a run where nothing is actually wrong.
+        """
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
+        metadata_type = MetadataType.objects.create(
+            name="Archive Discrepancy Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        job_result_content_type = ContentType.objects.get_for_model(JobResult)
+        metadata_type.content_types.set([job_result_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=job_result_content_type,
+            assigned_object_id=old_job_result.pk,
+            scoped_fields=["name"],
+            _value="probe",
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        # Asserted on the level rather than the wording, so rephrasing the message cannot hide a regression.
+        error_messages = list(
+            archive_job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_ERROR).values_list(
+                "message", flat=True
+            )
+        )
+        self.assertEqual(error_messages, [])
+
+    def test_a_user_without_child_delete_permission_fails_the_job(self):
+        """
+        The entries are restricted, and deleting their job result cascades them away regardless.
+
+        Without this gate a user holding only `delete_jobresult` would see no entries to archive, and
+        the parent delete would then destroy them with no archived copy. Nothing may move.
+        """
+        self.user.object_permissions.clear()
+        self.add_permissions("extras.delete_jobresult")
+        log_entry_count = 3
+        console_entry_count = 2
+        old_job_result = self.make_job_result(
+            age_in_days=90, log_entry_count=log_entry_count, console_entry_count=console_entry_count
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Every record is still live, and none of them reached the archive.
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), log_entry_count)
+        self.assertEqual(JobConsoleEntry.objects.filter(job_result_id=old_job_result.pk).count(), console_entry_count)
+        self.assertEqual(ArchivedJobResult.objects.count(), 0)
+        self.assertEqual(ArchivedJobLogEntry.objects.count(), 0)
+        self.assertEqual(ArchivedJobConsoleEntry.objects.count(), 0)
+        does_permission_message_exist = any(
+            "does not have permission to delete Job" in message
             for message in self.get_job_log_messages(archive_job_result)
         )
         self.assertTrue(does_permission_message_exist)
