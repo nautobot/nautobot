@@ -88,7 +88,7 @@ class NamespaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
@@ -160,7 +160,7 @@ class VRFForm(NautobotModelForm, TenancyForm):
 class VRFBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=VRF.objects.all(), widget=forms.MultipleHiddenInput())
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     add_prefixes = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(), required=False, query_params={"namespace": "$namespace"}
@@ -216,7 +216,7 @@ class RouteTargetForm(NautobotModelForm, TenancyForm):
 
 class RouteTargetBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=RouteTarget.objects.all(), widget=forms.MultipleHiddenInput())
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
@@ -413,7 +413,7 @@ class PrefixBulkEditForm(
     remove_vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(), required=False, query_params={"namespace": "$namespace"}
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     rir = DynamicModelChoiceField(queryset=RIR.objects.all(), required=False, label="RIR")
     date_allocated = forms.DateTimeField(required=False, widget=DateTimePicker)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
@@ -694,7 +694,7 @@ class IPAddressBulkEditForm(
         max_value=IPADDRESS_MASK_LENGTH_MAX,
         required=False,
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     dns_name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     type = forms.ChoiceField(
@@ -839,7 +839,7 @@ class IPAddressRangeBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=IPAddressRange.objects.all(), widget=forms.MultipleHiddenInput())
     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     count_as_utilized = forms.NullBooleanField(
         required=False,
@@ -1025,7 +1025,7 @@ class VLANBulkEditForm(
     remove_locations = DynamicModelMultipleChoiceField(
         queryset=Location.objects.all(), required=False, query_params={"content_type": VLAN._meta.label_lower}
     )
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:

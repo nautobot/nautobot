@@ -158,7 +158,7 @@ class ClusterBulkEditForm(
     pk = forms.ModelMultipleChoiceField(queryset=Cluster.objects.all(), widget=forms.MultipleHiddenInput())
     cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     add_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     remove_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
@@ -316,7 +316,7 @@ class VirtualMachineBulkEditForm(
 ):
     pk = forms.ModelMultipleChoiceField(queryset=VirtualMachine.objects.all(), widget=forms.MultipleHiddenInput())
     cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
-    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), query_params={"sort": "name"}, required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     vcpus = forms.IntegerField(required=False, label="vCPUs")
     memory = forms.IntegerField(required=False, label="Memory (MB)")

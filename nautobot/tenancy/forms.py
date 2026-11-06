@@ -107,7 +107,7 @@ class TenancyForm(forms.Form):
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
         required=False,
-        query_params={"tenant_group": "$tenant_group"},
+        query_params={"sort": "name", "tenant_group": "$tenant_group"},
     )
 
 
@@ -123,5 +123,5 @@ class TenancyFilterForm(forms.Form):
         to_field_name="name",
         required=False,
         null_option="None",
-        query_params={"tenant_group": "$tenant_group"},
+        query_params={"sort": "name", "tenant_group": "$tenant_group"},
     )
