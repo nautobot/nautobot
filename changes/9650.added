@@ -1,0 +1,3 @@
+Added an optional `within` argument to `nautobot.playwright.base_page.BasePage.panel`, which limits the panel search to the given locator.
+Added `expect_relationship_peer`, `expect_no_relationship_peer` and `_relationship_rows_showing` to `nautobot.playwright.detail_page.DetailPage`, which check a detail view's Relationships panel.
+Added `nautobot.playwright.object_form_page.ObjectFormPage.submit_and_return_pk`, which submits an add form and returns the new object's pk from the detail view it redirects to.
