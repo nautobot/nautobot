@@ -1,4 +1,4 @@
-"""Tests that a list view's Tags filter only offers tags that apply to that list's model (#4216)."""
+"""Tests that a list view's Tags filter only lists tags that apply to that list's model (#4216)."""
 
 import pytest
 
