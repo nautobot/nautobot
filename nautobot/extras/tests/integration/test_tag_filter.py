@@ -14,7 +14,7 @@ class TagFilterTestCase:
 
     @pytest.mark.behavioral
     def test_tag_matching_content_type(self, auth_page, base_url, created_provider_tags):
-        """Searching the Tags filter on Providers shows a full first page of the provider tags, without the last one."""
+        """Searching the Tags filter on Providers shows the first 50 provider tags, and the 51st is not on that page."""
         prefix = created_provider_tags["prefix"]
         tags = created_provider_tags["tags"]
         providers = ProvidersPage(auth_page, base_url)
