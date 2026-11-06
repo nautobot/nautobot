@@ -25,7 +25,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.timezone import get_current_timezone, now
+from django.utils.timezone import get_current_timezone, localtime, now
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
@@ -4044,7 +4044,7 @@ class JobResultUIViewSet(
         lines = []
         for entry in entries:
             # Format: [14:30:45.123] text
-            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            ts = localtime(entry.timestamp).strftime("%H:%M:%S.%f")[:12]  # trim to ms
             lines.append(f"[{ts}] {entry.text.strip()}")
 
         content = "\n".join(lines)
