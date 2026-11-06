@@ -371,9 +371,9 @@ Colour must never be the only signal. Text-coloured links inside a block of pros
 ### Target size
 
 A pointer target needs to be at least 24 by 24 pixels, or else far enough from its neighbours that a 24 pixel area
-around each one stays clear (WCAG 2.5.8). Padding is usually the way to reach the size, because it enlarges the target
-without changing how the control looks. A link inside a block of prose is exempt, since its size comes from the
-surrounding text.
+around each one stays clear (WCAG 2.5.8). Adding padding is usually the best way to make a target large enough,
+because padding enlarges the clickable area without changing how the control looks. A link inside a paragraph of text
+is exempt, because the surrounding text sets its size.
 
 ### Dynamic content
 
