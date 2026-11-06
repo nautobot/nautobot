@@ -73,9 +73,11 @@ def _is_queryset_lookup(queryset, lookup):
     return True
 
 
-def _get_match_filter(serializer, field, value):
+def _translate_import_match_field_and_value_to_database_lookup(serializer, field, value):
     """
-    Return the queryset filter for one match field, from `serializer.get_import_match_filter()` if it exists.
+    Return the queryset lookup for one match field and its value.
+
+    See also `BaseModelSerializer.translate_import_match_field_and_value_to_database_lookup`.
 
     Args:
         serializer (ModelSerializer): The serializer instance to query, if possible
@@ -85,8 +87,8 @@ def _get_match_filter(serializer, field, value):
     Returns:
         (dict): ORM `filter()` parameter(s) and their corresponding value(s) to filter the serializer's model by.
     """
-    if hasattr(serializer, "get_import_match_filter"):
-        return serializer.get_import_match_filter(field, value)
+    if hasattr(serializer, "translate_import_match_field_and_value_to_database_lookup"):
+        return serializer.translate_import_match_field_and_value_to_database_lookup(field, value)
     # The serializer isn't derived from `BaseModelSerializer` (for example, `CablePathSerializer`),
     # so filter on the field's source directly.
     return {serializer.fields[field].source.replace(".", LOOKUP_SEP): value}
@@ -117,9 +119,9 @@ def _unusable_match_fields(match_fields, serializer):
 
     A match field has to be something a record gives a value for, and that value has to identify one thing:
     a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) contains a set. The
-    queryset filter that `_get_match_filter()` returns for the field must also use lookups that the model's
-    queryset accepts. A field that exists only on the serializer fails this check, unless the serializer maps it
-    to a lookup.
+    queryset filter that `_translate_import_match_field_and_value_to_database_lookup()` returns for the field must
+    also use lookups that the model's queryset accepts.
+    A field that exists only on the serializer fails this check, unless the serializer maps it to a lookup.
 
     A field that the model declares sensitive, such as `User.password`, is never a match field. Otherwise,
     whether a record matched would tell the user whether some object has the value they gave for that field.
@@ -139,7 +141,7 @@ def _unusable_match_fields(match_fields, serializer):
         ):
             unusable.append(field)
             continue
-        lookups = _get_match_filter(serializer, field, None)
+        lookups = _translate_import_match_field_and_value_to_database_lookup(serializer, field, None)
         if not all(_is_queryset_lookup(queryset, lookup) for lookup in lookups) or any(
             _does_lookup_contain_sensitive_field(model, lookup) for lookup in lookups
         ):
@@ -266,7 +268,7 @@ def build_match_filter(row_data, match_fields, serializer):
             except serializers.ValidationError as exc:
                 details = exc.detail if isinstance(exc.detail, list) else [exc.detail]
                 raise ValueError(f"Match field {field}: {'; '.join(str(detail) for detail in details)}") from exc
-        params.update(_get_match_filter(serializer, field, value))
+        params.update(_translate_import_match_field_and_value_to_database_lookup(serializer, field, value))
     return params
 
 

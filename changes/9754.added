@@ -1,5 +1,5 @@
 Added the `namespace` field to IP Address and IP Address Range REST API responses; it was previously accepted on create but not returned.
 Added the `namespace` property to the IP Address and IP Address Range models.
-Added the `get_import_match_filter()` serializer method, which an app's serializer can override to control how an import matches existing records on a given match field.
+Added the `translate_import_match_field_and_value_to_database_lookup()` serializer method, which an app's serializer can override to control how an import looks up existing records from a given match field.
 Added the `Meta.related_field_query_paths` serializer option, mapping a related field that exists only on the serializer to the database path it is reached by, for export and import matching.
 Added the `Meta.derived_fields_omitted_from_default_export` serializer option, listing fields that an export leaves out unless they are explicitly selected.

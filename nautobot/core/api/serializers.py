@@ -230,7 +230,7 @@ class NaturalKeyRepresentationMixin:
                 omitted_fields = getattr(self.Meta, "derived_fields_omitted_from_default_export", [])
         return set(omitted_fields)
 
-    def _get_query_path_for_field_path(self, lookup_field):
+    def _get_query_path_from_field_path(self, lookup_field):
         """Translate a serializer-field path to the equivalent ORM query path.
 
         By default these are identical, but if this serializer contains related-object fields that are derived in some
@@ -243,7 +243,7 @@ class NaturalKeyRepresentationMixin:
         This serializer therefore declares `Meta.related_field_query_paths = {"namespace": "parent__namespace"}`.
 
         Examples:
-            >>> IPAddressSerializer()._get_query_path_for_field_path("namespace__name")
+            >>> IPAddressSerializer()._get_query_path_from_field_path("namespace__name")
             'parent__namespace__name'
 
         Args:
@@ -265,7 +265,7 @@ class NaturalKeyRepresentationMixin:
             >>> self._resolve_lookup_field("device__location__name")
             <django.db.models.fields.CharField: name>
         """
-        query_path = self._get_query_path_for_field_path(lookup_field)
+        query_path = self._get_query_path_from_field_path(lookup_field)
         *field_names, lookup = query_path.split(LOOKUP_SEP)
         model = self.Meta.model
         for field_component in field_names:
@@ -288,7 +288,7 @@ class NaturalKeyRepresentationMixin:
         # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
         output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
 
-        query_path = self._get_query_path_for_field_path(lookup_field)
+        query_path = self._get_query_path_from_field_path(lookup_field)
         *field_names, _lookup = query_path.split(LOOKUP_SEP)
         field_name = LOOKUP_SEP.join(field_names)
         return field_name, output_field
@@ -328,7 +328,7 @@ class NaturalKeyRepresentationMixin:
 
             # Since VarbinaryIPField cant be cast into CharField we would have to set the output_field as
             # `VarbinaryIPField`
-            query_path = self._get_query_path_for_field_path(lookup_field)
+            query_path = self._get_query_path_from_field_path(lookup_field)
             when_case = {
                 f"{field_name}__isnull": False,
                 "then": models.F(query_path)
@@ -582,19 +582,19 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
         """Return whether this is a nested serializer."""
         return getattr(self.Meta, "is_nested", False)
 
-    def get_import_match_filter(self, field_name, value):
+    def translate_import_match_field_and_value_to_database_lookup(self, field_name, value):
         """For a given field and value, get the queryset filter that import can use to find a matching, existing record.
 
-        By default, this method passes the field's source to `self._get_query_path_for_field_path()`, which replaces it
+        By default, this method passes the field's source to `self._get_query_path_from_field_path()`, which replaces it
         with the database lookup that the serializer maps it to in `Meta.related_field_query_paths`, if there is one.
         The result is used as the filter lookup, which is sufficient in most cases:
 
-            >>> IPAddressSerializer().get_import_match_filter("description", "Hello world")
+            >>> IPAddressSerializer().translate_import_match_field_and_value_to_database_lookup("description", "Hello world")
             {'description': 'Hello world'}
 
         Because `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`:
 
-            >>> IPAddressSerializer().get_import_match_filter("namespace", global_namespace)
+            >>> IPAddressSerializer().translate_import_match_field_and_value_to_database_lookup("namespace", global_namespace)
             {'parent__namespace': <Namespace: Global>}
 
         Override this method when the *value* needs to be transformed somehow to satisfy the queryset filter.
@@ -602,7 +602,7 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
         but ideally wants to match existing IPAddress records by the `host` portion alone. Thus, it overrides this
         method to behave as follows for this special case:
 
-            >>> IPAddressSerializer().get_import_match_filter("address", netaddr.IPNetwork("10.0.0.1/24"))
+            >>> IPAddressSerializer().translate_import_match_field_and_value_to_database_lookup("address", netaddr.IPNetwork("10.0.0.1/24"))
             {'host': netaddr.IPAddress('10.0.0.1')}
 
         Important: any override *must* safely handle the possibility that `value` may be `None`, because this method
@@ -616,7 +616,9 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
         Returns:
             (dict): Filter parameter(s) and corresponding value(s) to filter the model's queryset on.
         """
-        return {self._get_query_path_for_field_path(self.fields[field_name].source.replace(".", LOOKUP_SEP)): value}
+        field_path = self.fields[field_name].source.replace(".", LOOKUP_SEP)
+        query_path = self._get_query_path_from_field_path(field_path)
+        return {query_path: value}
 
     @extend_schema_field(serializers.CharField)
     def get_display(self, instance):

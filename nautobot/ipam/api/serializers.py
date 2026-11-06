@@ -354,11 +354,17 @@ class IPAddressSerializer(NamespaceParentedModelSerializerMixin, NautobotModelSe
             "parent": {"required": False},
         }
 
-    def get_import_match_filter(self, field_name, value):
-        """Match `address` on its host alone, as the natural key does, so that a changed mask length still matches."""
+    def translate_import_match_field_and_value_to_database_lookup(self, field_name, value):
+        """
+        Special case translation: `(address, netaddr.IPNetwork)` maps to `{host: netaddr.IPAddress}`, sans mask length.
+
+        This is so that a common use case of exporting an IPAddress (which exports `address`), then correcting the
+        mask length of the address, and reimporting it, matches the existing record's unchanged `host` value despite
+        the change in `mask_length`.
+        """
         if field_name == "address":
             return {"host": value.ip if value is not None else None}
-        return super().get_import_match_filter(field_name, value)
+        return super().translate_import_match_field_and_value_to_database_lookup(field_name, value)
 
     def get_field_names(self, declared_fields, info):
         """Add reverse relations to the automatically discovered fields."""

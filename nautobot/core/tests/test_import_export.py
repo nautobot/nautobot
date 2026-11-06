@@ -272,11 +272,18 @@ class MatchFieldsTests(TestCase):
 
     def test_match__serializer_declared_match_fields(self):
         """A serializer declares the match fields its model's natural key isn't spelled in."""
+        # IPAddress natural-key is [parent__namespace, host] but its serializer has a custom `import_match_fields`
         self.assertEqual(self.match_fields(IPAddress), ["namespace", "address"])
+        # Prefix natural-key is [namespace, network, prefix_length] but its serializer has custom `import_match_fields`
         self.assertEqual(self.match_fields(Prefix), ["prefix", "namespace"])
+        # IPAddressRange natural-key is [parent__namespace, start_address] but its serializer has `import_match_fields`
         self.assertEqual(self.match_fields(IPAddressRange), ["namespace", "start_address"])
+
+        # When explicitly providing `export_field_paths`, the serializer's `import_match_fields` still work as expected.
+        # If the `export_field_paths` align with the `import_match_fields`, the `import_match_fields` are still used:
         self.assertEqual(self.match_fields(IPAddress, ["address", "namespace", "type"]), ["namespace", "address"])
         self.assertEqual(self.match_fields(IPAddress, ["address", "namespace__name"]), ["namespace", "address"])
+        # If the `export_field_paths` don't cover the `import_match_fields`, None is returned, as usual.
         self.assertIsNone(self.match_fields(IPAddress, ["address"]))
 
     def test_match__serializer_only_field_needs_a_query_path(self):

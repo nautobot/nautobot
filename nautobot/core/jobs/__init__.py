@@ -17,6 +17,7 @@ from django.core.exceptions import (
 )
 from django.db import DatabaseError, transaction
 from django.db.models import Prefetch, Q
+from django.db.models.constants import LOOKUP_SEP
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
@@ -395,7 +396,7 @@ class ExportObjectList(Job):
         if field_path.startswith("cf_"):
             # Custom fields sort via a JSON-field lookup rather than a field of the model.
             return True
-        for segment in field_path.split("__"):
+        for segment in field_path.split(LOOKUP_SEP):
             if model is None:
                 return False  # a previous segment was not a relation, so there is nothing left to traverse
             if segment == "pk":
@@ -445,7 +446,7 @@ class ExportObjectList(Job):
                     continue
                 related_model = model
                 try:
-                    for part in query_paths.get(match_field, match_field).split("__"):
+                    for part in query_paths.get(match_field, match_field).split(LOOKUP_SEP):
                         related_model = related_model._meta.get_field(part).related_model
                 except (AttributeError, FieldDoesNotExist):
                     # The match field isn't a model field, or its query path passes through a non-relation field
@@ -544,7 +545,7 @@ class ExportObjectList(Job):
         # field selects that field alongside the pk, and so may repeat a pk.
         pks = list(dict.fromkeys(queryset.values_list("pk", flat=True)))
 
-        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
+        selected_heads = {path.split(LOOKUP_SEP, 1)[0] for path in export_field_paths} if export_field_paths else None
 
         # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
         # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for

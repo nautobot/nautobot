@@ -129,19 +129,22 @@ If the model's database-level natural key differs from the REST API serializer's
 
 #### Overriding Matching Behavior
 
-Each import match field must be a writable field of the serializer that contains a single value (not a to-many field such as `tags`). By default, an import matches existing records by passing each such field's value to the model queryset's `filter()` under the field's own name, so the queryset must accept that argument. Where it doesn't, the serializer has two ways to override this default behavior:
+Each import match field must be a writable field of the serializer that contains a single value (not a to-many field such as `tags`). By default, an import matches existing records by simply mapping `(match_field, row_value)` to a `QuerySet.filter(match_field=row_value)` call, so every match-field must be a valid filter for the queryset. When this isn't the case, you as the serializer's developer have two ways to override this default logic:
 
-- A serializer can define `Meta.related_field_query_paths` to specify mappings between serializer related fields and their equivalent queryset filters. For example, the IP Address serializer matches partly on the serializer field `namespace`, which needs to be mapped back to the database lookup `parent__namespace`, so we must declare `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`. This mapping also applies on export, where it allows the `namespace` field to be exported as its natural-key lookups (`namespace__name`) and declared as a match field.
-- A serializer can override `get_import_match_filter(field_name, value)` in cases where the previous option is insufficient, for example where the serializer field's _value_ also needs to be transformed in some way. Again, the IP Address serializer is an example of this, where it needs to transform a provided `address` value (`netaddr.IPNetwork("10.0.0.1/24")`) to its `host` value alone (`netaddr.IPAddress("10.0.0.1")`) for a proper query lookup.
+- A serializer can define `Meta.related_field_query_paths` to specify mappings between serializer related fields and their equivalent queryset filters. For example, the IP Address serializer matches partly on the serializer field `namespace`, which isn't actually a filter on `IPAddress` QuerySets -- it needs to be mapped to the nested database lookup `parent__namespace`, so we declare `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`.
+    - This mapping, if defined, also applies on export, so in the case of IPAddress exports, the `namespace` serializer field is declared as a default match field (instead of `parent__namespace`) and is exported as its natural-key lookup (`namespace__name`).
+- A serializer can override the instance method `translate_import_match_field_and_value_to_database_lookup(field_name, value)` in cases where the previous option is insufficient, for example where the serializer field's _value_ also needs to be transformed in some way. Again, the IP Address serializer is an example of this, where it needs to transform a provided `address` value (`netaddr.IPNetwork("10.0.0.1/24")`) to its `host` value alone (`netaddr.IPAddress("10.0.0.1")`) for a proper query lookup.
 
 !!! warning
-    Any override to `get_import_match_filter()` must handle the possibility that `value` is `None`, as it is called
-    this way when validating match fields, including when determining a model's default match fields during export
-    and import.
+    Any override to `translate_import_match_field_and_value_to_database_lookup()` must handle the possibility that `value` is `None`, as it is called this way when validating match fields, including when determining a model's default match fields during export and import.
 
 #### Avoiding Conflicts Between Fields
 
-Finally, in cases where the default (all-fields) export would include fields that contain derived values or are otherwise redundant with the preferred natural-key fields, a serializer can additionally define `Meta.derived_fields_omitted_from_default_export`, which is a list of field names that are omitted from the default export, but can still be explicitly selected for inclusion if desired. The IP Address serializer again provides an example here - because the serializer `parent` field derives its value from the natural-key `namespace` and `address` fields on an import, it would be undesirable to include this field in the default export since a change to the `namespace` would invalidate the `parent` and vice versa. Therefore, `IPAddressSerializer.Meta.derived_fields_omitted_from_default_export` is declared as `["parent"]`.
+In cases where the default (all-fields) export would include fields that contain derived values or that are otherwise redundant with the preferred natural-key fields, a serializer can additionally define `Meta.derived_fields_omitted_from_default_export`.
+
+`derived_fields_omitted_from_default_export` is a list of field names that are omitted from the default export, but can still be explicitly selected for inclusion if desired.
+
+The IP Address serializer again provides an example here - the serializer `parent` field derives its value from the natural-key `namespace` and `address` fields on an import. It would be undesirable to include this field in the default export since a change to the `namespace` would invalidate the `parent` and vice versa. Therefore, `IPAddressSerializer.Meta.derived_fields_omitted_from_default_export` is declared as `["parent"]`.
 
 #### Worked Example
 
@@ -157,8 +160,8 @@ class IPAddressSerializer(NautobotModelSerializer):
         related_field_query_paths = {"namespace": "parent__namespace"}
         derived_fields_omitted_from_default_export = ["parent"]
 
-    def get_import_match_filter(self, field_name, value):
+    def translate_import_match_field_and_value_to_database_lookup(self, field_name, value):
         if field_name == "address":
             return {"host": value.ip if value is not None else None}
-        return super().get_import_match_filter(field_name, value)
+        return super().translate_import_match_field_and_value_to_database_lookup(field_name, value)
 ```
