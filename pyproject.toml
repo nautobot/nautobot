@@ -28,7 +28,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=50.0.0,<51)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.18,<5.3)",
+    "django (>=5.2.19,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
