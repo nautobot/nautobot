@@ -1,4 +1,5 @@
 from django import forms
+from django.core.validators import RegexValidator
 
 from nautobot.apps.filters import FilterExtension, MultiValueCharFilter, NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.apps.forms import DynamicModelMultipleChoiceField
@@ -22,6 +23,9 @@ class TenantFilterExtension(FilterExtension):
         "example_app_dtype": MultiValueCharFilter(
             field_name="locations__devices__device_type__model", label="Device Type (model)"
         ),
+        "example_app_validated_description": MultiValueCharFilter(
+            field_name="description", label="Validated Description"
+        ),
     }
 
     filterform_fields = {
@@ -29,6 +33,11 @@ class TenantFilterExtension(FilterExtension):
         "example_app_dtype": forms.CharField(required=False, label="Device Type"),
         "name__ic": forms.CharField(required=False, label="Name Contains"),
         "example_app_sdescrip": forms.CharField(required=False, label="Suffix Description"),
+        "example_app_validated_description": forms.CharField(
+            required=False,
+            label="Validated Description",
+            validators=[RegexValidator(regex=r"^[A-Z]{3}[0-9]{2}$", message="Invalid filter value")],
+        ),
     }
 
 
