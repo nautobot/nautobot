@@ -368,6 +368,13 @@ actual WCAG contrast ratio.
 
 Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1).
 
+### Target size
+
+A pointer target needs to be at least 24 by 24 pixels, or else far enough from its neighbours that a 24 pixel area
+around each one stays clear (WCAG 2.5.8). Padding is usually the way to reach the size, because it enlarges the target
+without changing how the control looks. A link inside a block of prose is exempt, since its size comes from the
+surrounding text.
+
 ### Dynamic content
 
 Content that appears without a page load is not announced unless it lands in a live region. `#header_messages` is a

@@ -1856,12 +1856,12 @@ $nb-toast-variants: (
 }
 
 .nb-tag-link {
-  $nb-tag-link-min-height: 1.5rem; /* 24px, required to comply with WCAG 2.2 SC 2.5.8 Target Size (Minimum) */
-  $nb-tag-link-line-height: $line-height-base * $font-size-base; /* 20.125px. The negative `margin-block` below uses this value so that the tag link's margin box is no taller than the line height. */
-  $nb-tag-link-padding-block: ($nb-tag-link-min-height - $badge-font-size - $badge-padding-y * 2) * 0.5; /* 3px */
+  $nb-tag-link-min-size: 1.5rem; /* 24px, required to comply with WCAG 2.2 SC 2.5.8 Target Size (Minimum) */
+  $nb-tag-link-padding-block: ($nb-tag-link-min-size - $badge-font-size - $badge-padding-y * 2) * 0.5; /* 3px */
 
   display: inline-flex;
-  margin-block: ($nb-tag-link-min-height - $nb-tag-link-line-height) * -0.5; /* -1.9375px */
+  justify-content: center;
+  min-inline-size: $nb-tag-link-min-size;
   padding-block: $nb-tag-link-padding-block;
 
   .badge {
@@ -1872,7 +1872,7 @@ $nb-toast-variants: (
     box-shadow: none; /* Reset the default focus ring on the tag link click target box, it looks off given the additional padding. */
 
     .badge {
-      box-shadow: 0 0 0 $nb-tag-link-padding-block color-mix(in srgb, var(--nb-tag-bg) 40%, transparent);
+      box-shadow: 0 0 0 $nb-tag-link-padding-block color-mix(in srgb, var(--nb-tag-bg, var(--#{$prefix}focus-ring-color)) 40%, transparent);
     }
   }
 
@@ -1880,6 +1880,26 @@ $nb-toast-variants: (
   &:hover {
     text-decoration: underline;
     text-decoration-color: var(--nb-tag-color, var(--#{$prefix}body-color));
+  }
+
+  /*
+   * `.nb-tag-link` is `24px` tall, which is more than the default line height. To compensate, decrease the vertical
+   * padding of its containers so an element with a single line of tags keeps its height and neighboring content stays
+   * aligned. The padding correction works only for the edges, so each wrapped line still adds extra height.
+   */
+  @mixin nb-tag-link-container-padding-y($original-padding-y) {
+    $line-height: $line-height-base * $font-size-base;
+    padding-block: $original-padding-y - ($nb-tag-link-min-size - $line-height) * 0.5;
+  }
+  /* The cell rule uses a descendant instead of a child selector because `ipaddress_merge.html` nests its tags in a `<label>`. */
+  td:has(&) {
+    @include nb-tag-link-container-padding-y($table-cell-padding-y);
+  }
+  .table-sm td:has(&) {
+    @include nb-tag-link-container-padding-y($table-cell-padding-y-sm);
+  }
+  .card-body:has(> &) {
+    @include nb-tag-link-container-padding-y($card-spacer-y);
   }
 }
 
