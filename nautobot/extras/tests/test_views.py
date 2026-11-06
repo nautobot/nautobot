@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from http import HTTPStatus
 import re
 from unittest import mock
@@ -5407,6 +5407,29 @@ class JobResultTestCase(
         self.assertEqual(lines[1], f"[{ts2}] {self.console_entry_2.text.strip()}")
         ts3 = self.console_entry_3.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
         self.assertEqual(lines[2], f"[{ts3}] {self.console_entry_3.text.strip()}")
+
+    def test_export_job_console_entries_uses_user_timezone(self):
+        """Exported timestamps are rendered in the user's timezone, matching the Console Log tab."""
+        entry = JobConsoleEntry.objects.create(job_result=self.job_result_pending, text="Running job")
+        # `timestamp` is `auto_now_add`, so it can only be set to a fixed value via a queryset update
+        JobConsoleEntry.objects.filter(pk=entry.pk).update(
+            timestamp=datetime(2026, 11, 5, 6, 5, 8, 449000, tzinfo=dt_timezone.utc)
+        )
+        self.user.set_config("timezone", "Asia/Singapore", commit=True)
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        ui_response = self.client.get(
+            reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        )
+        export_response = self.client.get(
+            reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        )
+
+        self.assertHttpStatus(ui_response, 200)
+        self.assertHttpStatus(export_response, 200)
+        # 06:05:08.449 UTC is 14:05:08.449 in Asia/Singapore (UTC+8)
+        self.assertIn("[14:05:08.449] Running job", export_response.content.decode().splitlines())
+        self.assertBodyContains(ui_response, "<span>[14:05:08.449]</span>")
 
     def test_export_job_console_entries_with_constrained_permission(self):
         """Test that constrained permissions filter console entries correctly."""
