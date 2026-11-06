@@ -1,0 +1,2 @@
+Changed the export of IP Addresses and IP Address Ranges to leave out their parent Prefix unless it is explicitly selected, as it is determined by their Namespace and address, so that an exported file can still be imported after the parent Prefix changes.
+Changed `assertInstanceEqual()` to compare a model instance returned by a non-field attribute, such as a property, by its primary key, as it already compares foreign key fields.

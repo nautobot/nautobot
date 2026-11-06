@@ -1,0 +1,1 @@
+Deprecated the `_namespace` property of the IP Address and IP Address Range models in favor of the new `namespace` property.

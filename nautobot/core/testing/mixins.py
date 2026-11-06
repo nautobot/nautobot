@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
-from django.db.models import JSONField, ManyToManyField, ManyToManyRel
+from django.db.models import JSONField, ManyToManyField, ManyToManyRel, Model
 from django.forms.models import model_to_dict
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
@@ -102,6 +102,9 @@ class NautobotTestCaseMixin:
         for attr in fields:
             if hasattr(instance, attr) and attr not in model_dict:
                 model_dict[attr] = getattr(instance, attr)
+                # Replace the instance with its pk, as Django's model_to_dict() does for a foreign key
+                if isinstance(model_dict[attr], Model):
+                    model_dict[attr] = model_dict[attr].pk
             elif attr.startswith("cf_"):
                 # Handle custom fields specifically
                 model_dict[attr] = instance._custom_field_data.get(attr[3:])
@@ -291,6 +294,8 @@ class NautobotTestCaseMixin:
                 elif hasattr(v, "all") and callable(v.all):
                     # Convert related manager to list of PKs
                     relevant_data[k] = sorted(v.all().values_list("pk", flat=True))
+                elif isinstance(v, Model):
+                    relevant_data[k] = v.pk
                 else:
                     relevant_data[k] = v
 
