@@ -15,18 +15,23 @@ class ThemeTestCase:
 
         home.expect_theme_modal_closed()
 
-    @pytest.mark.behavioral
     def test_modal_opens_and_cancels(self, auth_page, base_url):
-        """The footer button opens the modal with System selected by default, and Cancel closes it."""
+        """The footer button opens the modal with a backdrop, and Cancel closes it."""
         home = HomePage(auth_page, base_url)
         home.navigate()
 
         home.open_theme_modal()
-
         home.expect_theme_modal_open()
-        home.expect_theme_choices(["Light", "Dark", "System"])
-        home.expect_selected_theme("system")
 
         home.cancel_theme_modal()
-
         home.expect_theme_modal_closed()
+
+    @pytest.mark.behavioral
+    def test_system_selected_by_default(self, auth_page, base_url):
+        """The modal lists Light, Dark and System in that order, and only System is highlighted."""
+        home = HomePage(auth_page, base_url)
+        home.navigate()
+
+        home.open_theme_modal()
+        home.expect_theme_choices(["Light", "Dark", "System"])
+        home.expect_selected_theme("system")
