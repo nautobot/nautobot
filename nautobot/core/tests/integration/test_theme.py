@@ -1,3 +1,5 @@
+import time
+
 from nautobot.core.testing.integration import SeleniumTestCase
 
 
@@ -35,6 +37,10 @@ class ThemeTestCase(SeleniumTestCase):
         theme_modal = self.browser.find_by_xpath("//div[@id='theme_modal']")
         self.assertTrue(theme_modal[0].is_visible(wait_time=5))
 
+        # Modals take .3 seconds to fully fade in after becoming "visible", and interacting with them during this time
+        # may have unexpected behavior, e.g. https://github.com/twbs/bootstrap/issues/35361
+        time.sleep(0.4)
+
         # Validate 3 themes available to select
         columns = self.browser.find_by_xpath("//div[@class[contains(., 'modal-body')]]//dl/dt")
         self.assertEqual(len(columns), 3)  # 3 columns (light, dark, system)
@@ -55,10 +61,6 @@ class ThemeTestCase(SeleniumTestCase):
         self.assertTrue(system_theme[0].has_class("border"))
         self.assertTrue(system_theme[0].has_class("border-primary"))
 
-        # Why is it required to click the cancel button twice? I honestly don't know, but for some reason Selenium seems
-        # to have troubles here. The first press only focuses the cancel button, and only after clicking it for the
-        # second time, the modal closes successfully.
-        self.browser.find_by_xpath(".//button[@id='dismiss-modal-theme']").click()
         self.browser.find_by_xpath(".//button[@id='dismiss-modal-theme']").click()
 
         # Validate Modal closes when cancel button clicked
