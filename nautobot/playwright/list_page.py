@@ -358,7 +358,10 @@ class ListPage(BasePage):
         select2_filter_pick(self.page, field_name, search=value, pick_text=value, exact=exact)
 
     def search_filter_options(self, field_name, search):
-        """Open the drawer's filter field named *field_name* and type *search*, leaving its dropdown open."""
+        """Click the drawer's filter field named *field_name* and type *search* into its search box.
+
+        The dropdown stays open afterwards.
+        """
         select2_filter_search(self.page, field_name, search)
 
     def expect_filter_option_count(self, text, count):
