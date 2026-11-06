@@ -9,13 +9,13 @@ scan of one model, which is why `test_core_list_views` scans every core list vie
 from playwright.sync_api import expect
 import pytest
 
-from nautobot.core.tests.integration.pages.home_page import HomePage
 from nautobot.core.tests.integration.pages.login_page import LoginPage
 from nautobot.core.tests.integration.pages.search_results_page import SearchResultsPage
 from nautobot.dcim.tests.integration.pages.location_create_page import LocationCreatePage
 from nautobot.dcim.tests.integration.pages.location_detail_page import LocationDetailPage
 from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
 from nautobot.playwright.accessibility import AccessibilityViolations, assert_no_accessibility_violations
+from nautobot.playwright.home_page import HomePage
 
 # App list views are under this prefix (their routes are named `plugins:...`). The sweep covers core views only.
 APPS_API_PREFIX = "/api/plugins/"
