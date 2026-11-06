@@ -557,12 +557,10 @@ class ImportObjectsTestCase(TransactionTestCase):
             csv_data=self.csv_data,
         )
         self.assertJobResultStatus(job_result)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
         self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
 
     def test_csv_import_with_utf_8_with_bom_encoding(self):
@@ -583,12 +581,10 @@ class ImportObjectsTestCase(TransactionTestCase):
             csv_file=csv_file.id,
         )
         self.assertJobResultStatus(job_result)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
         self.assertEqual(
             1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
         )
@@ -624,12 +620,10 @@ class ImportObjectsTestCase(TransactionTestCase):
             csv_file=csv_file.id,
         )
         self.assertJobResultStatus(job_result)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
         device_1 = Device.objects.get(name="Test-AC-01")
         device_2 = Device.objects.get(name="Test-AC-02")
         self.assertEqual(device_1.serial, "1021C4")
@@ -991,12 +985,10 @@ class BulkEditTestCase(TransactionTestCase):
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
         self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), expected_count)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
 
     def test_bulk_edit_objects_without_permission(self):
         statuses = [Status.objects.create(name=f"Sample Status {x}") for x in range(3)]
@@ -1491,12 +1483,10 @@ class BulkDeleteTestCase(TransactionTestCase):
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
         self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), 0)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
 
     def test_bulk_delete_objects_without_permission(self):
         statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
