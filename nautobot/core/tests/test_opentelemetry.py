@@ -58,8 +58,8 @@ def _db_instrumentor_for_engine(engine):
     `import MySQLdb` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
     """
     if "mysql" in engine:
-        if MySQLClientInstrumentor is None:
-            raise RuntimeError("MySQLClientInstrumentor is missing - maybe test should be skipped?")  # pragma: nocover
+        if MySQLClientInstrumentor is None:  # pragma: no cover
+            raise RuntimeError("MySQLClientInstrumentor is missing - maybe this test should have been skipped?")
         return MySQLClientInstrumentor
     return Psycopg2Instrumentor
 
@@ -339,8 +339,6 @@ class InstrumentExporterBranchTest(OpenTelemetryTestMixin, testing.TestCase):
         self._meter_provider_patcher.start()
 
     def tearDown(self):
-        otel_trace._TRACER_PROVIDER = None
-        otel_trace._TRACER_PROVIDER_SET_ONCE._done = False
         self._meter_provider_patcher.stop()
         super().tearDown()
 
@@ -582,7 +580,6 @@ class APITraceGenerationTest(OpenTelemetryTestMixin, testing.APITestCase):
 
     def tearDown(self):
         self.client.handler.load_middleware()
-        DjangoInstrumentor().uninstrument()
         self._env_patcher.stop()
         super().tearDown()
 
@@ -658,7 +655,6 @@ class OtelWithSilkProfilingTest(OpenTelemetryTestMixin, testing.APITestCase):
     def tearDown(self):
         self._trace_patcher.stop()
         self.client.handler.load_middleware()
-        DjangoInstrumentor().uninstrument()
         self._settings_override.disable()
         self._env_patcher.stop()
         super().tearDown()
@@ -763,10 +759,7 @@ class RequestsInstrumentationTraceparentTest(OpenTelemetryTestMixin, testing.Tes
         RequestsInstrumentor().instrument(tracer_provider=self._provider)
 
     def tearDown(self):
-        RequestsInstrumentor().uninstrument()
         set_global_textmap(self._original_propagator)
-        otel_trace._TRACER_PROVIDER = None
-        otel_trace._TRACER_PROVIDER_SET_ONCE._done = False
         super().tearDown()
 
     def test_traceparent_header_injected_in_outgoing_requests(self):

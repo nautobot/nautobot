@@ -146,8 +146,9 @@ def uninstrument():
                 instrumentor = instrumentor_cls()
                 if instrumentor.is_instrumented_by_opentelemetry:
                     instrumentor.uninstrument()
+                    logger.debug("Uninstrumented %s", instrumentor_cls.__name__)
         except Exception:
-            logger.warning("Could not load or instantiate OTEL instrumentor %s.", path)
+            logger.warning("Could not load or instantiate OTEL extra instrumentor %s.", path)
 
     instrumentors = [
         DjangoInstrumentor(),
@@ -163,6 +164,7 @@ def uninstrument():
     for instrumentor in instrumentors:
         if instrumentor.is_instrumented_by_opentelemetry:
             instrumentor.uninstrument()
+            logger.debug("Uninstrumented %s", instrumentor.__class__.__name__)
 
     # Based on opentelemetry-test-utils opentelemetry.test.globals_test.reset_trace_globals()
     trace._TRACER_PROVIDER = None
@@ -263,7 +265,7 @@ def uninstall_exporters():
     """TEST-ONLY cleanup helper - remove the OpenTelemetry exporters previously applied by install_exporters()."""
     global _exporters_installed
 
-    # TODO: clean up the trace exporters as well?
+    # TODO: clean up the trace exporters and span processors added by install_exporter() as well?
 
     if metrics._internal._METER_PROVIDER is not None:
         metrics._internal._METER_PROVIDER.shutdown()
