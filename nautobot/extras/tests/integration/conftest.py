@@ -163,7 +163,7 @@ PROVIDER_TAG_COUNT = 51
 
 @pytest.fixture
 def created_provider_tags(create_object):
-    """Create `PROVIDER_TAG_COUNT` tags that apply only to providers, deleted after the test.
+    """Create `PROVIDER_TAG_COUNT` tags that apply only to providers. The tags are deleted after the test.
 
     Tags are named `<prefix> 01`, `<prefix> 02`, and so on. Returns the `prefix` and the created `tags`.
     """
