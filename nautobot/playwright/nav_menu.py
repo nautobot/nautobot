@@ -1,7 +1,7 @@
 """Shared component object for the navigation menu, the sidenav (`nav#sidenav`) on every logged-in page.
 
-The sidenav lists one tab per `li[data-section-name]`. Each tab is a button and a flyout. The flyout holds
-one `<ul>` per group: the group's label (`li.nb-sidenav-link-group`) followed by its item links. The server
+The sidenav lists one tab per `li[data-section-name]`. Each tab contains a button and a flyout. The flyout
+contains one `<ul>` per group: the group's label (`li.nb-sidenav-link-group`) followed by its item links. The server
 leaves out every item the user has no permission for, then every group left with no items, then every tab
 left with no groups, so a tab or group the user cannot use is missing from the DOM rather than hidden.
 
@@ -26,8 +26,8 @@ def _exact(text):
 class NavMenu:
     """The sidenav on the current page: its tabs, their groups and items, and expanding a tab.
 
-    A component, not a page: it does no navigation of its own. Build it on a page that a page object
-    has already loaded:
+    It is a component, not a page, so it never navigates. Create it on a page that a page object has
+    already loaded:
 
         HomePage(page, base_url).navigate()
         nav = NavMenu(page)
@@ -109,7 +109,7 @@ class NavMenu:
         return self.tab(tab_name).locator(self._GROUP).filter(has=label)
 
     def group_labels(self, tab_name):
-        """Return the label of every group in tab *tab_name*, read with `text_content()` so a closed flyout reads too."""
+        """Return the label of every group in tab *tab_name*, read with `text_content()` so that a closed flyout's labels are read too."""
         labels = self.tab(tab_name).locator(f"{self._GROUP} > {self._GROUP_LABEL}")
         return [(label.text_content() or "").strip() for label in labels.all()]
 

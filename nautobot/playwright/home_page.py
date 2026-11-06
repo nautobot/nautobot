@@ -26,7 +26,8 @@ class HomePage(BasePage):
     """The home page panel grid: panels, their items and counters, and collapsing a panel."""
 
     PATH = "/"
-    # Nautobot's HOMEPAGE_PANELS_LAYOUT_COLUMNS. A literal, because importing nautobot.core needs a Django config.
+    # The value of Nautobot's HOMEPAGE_PANELS_LAYOUT_COLUMNS. It is hard-coded because importing nautobot.core
+    # requires configured Django settings, which this suite does not have.
     COLUMN_COUNT = 4
 
     _PANELS = "#draggable-homepage-panels"
@@ -34,12 +35,13 @@ class HomePage(BasePage):
     # Overrides BasePage's panel title, so the inherited panel(), expect_panel(), expect_no_panel() and
     # expect_panel_to_contain() find home page panels, whose name is the card header's <h2>.
     _PANEL_TITLE = "#draggable-homepage-panels .card > .card-header > h2"
-    # One <li> per item. A grouped item ("Connections") holds one link per member, each in its own <p>.
+    # One <li> per item. A grouped item ("Connections") contains one link per member, each in its own <p>.
     _ITEM = "li.list-group-item"
     # The count badge is a direct child of a top-level item's <li>. A locked item shows a padlock instead.
     _ITEM_BADGE = ":scope > span.badge"
     _ENCLOSING_ITEM = "xpath=ancestor::li[contains(concat(' ', normalize-space(@class), ' '), ' list-group-item ')][1]"
-    # A <span role="button"> in the card header; Bootstrap toggles the panel's <ul> and its `aria-expanded`.
+    # The toggle is a <span role="button"> in the card header. Clicking it makes Bootstrap show or hide the
+    # panel's <ul> and update the toggle's `aria-expanded`.
     _PANEL_TOGGLE = ".card-header [data-bs-toggle='collapse']"
     _PANEL_BODY = "ul.list-group"
     # Each collapse or expand PATCHes the whole panel layout, with each panel's collapsed state, to the user's config.
@@ -88,7 +90,8 @@ class HomePage(BasePage):
         """Return the count badge of the top-level item *item_name* in panel *panel_name*, as an int.
 
         The badge uses a thousands separator ("1,210"), which is removed before parsing. Fails, rather than
-        returning a number, when the badge is a padlock: the user holds only some of the item's permissions.
+        returning a number, when the badge is a padlock, which the page shows when the user has only some of the
+        item's permissions.
         A grouped item's members ("Connections" > "Cables") each have their own badge, which this does not read.
         """
         link = self.item_link(panel_name, item_name)

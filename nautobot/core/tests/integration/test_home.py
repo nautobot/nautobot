@@ -5,9 +5,10 @@ import pytest
 from nautobot.playwright.helpers import log_in
 from nautobot.playwright.home_page import HomePage
 
-# The panels and items the Selenium test checked, keyed by the names the home page renders (each app's
-# `homepage.py`). Each item has its object type, for granting permission, and its list view path, which is
-# the item's link and, under `/api`, its REST endpoint.
+# The panels and items that the Selenium test checked, keyed by the names that the home page displays (as
+# defined in each app's `homepage.py`). Each item has two values. `object_type` is the type that the
+# limited user is given view permission on. `path` is the item's list view, which is the href of the item's
+# link; with `/api` in front, the same path is the item's REST endpoint.
 LAYOUT = {
     "Organization": {
         "Locations": {"object_type": "dcim.location", "path": "/dcim/locations/"},
@@ -58,7 +59,7 @@ class HomeTestCase:
         assert not mismatches, f"Home page counters disagree with the API: {mismatches}"
 
     @pytest.mark.behavioral
-    # storage_state=None drops the admin's session login, so the test can log in as its own user.
+    # storage_state=None starts the browser context without the admin's saved login, so the test can log in as its own user.
     @pytest.mark.browser_context_args(storage_state=None)
     def test_homepage_render_with_limit_permissions(self, page, base_url, created_view_only_user):
         """A user who can view only locations and circuits sees only those items, and no panel without one."""

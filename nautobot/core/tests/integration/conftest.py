@@ -17,12 +17,13 @@ def default_homepage_layout(api):
     """Start the session user on the default home page layout, with every panel expanded, and restore theirs on teardown.
 
     The home page saves each panel's position and collapsed state to `homepage_layout.panels` in
-    `/api/users/config/`, so a collapse would otherwise carry into every later test, and a panel left
-    collapsed by an earlier run would break the "expanded by default" check. Writing `null` to `panels`
-    makes the home view discard it and render the default layout. It must not be written to
-    `homepage_layout` itself: Nautobot cannot clear `homepage_layout.panels` under a `null`. A list
-    replaces the stored one outright, so teardown writes the saved list (or `null` if there was none)
-    back unchanged. The API token and the browser login must be the same user.
+    `/api/users/config/`. Without this fixture, a panel collapsed in one test would stay collapsed in every
+    later test, and a panel left collapsed by an earlier run would fail the "expanded by default" check.
+    Writing `null` to `panels` makes the home view ignore the saved panels and render the default layout.
+    Don't write `null` to `homepage_layout` itself: Nautobot then fails when it later clears
+    `homepage_layout.panels`. The config PATCH merges dictionaries but replaces a list completely, so
+    teardown writes the saved list (or `null`, if there was none) back exactly as it was. The API token and
+    the browser login must belong to the same user.
     """
 
     def _set_panels(panels):

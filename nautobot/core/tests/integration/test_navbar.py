@@ -12,7 +12,8 @@ from nautobot.playwright.helpers import log_in
 from nautobot.playwright.home_page import HomePage
 from nautobot.playwright.nav_menu import NavMenu
 
-# The tabs, groups and items the Selenium test checked, each item with the object type that grants it.
+# The tabs, groups and items that the Selenium test checked. Each item maps to the object type whose view
+# permission makes the item visible.
 # "Metadata" is also a group in Extensibility, which is why groups are always looked up within their tab.
 NAVBAR = {
     "Organization": {
@@ -24,7 +25,7 @@ NAVBAR = {
     },
 }
 
-# Relationships are the only item the limited-permission user may view, so of the tabs above it sees only Extensibility.
+# The limited-permission user may view only Relationships, so Extensibility is the only tab above that this user sees.
 LIMITED_OBJECT_TYPES = ("extras.relationship",)
 
 
@@ -57,7 +58,7 @@ class NavBarTestCase:
             nav.collapse_tab(tab_name)
 
     @pytest.mark.behavioral
-    # storage_state=None drops the admin's session login, so the test can log in as its own user.
+    # storage_state=None starts the browser context without the admin's saved login, so the test can log in as its own user.
     @pytest.mark.browser_context_args(storage_state=None)
     def test_navbar_render_with_limited_permissions(self, page, base_url, created_view_only_user):
         """A user who can view only relationships gets the Extensibility tab with Relationships and no Organization tab."""
