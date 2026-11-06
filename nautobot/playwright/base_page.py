@@ -66,10 +66,10 @@ class BasePage:
     _HEADER = "#header"
     # The one modal every page includes; the favorite form is loaded into it over HTMX.
     _GENERIC_MODAL = "#nautobot-generic-modal"
-    # The footer opens the theme modal for a logged-in user. Each choice is a <dt> name and a <dd> button.
+    # The footer renders the theme button only for a logged-in user.
     _THEME_MODAL_BUTTON = "#btn-theme-modal"
     _THEME_MODAL = "#theme_modal"
-    # Looked up inside the theme modal.
+    # These three are matched inside `theme_modal()`. Each choice is a <dt> name and a <dd> button.
     _THEME_CHOICE_NAMES = "dl dt"
     _THEME_CHOICE_BUTTON = "button[data-nb-theme]"
     _THEME_MODAL_CANCEL = "#dismiss-modal-theme"
