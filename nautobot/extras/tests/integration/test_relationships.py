@@ -2,9 +2,13 @@
 
 import pytest
 
+from nautobot.dcim.tests.integration.pages.manufacturer_detail_page import ManufacturerDetailPage
+from nautobot.dcim.tests.integration.pages.platform_detail_page import PlatformDetailPage
 from nautobot.extras.tests.integration.pages.relationship_create_page import RelationshipCreatePage
-from nautobot.extras.tests.integration.pages.relationship_peer_pages import ManufacturerDetailPage, PlatformDetailPage
 from nautobot.playwright.helpers import unique_name
+
+MANUFACTURER_TYPE = "DCIM | manufacturer"
+PLATFORM_TYPE = "DCIM | platform"
 
 
 class RelationshipsTestCase:
@@ -49,35 +53,33 @@ class RelationshipsTestCase:
             detail.expect_relationship_peer("advanced", side_label, other_name)
 
     @pytest.mark.behavioral
-    def test_relationship_symmetric_form_behavior(self, auth_page, base_url, api, content_type_id, create_object):
+    def test_relationship_symmetric_form_behavior(self, auth_page, base_url, api, create_object):
         """A symmetric type copies the source fields into the disabled destination fields, and the copies are saved."""
-        manufacturer_type = content_type_id("dcim.manufacturer")
-        platform_type = content_type_id("dcim.platform")
         label = unique_name()
         filter_json = '{"name__ic": "peer"}'
 
         form = RelationshipCreatePage(auth_page, base_url)
         form.navigate()
-        form.fill_label(label)
-        form.select_object_type("source", manufacturer_type)
+        form.fill_input("label", label)
+        form.select_object_type("source", MANUFACTURER_TYPE)
         form.fill_side("source", "Peers", filter_json, hidden=True)
 
         form.select_type("symmetric-many-to-many")
-        form.expect_destination(manufacturer_type, "Peers", filter_json, hidden=True)
+        form.expect_destination(MANUFACTURER_TYPE, "Peers", filter_json, hidden=True)
         form.expect_destination_disabled()
 
         form.select_type("many-to-many")
         form.expect_destination_enabled()
-        form.select_object_type("destination", platform_type)
-        form.expect_destination_type(platform_type)
+        form.select_object_type("destination", PLATFORM_TYPE)
+        form.expect_destination_type(PLATFORM_TYPE)
 
         # Switching back to a symmetric type copies the source values over the destination type set by hand.
         form.select_type("symmetric-many-to-many")
-        form.expect_destination_type(manufacturer_type)
+        form.expect_destination_type(MANUFACTURER_TYPE)
         form.expect_destination_disabled()
 
         create_object.track("extras/relationships/", label=label)
-        relationship_id = form.submit()
+        relationship_id = form.submit_and_return_pk()
         form.expect_flash_message("Created relationship")
 
         # The destination fields are disabled, and a browser does not post disabled inputs. The form's

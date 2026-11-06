@@ -95,29 +95,6 @@ def created_note(create_object, created_location):
     )
 
 
-@pytest.fixture(scope="session")
-def content_type_id(api):
-    """Callable that returns the id of the content type named like "dcim.platform".
-
-    The id is the value that the form's object type option submits.
-    """
-    cache = {}
-
-    def _lookup(content_type):
-        if content_type not in cache:
-            app_label, model = content_type.split(".")
-            response = api.get("/api/extras/content-types/", params={"app_label": app_label, "model": model})
-            if not response.ok:
-                pytest.fail(f"Content type lookup for {content_type} returned {response.status}: {response.text()}")
-            results = response.json()["results"]
-            if len(results) != 1:
-                pytest.fail(f"Expected one content type {content_type}, got {len(results)}")
-            cache[content_type] = results[0]["id"]
-        return cache[content_type]
-
-    return _lookup
-
-
 @pytest.fixture
 def created_relationship(create_object):
     """A one-to-one relationship from a manufacturer to a platform, with one association between a manufacturer and a platform that this fixture creates.

@@ -1,7 +1,5 @@
 """Page object for the Relationship create form (/extras/relationships/add/)."""
 
-import re
-
 from playwright.sync_api import expect
 
 from nautobot.playwright.object_form_page import ObjectFormPage
@@ -15,9 +13,6 @@ class RelationshipCreatePage(ObjectFormPage):
     _TYPE = "#id_type"
     # The four source/destination field pairs that relationship_form.js keeps in sync, named by field suffix.
     _MIRRORED_FIELDS = ("type", "label", "hidden", "filter")
-    # The group is unnamed because expect().to_have_url() passes the pattern to the browser as a
-    # JavaScript RegExp, which does not accept Python's (?P<name>...) syntax.
-    _DETAIL_URL = re.compile(r"/extras/relationships/([0-9a-f-]{36})/$")
 
     def _field(self, side, name):
         """Locator for the *side* ("source" or "destination") field *name* ("type", "label", "hidden" or "filter")."""
@@ -27,17 +22,13 @@ class RelationshipCreatePage(ObjectFormPage):
     # Filling the form
     # -------------------------------------------------------------------------
 
-    def fill_label(self, label):
-        """Type *label*. The form's script fills the key from it."""
-        self.fill_input("label", label)
-
     def select_type(self, relationship_type):
         """Choose the relationship type by the value of *relationship_type*, e.g. "symmetric-many-to-many"."""
         self.page.locator(self._TYPE).select_option(relationship_type)
 
-    def select_object_type(self, side, content_type_id):
-        """Choose the *side* object type by its content type id."""
-        self._field(side, "type").select_option(str(content_type_id))
+    def select_object_type(self, side, type_label):
+        """Choose the *side* object type by its option label, e.g. "DCIM | manufacturer"."""
+        self._field(side, "type").select_option(label=type_label)
 
     def fill_side(self, side, label, filter_json, hidden):
         """Fill the *side* label and filter, and set its hidden checkbox to *hidden*."""
@@ -45,19 +36,13 @@ class RelationshipCreatePage(ObjectFormPage):
         self._field(side, "filter").fill(filter_json)
         self._field(side, "hidden").set_checked(hidden)
 
-    def submit(self) -> str:
-        """Click Create and return the new relationship's id from the detail page it redirects to."""
-        super().submit()
-        expect(self.page).to_have_url(self._DETAIL_URL)
-        return self._DETAIL_URL.search(self.page.url).group(1)
-
     # -------------------------------------------------------------------------
     # Destination field state
     # -------------------------------------------------------------------------
 
-    def expect_destination(self, content_type_id, label, filter_json, hidden):
+    def expect_destination(self, type_label, label, filter_json, hidden):
         """Assert (auto-retrying) the destination fields' current values."""
-        expect(self._field("destination", "type")).to_have_value(str(content_type_id))
+        self.expect_destination_type(type_label)
         expect(self._field("destination", "label")).to_have_value(label)
         expect(self._field("destination", "filter")).to_have_value(filter_json)
         if hidden:
@@ -65,9 +50,9 @@ class RelationshipCreatePage(ObjectFormPage):
         else:
             expect(self._field("destination", "hidden")).not_to_be_checked()
 
-    def expect_destination_type(self, content_type_id):
-        """Assert (auto-retrying) the destination object type's current value."""
-        expect(self._field("destination", "type")).to_have_value(str(content_type_id))
+    def expect_destination_type(self, type_label):
+        """Assert (auto-retrying) that the destination object type shows the option labelled *type_label*."""
+        expect(self._field("destination", "type").locator("option:checked")).to_have_text(type_label)
 
     def expect_destination_disabled(self):
         """Assert (auto-retrying) that every destination field that the script copies from the source is disabled."""
