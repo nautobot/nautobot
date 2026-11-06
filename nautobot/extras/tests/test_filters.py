@@ -1357,8 +1357,12 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
         self.assertTrue(self.filterset(params, self.queryset).qs.exists())
 
     def test_dryrun_default(self):
+        """Assert the `dryrun_default` filter returns exactly those Jobs whose `dryrun_default` is True."""
         params = {"dryrun_default": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 0)
+        filterset = self.filterset(params, self.queryset)
+        filterset_result = filterset.qs
+        expected_queryset = self.queryset.filter(dryrun_default=True)
+        self.assertQuerySetEqualAndNotEmpty(filterset_result, expected_queryset)
 
     @tag("example_app")
     def test_hidden(self):

@@ -149,6 +149,40 @@ class ArchivedObjectChange(ArchivedLogModel):
             models.Index(name="extras_aoc_related_obj_idx", fields=["related_object_type_id", "related_object_id"]),
         ]
 
+    # TODO: Naming is hard, get a better name
+    @classmethod
+    def from_object_change(cls, object_change):
+        """
+        Build an unsaved `ArchivedObjectChange` from a live `ObjectChange`.
+
+        TODO: Add more documentation
+
+        Args:
+            object_change (ObjectChange): The live record to copy.
+
+        Returns:
+            (ArchivedObjectChange): An unsaved instance. Saving it is the caller's responsibility.
+        """
+        new_archived_object_change = cls(
+            id=object_change.id,
+            time=object_change.time,
+            user_id=object_change.user_id,
+            user_name=object_change.user_name,
+            request_id=object_change.request_id,
+            action=object_change.action,
+            changed_object_type_id=object_change.changed_object_type_id,
+            changed_object_id=object_change.changed_object_id,
+            change_context=object_change.change_context,
+            change_context_detail=object_change.change_context_detail,
+            related_object_type_id=object_change.related_object_type_id,
+            related_object_id=object_change.related_object_id,
+            object_repr=object_change.object_repr,
+            object_data=object_change.object_data,
+            object_data_v2=object_change.object_data_v2,
+        )
+
+        return new_archived_object_change
+
     def get_related_changes(self, user=None, permission="view"):
         """
         Retrieve other ArchivedObjectChanges that have the same `changed_object` as this record.
@@ -303,6 +337,57 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
             models.Index(name="extras_ajr_statrcreate_idx", fields=["status", "-date_created"]),
         ]
 
+    @classmethod
+    def from_job_result(cls, job_result):
+        """
+        Build an unsaved `ArchivedJobResult` from a live `JobResult`.
+
+        The source record's primary key is carried over unchanged. That is what makes archival idempotent,
+        and what lets this record's archived log and console entries keep pointing at it without any
+        translation of their foreign key.
+
+        `user_name` is the one field with no live counterpart: a `JobResult` reads the username through its
+        `user` foreign key, which cannot be followed from the archive, so it is denormalized here.
+
+        Args:
+            job_result (JobResult): The live record to copy.
+
+        Returns:
+            (ArchivedJobResult): An unsaved instance. Saving it is the caller's responsibility.
+        """
+        new_archived_job_result = cls(
+            id=job_result.id,
+            _custom_field_data=job_result._custom_field_data,
+            job_model_id=job_result.job_model_id,
+            name=job_result.name,
+            task_name=job_result.task_name,
+            date_created=job_result.date_created,
+            date_started=job_result.date_started,
+            date_done=job_result.date_done,
+            user_id=job_result.user_id,
+            user_name=getattr(job_result.user, "username", "") or "",
+            status=job_result.status,
+            result=job_result.result,
+            worker=job_result.worker,
+            task_args=job_result.task_args,
+            task_kwargs=job_result.task_kwargs,
+            celery_kwargs=job_result.celery_kwargs,
+            traceback=job_result.traceback,
+            meta=job_result.meta,
+            scheduled_job_id=job_result.scheduled_job_id,
+            debug_log_count=job_result.debug_log_count,
+            success_log_count=job_result.success_log_count,
+            info_log_count=job_result.info_log_count,
+            warning_log_count=job_result.warning_log_count,
+            error_log_count=job_result.error_log_count,
+            canceled_by_id=job_result.canceled_by_id,
+            canceled_by_user_name=job_result.canceled_by_user_name,
+            cancel_type=job_result.cancel_type,
+            date_canceled=job_result.date_canceled,
+        )
+
+        return new_archived_job_result
+
     def __str__(self):
         return f"{self.name} created at {self.date_created} ({self.status})"
 
@@ -332,6 +417,34 @@ class ArchivedJobLogEntry(ArchivedLogModel):
             models.Index(name="extras_ajoblog_jr_created_idx", fields=["job_result", "created"]),
         ]
 
+    @classmethod
+    def from_job_log_entry(cls, job_log_entry):
+        """
+        Build an unsaved `ArchivedJobLogEntry` from a live `JobLogEntry`.
+
+        `job_result_id` is copied across as a raw identifier rather than resolved. An archived job result
+        keeps the primary key it had live, so the live entry's `job_result_id` already names the correct
+        `ArchivedJobResult` -- provided that parent has been archived first, which the foreign key enforces.
+
+        Args:
+            job_log_entry (JobLogEntry): The live record to copy.
+
+        Returns:
+            (ArchivedJobLogEntry): An unsaved instance. Saving it is the caller's responsibility.
+        """
+        new_job_log_entry = cls(
+            id=job_log_entry.id,
+            job_result_id=job_log_entry.job_result_id,
+            log_level=job_log_entry.log_level,
+            grouping=job_log_entry.grouping,
+            message=job_log_entry.message,
+            created=job_log_entry.created,
+            log_object=job_log_entry.log_object,
+            absolute_url=job_log_entry.absolute_url,
+        )
+
+        return new_job_log_entry
+
     def __str__(self):
         return self.message
 
@@ -359,6 +472,31 @@ class ArchivedJobConsoleEntry(ArchivedLogModel):
         indexes = [
             models.Index(name="extras_ajobconsole_jr_ts_idx", fields=["job_result", "timestamp"]),
         ]
+
+    @classmethod
+    def from_job_console_entry(cls, job_console_entry):
+        """
+        Build an unsaved `ArchivedJobConsoleEntry` from a live `JobConsoleEntry`.
+
+        `job_result_id` is copied across as a raw identifier rather than resolved. An archived job result
+        keeps the primary key it had live, so the live entry's `job_result_id` already names the correct
+        `ArchivedJobResult` -- provided that parent has been archived first, which the foreign key enforces.
+
+        Args:
+            job_console_entry (JobConsoleEntry): The live record to copy.
+
+        Returns:
+            (ArchivedJobConsoleEntry): An unsaved instance. Saving it is the caller's responsibility.
+        """
+        new_job_console_entry = cls(
+            id=job_console_entry.id,
+            job_result_id=job_console_entry.job_result_id,
+            timestamp=job_console_entry.timestamp,
+            output_type=job_console_entry.output_type,
+            text=job_console_entry.text,
+        )
+
+        return new_job_console_entry
 
     def __str__(self):
         return self.text

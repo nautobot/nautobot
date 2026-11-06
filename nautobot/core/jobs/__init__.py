@@ -45,6 +45,7 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms.fields import ExportFieldsChoiceField
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import import_utils
+from nautobot.core.jobs.archive import ArchiveOldRecords
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.customfields import (
@@ -1367,6 +1368,7 @@ class ValidateModelData(Job):
 
 
 jobs = [
+    ArchiveOldRecords,
     BulkDeleteObjects,
     BulkEditObjects,
     CleanupCustomFieldsData,
