@@ -32,6 +32,9 @@ from .models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -82,6 +85,10 @@ APPROVAL_WORKFLOW_OBJECT = """
 {% else %}
     {{ record.object_under_review }}
 {% endif %}
+"""
+
+ARCHIVEDOBJECTCHANGE_REQUEST_ID = """
+<a href="{% url 'extras:archivedobjectchange_list' %}?request_id={{ value }}">{{ value }}</a>
 """
 
 ASSIGNED_OBJECT = """
@@ -1665,6 +1672,72 @@ class ObjectChangeTable(BaseTable):
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
             logger.warning(error_message)
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryTable(JobLogEntryTable):
+    pk = None
+
+    class Meta(JobLogEntryTable.Meta):
+        model = ArchivedJobLogEntry
+
+
+class ArchivedJobResultTable(JobResultTable):
+    pk = None
+    canceled_by = None
+    job_model = None
+    scheduled_job = None
+    user = None
+
+    class Meta(JobResultTable.Meta):
+        model = ArchivedJobResult
+        fields = (
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "duration",
+            "user_name",
+            "status",
+            "summary",
+            "console_log",
+            "queue_name",
+            "actions",
+        )
+        default_columns = (
+            "date_created",
+            "name",
+            "user_name",
+            "status",
+            "summary",
+            "actions",
+        )
+
+
+class ArchivedObjectChangeTable(BaseTable):
+    time = tables.DateTimeColumn(linkify=True, short=True)
+    action = ChoiceFieldColumn()
+    # Not orderable because it isn't a real FK, so it would order by `content_type_id` instead of by ContentType order.
+    changed_object_type = tables.Column(verbose_name="Type", orderable=False)
+    # TODO: plain text for now. Linking is added in CONCRETE-3.
+    object_repr = tables.Column(verbose_name="Object")
+    request_id = tables.TemplateColumn(template_code=ARCHIVEDOBJECTCHANGE_REQUEST_ID, verbose_name="Request ID")
+
+    class Meta(BaseTable.Meta):
+        model = ArchivedObjectChange
+        fields = (
+            "time",
+            "user_name",
+            "action",
+            "changed_object_type",
+            "object_repr",
+            "request_id",
+        )
 
 
 #

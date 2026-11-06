@@ -50,6 +50,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -1477,6 +1480,29 @@ class ObjectChangeViewSet(ReadOnlyModelViewSet):
     queryset = ObjectChange.objects.all()
     serializer_class = serializers.ObjectChangeSerializer
     filterset_class = filters.ObjectChangeFilterSet
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedObjectChangeViewSet(ReadOnlyModelViewSet):
+    queryset = ArchivedObjectChange.objects.all()
+    serializer_class = serializers.ArchivedObjectChangeSerializer
+    filterset_class = filters.ArchivedObjectChangeFilterSet
+
+
+class ArchivedJobResultViewSet(ReadOnlyModelViewSet):
+    queryset = ArchivedJobResult.objects.all()
+    serializer_class = serializers.ArchivedJobResultSerializer
+    filterset_class = filters.ArchivedJobResultFilterSet
+
+
+class ArchivedJobLogEntryViewSet(ReadOnlyModelViewSet):
+    queryset = ArchivedJobLogEntry.objects.all()
+    serializer_class = serializers.ArchivedJobLogEntrySerializer
+    filterset_class = filters.ArchivedJobLogEntryFilterSet
 
 
 #
