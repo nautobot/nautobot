@@ -4,6 +4,7 @@ import json
 import logging
 from pathlib import Path
 from unittest import mock
+import uuid
 import weakref
 
 from django.contrib.contenttypes.models import ContentType
@@ -28,6 +29,8 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
 )
 from nautobot.extras.factory import JobResultFactory, LIVE_HISTORY_END, LIVE_HISTORY_START, ObjectChangeFactory
 from nautobot.extras.jobs import RunJobTaskFailed
@@ -1421,11 +1424,40 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         """
         Create an `ObjectChange` whose `time` is `age_in_days` in the past.
 
-        Reloaded before being returned so that its `JSONField`s hold what the database holds. The factory
-        fills `object_data` with native `datetime` and `Decimal` values, which only become the strings the
-        archived copy will carry once they have been through a save and a read.
+        Built field by field rather than through `ObjectChangeFactory`. A factory's output depends on the
+        sequence of factory calls made before it, so it shifts with test ordering and with whether the
+        fixture cache was used. Several of its fields are also filled only part of the time, which would
+        leave the archive comparison tests asserting `None == None` on a given run.
+
+        Every field the archive copies is given a value here, so those comparisons always compare
+        something, and two runs of the same test build the same record.
         """
-        new_object_change = ObjectChangeFactory.create(time=timezone.now() - timedelta(days=age_in_days), **kwargs)
+        timestamp = timezone.now() - timedelta(days=age_in_days)
+        changed_object_type = ContentType.objects.get_for_model(Status)
+        object_change_fields = {
+            "user": self.user,
+            "user_name": self.user.username,
+            "request_id": uuid.uuid4(),
+            "action": ObjectChangeActionChoices.ACTION_UPDATE,
+            "changed_object_type": changed_object_type,
+            "changed_object_id": uuid.uuid4(),
+            "change_context": ObjectChangeEventContextChoices.CONTEXT_ORM,
+            "change_context_detail": "archive test change",
+            "related_object_type": changed_object_type,
+            "related_object_id": uuid.uuid4(),
+            "object_repr": "archive test object",
+            "object_data": {"name": "archive test object"},
+            "object_data_v2": {"name": "archive test object"},
+        }
+        object_change_fields.update(kwargs)
+
+        new_object_change = ObjectChange.objects.create(**object_change_fields)
+        # `time` is `auto_now_add`, which overrides whatever the insert supplies, so it is written once
+        # the row exists. `auto_now_add` only applies to the insert, so this second save keeps the value.
+        new_object_change.time = timestamp
+        new_object_change.save()
+
+        # Reloaded so that its `JSONField`s hold what the database holds rather than what was passed in.
         new_object_change.refresh_from_db()
         return new_object_change
 
@@ -1436,7 +1468,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         The threshold and batch size are passed on every run. `run()` has no setting to fall back on,
         so leaving them out hands it `None` rather than a default.
         """
-        kwargs.setdefault("selected_models_to_archive", ["extras.objectchange"])
+        kwargs.setdefault("selected_models_to_archive", ["extras.ObjectChange"])
         kwargs.setdefault("archive_age_threshold", ARCHIVE_AGE_THRESHOLD_IN_DAYS)
         kwargs.setdefault("archive_batch_size", ARCHIVE_BATCH_SIZE)
         kwargs.setdefault("dryrun", False)
@@ -1498,10 +1530,10 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(
             job_result.result,
             {
-                "extras.objectchange": 2,
-                "extras.jobresult": 0,
-                "extras.joblogentry": 0,
-                "extras.jobconsoleentry": 0,
+                "extras.ObjectChange": 2,
+                "extras.JobResult": 0,
+                "extras.JobLogEntry": 0,
+                "extras.JobConsoleEntry": 0,
             },
         )
 
@@ -1650,6 +1682,25 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertEqual(error_messages, [])
 
+    def test_a_model_this_job_does_not_archive_fails_the_job(self):
+        """
+        An unrecognised name matches none of the `in selected_models` checks, so without the guard the
+        run would archive nothing and report success.
+
+        The lowercase spelling is used deliberately: it is what this job accepted before the labels were
+        taken from `_meta.label`, so it is the mistake most likely to reach it.
+        """
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job(selected_models_to_archive=["extras.objectchange"])
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        # The message names the offending value and what it could have been.
+        self.assertIn("extras.objectchange", job_result.traceback)
+        self.assertIn("extras.ObjectChange", job_result.traceback)
+
     def test_handle_deleted_object_is_disconnected_for_pre_delete_signal_during_job_run(self):
         """
         `_handle_deleted_object` is globally connected to the pre_delete signal. Make sure that
@@ -1662,7 +1713,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             was_handle_deleted_object_connected_during_archival.append(
                 self.is_handle_deleted_object_connected_to_pre_delete_signal()
             )
-            return {"extras.objectchange": 0}
+            return {"extras.ObjectChange": 0}
 
         self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
 
@@ -1720,16 +1771,31 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         Create a `JobResult` that finished `age_in_days` in the past, with the requested child records.
 
-        The factory scatters its three timestamps randomly across its live history window, so they are
-        overwritten here. Eligibility is decided by `date_done`, which means the test has to own it.
+        Built field by field rather than through `JobResultFactory`, for the reasons given on
+        `ArchiveOldRecordsObjectChangeTestCase.make_object_change`: factory output depends on the calls
+        that preceded it, and it assigns a user only most of the time.
 
-        Reloaded before being returned so that its `JSONField`s hold what the database holds. The factory
-        fills `result` and `task_kwargs` with native Python values, which only become the strings the
-        archived copy will carry once they have been through a save and a read.
+        Eligibility is decided by `date_done`, so the test owns all three timestamps.
         """
         finished_timestamp = timezone.now() - timedelta(days=age_in_days)
 
-        new_job_result = JobResultFactory.create(status=status, **kwargs)
+        job_result_fields = {
+            "name": "Archive Test Job",
+            "task_name": "nautobot.core.tests.test_jobs.archive_test_job",
+            "user": self.user,
+            "status": status,
+            "worker": "celery@archive-test",
+            "task_args": ["archive test arg"],
+            "task_kwargs": {"archive_test_kwarg": "value"},
+            "celery_kwargs": {"queue": "default"},
+            "result": {"archive_test_result": "value"},
+            "traceback": "archive test traceback",
+            "meta": {"archive_test_meta": "value"},
+        }
+        job_result_fields.update(kwargs)
+
+        new_job_result = JobResult.objects.create(**job_result_fields)
+        # `date_created` is `auto_now_add`, so all three timestamps are written after the insert.
         new_job_result.date_created = finished_timestamp
         new_job_result.date_started = finished_timestamp
         new_job_result.date_done = finished_timestamp
@@ -1759,7 +1825,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         The threshold and batch size are passed on every run. `run()` has no setting to fall back on,
         so leaving them out hands it `None` rather than a default.
         """
-        kwargs.setdefault("selected_models_to_archive", ["extras.jobresult"])
+        kwargs.setdefault("selected_models_to_archive", ["extras.JobResult"])
         kwargs.setdefault("archive_age_threshold", ARCHIVE_AGE_THRESHOLD_IN_DAYS)
         kwargs.setdefault("archive_batch_size", ARCHIVE_BATCH_SIZE)
         kwargs.setdefault("dryrun", False)
@@ -1848,10 +1914,10 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(
             archive_job_result.result,
             {
-                "extras.objectchange": 0,
-                "extras.jobresult": 1,
-                "extras.joblogentry": log_entry_count,
-                "extras.jobconsoleentry": console_entry_count,
+                "extras.ObjectChange": 0,
+                "extras.JobResult": 1,
+                "extras.JobLogEntry": log_entry_count,
+                "extras.JobConsoleEntry": console_entry_count,
             },
         )
 
@@ -1869,10 +1935,10 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(
             archive_job_result.result,
             {
-                "extras.objectchange": 0,
-                "extras.jobresult": 1,
-                "extras.joblogentry": log_entry_count,
-                "extras.jobconsoleentry": console_entry_count,
+                "extras.ObjectChange": 0,
+                "extras.JobResult": 1,
+                "extras.JobLogEntry": log_entry_count,
+                "extras.JobConsoleEntry": console_entry_count,
             },
         )
         # Counted, but left where they were.
@@ -2184,9 +2250,9 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         archive_failure_message = "Archive Unavailable"
         archived_count_before_failure = 2
         archived_counts_before_failure = {
-            "extras.jobresult": archived_count_before_failure,
-            "extras.joblogentry": 0,
-            "extras.jobconsoleentry": 0,
+            "extras.JobResult": archived_count_before_failure,
+            "extras.JobLogEntry": 0,
+            "extras.JobConsoleEntry": 0,
         }
 
         with mock.patch.object(

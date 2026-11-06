@@ -23,10 +23,14 @@ from nautobot.extras.signals import _handle_deleted_object
 name = "System Jobs"
 JOB_NAME = "Archive Old Records"
 
-OBJECT_CHANGE_LABEL = "extras.objectchange"
-JOB_RESULT_LABEL = "extras.jobresult"
-JOB_LOG_ENTRY_LABEL = "extras.joblogentry"
-JOB_CONSOLE_ENTRY_LABEL = "extras.jobconsoleentry"
+# Read from `_meta.label` rather than written out, so that they cannot drift from the model and so that
+# one spelling serves every use: the choices a run is given, the keys of the counts `run()` returns, and
+# the keys Django hands back from `QuerySet.delete()`. The CamelCase form is also what `LogsCleanup`'s
+# `CleanupTypes` uses, so both system jobs name these models the same way.
+OBJECT_CHANGE_LABEL = ObjectChange._meta.label
+JOB_RESULT_LABEL = JobResult._meta.label
+JOB_LOG_ENTRY_LABEL = JobLogEntry._meta.label
+JOB_CONSOLE_ENTRY_LABEL = JobConsoleEntry._meta.label
 
 # Archival order matters, used to determine what gets archived first to remove concerns about foreign key
 # relationships when archiving
@@ -95,11 +99,21 @@ class ArchiveOldRecords(Job):
 
         Returns:
             (dict): Archived record count keyed by model label, for example
-                `{"extras.objectchange": 12, "extras.jobresult": 3, "extras.joblogentry": 40,
-                "extras.jobconsoleentry": 7}`. Every archivable model is present, so a model that this run
+                `{"extras.ObjectChange": 12, "extras.JobResult": 3, "extras.JobLogEntry": 40,
+                "extras.JobConsoleEntry": 7}`. Every archivable model is present, so a model that this run
                 was not asked to archive reports 0 rather than being absent.
         """
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
+
+        # Every check below asks whether a label is in `selected_models`, so a name this job does not
+        # recognise matches nothing, archives nothing, and reports success. Callers that bypass the form,
+        # such as the REST API, can supply one, so it is named here instead.
+        unrecognized_models = selected_models - set(ARCHIVAL_ORDER)
+        if unrecognized_models:
+            raise ValueError(
+                f"{JOB_NAME} cannot archive {', '.join(sorted(unrecognized_models))}. "
+                f"Choose from: {', '.join(ARCHIVAL_DISPLAY_ORDER)}."
+            )
 
         # `restrict()` is used in object select during the run of this job, however it only narrows
         # each queryset to the records this user may delete. And, it does this silently. A user with
@@ -175,7 +189,7 @@ class ArchiveOldRecords(Job):
 
         Returns:
             (dict): Archived record count keyed by model label, or on a dry run the count a real run
-                would archive. Always carries the `extras.objectchange` key.
+                would archive. Always carries the `extras.ObjectChange` key.
         """
         object_changes_to_archive = (
             ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=threshold_timestamp).order_by("time")
@@ -274,7 +288,7 @@ class ArchiveOldRecords(Job):
         # Django's QuerySet.delete() returns a 2-tuple
         # (total_rows_deleted, {model_label: rows_deleted_for_that_model})
         # Instead of checking rows deleted we confirm the model count deleted
-        object_change_deleted_count = deleted_counts_by_model.get(ObjectChange._meta.label, 0)
+        object_change_deleted_count = deleted_counts_by_model.get(OBJECT_CHANGE_LABEL, 0)
 
         self.logger.debug(
             "Archived %d and deleted %d live ObjectChange rows",
@@ -314,8 +328,8 @@ class ArchiveOldRecords(Job):
 
         Returns:
             (dict): Archived record counts keyed by model label, or on a dry run the counts a real run
-                would archive. Always carries the `extras.jobresult`, `extras.joblogentry` and
-                `extras.jobconsoleentry` keys.
+                would archive. Always carries the `extras.JobResult`, `extras.JobLogEntry` and
+                `extras.JobConsoleEntry` keys.
         """
         # Only job results that are done can be archived
         job_results_to_archive = (
@@ -459,7 +473,7 @@ class ArchiveOldRecords(Job):
         # Django's QuerySet.delete() returns a 2-tuple
         # (total_rows_deleted, {model_label: rows_deleted_for_that_model})
         # Instead of checking rows deleted we confirm the model count deleted
-        job_result_deleted_count = deleted_counts_by_model.get(JobResult._meta.label, 0)
+        job_result_deleted_count = deleted_counts_by_model.get(JOB_RESULT_LABEL, 0)
 
         self.logger.debug(
             "Archived %d job results with %d log entries and %d console entries, and deleted %d live rows",
