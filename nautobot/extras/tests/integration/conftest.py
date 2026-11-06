@@ -157,6 +157,24 @@ def created_static_group(create_object):
     )
 
 
+# One more tag than fits on the first page of the Tags filter dropdown.
+PROVIDER_TAG_COUNT = 51
+
+
+@pytest.fixture
+def created_provider_tags(create_object):
+    """Create `PROVIDER_TAG_COUNT` tags that apply only to providers. The tags are deleted after the test.
+
+    Tags are named `<prefix> 01`, `<prefix> 02`, and so on. Returns the `prefix` and the created `tags`.
+    """
+    prefix = unique_name()
+    tags = [
+        create_object("extras/tags/", name=f"{prefix} {index:02d}", content_types=["circuits.provider"])
+        for index in range(1, PROVIDER_TAG_COUNT + 1)
+    ]
+    return {"prefix": prefix, "tags": tags}
+
+
 @pytest.fixture(scope="session")
 def require_celery_worker(api):
     """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.

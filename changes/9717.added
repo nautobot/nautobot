@@ -1,0 +1,1 @@
+Added `select2_filter_search` and the `ListPage` helpers `search_filter_options`, `expect_filter_option_count` and `expect_no_filter_options` to `nautobot.playwright`.
