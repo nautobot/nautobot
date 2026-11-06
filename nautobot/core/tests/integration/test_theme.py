@@ -1,4 +1,4 @@
-"""Theme modal: opened from the footer to choose Light, Dark or System."""
+"""The theme modal, opened from the footer, where the user chooses Light, Dark or System."""
 
 import pytest
 
