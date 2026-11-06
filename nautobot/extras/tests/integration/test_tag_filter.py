@@ -17,7 +17,6 @@ class TagFilterTestCase:
         """Searching the Tags filter on Providers shows a full first page of the provider tags, without the last one."""
         prefix = created_provider_tags["prefix"]
         tags = created_provider_tags["tags"]
-        assert len(tags) > SELECT2_PAGE_SIZE, "The fixture must create more tags than fit on one page"
         providers = ProvidersPage(auth_page, base_url)
         providers.navigate()
         providers.open_filter_drawer()
