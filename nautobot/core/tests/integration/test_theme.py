@@ -38,7 +38,7 @@ class ThemeTestCase(SeleniumTestCase):
         self.assertTrue(theme_modal[0].is_visible(wait_time=5))
 
         # Modals take .3 seconds to fully fade in after becoming "visible", and interacting with them during this time
-        # may have unexpected behavior, e.g. https://github.com/twbs/bootstrap/issues/35361
+        # may have unexpected behavior, e.g. https://github.com/twbs/bootstrap/issues/34213
         time.sleep(0.4)
 
         # Validate 3 themes available to select
