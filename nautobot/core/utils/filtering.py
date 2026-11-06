@@ -4,6 +4,7 @@ from typing import Any, Iterable, Mapping
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Model
 from django_filters import (
     BooleanFilter,
     ChoiceFilter,
@@ -227,6 +228,19 @@ def _field_name_to_display(field_name):
     return words[0].upper() + words[1:]
 
 
+def _get_model_field_value(item: Any, field_to_query: str) -> Any:
+    """
+    Return `item.<field_to_query>` if `item` is a model instance, else `item` unchanged.
+
+    The field type is taken from the declared filter form, but the value comes from the filterset's
+    auto-generated form, which may already have cleaned it to a plain value (e.g. `ContentTypeMultipleChoiceFilter`
+    yields `"dcim.interface"` strings while the declared `MultipleContentTypeField` is a `ModelMultipleChoiceField`).
+    """
+    if isinstance(item, Model):
+        return getattr(item, field_to_query, None)
+    return item
+
+
 def build_filter_dict_from_filterset(
     filterset_class: type[FilterSet],
     form_data: Mapping[str, Any],
@@ -267,16 +281,16 @@ def build_filter_dict_from_filterset(
             if not field_value:
                 continue
             field_to_query = field.to_field_name or "pk"
-            new_value = [getattr(item, field_to_query) for item in field_value]
+            new_value: list[Any] = [_get_model_field_value(item, field_to_query) for item in field_value]
 
         elif isinstance(field, forms.ModelChoiceField):
             if not field_value:
                 continue
             field_to_query = field.to_field_name or "pk"
             if isinstance(field_value, list):
-                new_value = [getattr(item, field_to_query) for item in field_value]
+                new_value = [_get_model_field_value(item, field_to_query) for item in field_value]
             else:
-                new_value = getattr(field_value, field_to_query, None)
+                new_value = _get_model_field_value(field_value, field_to_query)
 
         else:
             new_value = field_value
