@@ -1,0 +1,3 @@
+Fixed the Job detail page not loading the code of a JOBS_ROOT or Git repository Job when the web worker serving the request had not yet imported it.
+Fixed a 500 error on the Job detail page for a Job with an overridden time limit when the Job's code could not be loaded. The default time limit is now shown as unknown.
+Fixed the Job detail page repeating "default is" for overridden fields on a Job that is not installed.
