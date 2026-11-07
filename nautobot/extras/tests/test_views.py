@@ -5953,6 +5953,47 @@ class JobTestCase(
         response = self.client.get(instance.get_absolute_url())
         self.assertBodyContains(response, apps.get_app_config("example_app").version)
 
+    def _override_time_limits(self, instance):
+        instance.soft_time_limit_override = True
+        instance.soft_time_limit = 350
+        instance.time_limit_override = True
+        instance.time_limit = 650
+        instance.save()
+
+    def test_job_detail_overridden_time_limits_loads_unregistered_job_class(self):
+        """A JOBS_ROOT Job not yet imported by this process is reloaded so its defaults render."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_pass
+        self._override_time_limits(instance)
+        with mock.patch.dict(registry["jobs"]):
+            registry["jobs"].pop(instance.class_path)
+            response = self.client.get(instance.get_absolute_url())
+            self.assertIn(instance.class_path, registry["jobs"])
+
+        self.assertBodyContains(response, "seconds (system default)")
+        self.assertNotIn("default is unknown", response.content.decode(response.charset))
+
+    def test_job_detail_overridden_time_limits_without_job_class(self):
+        """Overridden time limits render as unknown, rather than a 500, when the Job class can't be loaded."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_pass
+        self._override_time_limits(instance)
+        with mock.patch.dict(registry["jobs"]), mock.patch("nautobot.extras.jobs.import_jobs"):
+            registry["jobs"].pop(instance.class_path)
+            response = self.client.get(instance.get_absolute_url())
+
+        self.assertBodyContains(response, "overridden; default is unknown")
+
+    def test_job_detail_overridden_field_not_installed(self):
+        """An overridden field on a non-installed Job states once that its default is unknown."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_not_installed
+        self._override_time_limits(instance)
+
+        response = self.client.get(instance.get_absolute_url())
+
+        self.assertBodyContains(response, "overridden; default is unknown (not currently installed)")
+
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
         job_name = instance.name
