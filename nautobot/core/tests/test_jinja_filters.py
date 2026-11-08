@@ -7,6 +7,7 @@ from django.db.models import Case, Count, IntegerField, Max, Min, Subquery, Sum,
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.test import override_settings, TestCase
+from django.utils.timezone import now
 from jinja2.exceptions import SecurityError, TemplateAssertionError
 from netutils.utils import jinja2_convenience_function
 import regex
@@ -21,7 +22,7 @@ from nautobot.core.testing.utils import temporarily_sensitive_fields
 from nautobot.core.utils import data
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
-from nautobot.extras.choices import DynamicGroupTypeChoices
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, DynamicGroupTypeChoices, JobExecutionType
 from nautobot.ipam import models as ipam_models
 from nautobot.users import models as users_models
 
@@ -142,6 +143,7 @@ class NautobotJinjaFilterTest(TestCase):
         }
 
         for call in [
+            "device.assign_cluster(None)",
             "device.create_components()",
             "dynamic_group.add_members([])",
             "dynamic_group.remove_members([])",
@@ -163,6 +165,41 @@ class NautobotJinjaFilterTest(TestCase):
             "JobResult.enqueue_job(None, None)",
             "JobResult.log('hello world')",
             "ScheduledJob.create_schedule(None, None)",
+        ]:
+            with self.subTest(call=call):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code="{{ " + call + " }}", context=context)
+
+    def test_render_blocks_approval_workflow_mutators(self):
+        """Assert approval-workflow state-changing methods cannot be invoked from a template."""
+        scheduled_job = extras_models.ScheduledJob.objects.create(
+            name="SSTI Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=extras_models.Job.objects.get_for_class_path("pass_job.TestPassJob"),
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=get_user_model().objects.first(),
+            start_time=now(),
+        )
+        scheduled_job_ct = ContentType.objects.get_for_model(extras_models.ScheduledJob)
+        approval_workflow = extras_models.ApprovalWorkflow.objects.create(
+            approval_workflow_definition=extras_models.ApprovalWorkflowDefinition.objects.create(
+                name="SSTI Workflow Definition",
+                model_content_type=scheduled_job_ct,
+                weight=0,
+            ),
+            object_under_review_content_type=scheduled_job_ct,
+            object_under_review_object_id=scheduled_job.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        context = {"scheduled_job": scheduled_job, "approval_workflow": approval_workflow}
+
+        for call in [
+            "scheduled_job.begin_approval_workflow()",
+            "scheduled_job.on_workflow_initiated(None)",
+            "scheduled_job.on_workflow_approved(None)",
+            "scheduled_job.on_workflow_denied(None)",
+            "scheduled_job.on_workflow_canceled(None)",
+            "approval_workflow.cancel()",
         ]:
             with self.subTest(call=call):
                 with self.assertRaises(SecurityError):
