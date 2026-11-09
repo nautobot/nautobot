@@ -287,7 +287,81 @@ The Device detail view "Module Bays" tab now supports a hierarchical view with a
 As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
+
 <!-- towncrier release notes start -->
+
+## v3.2.9 (2026-11-09)
+
+### Breaking Changes in v3.2.9
+
+- [#9741](https://github.com/nautobot/nautobot/issues/9741) - Due to updating `social-auth-core` and `social-auth-app-django`, deployments that override the `SOCIAL_AUTH_PIPELINE` setting may need to update their configuration to add an entry for `"social_core.pipeline.social_auth.social_names"`. If this is not added, some SSO backends may no longer automatically populate the `first_name` and `last_name` fields when creating new User records in Nautobot.
+
+### Security in v3.2.9
+
+- [#GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/issues/GHSA-h3qx-qrj8-q6wf) - Fixed a vulnerability in which the "Export Object List" system Job, and any other code that applied object permissions to API tokens, allowed a user to read the keys of other users' API tokens. Applying object permissions to tokens now always limits every user, including superusers, to their own tokens; staff users with the appropriate permissions can still manage all users' tokens in the Django admin interface.
+- [#GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/issues/GHSA-h3qx-qrj8-q6wf) - Changed the "Export Object List" and "Import Objects" system Jobs to refuse to export or import API tokens, as doing so would write token keys to a file that other users may be able to download.
+- [#GHSA-546w-cg72-vf5w](https://github.com/nautobot/nautobot/issues/GHSA-546w-cg72-vf5w) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could infer a sensitive field's value by filtering a queryset on it.
+- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where the `hyperlinked_object` and `hyperlinked_object_target_new_tab` template filters could read a sensitive field or private attribute of an object.
+- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read a sensitive field through a model or field method that reads a field by name, such as `serializable_value()`.
+- [#9716](https://github.com/nautobot/nautobot/issues/9716) - Fixed the "Non-Racked Devices" table on the Rack detail view displaying devices that the user did not have permission to view.
+- [#9741](https://github.com/nautobot/nautobot/issues/9741) - Updated dependency `social-auth-core` to `>=6.2.0,<6.3` to mitigate CVE-2026-115910.
+- [#9751](https://github.com/nautobot/nautobot/issues/9751) - Fixed the circuit "Swap Terminations" view not enforcing the `circuits.change_circuittermination` permission or object-level permission constraints on the circuit terminations being modified.
+- [#9764](https://github.com/nautobot/nautobot/issues/9764) - Updated dependency `django` to `>=5.2.19,<5.3` to mitigate multiple security vulnerabilities.
+- [#9765](https://github.com/nautobot/nautobot/issues/9765) - Updated dependency `oauthlib` to 4.0.1 to mitigate CVE-2026-49272. As this is not a direct dependency, it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+
+### Added in v3.2.9
+
+- [#9714](https://github.com/nautobot/nautobot/issues/9714) - Added the `PERSISTENT_CACHE_TIMEOUT` setting to optionally expire custom field, relationship, and similar caches that are otherwise only refreshed when their underlying data changes.
+
+### Changed in v3.2.9
+
+- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Changed the `meta` filter in Jinja2 templates to return only the attributes that identify a model, such as `app_label` and `verbose_name`; any other `_meta` attribute now raises an error.
+- [#9762](https://github.com/nautobot/nautobot/issues/9762) - Updated Marketplace entries for Apps no longer relevant in 3.2.
+
+### Removed in v3.2.9
+
+- [#9676](https://github.com/nautobot/nautobot/issues/9676) - Removed support for `--database` parameter from `nautobot-server generate_test_data` command, as it did not generally work correctly for non-default databases.
+
+### Fixed in v3.2.9
+
+- [#3146](https://github.com/nautobot/nautobot/issues/3146) - Added bulk rename/edit/delete buttons to the Interfaces panel on the Virtual Machine detail view, matching the Device detail view behavior.
+- [#6475](https://github.com/nautobot/nautobot/issues/6475) - Fixed custom fields, relationships, and notes not being available when assigning an existing contact or team to an object.
+- [#8497](https://github.com/nautobot/nautobot/issues/8497) - Added REST API validation that a device being installed in a device bay must be assigned to the same location and rack as the parent device, matching the existing UI behavior.
+- [#9684](https://github.com/nautobot/nautobot/issues/9684) - Fixed long JSON and YAML values overflowing panels and tables, including exception messages on Job Result detail pages.
+- [#9692](https://github.com/nautobot/nautobot/issues/9692) - Fixed the Device LLDP Neighbors tab issuing database queries for each cabled interface to render its connected endpoint.
+- [#9714](https://github.com/nautobot/nautobot/issues/9714) - Fixed a race condition where persistent caches could stay stale indefinitely after their underlying data was changed while other requests were in flight.
+- [#9730](https://github.com/nautobot/nautobot/issues/9730) - Fixed the "Data Compliance" tab not appearing on detail views that use a legacy HTML template, such as Module and Cable, and its page showing the object's main tab instead of its compliance results.
+- [#9731](https://github.com/nautobot/nautobot/issues/9731) - Fixed incorrect positioning of bulk-action buttons in a small number of object-table panels.
+- [#9758](https://github.com/nautobot/nautobot/issues/9758) - Fixed an unhandled exception in bulk-rename views resulting in an HTTP 500 error.
+- [#9758](https://github.com/nautobot/nautobot/issues/9758) - Changed some leftover `print()` calls in custom field provisioning background tasks to proper logger `debug()` calls.
+- [#9767](https://github.com/nautobot/nautobot/issues/9767) - Fixed the Job detail page not loading the code of a JOBS_ROOT or Git repository Job when the web worker serving the request had not yet imported it.
+- [#9767](https://github.com/nautobot/nautobot/issues/9767) - Fixed a 500 error on the Job detail page for a Job with an overridden time limit when the Job's code could not be loaded. The default time limit is now shown as unknown.
+- [#9767](https://github.com/nautobot/nautobot/issues/9767) - Fixed the Job detail page repeating "default is" for overridden fields on a Job that is not installed.
+
+### Dependencies in v3.2.9
+
+- [#9599](https://github.com/nautobot/nautobot/issues/9599) - Updated npm dependency `postcss` to `^8.5.32`.
+- [#9705](https://github.com/nautobot/nautobot/issues/9705) - Dropped support for Python 3.10 as it has reached end-of-life.
+- [#9741](https://github.com/nautobot/nautobot/issues/9741) - Updated dependency `social-auth-app-django` to `>=7.2.0,<7.3`.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated dependency `django-tables2` to `>=3.0.1,<3.1`.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated the set of `opentelemetry` dependencies to `>=1.45.2,<1.46` and `>=0.66b2,<0.67`.
+
+### Documentation in v3.2.9
+
+- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Added guidance for App and core developers on writing Jinja2 template filters that do not bypass the template sandbox.
+- [#9739](https://github.com/nautobot/nautobot/issues/9739) - Restructured App developer migration documentation to more clearly delineate v1-to-v2 guides from v2-to-v3 guides.
+
+### Housekeeping in v3.2.9
+
+- [#9676](https://github.com/nautobot/nautobot/issues/9676) - Fixed `nautobot-server test` execution potentially deleting or overwriting preexisting files in the development environment's `GIT_ROOT`, `MEDIA_ROOT`, and `STATIC_ROOT` directories.
+- [#9676](https://github.com/nautobot/nautobot/issues/9676) - Fixed `nautobot-server generate_test_data` cached output file omitting data for non-static DynamicGroup members.
+- [#9730](https://github.com/nautobot/nautobot/issues/9730) - Added a test that checks that the tabs of an object's detail view do not render the object's main detail template in place of their own content.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated development dependency `faker` to `^40.44.0`.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated development dependency `mkdocs-glightbox` to `~0.5.3`.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated development dependency `mkdocstrings` to `~1.0.8`.
+- [#9744](https://github.com/nautobot/nautobot/issues/9744) - Updated development dependency `mkdocstrings-python` to `~2.0.10`.
+- [#9758](https://github.com/nautobot/nautobot/issues/9758) - Fixed and consolidated test case cleanup logic in OpenTelemetry test cases to avoid state leakage into other tests that could result in intermittent test failures.
+- [#9768](https://github.com/nautobot/nautobot/issues/9768) - Fixed an intermittent failure in the `test_modal_rendered` integration test.
 
 ## v3.2.8 (2026-10-27)
 
