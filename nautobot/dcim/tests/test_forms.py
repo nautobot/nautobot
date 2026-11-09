@@ -1082,6 +1082,16 @@ class CableTerminationFieldSetTestCase(TestCase):
         self.assertNotIn("data-query-param-has_cable", attrs)
         self.assertNotIn("disabled-indicator", attrs)
 
+    def test_get_fields_pickers_filtered_by_termination_location(self):
+        """The pickers carry the location filter fed by the form's `termination_location` field."""
+        device_result = CableTerminationFieldSet().get_fields("a_conn_1")
+        parent_attrs = device_result["fields"]["a_conn_1_parent"].widget.attrs
+        self.assertEqual(json.loads(parent_attrs["data-query-param-location"]), ["$termination_location"])
+
+        circuit_result = CableTerminationFieldSet().get_fields("b_conn_1", term_type="circuittermination")
+        term_attrs = circuit_result["fields"]["b_conn_1_termination"].widget.attrs
+        self.assertEqual(json.loads(term_attrs["data-query-param-location"]), ["$termination_location"])
+
 
 class CableFormTestCase(FormTestCases.BaseFormTestCase):
     """Behavioral tests for `CableForm`. Scope expected to grow over time."""
@@ -1353,6 +1363,37 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         self.assertEqual(form.initial.get("b_conn_1_parent"), self.device.pk)
         self.assertEqual(form.initial.get("b_conn_1_termination"), self.iface_b.pk)
 
+    def test_init_lane_fields_prefills_common_location(self):
+        """Expect the location field to be prefilled when every termination shares the same location."""
+        form = CableForm(instance=self.cable)
+        self.assertEqual(form.initial.get("termination_location"), self.device.location.pk)
+
+    def test_init_lane_fields_no_location_prefill_across_locations(self):
+        """Expect the location field to not be prefilled when the terminations span more than one location."""
+        other_location = Location(
+            name="Cable Swap Other Campus",
+            location_type=self.device.location.location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        other_location.validated_save()
+        other_device = Device.objects.create(
+            name="Cable Swap Device 2",
+            device_type=self.device.device_type,
+            role=self.device.role,
+            location=other_location,
+            status=self.device.status,
+        )
+        local_iface = Interface.objects.create(
+            device=self.device, name="iface-c", status=self.iface_a.status, type="1000base-t"
+        )
+        remote_iface = Interface.objects.create(
+            device=other_device, name="iface-d", status=self.iface_a.status, type="1000base-t"
+        )
+        cable = Cable.objects.create(termination_a=local_iface, termination_b=remote_iface, status=self.cable_status)
+
+        form = CableForm(instance=cable)
+        self.assertNotIn("termination_location", form.initial)
+
     # `CableForm._init_lane_fields` — happy paths and the exception branches that turn malformed
     # URL/HTMX-supplied `initial` values into a fallback layout *plus* a form-error message.
 
@@ -1428,6 +1469,15 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         self.assertEqual(form.initial.get("a_conn_1_type"), "interface")
         self.assertEqual(form.initial.get("a_conn_1_parent"), self.device.pk)
         self.assertEqual(form.initial.get("a_conn_1_termination"), self.iface_a.pk)
+
+    def test_init_lane_fields_prefills_location_from_initial_termination(self):
+        """Expect the location field to be prefilled when the A side arrives from the connect flow."""
+        form = CableForm(
+            initial={"termination_a_type": "dcim.interface", "termination_a_id": str(self.iface_a.pk)},
+            data=self._minimal_form_data(),
+        )
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(form.initial.get("termination_location"), self.device.location.pk)
 
     def test_init_lane_fields_b_side_type_default_from_initial_b_type(self):
         """Validate termination_b_type prepopulation via `initial`."""
