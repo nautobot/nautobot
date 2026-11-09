@@ -44,7 +44,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.models import Tenant
-from nautobot.users.models import ObjectPermission, User
+from nautobot.users.models import ObjectPermission, Token, User
 
 
 class ExportObjectListTest(TransactionTestCase):
@@ -118,6 +118,33 @@ class ExportObjectListTest(TransactionTestCase):
         csv_data = csv_bytes.decode("utf-8")
         self.assertIn(str(instance1.pk), csv_data)
         self.assertNotIn(str(instance2.pk), csv_data)
+
+    def test_tokens_are_never_imported_or_exported(self):
+        """Neither Job handles Tokens, even for a superuser, as the Tokens' keys would be written to a file."""
+        superuser = User.objects.create_user(username="token-superuser", is_superuser=True)
+        Token.objects.create(user=superuser)
+        for job_class_name, kwargs in (
+            ("ExportObjectList", {}),
+            ("ImportObjects", {"csv_data": "description\nImported Token"}),
+        ):
+            with self.subTest(job_class_name=job_class_name):
+                job_result = create_job_result_and_run_job(
+                    "nautobot.core.jobs",
+                    job_class_name,
+                    username=superuser.username,
+                    content_type=ContentType.objects.get_for_model(Token).pk,
+                    **kwargs,
+                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        log_level=LogLevelChoices.LOG_ERROR,
+                        message="users.token objects do not support import/export",
+                    ).exists()
+                )
+                self.assertFalse(job_result.files.exists())
+        self.assertFalse(Token.objects.filter(description="Imported Token").exists())
 
     def test_export_all_to_csv(self):
         """By default, job should export all instances to CSV."""

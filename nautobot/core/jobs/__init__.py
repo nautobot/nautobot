@@ -111,6 +111,17 @@ class GitRepositoryDryRun(Job):
             self.logger.info(f"Repository dry run completed in {job_result.duration}")
 
 
+# API tokens are never imported or exported, as either would write their keys to a file that other users may read.
+IMPORT_EXPORT_EXCLUDED_MODELS = ("users.token",)
+
+
+def _require_import_export_support(logger, content_type):
+    """Abort if the content-type is one that `ImportObjects` and `ExportObjectList` refuse to handle."""
+    if f"{content_type.app_label}.{content_type.model}" in IMPORT_EXPORT_EXCLUDED_MODELS:
+        logger.error("%s.%s objects do not support import/export", content_type.app_label, content_type.model)
+        raise RunJobTaskFailed("The requested content-type does not support import/export")
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects via CSV or ExportTemplate."""
 
@@ -169,6 +180,7 @@ class ExportObjectList(Job):
         return {}
 
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
+        _require_import_export_support(self.logger, content_type)
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
@@ -322,6 +334,7 @@ class ImportObjects(Job):
         return new_objs, validation_failed
 
     def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
+        _require_import_export_support(self.logger, content_type)
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
