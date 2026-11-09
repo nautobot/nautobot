@@ -129,7 +129,7 @@ If the model's database-level natural key differs from the REST API serializer's
 
 #### Overriding Matching Behavior
 
-Each import match field must be a writable field of the serializer that contains a single value (not a to-many field such as `tags`). By default, an import matches existing records by simply mapping `(match_field, row_value)` to a `QuerySet.filter(match_field=row_value)` call, so every match-field must be a valid filter for the queryset. When this isn't the case, you as the serializer's developer have two ways to override this default logic:
+Each import match field must be a writable field of the serializer that contains a single value (not a to-many field such as `tags`). By default, an import matches existing records by mapping `(match_field, row_value)` to a `QuerySet.filter(match_field=row_value)` call, so every match-field must be a valid filter for the queryset. When this isn't the case, you as the serializer's developer have two ways to override this default logic:
 
 - A serializer can define `Meta.related_field_query_paths` to specify mappings between serializer related fields and their equivalent queryset filters. For example, the IP Address serializer matches partly on the serializer field `namespace`, which isn't actually a filter on `IPAddress` QuerySets -- it needs to be mapped to the nested database lookup `parent__namespace`, so we declare `IPAddressSerializer.Meta.related_field_query_paths = {"namespace": "parent__namespace"}`.
     - This mapping, if defined, also applies on export, so in the case of IPAddress exports, the `namespace` serializer field is declared as a default match field (instead of `parent__namespace`) and is exported as its natural-key lookup (`namespace__name`).
