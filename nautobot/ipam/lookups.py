@@ -41,7 +41,8 @@ def _postgresql_varbin_to_network(lhs, length, alias=None):
 
 
 def py_to_hex(ip, length):
-    return str(hex(int(ip)))[2:].zfill(int(length / 4))
+    # Upper-case to match the output of the SQL HEX() function; SQLite compares the two case-sensitively.
+    return str(hex(int(ip)))[2:].zfill(int(length / 4)).upper()
 
 
 def get_ip_info(field_name, ip_str, alias=None):
@@ -56,7 +57,8 @@ def get_ip_info(field_name, ip_str, alias=None):
     ip_details.prefix = ip.prefixlen
     ip_details.length = ip_details.to_len[ip.version]
 
-    if _connection.vendor == "mysql":
+    # SQLite's HEX() renders blobs exactly as MySQL's does, so the two share a code path.
+    if _connection.vendor in ("mysql", "sqlite"):
         ip_details.rhs = py_to_hex(ip.ip, ip_details.length)
         ip_details.net_addr = f"'{py_to_hex(ip.network, ip_details.length)}'"
         ip_details.bcast_addr = f"'{py_to_hex(ip[-1], ip_details.length)}'"
@@ -279,6 +281,9 @@ class NetIn(Lookup):
             self.query_starter = "'1' NOT IN %s AND "
         elif _connection.vendor == "postgresql":
             self.query_starter = "'1' != ANY(%s) AND "
+        else:
+            # SQLite cannot bind a list as a single parameter; the addresses are inlined as literals below anyway.
+            self.query_starter = ""
         return self.rhs
 
     def as_sql(self, compiler, connection):
@@ -286,7 +291,8 @@ class NetIn(Lookup):
         _, rhs_params = self.process_rhs(compiler, connection)
         query = self.query_starter
         query += "OR ".join(f"{ip.q_ip} BETWEEN {ip.net_addr} AND {ip.bcast_addr} " for ip in self.ips)
-        return query, lhs_params + rhs_params
+        params = lhs_params + rhs_params if self.query_starter else lhs_params
+        return query, params
 
 
 class NetHostContained(NetworkFieldMixin, Lookup):

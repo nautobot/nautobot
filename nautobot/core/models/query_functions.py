@@ -18,6 +18,7 @@ class CollateAsChar(Func):
         func_map = {
             "postgresql": '"C"',
             "mysql": "utf8mb4_bin",
+            "sqlite": "BINARY",
         }
 
         if vendor not in func_map:
@@ -28,6 +29,24 @@ class CollateAsChar(Func):
         return super().as_sql(compiler, connection, function, template, arg_joiner, **extra_context)
 
 
+class AsJSON(Func):
+    """
+    Mark a JSON-typed expression as JSON when it is nested inside another JSON-building function.
+
+    PostgreSQL and MySQL know that a `JSONField` column holds JSON, so `JSONObject(data=F("data"))` nests the
+    document. SQLite stores JSON as plain text and would nest it as a string; wrapping it in `JSON()` makes SQLite
+    treat it as a document. On the other backends this expression compiles to the wrapped expression unchanged.
+    """
+
+    template = "%(expressions)s"
+    arity = 1
+
+    def as_sqlite(self, compiler, connection, **extra_context):
+        return super().as_sql(
+            compiler, connection, function="JSON", template="%(function)s(%(expressions)s)", **extra_context
+        )
+
+
 class JSONSet(Func):
     """
     Set or create the value of a single key in a JSONField.
@@ -36,7 +55,7 @@ class JSONSet(Func):
         model.objects.all().update(_custom_field_data=JSONSet("_custom_field_data", "cf_key", "new_value"))
 
     Limitations:
-        - Postgres and MySQL only.
+        - Postgres, MySQL, and SQLite only.
         - Does *not* support nested lookups (`key1__key2`), only a single top-level key.
         - Unlike the referenced Django PR, supports only a single key/value rather than an arbitrary number of them.
 
@@ -91,6 +110,26 @@ class JSONSet(Func):
         copy.set_source_expressions(new_source_expressions)
         return super(JSONSet, copy).as_sql(compiler, connection, function="JSON_SET", **extra_context)
 
+    def as_sqlite(self, compiler, connection, function=None, **extra_context):
+        """
+        SQLite implementation: `JSON_SET()` with the MySQL path syntax, wrapping the value in `JSON()` so that
+        SQLite parses the serialized value as JSON rather than storing it as a string.
+        """
+        copy = self.copy()
+        new_source_expressions = copy.get_source_expressions()
+
+        path = compile_json_path([self.path])
+        value = self.value
+        if not hasattr(value, "resolve_expression"):
+            value = Value(value, output_field=self.output_field)
+
+        class ToJSON(Func):
+            function = "JSON"
+
+        new_source_expressions.extend((Value(path), ToJSON(value, output_field=self.output_field)))
+        copy.set_source_expressions(new_source_expressions)
+        return super(JSONSet, copy).as_sql(compiler, connection, function="JSON_SET", **extra_context)
+
     def as_postgresql(self, compiler, connection, function=None, **extra_context):
         """
         PostgreSQL implementation based on https://github.com/django/django/pull/18489/files.
@@ -125,7 +164,7 @@ class JSONRemove(Func):
         model.objects.all().update(_custom_field_data=JSONRemove("_custom_field_data", "cf_key"))
 
     Limitations:
-        - Postgres and MySQL only.
+        - Postgres, MySQL, and SQLite only.
         - Does *not* support nested lookups (`key1__key2`), only a single top-level key.
         - Unlike the referenced Django PR, supports only a single key, not N keys.
 
@@ -140,12 +179,12 @@ class JSONRemove(Func):
 
     def as_sql(self, compiler, connection, function=None, **extra_context):  # pylint:disable=arguments-differ
         """
-        MySQL implementation based on https://github.com/django/django/pull/18489/files.
+        MySQL and SQLite implementation based on https://github.com/django/django/pull/18489/files.
 
-        Creates a copy of this object with appropriately transformed self.path for MySQL JSON_REMOVE().
+        Creates a copy of this object with appropriately transformed self.path for JSON_REMOVE().
         """
-        if connection.vendor != "mysql":
-            raise NotSupportedError(f"JSONSet is not implemented for database {connection.vendor}")
+        if connection.vendor not in ("mysql", "sqlite"):
+            raise NotSupportedError(f"JSONRemove is not implemented for database {connection.vendor}")
 
         copy = self.copy()
         new_source_expressions = copy.get_source_expressions()
@@ -176,7 +215,7 @@ class JSONBAgg(Aggregate):
     """
     Like django.contrib.postgres.aggregates.JSONBAgg, but different.
 
-    1. Supports both Postgres (JSONB_AGG) and MySQL (JSON_ARRAYAGG)
+    1. Supports Postgres (JSONB_AGG), MySQL (JSON_ARRAYAGG), and SQLite (JSON_GROUP_ARRAY)
     2. Does not support `ordering` as JSON_ARRAYAGG does not guarantee ordering.
     """
 
@@ -196,6 +235,7 @@ class JSONBAgg(Aggregate):
         func_map = {
             "postgresql": "JSONB_AGG",
             "mysql": "JSON_ARRAYAGG",
+            "sqlite": "JSON_GROUP_ARRAY",
         }
 
         if JSONBAgg.function is None and vendor not in func_map:
