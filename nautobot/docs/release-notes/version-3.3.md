@@ -1,6 +1,6 @@
 # Nautobot v3.3
 
-This document describes all new features and chagnes in Nautobot 3.3.
+This document describes all new features and changes in Nautobot 3.3.
 
 ## Upgrade Actions
 
@@ -35,21 +35,15 @@ For more details, refer to the [import and export documentation](../user-guide/f
 As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
-## v3.3.0a0 (2026-11-09)
+## v3.3.0a1 (2026-11-09)
 
-### Breaking Changes in v3.3.0a0
+### Breaking Changes in v3.3.0a1
 
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - It is no longer possible to change the `ip_address`, `interface`, or `vm_interface` of an existing IP Address Assignment (`IPAddressToInterface`), including via the REST API; delete the assignment and create a new one instead.
 
-### Security in v3.3.0a0
-
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `gitpython` to `>=3.2.0,<3.3` to mitigate multiple vulnerabilities.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `urllib3` to `>=2.8.0,<3.0` to mitigate multiple vulnerabilities.
-
-### Added in v3.3.0a0
+### Added in v3.3.0a1
 
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Added `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` configuration setting; when disabled, an IP address that is not assigned to any interface can be designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Added "Unassigned primary IPv4" and "Unassigned primary IPv6" fields to the Device, Virtual Machine, and Virtual Device Context create/edit forms when `PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT` is disabled, allowing a primary IP to be set at creation time.
@@ -62,27 +56,8 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9402](https://github.com/nautobot/nautobot/issues/9402) - Added background refresh of Django messages while the browser tab is active.
 - [#9408](https://github.com/nautobot/nautobot/issues/9408) - Enhanced `ExportObjectList` system Job to support export to JSON and YAML formats for all models.
 - [#9409](https://github.com/nautobot/nautobot/issues/9409) - Added a Playwright-based UI test framework as the forward standard for browser-based test coverage: shared page-object and fixture infrastructure in `nautobot/playwright/`, per-app test suites under `nautobot/<app>/tests/integration/`, an optional `playwright` dependency group, an `invoke playwright` task, and a `playwright-test` CI job. The Locations list view filter Selenium test was replaced by its Playwright equivalent.
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_BUDGET`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_MODE`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_READ_COST`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_WRITE_COST`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Exposed new environment variable `NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `nautobot/core/rate_limiting` for rate limiting logic
+- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added support for rate limiting of REST API requests, with many new configuration options.
 - [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `to_int_or_none` helper function to `nautobot/core/utils/data.py`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `RestReadRequestFeatures` to track identifiable query features in a REST read request
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `classify_rest_read_request_features` to generate a `RestReadRequestFeatures` from a REST request
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `estimate_rest_read_request_cost` to generate an estimated cost from a `RestReadRequestFeatures` object
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `calculate_records_per_page` to resolve the page size the paginator will actually serve
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `number` type support to `nautobot/core/tests/test_settings_schema.py`
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Added `ClassifyRestRequestFeaturesTestCase` in `nautobot/core/tests/test_rate_limiting.py` for validation
-- [#9411](https://github.com/nautobot/nautobot/issues/9411) - Documented new settings in `nautobot/core/settings.yaml`
 - [#9416](https://github.com/nautobot/nautobot/issues/9416) - Added a message to the "Export Object List" job when a many-to-many field has additional data recorded about each association (such as the priority recorded against each of an InterfaceRedundancyGroup's interfaces), noting which values are not included in the export and where to find them.
 - [#9420](https://github.com/nautobot/nautobot/issues/9420) - Added an internal `nautobot.extras.conditions` package (comparison operators, event payload builder, and condition preset catalog) with a `condition_presets` registry that Apps can register into via `register_condition_preset()`.
 - [#9421](https://github.com/nautobot/nautobot/issues/9421) - Added `ObjectOverviewViewMixin`, providing a per-object overview endpoint on `NautobotUIViewSet`.
@@ -151,7 +126,7 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9754](https://github.com/nautobot/nautobot/issues/9754) - Added the `Meta.derived_fields_omitted_from_default_export` serializer option, listing fields that an export leaves out unless they are explicitly selected.
 - [#9778](https://github.com/nautobot/nautobot/issues/9778) - Added `htmx_only` optional kwarg for use by `NautobotViewSetMixin` actions that only respond positively to HTMX requests.
 
-### Changed in v3.3.0a0
+### Changed in v3.3.0a1
 
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Changed Virtual Device Context primary IP validation to require that the IP address be assigned to one of the interfaces assigned to the Virtual Device Context, rather than to any of the parent Device's interfaces, and to also permit the NAT outside address of such an IP address.
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Changed the "Assigned" column of the IP Address list view to also indicate IP addresses designated as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
@@ -171,7 +146,6 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9514](https://github.com/nautobot/nautobot/issues/9514) - Changed multiple custom links to be collected into a single dropdown menu.
 - [#9514](https://github.com/nautobot/nautobot/issues/9514) - Changed custom link buttons to display a link icon.
 - [#9516](https://github.com/nautobot/nautobot/issues/9516) - Changed `ComplexityCostRateLimitingMiddleware` to persist rate limit budget in Redis
-- [#9516](https://github.com/nautobot/nautobot/issues/9516) - 
 - [#9516](https://github.com/nautobot/nautobot/issues/9516) - Renamed `NAUTOBOT_RATE_LIMITING_LIMIT` to `NAUTOBOT_RATE_LIMITING_REST_BUDGET`
 - [#9517](https://github.com/nautobot/nautobot/issues/9517) - Lightened borders, dividers, and navigation menu links hover highlight in dark mode.
 - [#9524](https://github.com/nautobot/nautobot/issues/9524) - Changed the `Import Objects` system Job to reject data containing unrecognized fields, including unrecognized `cf_<key>` custom fields, rather than silently ignoring them. Fields that Nautobot generates rather than stores, such as `display` and `object_type`, continue to be accepted and ignored so that an exported file re-imports unchanged.
@@ -198,18 +172,18 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9754](https://github.com/nautobot/nautobot/issues/9754) - Changed `assertInstanceEqual()` to compare a model instance returned by a non-field attribute, such as a property, by its primary key, as it already compares foreign key fields.
 - [#9761](https://github.com/nautobot/nautobot/issues/9761) - Improved the hover and focus appearance of tag links.
 
-### Deprecated in v3.3.0a0
+### Deprecated in v3.3.0a1
 
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Deprecated the `VirtualDeviceContext.validate_primary_ips()` method; primary IP validation is performed by `VirtualDeviceContext.clean()`.
 - [#9754](https://github.com/nautobot/nautobot/issues/9754) - Deprecated the `_namespace` property of the IP Address and IP Address Range models in favor of the new `namespace` property.
 
-### Removed in v3.3.0a0
+### Removed in v3.3.0a1
 
 - [#9576](https://github.com/nautobot/nautobot/issues/9576) - Removed default `placeholder` text identical to the form-field `label` from most forms. Form fields with explicitly specified `placeholder` values are unaffected.
 - [#9601](https://github.com/nautobot/nautobot/issues/9601) - Removed the `Webhook.check_for_conflicts()` and `JobHook.check_for_conflicts()` class methods.
 - [#9671](https://github.com/nautobot/nautobot/issues/9671) - Removed `SeleniumTestCase.assertNoAccessibilityViolations()`. Playwright tests call `nautobot.playwright.accessibility.assert_no_accessibility_violations()` instead.
 
-### Fixed in v3.3.0a0
+### Fixed in v3.3.0a1
 
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Fixed an exception when removing an IP address from an interface on a module that is not installed in a Device.
 - [#4138](https://github.com/nautobot/nautobot/issues/4138) - Fixed a Virtual Device Context's primary IP not being cleared when the IP address is removed from the Virtual Device Context's interfaces.
@@ -240,23 +214,12 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9761](https://github.com/nautobot/nautobot/issues/9761) - Fixed tag links, and the header's search help link,  being too small to satisfy the WCAG 2.2 pointer target minimum.
 - [#9763](https://github.com/nautobot/nautobot/issues/9763) - Fixed exported Job console log timestamps not being rendered in the requesting user's configured timezone.
 
-### Dependencies in v3.3.0a0
+### Dependencies in v3.3.0a1
 
-- [#9315](https://github.com/nautobot/nautobot/issues/9315) - Updated dependency `djangorestframework` to `>=3.18.0,<3.19`.
-- [#9315](https://github.com/nautobot/nautobot/issues/9315) - Updated dependencies `opentelemetry-sdk` and `opentelemetry-exporter-otlp` to `>=1.44.0,<1.45`, and updated all associated `opentelemetry-instrumentation-*` dependencies to `>=0.65b0,<0.66`.
 - [#9315](https://github.com/nautobot/nautobot/issues/9315) - Updated dependency `prometheus-client` to `>=0.26.0,<0.27`.
-- [#9316](https://github.com/nautobot/nautobot/issues/9316) - Updated dependency `django-filter` to `>=26.1,<26.2`.
-- [#9456](https://github.com/nautobot/nautobot/issues/9456) - Dropped support for Python 3.10 as it approaches end-of-life. Python 3.11 will be the minimum version for Nautobot 3.3.
-- [#9456](https://github.com/nautobot/nautobot/issues/9456) - Updated dependency `django-tables2` to `>=3.0.1,<3.1`.
 - [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `django-silk` to `>=5.6.0,<5.7`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `django-tree-queries` to `>=0.26.1,<0.27`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `djangorestframework` to `>=3.18.1,<3.19`.
 - [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `emoji` to `>=2.16.0,<2.17`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `Markdown` to `>=3.11,<3.12`.
 - [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `mysqlclient` to `>=2.3.0,<2.4`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated OpenTelemetry dependencies to `>=1.45.0,<1.46` and `>=0.66b0,<0.67` as a group.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `social-auth-app-django` to `>=6.1.0,<6.2`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated dependency `social-auth-core` to `>=5.2.0,<5.3`.
 - [#9611](https://github.com/nautobot/nautobot/issues/9611) - Updated dependency `Markdown` to `>=3.11.2,<3.12`.
 - [#9611](https://github.com/nautobot/nautobot/issues/9611) - Updated optional dependency `django-auth-ldap` to `>=5.4.0,<5.5`.
 - [#9611](https://github.com/nautobot/nautobot/issues/9611) - Updated dependency `django-constance` to `>=4.5.0,<4.6`.
@@ -268,7 +231,7 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9670](https://github.com/nautobot/nautobot/issues/9670) - Replaced dependency `drf-spectacular-sidecar` with the `swagger-ui-dist` and `redoc` NPM packages, bundled into Nautobot's static files, for the Swagger UI and Redoc REST API documentation pages. Static files under `drf_spectacular_sidecar/` are no longer available to apps or custom templates.
 - [#9670](https://github.com/nautobot/nautobot/issues/9670) - Updated Swagger UI to version 5.34.0.
 
-### Documentation in v3.3.0a0
+### Documentation in v3.3.0a1
 
 - [#9416](https://github.com/nautobot/nautobot/issues/9416) - Added initial documentation for CSV/JSON/YAML import/export functionality as enhanced in v3.3.
 - [#9428](https://github.com/nautobot/nautobot/issues/9428) - Added documentation for the `humanize_duration` template filter.
@@ -282,7 +245,7 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9638](https://github.com/nautobot/nautobot/issues/9638) - Added documentation for rate limiting.
 - [#9638](https://github.com/nautobot/nautobot/issues/9638) - Added documentation for request performance measurements.
 
-### Housekeeping in v3.3.0a0
+### Housekeeping in v3.3.0a1
 
 - [#9111](https://github.com/nautobot/nautobot/issues/9111) - Refactored IPAddress model related UI views to use `NautobotUIViewSet`.
 - [#9315](https://github.com/nautobot/nautobot/issues/9315) - Updated development dependency `django-debug-toolbar` to `~7.1.1`.
@@ -295,14 +258,9 @@ As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3
 - [#9469](https://github.com/nautobot/nautobot/issues/9469) - Added `change_has_consumers()`, which answers whether any enabled webhook, job hook, or event broker would act on a given content type and action, so that work done only for those consumers can be skipped.
 - [#9470](https://github.com/nautobot/nautobot/issues/9470) - Fixed omission of `pytest` and `playwright` Python packages from the Docker `dev` image.
 - [#9479](https://github.com/nautobot/nautobot/issues/9479) - Moved Playwright login out of the auth fixture and into a helper with documentation for using it in a script.
-- [#9511](https://github.com/nautobot/nautobot/issues/9511) - Changed Playwright browser contexts to send the `X-Disable-Debug-Toolbar` header, and the development configuration to keep django-debug-toolbar off pages that carry it or when `NAUTOBOT_SHOW_DJDT_TOOLBAR` is set to a falsy value.
+- [#9511](https://github.com/nautobot/nautobot/issues/9511) - Changed Playwright browser contexts to send the `X-Disable-Debug-Toolbar` header, and the development configuration to keep Django-debug-toolbar off pages that carry it or when `NAUTOBOT_SHOW_DJDT_TOOLBAR` is set to a falsy value.
 - [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `faker` to `^40.40.0`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `djlint` to `~1.46.4` and addressed all new warnings.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `pylint` to `~4.1.1` and addressed all new warnings.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `coverage` to `~7.16.2`.
 - [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `django-test-migrations` to `~1.7.0`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `time-machine` to `~3.5.1`.
-- [#9518](https://github.com/nautobot/nautobot/issues/9518) - Updated development dependency `playwright` to `~1.63.0`.
 - [#9519](https://github.com/nautobot/nautobot/issues/9519) - Updated development dependency `django-debug-toolbar` to `~8.0.0`.
 - [#9519](https://github.com/nautobot/nautobot/issues/9519) - Updated development dependency `towncrier` to `~26.9.0` and simplified its configuration in `pyproject.toml`.
 - [#9520](https://github.com/nautobot/nautobot/issues/9520) - Replaced the Device detail Selenium tests with Playwright tests and added a shared `DetailPage` page object for detail views.
