@@ -1928,6 +1928,31 @@ class DynamicGroupTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.json()["count"], 1)
         self.assertEqual(response.json()["results"][0]["id"], str(obj1.pk))
 
+    def test_get_members_with_depth(self):
+        """Test that the `/members/` API endpoint respects the `depth` query parameter."""
+        self.add_permissions("extras.view_dynamicgroup")
+        instance = DynamicGroup.objects.filter(static_group_associations__isnull=False).distinct().first()
+        self.add_permissions(get_permission_for_model(instance.content_type.model_class(), "view"))
+        self.add_permissions("dcim.view_devicetype")
+        url = reverse("extras-api:dynamicgroup-members", kwargs={"pk": instance.pk})
+
+        # At default depth (0), nested foreign keys only have brief representations (id, object_type, url)
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = response.json()["results"]
+        self.assertGreater(len(results), 0)
+        self.assertNotIn("model", results[0]["device_type"])
+
+        # At depth=1, nested foreign keys are expanded to nested serializer data
+        response_depth = self.client.get(f"{url}?depth=1", **self.header)
+        self.assertHttpStatus(response_depth, status.HTTP_200_OK)
+        results_depth = response_depth.json()["results"]
+        self.assertIn("model", results_depth[0]["device_type"])
+
+        # Invalid depth returns HTTP 400
+        response_invalid = self.client.get(f"{url}?depth=11", **self.header)
+        self.assertHttpStatus(response_invalid, status.HTTP_400_BAD_REQUEST)
+
 
 class DynamicGroupMembershipTest(DynamicGroupTestMixin, APIViewTestCases.APIViewTestCase):
     model = DynamicGroupMembership
