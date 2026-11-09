@@ -1525,9 +1525,6 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
 
     choices_fields = ["type"]
 
-    # Namespace is a write-only field.
-    validation_excluded_fields = ["namespace"]
-
     @classmethod
     def setUpTestData(cls):
         cls.statuses = Status.objects.get_for_model(IPAddress)
@@ -1541,7 +1538,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         first_ip = IPAddress.objects.first()
         cls.update_data = {
             "address": str(first_ip),
-            "namespace": cls.namespace.pk,
+            "namespace": first_ip.namespace.pk,
             "status": cls.statuses[0].pk,
         }
 
@@ -1662,6 +1659,50 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertEqual(response.data["parent"], [expected_err_msg])
 
+    def test_namespace_is_readable(self):
+        self.add_permissions("ipam.view_ipaddress")
+        ip_address = IPAddress.objects.first()
+
+        response = self.client.get(self._get_detail_url(ip_address), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["namespace"]["id"], ip_address.parent.namespace.pk)
+
+    def test_update_namespace_moves_ip_address(self):
+        self.add_permissions("ipam.change_ipaddress", "ipam.view_namespace")
+        ip_address = IPAddress.objects.first()
+        namespace = Namespace.objects.create(name="Destination Namespace")
+        prefix = Prefix.objects.create(
+            prefix=ip_address.parent.prefix, namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+
+        response = self.client.patch(
+            self._get_detail_url(ip_address), {"namespace": namespace.pk}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["namespace"]["id"], namespace.pk)
+        ip_address.refresh_from_db()
+        self.assertEqual(ip_address.parent, prefix)
+
+    def test_update_namespace_rejects_parent_from_another_namespace(self):
+        self.add_permissions("ipam.change_ipaddress", "ipam.view_namespace", "ipam.view_prefix")
+        ip_address = IPAddress.objects.first()
+        original_parent = ip_address.parent
+        namespace = Namespace.objects.create(name="Destination Namespace")
+        Prefix.objects.create(
+            prefix=original_parent.prefix, namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+
+        response = self.client.patch(
+            self._get_detail_url(ip_address),
+            {"namespace": namespace.pk, "parent": original_parent.pk},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("parent", response.data)
+        ip_address.refresh_from_db()
+        self.assertEqual(ip_address.parent, original_parent)
+
 
 class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
     model = IPAddressToInterface
@@ -1743,9 +1784,6 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
 class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
     model = IPAddressRange
 
-    # namespace is a write-only field, not present on the serialized object
-    validation_excluded_fields = ["namespace"]
-
     @classmethod
     def setUpTestData(cls):
         cls.statuses = Status.objects.get_for_model(IPAddressRange)
@@ -1775,7 +1813,7 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         cls.update_data = {
             "start_address": str(first_range.start_address),
             "end_address": str(first_range.end_address),
-            "namespace": cls.namespace.pk,
+            "namespace": first_range.namespace.pk,
             "status": cls.statuses[0].pk,
         }
 
@@ -1934,6 +1972,24 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_namespace_moves_ip_address_range(self):
+        self.add_permissions("ipam.change_ipaddressrange", "ipam.view_namespace")
+        ip_address_range = IPAddressRange.objects.first()
+        namespace = Namespace.objects.create(name="Destination Namespace")
+        prefix = Prefix.objects.create(
+            prefix=ip_address_range.parent.prefix,
+            namespace=namespace,
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+
+        response = self.client.patch(
+            self._get_detail_url(ip_address_range), {"namespace": namespace.pk}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["namespace"]["id"], namespace.pk)
+        ip_address_range.refresh_from_db()
+        self.assertEqual(ip_address_range.parent, prefix)
 
     def test_ipv4_size_is_correct_under_256_octet_range(self):
         """Confirm IPV4 Size Is Calculated Correctly Under Simple Prefix."""
