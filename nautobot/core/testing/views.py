@@ -2690,6 +2690,8 @@ class ViewTestCases:
                     "path": url,
                     "data": utils.post_data({"pk": data["virtual_machine"]}),
                 }
+            parent_model = resolve(url).func.view_class.parent_model
+            self.add_permissions(f"{parent_model._meta.app_label}.change_{parent_model._meta.model_name}")
             self.assertHttpStatus(self.client.post(**request), 200)
 
             # Post to the device-bulk-add or virtualmachine-bulk-add form to create records
@@ -2712,6 +2714,94 @@ class ViewTestCases:
                 except AssertionError:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
+
+        def test_bulk_add_component_with_constrained_parent_permission(self):
+            """Bulk-adding components must not expose or modify parent objects the user is not permitted to select."""
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            model_name = self.model._meta.model_name
+            urls = []
+            for url_name in (
+                f"dcim:device_bulk_add_{model_name}",
+                f"dcim:module_bulk_add_{model_name}",
+                f"virtualization:virtualmachine_bulk_add_{model_name}",
+            ):
+                try:
+                    urls.append(reverse(url_name))
+                except NoReverseMatch:
+                    continue
+            if not urls:
+                self.skipTest(f"No bulk-add view exists for {self.model._meta.verbose_name_plural}")
+
+            for url in urls:
+                with self.subTest(url=url):
+                    self._test_bulk_add_component_with_constrained_parent_permission(url)
+
+        def _test_bulk_add_component_with_constrained_parent_permission(self, url):
+            view_func = resolve(url).func
+            if hasattr(view_func, "cls"):
+                # NautobotUIViewSet action, e.g. `ModuleUIViewSet.bulk_add_consoleport`
+                parent_model = view_func.cls.queryset.model
+                action = view_func.initkwargs.get("custom_view_base_action") or "view"
+            else:
+                # `generic.BulkComponentCreateView` subclass, which selects parents the user can change
+                parent_model = view_func.view_class.parent_model
+                action = "change"
+
+            data = (self.bulk_add_data or self.bulk_create_data).copy()
+            parent_pks = [
+                data.pop(field)
+                for field in ("device", "module", "parent_device", "parent_module", "virtual_machine")
+                if field in data
+            ]
+
+            # Prefer the parent from the test data, which is known to accept these components without name conflicts
+            permitted_parent = (
+                parent_model.objects.filter(pk__in=parent_pks).first() or parent_model.objects.order_by("pk").first()
+            )
+            hidden_parent = parent_model.objects.exclude(pk=permitted_parent.pk).first()
+            self.assertIsNotNone(
+                hidden_parent, f"At least two {parent_model._meta.verbose_name_plural} are required for this test"
+            )
+
+            obj_perm = users_models.ObjectPermission(
+                name=f"Test {action} permission for {parent_model._meta.verbose_name_plural}",
+                constraints={"pk": permitted_parent.pk},
+                actions=[action],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(parent_model))
+
+            # Only the parent's selection permission is constrained; all other related objects are viewable
+            exempt_view_permissions = [
+                f"{model._meta.app_label}.{model._meta.model_name}"
+                for model in apps.get_models()
+                if model is not parent_model or action != "view"
+            ]
+            with override_settings(EXEMPT_VIEW_PERMISSIONS=exempt_view_permissions):
+                # Selecting "all" parents must only include permitted parents in the rendered form
+                response = self.client.post(url, data={"_all": "1"})
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertIn(str(permitted_parent.pk), content)
+                self.assertNotIn(str(hidden_parent.pk), content)
+
+                initial_count = self._get_queryset().count()
+                request_data = utils.post_data(data)
+                request_data["_create"] = ""
+
+                # Creating components on a non-permitted parent must fail, alone or mixed with a permitted parent
+                for pk_list in ([hidden_parent.pk], [permitted_parent.pk, hidden_parent.pk]):
+                    with self.subTest(pk_list=pk_list):
+                        response = self.client.post(url, data={**request_data, "pk": pk_list})
+                        self.assertIn(response.status_code, (200, 302))
+                        self.assertEqual(self._get_queryset().count(), initial_count)
+
+                # The permitted parent on its own succeeds, so the rejections above are due to permissions
+                response = self.client.post(url, data={**request_data, "pk": [permitted_parent.pk]})
+                self.assertHttpStatus(response, 302)
+                self.assertEqual(self._get_queryset().count(), initial_count + self.bulk_create_count)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_components_with_required_custom_field(self):

@@ -4178,8 +4178,8 @@ class BulkComponentCreateUIViewSetMixin:
         component_create_form = get_form_for_model(model)
 
         # Are we editing *all* objects in the queryset or just a selected subset?
-        if request.POST.get("_all") and self.filterset is not None:
-            pk_list = [obj.pk for obj in self.filterset(request.GET, self.get_queryset().only("pk")).qs]
+        if request.POST.get("_all") and self.filterset_class is not None:
+            pk_list = [obj.pk for obj in self.filterset_class(request.GET, self.get_queryset().only("pk")).qs]
         else:
             pk_list = request.POST.getlist("pk")
 
@@ -4194,6 +4194,9 @@ class BulkComponentCreateUIViewSetMixin:
 
         if "_create" in request.POST:
             form = bulk_component_form(model, request.POST)
+            restrict_form_fields(form, request.user)
+            # Parents must be selectable with the same permission action used to select them above
+            form.fields["pk"].queryset = self.get_queryset()
 
             if form.is_valid():
                 new_components = []
