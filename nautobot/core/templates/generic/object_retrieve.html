@@ -83,6 +83,19 @@
                             {% endif %}
                         {% endwith %}
                     {% endif %}
+                    {% if object.is_data_compliance_model and perms.data_validation.view_datacompliance %}
+                        {% if active_tab == 'data_compliance' or object.get_data_compliance_url and object.associated_data_compliance.exists %}
+                            <li class="nav-item" role="presentation">
+                                <a
+                                    class="nav-link {% if active_tab == 'data_compliance' %}active{% endif %}"
+                                    {% if active_tab == 'data_compliance' %}aria-current="page"{% endif %}
+                                    href="{{ object.get_data_compliance_url }}"
+                                >
+                                    Data Compliance
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
                 {% if perms.extras.view_note %}
                     {% if active_tab != 'notes' and object.get_notes_url or active_tab == 'notes' %}

@@ -281,6 +281,28 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 
+## v2.4.46 (2026-11-09)
+
+### Security in v2.4.46
+
+- [GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/security/advisories/GHSA-h3qx-qrj8-q6wf) - Fixed a vulnerability in which the "Export Object List" system Job, and any other code that applied object permissions to API tokens, allowed a user to read the keys of other users' API tokens. Applying object permissions to tokens now always limits every user, including superusers, to their own tokens; staff users with the appropriate permissions can still manage all users' tokens in the Django admin interface.
+- [GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/security/advisories/GHSA-h3qx-qrj8-q6wf) - Changed the "Export Object List" and "Import Objects" system Jobs to refuse to export or import API tokens, as doing so would write token keys to a file that other users may be able to download.
+- [GHSA-546w-cg72-vf5w](https://github.com/nautobot/nautobot/security/advisories/GHSA-546w-cg72-vf5w) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could infer a sensitive field's value by filtering a queryset on it.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where the `hyperlinked_object` and `hyperlinked_object_target_new_tab` template filters could read a sensitive field or private attribute of an object.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read a sensitive field through a model or field method that reads a field by name, such as `serializable_value()`.
+
+### Changed in v2.4.46
+
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Changed the `meta` filter in Jinja2 templates to return only the attributes that identify a model, such as `app_label` and `verbose_name`; any other `_meta` attribute now raises an error.
+
+### Dependencies in v2.4.46
+
+- [#9701](https://github.com/nautobot/nautobot/issues/9701) - Dropped support for Python 3.10 as it has reached end-of-life.
+
+### Documentation in v2.4.46
+
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Added guidance for App and core developers on writing Jinja2 template filters that do not bypass the template sandbox.
+
 ## v2.4.45 (2026-10-27)
 
 ### Security in v2.4.45

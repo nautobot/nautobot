@@ -182,6 +182,8 @@ This filter also accepts an optional `field` parameter, which allows you to use 
 {{ location|hyperlinked_object("name") }}
 ```
 
+The `field` parameter cannot name a field that the model declares as [sensitive](../../development/core/sensitive-fields.md), such as an API token's `key`, or an attribute whose name starts with an underscore. Rendering a template that does so raises an error instead of displaying the value.
+
 ### meta
 
 Return the specified Meta attribute of a model.
@@ -189,6 +191,9 @@ Return the specified Meta attribute of a model.
 ```django
 {{ obj | meta('app_label') }}
 ```
+
+!!! note
+    For security, in Jinja2 templates this filter only returns the attributes that identify the model: `app_label`, `label`, `label_lower`, `model_name`, `object_name`, `verbose_name` and `verbose_name_plural`. Requesting any other attribute raises an error. Django templates are not restricted.
 
 ### meters_to_feet
 
