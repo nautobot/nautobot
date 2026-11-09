@@ -1,1 +1,0 @@
-Fixed the `Import Objects` system Job failing, before importing anything, for object types whose manager doesn't support object permissions, such as users.
