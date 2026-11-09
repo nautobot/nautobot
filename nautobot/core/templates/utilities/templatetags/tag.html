@@ -1,3 +1,13 @@
 {% load helpers %}
 
-{% if url_name %}<a class="nb-tag-link" href="{% url url_name %}?tags={{ tag.name }}" style="--nb-tag-bg: #{{ tag.color }}; --nb-tag-color: {{ tag.color|fgcolor }};">{% endif %}<span class="badge" style="color: {{ tag.color|fgcolor }}; background-color: #{{ tag.color }}">{{ tag }}</span>{% if url_name %}</a>{% endif %}
+{% spaceless %}
+    {% if url_name %}
+        <a
+            class="nb-tag-link"
+            href="{% url url_name %}?tags={{ tag.name }}"
+            style="--nb-tag-bg: #{{ tag.color }}; --nb-tag-color: {{ tag.color|fgcolor }};"
+        >
+    {% endif %}
+    <span class="badge" style="color: {{ tag.color|fgcolor }}; background-color: #{{ tag.color }}">{{ tag }}</span>
+    {% if url_name %}</a>{% endif %}
+{% endspaceless %}
