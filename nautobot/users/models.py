@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import SensitiveFieldError
-from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
+from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -262,6 +262,21 @@ class AdminGroup(Group):
 #
 
 
+class TokenQuerySet(RestrictedQuerySet):
+    """
+    A `RestrictedQuerySet` that also limits every user, superusers included, to their own Tokens.
+
+    An object permission can limit a user to their own Tokens with the constraint `{"user": "$user"}`. Without this
+    queryset, a superuser, a user whose permission lacks that constraint, or any user when view permissions are exempt
+    could view, change, or delete other users' Tokens, including their keys, through any code that calls `restrict()`.
+    """
+
+    def restrict(self, user, action="view"):
+        if not user.is_authenticated:
+            return self.none()
+        return super().restrict(user, action).filter(user=user)
+
+
 class Token(BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
@@ -274,6 +289,8 @@ class Token(BaseModel):
     key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    objects = BaseManager.from_queryset(TokenQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
