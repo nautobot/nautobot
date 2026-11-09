@@ -1,2 +1,0 @@
-Fixed a bypass of the `sensitive_fields` control where the `hyperlinked_object` and `hyperlinked_object_target_new_tab` template filters could read a sensitive field or private attribute of an object.
-Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read a sensitive field through a model or field method that reads a field by name, such as `serializable_value()`.
