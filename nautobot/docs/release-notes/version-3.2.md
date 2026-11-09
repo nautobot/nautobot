@@ -287,7 +287,6 @@ The Device detail view "Module Bays" tab now supports a hierarchical view with a
 As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.2.9 (2026-11-09)
@@ -298,11 +297,11 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Security in v3.2.9
 
-- [#GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/issues/GHSA-h3qx-qrj8-q6wf) - Fixed a vulnerability in which the "Export Object List" system Job, and any other code that applied object permissions to API tokens, allowed a user to read the keys of other users' API tokens. Applying object permissions to tokens now always limits every user, including superusers, to their own tokens; staff users with the appropriate permissions can still manage all users' tokens in the Django admin interface.
-- [#GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/issues/GHSA-h3qx-qrj8-q6wf) - Changed the "Export Object List" and "Import Objects" system Jobs to refuse to export or import API tokens, as doing so would write token keys to a file that other users may be able to download.
-- [#GHSA-546w-cg72-vf5w](https://github.com/nautobot/nautobot/issues/GHSA-546w-cg72-vf5w) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could infer a sensitive field's value by filtering a queryset on it.
-- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where the `hyperlinked_object` and `hyperlinked_object_target_new_tab` template filters could read a sensitive field or private attribute of an object.
-- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read a sensitive field through a model or field method that reads a field by name, such as `serializable_value()`.
+- [GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/security/advisories/GHSA-h3qx-qrj8-q6wf) - Fixed a vulnerability in which the "Export Object List" system Job, and any other code that applied object permissions to API tokens, allowed a user to read the keys of other users' API tokens. Applying object permissions to tokens now always limits every user, including superusers, to their own tokens; staff users with the appropriate permissions can still manage all users' tokens in the Django admin interface.
+- [GHSA-h3qx-qrj8-q6wf](https://github.com/nautobot/nautobot/security/advisories/GHSA-h3qx-qrj8-q6wf) - Changed the "Export Object List" and "Import Objects" system Jobs to refuse to export or import API tokens, as doing so would write token keys to a file that other users may be able to download.
+- [GHSA-546w-cg72-vf5w](https://github.com/nautobot/nautobot/security/advisories/GHSA-546w-cg72-vf5w) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could infer a sensitive field's value by filtering a queryset on it.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where the `hyperlinked_object` and `hyperlinked_object_target_new_tab` template filters could read a sensitive field or private attribute of an object.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Fixed a bypass of the `sensitive_fields` control where a user-authored Jinja2 template could read a sensitive field through a model or field method that reads a field by name, such as `serializable_value()`.
 - [#9716](https://github.com/nautobot/nautobot/issues/9716) - Fixed the "Non-Racked Devices" table on the Rack detail view displaying devices that the user did not have permission to view.
 - [#9741](https://github.com/nautobot/nautobot/issues/9741) - Updated dependency `social-auth-core` to `>=6.2.0,<6.3` to mitigate CVE-2026-115910.
 - [#9751](https://github.com/nautobot/nautobot/issues/9751) - Fixed the circuit "Swap Terminations" view not enforcing the `circuits.change_circuittermination` permission or object-level permission constraints on the circuit terminations being modified.
@@ -315,7 +314,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Changed in v3.2.9
 
-- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Changed the `meta` filter in Jinja2 templates to return only the attributes that identify a model, such as `app_label` and `verbose_name`; any other `_meta` attribute now raises an error.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Changed the `meta` filter in Jinja2 templates to return only the attributes that identify a model, such as `app_label` and `verbose_name`; any other `_meta` attribute now raises an error.
 - [#9762](https://github.com/nautobot/nautobot/issues/9762) - Updated Marketplace entries for Apps no longer relevant in 3.2.
 
 ### Removed in v3.2.9
@@ -348,7 +347,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Documentation in v3.2.9
 
-- [#GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/issues/GHSA-w2v9-g37h-x98j) - Added guidance for App and core developers on writing Jinja2 template filters that do not bypass the template sandbox.
+- [GHSA-w2v9-g37h-x98j](https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j) - Added guidance for App and core developers on writing Jinja2 template filters that do not bypass the template sandbox.
 - [#9739](https://github.com/nautobot/nautobot/issues/9739) - Restructured App developer migration documentation to more clearly delineate v1-to-v2 guides from v2-to-v3 guides.
 
 ### Housekeeping in v3.2.9
