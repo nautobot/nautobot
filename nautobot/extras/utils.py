@@ -13,6 +13,7 @@ from typing import Optional, TYPE_CHECKING, Union
 
 from django.apps import apps
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
@@ -33,6 +34,7 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.core.utils.requests import is_single_choice_field
@@ -201,6 +203,9 @@ def get_change_logged_m2m_through_side_field_names():
     attribute `is_m2m_change_logged = False` (e.g. `UserSavedViewAssociation`, which records per-user
     preferences rather than shared data).
 
+    This does not account for the runtime `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` configuration; use
+    `get_change_logged_m2m_side_field_names` to determine which sides of a given through model to change-log.
+
     Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
 
     Returns:
@@ -211,6 +216,39 @@ def get_change_logged_m2m_through_side_field_names():
         for through, side_field_names in get_explicit_m2m_through_side_field_names().items()
         if getattr(through, "is_m2m_change_logged", True)
     }
+
+
+def get_change_logged_m2m_side_field_names(through):
+    """Get the names of the "side" fields of `through` whose related objects should be change-logged.
+
+    Starts from `get_change_logged_m2m_through_side_field_names` and removes any sides excluded by the
+    `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` configuration, which maps `app_label.modelname` of a through model to a
+    list of side field names to exclude. Only explicitly listed sides are excluded, so an empty list excludes
+    nothing. Unlike the functions above, this is not memoized: the configuration may be changed at runtime via
+    Constance, and a per-process cache would go stale in every other process. Constance already caches its values
+    in the shared Django cache.
+
+    Args:
+        through (Model): Any model class; models that are not change-logged M2M through models yield no sides.
+
+    Returns:
+        tuple: `(side_field_name, ...)`
+    """
+    side_field_names = get_change_logged_m2m_through_side_field_names().get(through)
+    if not side_field_names:
+        return ()
+
+    excluded_associations = get_settings_or_config("CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS", fallback={})
+    if not isinstance(excluded_associations, dict):
+        logger.warning(
+            "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS must be a dict, not %s; ignoring it",
+            type(excluded_associations).__name__,
+        )
+        return side_field_names
+
+    excluded_associations = {label.lower(): sides for label, sides in excluded_associations.items()}
+    excluded_sides = excluded_associations.get(through._meta.label_lower, [])
+    return tuple(name for name in side_field_names if name not in excluded_sides)
 
 
 @deconstructible
@@ -260,6 +298,14 @@ class FeatureQuery:
         Raises a KeyError if the given feature doesn't exist.
         """
         return registry["model_features"][self.feature].items()
+
+    def includes(self, model):
+        """
+        Return whether the given model class or instance supports this feature.
+        """
+        populate_model_features_registry()
+        app_label, model_name = model._meta.label_lower.split(".")
+        return model_name in registry["model_features"].get(self.feature, {}).get(app_label, [])
 
     def get_choices(self):
         """
@@ -409,6 +455,16 @@ def populate_model_features_registry(refresh=False):
             "additional_constraints": {"is_custom_field_model": True},
         },
         {
+            "feature_name": "export",
+            "field_names": [],
+            "additional_constraints": {"is_exportable_model": True},
+        },
+        {
+            "feature_name": "import",
+            "field_names": [],
+            "additional_constraints": {"is_importable_model": True},
+        },
+        {
             "feature_name": "metadata",
             "field_names": [],  # TODO: add "associated_metadata" ReverseRelation here when implemented
             "additional_constraints": {"is_metadata_associable_model": True},
@@ -446,6 +502,13 @@ def populate_model_features_registry(refresh=False):
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
+
+    # Add the plain Django models that the import/export Jobs also support, in addition to Nautobot's own models.
+    # ContentTypes are created and removed by Django as models are installed, so they may be exported but not imported.
+    for model_class, feature_names in ((Group, ("export", "import")), (ContentType, ("export",))):
+        app_label, model_name = model_class._meta.label_lower.split(".")
+        for feature_name in feature_names:
+            registry["model_features"][feature_name].setdefault(app_label, []).append(model_name)
 
     if not registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True

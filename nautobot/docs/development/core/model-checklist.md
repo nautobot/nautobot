@@ -30,6 +30,8 @@ article ul li {
         - Contact/team association (`is_contact_associable_model = False`, OrganizationalModel/PrimaryModel only)
         - Custom fields (`is_custom_field_model = False`, any `CustomFieldModel` subclass, including OrganizationalModel/PrimaryModel)
         - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Export support (`is_exportable_model = False`, any base class)
+        - Import support (`is_importable_model = False`, any base class)
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
         - Data Compliance (`is_data_compliance_model = False`, OrganizationalModel/PrimaryModel only)

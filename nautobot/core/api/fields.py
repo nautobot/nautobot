@@ -13,6 +13,8 @@ from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from timezone_field.rest_framework import TimeZoneSerializerField as TimeZoneSerializerField_
 
 from nautobot.core.api.mixins import WritableSerializerMixin
+from nautobot.core.api.utils import get_request_with_user
+from nautobot.core.models.querysets import restrict_queryset
 from nautobot.core.models.utils import deconstruct_composite_key
 from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.data import is_url, is_uuid
@@ -140,12 +142,20 @@ class GroupField(RelatedField):
         "invalid": "Invalid value. Specify a group using its primary key or name",
     }
 
+    def get_queryset(self):
+        """The groups that may be referenced, limited to those the requesting user (if any) may view."""
+        queryset = super().get_queryset()
+        if request := get_request_with_user(self.context):
+            queryset = restrict_queryset(queryset, request.user)
+        return queryset
+
     def to_internal_value(self, data):
+        queryset = self.get_queryset()
         try:
             if isinstance(data, str):
-                return self.queryset.get(name=data)
+                return queryset.get(name=data)
             else:
-                return self.queryset.get(pk=data)
+                return queryset.get(pk=data)
         except ObjectDoesNotExist:
             self.fail("does_not_exist", group=data)
         except (AttributeError, TypeError, ValueError):
@@ -303,6 +313,13 @@ class SerializedPKRelatedField(PrimaryKeyRelatedField):
         self.serializer = serializer
         self.pk_field = kwargs.pop("pk_field", None)
         super().__init__(**kwargs)
+
+    def get_queryset(self):
+        """The objects that may be referenced, limited to those the requesting user (if any) may view."""
+        queryset = super().get_queryset()
+        if request := get_request_with_user(self.context):
+            queryset = restrict_queryset(queryset, request.user)
+        return queryset
 
     def to_representation(self, value):
         return self.serializer(value, context={"request": self.context["request"]}).data

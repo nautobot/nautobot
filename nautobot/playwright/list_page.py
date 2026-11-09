@@ -24,6 +24,9 @@ class ListPage(BasePage):
 
     # The row selection checkbox; its value is the object's id.
     _PK_CHECKBOX = "input[name='pk']"
+    # `generic/object_list.html` renders this around the table on every branch, with or without change
+    # permission and with or without rows. The bulk-action form around it renders only with permission.
+    _OBJECT_TABLE_WRAPPER = "#object_table_wrapper"
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
     # rendered when a list has no results. Reference this constant, never inline it.
     _DATA_ROWS = f"table tbody tr:has({_PK_CHECKBOX})"
@@ -49,6 +52,20 @@ class ListPage(BasePage):
     _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
     _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
     _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
+    # The header checkbox that checks every row on the current page.
+    _TOGGLE_ALL = "table thead input.toggle"
+    # Rendered only while the list spans more than one page, and hidden with d-none until the
+    # header checkbox is checked. Its own checkbox enables Edit All and Delete All, which post
+    # `_all` plus the list's query string so the server rebuilds the filter over every page.
+    _SELECT_ALL_BOX = "#select_all_box"
+    _SELECT_ALL_CHECKBOX = "#select_all_box #select_all"
+    _EDIT_ALL = "#select_all_box button[name='_edit']"
+    # In the select-all box, so it is enabled only once every matching record is selected. Rendered,
+    # with its modal, on every list whose model can be statically assigned to a dynamic group.
+    _UPDATE_GROUP_ASSIGNMENT_FOR_ALL = "#update_dynamic_groups_for_all"
+    _ASSIGNMENT_MODAL = "#dynamic_group_assignment_modal"
+    _ADD_TO_GROUPS = "select[name='add_to_groups']"
+    _ASSIGNMENT_APPLY = "#dynamic_group_assignment_form button[type='submit']"
     # The bulk edit form lists the selected ids as hidden pk inputs.
     _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
     _BULK_EDIT_APPLY = "button[name='_apply']"
@@ -71,6 +88,10 @@ class ListPage(BasePage):
     def navigate(self, **params):
         """Go to the list view, optionally with given query *params*, e.g. for pinning it to test-owned records."""
         self._goto(f"{self.LIST_PATH}?{urlencode(params)}" if params else self.LIST_PATH)
+
+    def object_table_wrapper(self):
+        """Return the locator of the wrapper around the object table. A page without it is not an object list."""
+        return self.page.locator(self._OBJECT_TABLE_WRAPPER)
 
     def data_row(self, index=0):
         """Locator for the data row at *index*."""
@@ -172,6 +193,41 @@ class ListPage(BasePage):
         """Check the pk checkbox of the data row whose link text is exactly *name*."""
         row = self.page.locator(self._DATA_ROWS).filter(has=self.page.get_by_role("link", name=name, exact=True))
         row.locator(self._PK_CHECKBOX).check()
+
+    def select_all_rows(self):
+        """Check the header checkbox, which checks every row on the current page."""
+        self.page.locator(self._TOGGLE_ALL).check()
+
+    def select_all_matching(self, expected):
+        """Select every record matching the list's filter, on every page, and check that there are *expected* of them.
+
+        Page links are HTMX swaps that replace the table, so rows checked on one page are
+        gone on the next and cannot add up to a selection. This is the only way to select
+        past the first page. The header checkbox reveals the box, and the box's checkbox
+        enables its buttons. Both change one tick after the click, because the checkbox
+        handler dispatches its events from a setTimeout.
+        """
+        self.select_all_rows()
+        box = self.page.locator(self._SELECT_ALL_BOX)
+        expect(box).not_to_have_class(re.compile(r"\bd-none\b"))
+        expect(box.locator("label")).to_contain_text(re.compile(rf"\ball {expected} "))
+        self.page.locator(self._SELECT_ALL_CHECKBOX).check()
+        expect(self.page.locator(self._EDIT_ALL)).to_be_enabled()
+
+    def assign_all_matching_to_group(self, group_name):
+        """Click "Update Group Assignment for All", add the selection to the group *group_name*, and apply.
+
+        Call `select_all_matching` first: the button is disabled until the select-all box is checked.
+        """
+        self.page.locator(self._UPDATE_GROUP_ASSIGNMENT_FOR_ALL).click()
+        expect(self.page.locator(self._ASSIGNMENT_MODAL)).to_be_visible()
+        self.page.locator(f"{self._ADD_TO_GROUPS} + span.select2-container").click()
+        # Select2 sizes this multi-select's search box while the modal is still hidden, so the box
+        # has no width and Playwright will not fill it. The click focuses it, so type instead.
+        self.page.keyboard.type(group_name)
+        self.page.locator(".select2-dropdown").get_by_text(group_name, exact=True).click()
+        expect(self.page.locator(f"{self._ADD_TO_GROUPS} option:checked", has_text=group_name)).to_have_count(1)
+        self._click_and_wait_for_navigation(self._ASSIGNMENT_APPLY)
 
     def click_edit_selected(self):
         """Click Edit Selected and wait for the bulk edit form to load."""

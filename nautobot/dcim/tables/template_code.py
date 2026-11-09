@@ -140,7 +140,7 @@ CABLE_TERMINATIONS_MULTI = """
             <span class="mdi {{ row.info.termination|termination_type_icon }}" title="{{ row.info.termination|meta:'verbose_name'|capfirst }}"></span>
         {% endif %}
         {{ row.info.termination|hyperlinked_object }}
-        {% if value.is_breakout %}
+        {% if value.is_multi_connector %}
             <small class="text-secondary">({{ row.info.side }}{{ row.info.connector }})</small>
         {% endif %}
     {% endif %}

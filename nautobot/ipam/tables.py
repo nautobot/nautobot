@@ -661,6 +661,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         verbose_name="",
     )
 
+    # Map this column to the serializer's own `namespace` field instead of to a path through its `parent` field
+    column_serializer_field_overrides = {"parent__namespace": "namespace"}
+
     def render_pk(self, value, record):
         """Suppress the bulk-select checkbox for non-IPAddress rows (e.g. IPRange or available-IP rows)."""
         if not isinstance(record, IPAddress):
@@ -790,7 +793,7 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     size = tables.Column(accessor="size", orderable=False, verbose_name="Size")
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
-    namespace = tables.Column(linkify=True, accessor="parent__namespace")
+    namespace = tables.Column(linkify=True, order_by=("parent__namespace",))
     tenant = TenantColumn()
     count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")
     is_exclusive = BooleanColumn(verbose_name="Exclusive")

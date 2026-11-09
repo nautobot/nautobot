@@ -13,6 +13,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Object permissions](../../../../user-guide/administration/guides/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../../../core/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Object Metadata](../../../../user-guide/platform-functionality/objectmetadata.md) | ❌ | ✅ | ✅ | ✅ |
+| [Import and export](../../../../user-guide/feature-guides/import-and-export.md) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../../../../user-guide/platform-functionality/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
 | [Contacts](../../../../user-guide/core-data-model/extras/contact.md) and [Teams](../../../../user-guide/core-data-model/extras/team.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
@@ -48,6 +49,12 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 
 +++ 3.3.0 "Opting out of custom fields"
     A model that inherits from `CustomFieldModel` (including any `OrganizationalModel` or `PrimaryModel` subclass) can opt out of custom field support by declaring the class attribute `is_custom_field_model = False`. Custom fields then cannot be defined for that model, although its `_custom_field_data` database column remains.
+
++++ 3.3.0 "Opting models out of import and export"
+    If a specific `BaseModel` subclass should not be importable, the model author can define the class attribute `is_importable_model = False` to opt it out, and its list view then no longer shows the "Import" button. Likewise, a model that should not be exportable can define `is_exportable_model = False`, and its list view then no longer shows the "Export" button. A model that sets `is_exportable_model = False` also can't be exported with an [Export Template](../../../../user-guide/platform-functionality/exporttemplate.md), so it should not declare the `export_templates` feature.
+
++/- 3.3.0 "Import and export restricted to Nautobot models"
+    The "Import Objects" and "Export Object List" system Jobs now accept only content-types for `BaseModel` subclasses (plus Django's `auth.Group`, and for export only, `contenttypes.ContentType`), rather than any installed model.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

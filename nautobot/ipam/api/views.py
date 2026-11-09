@@ -419,7 +419,7 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
 # IP address ranges
 #
 class IPAddressRangeViewSet(NautobotModelViewSet):
-    queryset = IPAddressRange.objects.all()
+    queryset = IPAddressRange.objects.select_related("parent__namespace")
     serializer_class = serializers.IPAddressRangeSerializer
     filterset_class = filters.IPAddressRangeFilterSet
 
@@ -518,7 +518,9 @@ class VLANGroupViewSet(NautobotModelViewSet):
                         requested_vlan_group = None
                         requested_vlan_group_pk = requested_vlan["vlan_group"]
                         try:
-                            requested_vlan_group = VLANGroup.objects.get(pk=requested_vlan_group_pk)
+                            requested_vlan_group = VLANGroup.objects.restrict(request.user, "view").get(
+                                pk=requested_vlan_group_pk
+                            )
                         except VLANGroup.DoesNotExist:
                             return Response(
                                 {"detail": f"VLAN Group with pk {requested_vlan_group_pk} does not exist."},

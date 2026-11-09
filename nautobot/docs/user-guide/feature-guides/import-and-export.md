@@ -9,6 +9,8 @@ From any object list view, under the **Actions** menu, there are two available a
 
 These actions are backed by the built-in system Jobs `Export Object List` and `Import Objects` respectively. Because of this, you must have the _run_ permission for these Jobs as well as the appropriate permissions for the object type you are exporting/importing (see [Permissions](#permissions)) in order to perform these actions. Additionally, each time you perform these actions, because they are Job-backed, the action runs asynchronously (allowing for export/import of quite large data sets without running the risk of your browser HTTP request timing out) and produces a Job Result and corresponding log entries.
 
+These Jobs support the object types of Nautobot and of installed Apps, plus user groups. Content types can be exported but not imported. They do not support models that come from third-party libraries that Nautobot uses, such as the scheduling records of Celery Beat. An App may also opt some of its own object types out as well. If a Job doesn't support an object type, that type doesn't appear in the Job's **Content Type** choices, and the type's list view doesn't display the matching **Import from file** or **Export to file** action.
+
 ## Exporting
 
 From any supported object list view, choose **Export to file** from the **Actions** menu. A modal dialog will open, allowing you to choose the export file format, optionally pick and order the object fields ("id", "name", etc.) to include or exclude from the export, and optionally apply filtering/sorting criteria to scope the export's content. When the Job finishes, you will be presented with the option to download the resulting file.
@@ -276,6 +278,18 @@ Every column or key must be a field of that content type's REST API serializer, 
 
 Fields Nautobot generates rather than stores — `display`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
 
+### Creating, updating, or both
+
++++ 3.3.0
+
+**Import Mode** decides what a record may do with the existing object it [matches](#match-fields):
+
+- **Create/Update**, the default, updates the object a record matches, and creates a new object for a record that matches none.
+- **Create Only** creates a new object for every record. A record that matches an existing object is reported as an error, and nothing is changed for it, so an import meant to add new objects can't overwrite existing ones by mistake. Records are checked against every existing object that you have permission to view, so a matching record is reported as an error even when the match fields aren't unique in Nautobot itself.
+- **Update Only** updates the existing object that each record matches. A record that matches no object is reported as an error rather than created, so an import meant to edit existing objects can't add stray new ones, for example because of a misspelled name. Every record must be matchable, even when the [default match fields](#match-fields) are in use, and an object type with no match fields at all can't be imported in this mode.
+
+A record that its import mode rejects fails like any other invalid row, so whether the rest of the import is kept depends on **Rollback Changes on Failure**, below.
+
 ### If a row fails
 
 **Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back, so nothing is created or updated. Every failing row is still reported, so one run tells you everything that needs fixing. If you disable it, the rows that succeeded are kept, including any updates to existing objects, and you can import the rest later.
@@ -287,7 +301,10 @@ Fields Nautobot generates rather than stores — `display`, `object_type`, `natu
 ```no-highlight
 nautobot-server import_objects ./statuses.yaml --username admin
 nautobot-server import_objects ./devices.csv --username admin --content-type dcim.device --no-rollback
+nautobot-server import_objects ./statuses.yaml --username admin --mode update
 ```
+
+`--mode` takes `create_update` (the default), `create` or `update`, for the three [import modes](#creating-updating-or-both).
 
 As in the UI, `--content-type` may be omitted for a file that declares its own model.
 
@@ -318,6 +335,9 @@ The import log reports each updated object with the fields that changed and thei
 
 Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
 
+!!! tip
+    Any [sensitive field](../../development/core/sensitive-fields.md), such as a user's `password`, can never be used as a match field.
+
 When importing, you can override the match fields for a particular file either by editing the metadata directly before uploading the file, or by explicitly specifying match fields as an input to the "Import Objects" Job. This can be powerful for in-place updates where you know that a given field(s), even though not actually enforced unique by Nautobot itself, happen in your particular use case to be unique identifiers for the existing objects in the system. Overriding the match fields in this case can allow you to specify records in a simpler or more portable way than using a full natural-key field set or using the raw `id` values would.
 
 !!! warning "You own the uniqueness"
@@ -331,7 +351,9 @@ When importing, you can override the match fields for a particular file either b
 | Import (create rows) | Run permission for the `Import Objects` job, plus _add_ permission on the model. |
 | Import (update rows) | Run permission for the `Import Objects` job, plus _change_ permission on the model. |
 
+In the default Create/Update [import mode](#creating-updating-or-both), either _add_ or _change_ permission lets the import start, and each record is then checked against the permission for what it does. Create Only mode requires _add_ permission and Update Only mode requires _change_ permission; without it, the import is refused before any record is read.
+
 Object permissions with constraints apply to imports as they do elsewhere in Nautobot:
 
-- Records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
+- In the Create/Update and Update Only modes, records are matched only against objects that you have permission to change. In Create/Update mode, a record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object. In Update Only mode, such a record is reported as matching no existing object.
 - An updated object must still fall within your _change_ permission's constraints after the update, and a created object must fall within your _add_ permission's constraints. A record that would leave an object outside them is reported as an error, such as "does not have permission to update an object with these attributes", and nothing is saved for it.

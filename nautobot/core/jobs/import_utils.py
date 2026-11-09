@@ -5,13 +5,14 @@ from enum import Enum
 import json
 import re
 
-from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, FieldError, ObjectDoesNotExist, ValidationError
+from django.db.models.constants import LOOKUP_SEP
 from rest_framework import serializers
 import yaml
 
 from nautobot.core.api.import_export import natural_key_lookups_for
 from nautobot.core.constants import CSV_NO_OBJECT
-from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.core.models.sensitive_fields import get_sensitive_field_names
 from nautobot.core.utils.requests import mock_wsgi_request
 
 # A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
@@ -24,20 +25,6 @@ class ImportRowOutcome(Enum):
     CREATED = "created"
     UPDATED = "updated"
     UNCHANGED = "unchanged"
-
-
-def restricted_queryset(model, user, action):
-    """Every object of `model` that `user` may perform `action` (`"view"`, `"add"`, ...) on, unfiltered and unordered.
-
-    A model whose default manager is not one of Nautobot's has no `restrict()` to call: `auth.Group` and
-    `contenttypes.ContentType` are plain Django models, and `users.User`'s manager extends Django's own
-    `UserManager`. Wrapping such a model in a `RestrictedQuerySet` applies object permissions to it all the
-    same, which is what `users.api.views` does for the very same reason.
-    """
-    queryset = model.objects.all()
-    if not hasattr(queryset, "restrict"):
-        queryset = RestrictedQuerySet(model=model)
-    return queryset.restrict(user, action)
 
 
 def import_serializer_context(user):
@@ -86,15 +73,61 @@ def _is_queryset_lookup(queryset, lookup):
     return True
 
 
+def _translate_import_match_field_and_value_to_database_lookup(serializer, field, value):
+    """
+    Return the queryset lookup for one match field and its value.
+
+    See also `BaseModelSerializer.translate_import_match_field_and_value_to_database_lookup`.
+
+    Args:
+        serializer (ModelSerializer): The serializer instance to query, if possible
+        field (str): The name of a specific serializer field
+        value (Any): The value of the serializer field for a given record
+
+    Returns:
+        (dict): ORM `filter()` parameter(s) and their corresponding value(s) to filter the serializer's model by.
+    """
+    if hasattr(serializer, "translate_import_match_field_and_value_to_database_lookup"):
+        return serializer.translate_import_match_field_and_value_to_database_lookup(field, value)
+    # The serializer isn't derived from `BaseModelSerializer` (for example, `CablePathSerializer`),
+    # so filter on the field's source directly.
+    return {serializer.fields[field].source.replace(".", LOOKUP_SEP): value}
+
+
+def _does_lookup_contain_sensitive_field(model, lookup):
+    """Whether `lookup` ends on a field that its model declares in `sensitive_fields`.
+
+    Example:
+        >>> _does_lookup_contain_sensitive_field(User, "password")
+        True
+        >>> _does_lookup_contain_sensitive_field(IPAddress, "parent__namespace")
+        False
+    """
+    *relations, field_name = lookup.split(LOOKUP_SEP)
+    try:
+        for relation in relations:
+            model = model._meta.get_field(relation).related_model
+        return field_name in get_sensitive_field_names(model)
+    except (AttributeError, FieldDoesNotExist):
+        # The lookup isn't a path of model fields. It is a lookup that only the queryset accepts, such as
+        # IPAddress's `address`.
+        return False
+
+
 def _unusable_match_fields(match_fields, serializer):
     """The match fields that aren't a writable, single-valued field of `serializer` that its model can filter on.
 
     A match field has to be something a record gives a value for, and that value has to identify one thing:
-    a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) holds a set. It also
-    has to be something existing records can be looked up by, which a serializer-only field such as
-    IPAddress's write-only `namespace` is not.
+    a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) contains a set. The
+    queryset filter that `_translate_import_match_field_and_value_to_database_lookup()` returns for the field must
+    also use lookups that the model's queryset accepts.
+    A field that exists only on the serializer fails this check, unless the serializer maps it to a lookup.
+
+    A field that the model declares sensitive, such as `User.password`, is never a match field. Otherwise,
+    whether a record matched would tell the user whether some object has the value they gave for that field.
     """
-    queryset = serializer.Meta.model.objects.none()
+    model = serializer.Meta.model
+    queryset = model.objects.none()
     unusable = []
     for field in match_fields:
         if _row_key(field) == "id":
@@ -105,7 +138,12 @@ def _unusable_match_fields(match_fields, serializer):
             or serializer_field.read_only
             or serializer_field.source == "*"
             or isinstance(serializer_field, (serializers.ManyRelatedField, serializers.ListSerializer))
-            or not _is_queryset_lookup(queryset, serializer_field.source.replace(".", "__"))
+        ):
+            unusable.append(field)
+            continue
+        lookups = _translate_import_match_field_and_value_to_database_lookup(serializer, field, None)
+        if not all(_is_queryset_lookup(queryset, lookup) for lookup in lookups) or any(
+            _does_lookup_contain_sensitive_field(model, lookup) for lookup in lookups
         ):
             unusable.append(field)
     return unusable
@@ -117,9 +155,9 @@ def natural_key_match_fields(model, serializer_class):
     A Device's natural key lookups `name`, `tenant__name` and `location__name` (etc.) make the match fields
     `name`, `tenant` and `location`. A `pk` natural key is matched on `id`.
 
-    A serializer whose model's natural key isn't spelled in its own fields declares its match fields instead,
-    as `Meta.import_match_fields`: an IPAddress is keyed on `host`, which its serializer reads only as part
-    of `address`.
+    When a model's natural key doesn't use the serializer's field names, the serializer declares its match
+    fields in `Meta.import_match_fields` instead. For example, an IPAddress's natural key is
+    `parent__namespace` and `host`, which the serializer represents as `namespace` and as part of `address`.
 
     Returns:
         (list): The match fields, or None if the model has no identifiable natural key, or one that the
@@ -134,7 +172,7 @@ def natural_key_match_fields(model, serializer_class):
             return None
         match_fields = []
         for lookup in lookups:
-            head = _row_key(lookup.split("__", 1)[0])
+            head = _row_key(lookup.split(LOOKUP_SEP, 1)[0])
             if head not in match_fields:
                 match_fields.append(head)
     if _unusable_match_fields(match_fields, _match_serializer(serializer_class)):
@@ -186,7 +224,7 @@ def validate_match_fields(match_fields, serializer_class):
             f"Invalid match field(s): {', '.join(invalid)}. "
             "Match fields must be writable fields of the serializer for this content-type that existing records "
             'can be looked up by, such as "name" or "location", not lookups such as "location__name", to-many '
-            'fields such as "tags", or fields that exist only on the serializer.'
+            'fields such as "tags", fields that exist only on the serializer, or sensitive fields such as "password".'
         )
 
 
@@ -230,7 +268,7 @@ def build_match_filter(row_data, match_fields, serializer):
             except serializers.ValidationError as exc:
                 details = exc.detail if isinstance(exc.detail, list) else [exc.detail]
                 raise ValueError(f"Match field {field}: {'; '.join(str(detail) for detail in details)}") from exc
-        params[serializer_field.source.replace(".", "__")] = value
+        params.update(_translate_import_match_field_and_value_to_database_lookup(serializer, field, value))
     return params
 
 
@@ -307,7 +345,7 @@ def change_snapshot(serializer_class, instance):
         key: value
         for key, value in serializer.data.items()
         # A related field is exported as its natural-key lookups (`location__name`), named for the field
-        if not getattr(fields.get(key.split("__", 1)[0]), "read_only", False)
+        if not getattr(fields.get(key.split(LOOKUP_SEP, 1)[0]), "read_only", False)
     }
 
 
@@ -352,7 +390,7 @@ def format_change_diff(before, changed, sensitive_fields=(), write_only_fields=(
 
     def display(field, value):
         # A relation's natural-key lookup reads CSV_NO_OBJECT, whatever the import format, when it has no object
-        if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
+        if value is None or value == "" or (LOOKUP_SEP in field and value == CSV_NO_OBJECT):
             return "∅"
         if isinstance(value, (list, dict)):
             value = json.dumps(value, default=str, ensure_ascii=False)

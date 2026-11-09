@@ -15,3 +15,7 @@ Why are some columns slower? On a technical level, columns that pull data from r
 - Calculated values — values that are not stored directly in the database but instead are calculated dynamically at display time (e.g. Computed Fields, `utilization` on Prefixes and Racks).
 
 These guidelines won’t cover every scenario, but they provide a quick way to estimate the performance impact of enabling a given column.
+
++++ 3.3.0
+
+List view tables also keep their column headers visible while you scroll, as covered in [Table Sticky Headers](table-sticky-headers.md).

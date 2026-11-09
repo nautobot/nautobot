@@ -1,1 +1,0 @@
-Updated dependency `djangorestframework` to `>=3.18.3,<3.19` to mitigate several vulnerabilities.

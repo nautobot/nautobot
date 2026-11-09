@@ -2579,9 +2579,21 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         ip.refresh_from_db()
         self.assertEqual(ip.parent, prefixes[1])
 
-        ip._namespace = namespaces[0]
+        ip.namespace = namespaces[0]
         ip.validated_save()
         self.assertEqual(ip.parent, prefixes[0])
+
+    def test_deprecated_namespace_alias(self):
+        namespace = Namespace.objects.create(name="test_deprecated_namespace_alias")
+        prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=self.status, namespace=namespace)
+        ip = IPAddress.objects.create(address="192.0.2.1/32", status=self.status, namespace=self.namespace)
+
+        with self.assertWarns(DeprecationWarning):
+            ip._namespace = namespace
+        ip.validated_save()
+        self.assertEqual(ip.parent, prefix)
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(ip._namespace, namespace)
 
     def test_change_host(self):
         ip = IPAddress.objects.create(address="192.0.2.1/32", status=self.status, namespace=self.namespace)
