@@ -1,5 +1,7 @@
 from django.contrib import messages
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html, format_html_join
 
@@ -416,75 +418,110 @@ class ProviderNetworkUIViewSet(NautobotUIViewSet):
 class CircuitSwapTerminations(generic.ObjectEditView):
     """
     Swap the A and Z terminations of a circuit.
+
+    This view modifies CircuitTermination records (their `term_side`), so in addition to the `change_circuit`
+    permission derived from `queryset`, the user must hold `change_circuittermination`, and every existing termination
+    on the circuit must be permitted (before and after the swap) by the user's object-level permissions.
     """
 
     queryset = Circuit.objects.all()
+    additional_permissions = ["circuits.change_circuittermination"]
 
-    def get(self, request, *args, **kwargs):
-        circuit = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = ConfirmationForm()
+    def _get_terminations(self, request, circuit):
+        """
+        Return the circuit's (A, Z) terminations, or None if the user may not change all of them.
+        """
+        terminations = CircuitTermination.objects.filter(circuit=circuit)
+        permitted = terminations.restrict(request.user, "change")
+        if permitted.count() != terminations.count():
+            return None
+        return (
+            permitted.filter(term_side=CircuitTerminationSideChoices.SIDE_A).first(),
+            permitted.filter(term_side=CircuitTerminationSideChoices.SIDE_Z).first(),
+        )
+
+    def _render(self, request, circuit, form, circuit_termination_a, circuit_termination_z):
+        return render(
+            request,
+            "circuits/circuit_terminations_swap.html",
+            {
+                "circuit": circuit,
+                "circuit_termination_a": circuit_termination_a,
+                "circuit_termination_z": circuit_termination_z,
+                "form": form,
+                "button_class": "primary",
+                "return_url": circuit.get_absolute_url(),
+            },
+        )
+
+    def _validate(self, request, circuit):
+        """
+        Return (A, Z) terminations if the swap may proceed, else an HttpResponse redirecting with an error message.
+        """
+        terminations = self._get_terminations(request, circuit)
+        if terminations is None:
+            messages.error(
+                request,
+                f"You do not have permission to modify all terminations of circuit {circuit}.",
+            )
+            return redirect("circuits:circuit", pk=circuit.pk)
 
         # Circuit must have at least one termination to swap
-        if not circuit.circuit_termination_a and not circuit.circuit_termination_z:
+        if not any(terminations):
             messages.error(
                 request,
                 f"No terminations have been defined for circuit {circuit}.",
             )
             return redirect("circuits:circuit", pk=circuit.pk)
 
-        return render(
-            request,
-            "circuits/circuit_terminations_swap.html",
-            {
-                "circuit": circuit,
-                "circuit_termination_a": circuit.circuit_termination_a,
-                "circuit_termination_z": circuit.circuit_termination_z,
-                "form": form,
-                "button_class": "primary",
-                "return_url": circuit.get_absolute_url(),
-            },
-        )
+        return terminations
+
+    def get(self, request, *args, **kwargs):
+        circuit = get_object_or_404(self.queryset, pk=kwargs["pk"])
+        result = self._validate(request, circuit)
+        if isinstance(result, HttpResponse):
+            return result
+        return self._render(request, circuit, ConfirmationForm(), *result)
 
     def post(self, request, *args, **kwargs):
         circuit = get_object_or_404(self.queryset, pk=kwargs["pk"])
+        result = self._validate(request, circuit)
+        if isinstance(result, HttpResponse):
+            return result
+        circuit_termination_a, circuit_termination_z = result
+
         form = ConfirmationForm(request.POST)
+        if not form.is_valid():
+            return self._render(request, circuit, form, circuit_termination_a, circuit_termination_z)
 
-        if form.is_valid():
-            circuit_termination_a = CircuitTermination.objects.filter(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A
-            ).first()
-            circuit_termination_z = CircuitTermination.objects.filter(
-                circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_Z
-            ).first()
-
-            if circuit_termination_a and circuit_termination_z:
-                # Use a placeholder to avoid an IntegrityError on the (circuit, term_side) unique constraint
-                with transaction.atomic():
+        try:
+            with transaction.atomic():
+                if circuit_termination_a and circuit_termination_z:
+                    # Use a placeholder to avoid an IntegrityError on the (circuit, term_side) unique constraint
                     circuit_termination_a.term_side = "_"
                     circuit_termination_a.save()
-                    circuit_termination_z.term_side = "A"
+                    circuit_termination_z.term_side = CircuitTerminationSideChoices.SIDE_A
                     circuit_termination_z.save()
-                    circuit_termination_a.term_side = "Z"
+                    circuit_termination_a.term_side = CircuitTerminationSideChoices.SIDE_Z
                     circuit_termination_a.save()
-            elif circuit_termination_a:
-                circuit_termination_a.term_side = "Z"
-                circuit_termination_a.save()
-            else:
-                circuit_termination_z.term_side = "A"
-                circuit_termination_z.save()
+                elif circuit_termination_a:
+                    circuit_termination_a.term_side = CircuitTerminationSideChoices.SIDE_Z
+                    circuit_termination_a.save()
+                else:
+                    circuit_termination_z.term_side = CircuitTerminationSideChoices.SIDE_A
+                    circuit_termination_z.save()
 
-            messages.success(request, f"Swapped terminations for circuit {circuit}.")
+                # Enforce object-level permission constraints on the modified terminations
+                # (e.g. a constraint on `term_side` must still be satisfied after the swap).
+                pks = [t.pk for t in (circuit_termination_a, circuit_termination_z) if t]
+                if CircuitTermination.objects.restrict(request.user, "change").filter(pk__in=pks).count() != len(pks):
+                    raise ObjectDoesNotExist
+        except ObjectDoesNotExist:
+            messages.error(
+                request,
+                f"Swapping terminations for circuit {circuit} would violate your object-level permissions.",
+            )
             return redirect("circuits:circuit", pk=circuit.pk)
 
-        return render(
-            request,
-            "circuits/circuit_terminations_swap.html",
-            {
-                "circuit": circuit,
-                "circuit_termination_a": circuit.circuit_termination_a,
-                "circuit_termination_z": circuit.circuit_termination_z,
-                "form": form,
-                "button_class": "primary",
-                "return_url": circuit.get_absolute_url(),
-            },
-        )
+        messages.success(request, f"Swapped terminations for circuit {circuit}.")
+        return redirect("circuits:circuit", pk=circuit.pk)

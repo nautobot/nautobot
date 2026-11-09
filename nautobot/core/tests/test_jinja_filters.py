@@ -3,7 +3,7 @@ import types
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections
-from django.db.models import Case, Count, IntegerField, Max, Min, Subquery, Sum, Value, When
+from django.db.models import Case, Count, IntegerField, Max, Min, Q, Subquery, Sum, Value, When
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.test import override_settings, TestCase
@@ -332,6 +332,111 @@ class NautobotJinjaFilterTest(TestCase):
                         with self.assertRaises((SecurityError, SensitiveFieldError)):
                             data.render_jinja2(template_code=template_code, context=context)
 
+    def test_render_cannot_retrieve_a_sensitive_field_via_hyperlink_filters(self):
+        """Assert the hyperlink filters cannot be used to display a sensitive field or a private attribute.
+
+        These filters take the name of the attribute to display and read it themselves, outside the
+        sandbox's attribute hook, so they are enforced separately from plain attribute access. A private
+        attribute such as `__dict__` holds every loaded column, sensitive ones included.
+        """
+        user = users_models.User.objects.create_user(
+            username="jinja-hyperlink-filter-testuser",
+            password="probe-password-value",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
+        token = users_models.Token.objects.create(user=user, description="hyperlink filter regression")
+        context = {"user": user, "token": token}
+        for strict in (True, False):
+            for filter_name in ("hyperlinked_object", "hyperlinked_object_target_new_tab"):
+                for template_code in [
+                    f"{{{{ user|{filter_name}('password') }}}}",
+                    f"{{{{ token|{filter_name}('key') }}}}",
+                    f"{{% for t in user.tokens.all() %}}{{{{ t|{filter_name}('key') }}}}{{% endfor %}}",
+                    f"{{{{ user|{filter_name}('__dict__') }}}}",
+                    f"{{{{ token|{filter_name}('__dict__') }}}}",
+                ]:
+                    with self.subTest(strict=strict, template_code=template_code):
+                        with override_settings(STRICT_SENSITIVE_FIELDS=strict):
+                            with self.assertRaises((SecurityError, SensitiveFieldError)):
+                                data.render_jinja2(template_code=template_code, context=context)
+
+    def test_render_cannot_retrieve_a_sensitive_field_via_a_method_that_reads_it_by_name(self):
+        """Assert model and field methods that read a field off an instance by name cannot read a sensitive one.
+
+        `Model.serializable_value()` and the `Field` methods that take an instance read the value themselves,
+        outside the sandbox's attribute hook. A `Field` reads its own name off whatever instance it is given, so
+        a non-sensitive field of another model that shares a sensitive field's name reaches it too. The fields
+        are supplied in the context here, as an App's context or filter could supply one.
+        """
+        user = users_models.User.objects.create_user(
+            username="jinja-read-by-name-testuser",
+            password="probe-password-value",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
+        token = users_models.Token.objects.create(user=user, description="read by name regression")
+        context = {
+            "user": user,
+            "token": token,
+            "password_field": users_models.User._meta.get_field("password"),
+            "key_field": users_models.Token._meta.get_field("key"),
+            "custom_field_key_field": extras_models.CustomField._meta.get_field("key"),
+        }
+        for strict in (True, False):
+            for template_code in [
+                "{{ user.serializable_value('password') }}",
+                "{{ token.serializable_value('key') }}",
+                "{{ token.serializable_value(field_name='key') }}",
+                "{% for t in user.tokens.all() %}{{ t.serializable_value('key') }}{% endfor %}",
+                "{{ password_field.value_from_object(user) }}",
+                "{{ key_field.value_to_string(token) }}",
+                # `CustomField.key` is not sensitive, but it reads `key` off the token it is given.
+                "{{ custom_field_key_field.value_from_object(token) }}",
+            ]:
+                with self.subTest(strict=strict, template_code=template_code):
+                    with override_settings(STRICT_SENSITIVE_FIELDS=strict):
+                        with self.assertRaises((SecurityError, SensitiveFieldError)):
+                            data.render_jinja2(template_code=template_code, context=context)
+
+    def test_render_allows_reading_a_non_sensitive_field_by_name(self):
+        """Assert the read-by-name denial is scoped to sensitive fields, so field introspection keeps working."""
+        user = users_models.User.objects.create_user(username="jinja-read-by-name-allowed-testuser")
+        context = {
+            "user": user,
+            "username_field": users_models.User._meta.get_field("username"),
+            "password_field": users_models.User._meta.get_field("password"),
+        }
+        for template_code, expected in [
+            ("{{ user.serializable_value('username') }}", user.username),
+            ("{{ username_field.value_from_object(user) }}", user.username),
+            # A sensitive field's own metadata is not its value.
+            ("{{ password_field.name }}", "password"),
+        ]:
+            with self.subTest(template_code=template_code):
+                self.assertIn(expected, data.render_jinja2(template_code=template_code, context=context))
+
+    def test_render_meta_filter_returns_only_identifying_metadata(self):
+        """Assert the Jinja `meta` filter returns a model's identifying names and refuses the rest of `_meta`.
+
+        `_meta` holds the model's managers, fields and app registry, each of which leads back into the ORM, so the
+        Jinja filter allows only plain-string attributes that name the model. The Django filter is unaffected.
+        """
+        location = dcim_models.Location.objects.first()
+        context = {"obj": location}
+        for attr, expected in [
+            ("app_label", "dcim"),
+            ("model_name", "location"),
+            ("object_name", "Location"),
+            ("label", "dcim.Location"),
+            ("label_lower", "dcim.location"),
+            ("verbose_name", "location"),
+            ("verbose_name_plural", "locations"),
+        ]:
+            with self.subTest(attr=attr):
+                rendered = data.render_jinja2(template_code=f"{{{{ obj | meta('{attr}') }}}}", context=context)
+                self.assertEqual(rendered, expected)
+        for attr in ["fields", "pk", "db_table", "concrete_fields", "get_field", "__dict__", "not_present"]:
+            with self.subTest(attr=attr):
+                with self.assertRaises(SecurityError):
+                    data.render_jinja2(template_code=f"{{{{ obj | meta('{attr}') }}}}", context=context)
+
     def test_render_checks_a_named_projection_against_the_querysets_model(self):
         """Assert the projection check resolves the model from the queryset, not the manager's attribute.
 
@@ -433,26 +538,61 @@ class NautobotJinjaFilterTest(TestCase):
             with self.subTest(template_code=template_code):
                 self.assertIn("visible-value", data.render_jinja2(template_code=template_code, context=context))
 
-    def test_render_allows_filtering_on_a_sensitive_model_field(self):
-        """Assert the sensitive-field denial does not over-block: filtering by the field is still allowed.
+    def test_render_cannot_filter_on_a_sensitive_field(self):
+        """Assert a template cannot filter, exclude or look up by a sensitive field.
 
-        The contract is that the value is never returned, not that the column cannot be referenced. A
-        filter value is supplied by the template author, so it discloses nothing.
+        A prefix or pattern lookup answers whether any row matches, so repeated lookups rebuild the value
+        one character at a time without it ever being returned. This holds whether the lookup is a keyword
+        argument, sits inside a `Q` object, or reaches the field through a relation from another model.
         """
-        user = users_models.User.objects.create_user(username="jinja-sensitive-filter-testuser")
+        user = users_models.User.objects.create_user(
+            username="jinja-sensitive-filter-testuser",
+            password="probe-password-value",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
         users_models.Token.objects.create(user=user)
-        context = {"obj": user}
-        for template_code in [
-            "{{ obj.tokens.filter(key='not-a-real-key').count() }}",
-            "{{ obj.tokens.exclude(key='not-a-real-key').count() }}",
-            "{{ obj.tokens.all().count() }}",
-            "{{ obj.tokens.values_list('description', flat=True) | list }}",
+        permission = users_models.ObjectPermission.objects.create(
+            name="jinja-sensitive-filter-permission", actions=["view"]
+        )
+        permission.users.add(user)
+        context = {
+            "obj": user,
+            "q": Q(key__startswith="a"),
+            "nested_q": Q(description="unrelated") | ~Q(key__startswith="a"),
+        }
+        for strict in (True, False):
+            for template_code in [
+                "{{ obj.tokens.filter(key='not-a-real-key').count() }}",
+                "{{ obj.tokens.filter(key__startswith='a').exists() }}",
+                "{{ obj.tokens.all().filter(key__istartswith='a').exists() }}",
+                "{{ obj.tokens.exclude(key__regex='^a').count() }}",
+                "{{ obj.tokens.get(key__startswith='') }}",
+                "{{ obj.tokens.filter(**{'key__startswith': 'a'}).exists() }}",
+                "{{ obj.tokens.filter(q).exists() }}",
+                "{{ obj.tokens.exclude(nested_q).count() }}",
+                # A User queryset, reached by traversing a shared object permission.
+                "{{ obj.object_permissions.first().users.filter(tokens__key__startswith='a').exists() }}",
+                "{{ obj.object_permissions.first().users.filter(password__startswith='p').exists() }}",
+            ]:
+                with self.subTest(strict=strict, template_code=template_code):
+                    with override_settings(STRICT_SENSITIVE_FIELDS=strict):
+                        with self.assertRaises((SecurityError, SensitiveFieldError)):
+                            data.render_jinja2(template_code=template_code, context=context)
+
+    def test_render_allows_filtering_on_non_sensitive_fields(self):
+        """Assert the filtering denial is scoped to sensitive lookups, not to the values a template filters by."""
+        user = users_models.User.objects.create_user(username="jinja-non-sensitive-filter-testuser")
+        users_models.Token.objects.create(user=user, description="key")
+        context = {"obj": user, "q": Q(description="key")}
+        for template_code, expected in [
+            # A filter value that happens to name a sensitive field is only a value.
+            ("{{ obj.tokens.filter(description='key').count() }}", "1"),
+            ("{{ obj.tokens.exclude(description__startswith='k').count() }}", "0"),
+            ("{{ obj.tokens.filter(q).count() }}", "1"),
+            ("{{ obj.tokens.all().count() }}", "1"),
+            ("{{ obj.tokens.values_list('description', flat=True) | join(',') }}", "key"),
         ]:
             with self.subTest(template_code=template_code):
-                try:
-                    data.render_jinja2(template_code=template_code, context=context)
-                except (SecurityError, SensitiveFieldError):
-                    self.fail(f"Sensitive-field denial over-blocked a safe template render: {template_code}")
+                self.assertEqual(data.render_jinja2(template_code=template_code, context=context), expected)
 
     def test_context_call_enforces_callable_safety(self):
         """Assert callables invoked through Context.call are subject to the sandbox's is_safe_callable check."""
