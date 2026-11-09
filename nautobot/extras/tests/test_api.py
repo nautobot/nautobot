@@ -3512,6 +3512,44 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_run_job_string_dryrun_does_not_bypass_approval(self, mock_enqueue_job, mock_get_worker_count):
+        """A string `dryrun` value must not bypass a required approval workflow.
+
+        The approval gate must consult the validated (cleaned) value: a raw string such as
+        "false" is truthy and, if read directly from the request, would skip approval entirely.
+        """
+        ApprovalWorkflowDefinition.objects.create(
+            name="Dryrun Bypass Workflow",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+        dryrun_job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        dryrun_job_model.enabled = True
+        # An approval workflow cannot coexist with sensitive variables; force this off for the test.
+        dryrun_job_model.has_sensitive_variables_override = True
+        dryrun_job_model.has_sensitive_variables = False
+        dryrun_job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        mock_enqueue_job.return_value = JobResult.objects.create(name="dryrun-approval-guard", user=self.user)
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        url = self.get_run_url(class_path="dry_run.TestDryRun")
+
+        # "false" is a truthy string; the cleaned DryRunVar value is False, so approval still applies.
+        response = self.client.post(url, {"data": {"dryrun": "false"}}, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # The job must be held for approval, not enqueued for immediate execution.
+        mock_enqueue_job.assert_not_called()
+        scheduled_job = ScheduledJob.objects.filter(job_model=dryrun_job_model).last()
+        self.assertIsNotNone(scheduled_job)
+        self.assertTrue(scheduled_job.associated_approval_workflows.exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_immediate_job_with_no_approval_workflow_defined(self, mock_get_worker_count):
         """
         Run an immediate job with no approval workflow defined.
