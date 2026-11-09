@@ -14,7 +14,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
@@ -1583,7 +1583,7 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
 
     def test_get_joblogentrytable_with_constrained_permission(self):
         """Test that constrained permissions filter log entries correctly."""
-        instance = ArchivedJobResult.objects.filter(job_log_entries__isnull=False).first()
+        instance = ArchivedJobResult.objects.annotate(jl_count=Count("job_log_entries")).filter(jl_count__gte=2).first()
         url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
@@ -1627,7 +1627,9 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
 
     def test_get_console_entries_with_constrained_permission(self):
         """Test that constrained permissions filter console entries correctly."""
-        instance = ArchivedJobResult.objects.filter(job_console_entries__isnull=False).first()
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
         url = reverse("extras:archivedjobresult_job_console_entries", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
@@ -1650,7 +1652,9 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
 
     def test_get_console_entries_with_permission(self):
         """Test full page load for completed job (no polling)."""
-        instance = ArchivedJobResult.objects.filter(job_console_entries__isnull=False).first()
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
         url = reverse("extras:archivedjobresult_job_console_entries", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjobconsoleentry")
         response = self.client.get(url)
@@ -1699,7 +1703,9 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
 
     def test_export_job_console_entries_with_constrained_permission(self):
         """Test that constrained permissions filter console entries correctly."""
-        instance = ArchivedJobResult.objects.filter(job_console_entries__isnull=False).first()
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
         url = reverse("extras:archivedjobresult_export_job_console_entries", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
