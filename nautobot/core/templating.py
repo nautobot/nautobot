@@ -9,12 +9,13 @@ Django ORM's chain from a model instance to a raw database cursor reachable. It 
 directly through `Context.call()`.
 
 This environment also denies access to any field a model declares in `sensitive_fields`, as an
-attribute, as a named queryset projection, and as a projection that names no fields at all,
-which is narrowed to the model's non-sensitive fields.
+attribute, as a value read by name through a model or field method, as a named queryset projection,
+as a queryset lookup, and as a projection that names no fields at all, which is narrowed to the model's
+non-sensitive fields.
 
 To prevent templates from executing arbitrary SQL with database-level privileges, we block access
-to Python modules and app configs, restrict the `meta` filter from returning them, and refuse any
-query expression containing author-supplied SQL.
+to Python modules and app configs, limit the Jinja `meta` filter to the attributes that name a model,
+and refuse any query expression containing author-supplied SQL.
 """
 
 from types import ModuleType
@@ -24,7 +25,7 @@ from django.apps.registry import Apps
 from django.contrib.contenttypes.models import ContentType
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.utils import CursorDebugWrapper, CursorWrapper
-from django.db.models import Model
+from django.db.models import Field, Model, Q
 from django.db.models.expressions import BaseExpression, RawSQL
 from django.db.models.manager import BaseManager, Manager
 from django.db.models.options import Options
@@ -47,7 +48,7 @@ from nautobot.core.models.sensitive_fields import (
 )
 
 # Types that templates must not introspect. Attribute access is denied both on these objects and on any
-# value resolving to them, and the `meta` template filter refuses to return one.
+# value resolving to them.
 # Excludes BaseManager and QuerySet, as these are commonly and legitimately used in templates.
 DANGEROUS_TYPES = (
     Query,
@@ -201,6 +202,23 @@ def deny_sensitive_field_attribute(obj, attribute):
         )
 
 
+def deny_sensitive_field_read_by_name(obj, args, kwargs):
+    """Raise `SecurityError` if a call would read a sensitive field off a model instance by name.
+
+    `Model.serializable_value()` and the `Field` methods that take an instance (`value_from_object()`,
+    `value_to_string()` and so on) read the value with `getattr()` themselves, so the attribute check never
+    sees it. A `Field` reads its own `attname` off whatever instance it is given, so it is the instance's model,
+    not the field's, that decides whether the read is of a sensitive field.
+    """
+    owner = getattr(obj, "__self__", None)
+    if isinstance(owner, Field):
+        for value in (*args, *kwargs.values()):
+            if isinstance(value, Model):
+                deny_sensitive_field_attribute(value, owner.attname)
+    elif isinstance(owner, Model) and getattr(obj, "__name__", None) == "serializable_value":
+        deny_sensitive_field_attribute(owner, args[0] if args else kwargs.get("field_name"))
+
+
 def projection_model(owner):
     """Given an `owner`, return the model whose fields would be selected in a query, or None if not applicable.
 
@@ -225,15 +243,18 @@ def projection_model(owner):
     return None
 
 
-def deny_sensitive_field_arguments(obj, args):
+def deny_sensitive_field_arguments(obj, args, kwargs):
     """Raise `SecurityError` if a Manager/QuerySet method is called with a sensitive field's lookup path.
 
-    Covers the projection route into a sensitive value, `{{ obj.tokens.values_list('key') }}`, which the
-    attribute check cannot see because the value is produced by the query rather than read off an instance.
+    Covers two routes into a sensitive value that the attribute check cannot see, because the value is
+    produced or tested by the query rather than read off an instance:
 
-    Only positional arguments are examined. Keyword arguments to a queryset method are overwhelmingly
-    filter predicates, whose *values* are supplied by the template author and would produce false
-    positives if treated as lookup paths; filtering by a sensitive field is permitted in any case.
+    - Projection, `{{ obj.tokens.values_list('key') }}`, through positional field names.
+    - Filtering, `{{ obj.tokens.filter(key__startswith='a').exists() }}`, through keyword lookups and the
+      lookups inside a positional `Q`. A prefix or pattern lookup answers whether any row matches, so
+      repeated lookups rebuild the value one character at a time without it ever being returned.
+
+    Keyword *values* are not examined: they are literals supplied by the template author, not lookup paths.
 
     A projection that names no fields has nothing here to inspect; `narrow_bare_projection_arguments()`
     covers that case.
@@ -242,18 +263,35 @@ def deny_sensitive_field_arguments(obj, args):
     if model is None:
         return
     for arg in args:
-        if not isinstance(arg, str):
-            continue
-        # `with_sensitive_fields()` carries an opted-in value as an annotation under this prefix. The name
-        # is not a model field, so the lookup-path walk below would not recognize it.
-        if arg.startswith(SENSITIVE_FIELD_ALIAS_PREFIX):
-            raise SecurityError(f"{arg} refers to a sensitive field value and cannot be selected in a template.")
-        try:
-            check_lookup_path(model, arg)
-        except SensitiveFieldError as exc:
-            # Re-raised as SecurityError so a template author sees the sandbox's normal refusal, and so
-            # that callers already handling template security failures keep working.
-            raise SecurityError(str(exc)) from exc
+        if isinstance(arg, Q):
+            _deny_sensitive_q_lookups(model, arg)
+        elif isinstance(arg, str):
+            _deny_sensitive_lookup_path(model, arg)
+    for lookup_path in kwargs:
+        _deny_sensitive_lookup_path(model, lookup_path)
+
+
+def _deny_sensitive_q_lookups(model, q):
+    """Raise `SecurityError` if any lookup in `q`, including those of nested `Q` objects, is sensitive."""
+    for child in q.children:
+        if isinstance(child, Q):
+            _deny_sensitive_q_lookups(model, child)
+        elif isinstance(child, tuple):
+            _deny_sensitive_lookup_path(model, child[0])
+
+
+def _deny_sensitive_lookup_path(model, lookup_path):
+    """Raise `SecurityError` if `lookup_path` resolves to a sensitive field on `model` or any model it traverses."""
+    # `with_sensitive_fields()` carries an opted-in value as an annotation under this prefix. The name
+    # is not a model field, so the lookup-path walk below would not recognize it.
+    if lookup_path.startswith(SENSITIVE_FIELD_ALIAS_PREFIX):
+        raise SecurityError(f"{lookup_path} refers to a sensitive field value and cannot be used in a template.")
+    try:
+        check_lookup_path(model, lookup_path)
+    except SensitiveFieldError as exc:
+        # Re-raised as SecurityError so a template author sees the sandbox's normal refusal, and so
+        # that callers already handling template security failures keep working.
+        raise SecurityError(str(exc)) from exc
 
 
 def narrow_bare_projection_arguments(obj, args):
@@ -351,7 +389,8 @@ class NautobotSandboxedContext(Context):
             raise SecurityError(f"{__obj!r} is not safely callable")
         # Check caller-supplied SQL before arg narrowing below, so it checks the original args.
         deny_caller_supplied_sql(__obj, args, kwargs)
-        deny_sensitive_field_arguments(__obj, args)
+        deny_sensitive_field_read_by_name(__obj, args, kwargs)
+        deny_sensitive_field_arguments(__obj, args, kwargs)
         args = narrow_bare_projection_arguments(__obj, args)
         return super().call(__obj, *args, **kwargs)
 
@@ -369,7 +408,7 @@ class NautobotSandboxedEnvironment(SandboxedEnvironment):
         if isinstance(obj, DANGEROUS_TYPES):
             return False
         # Never hand back a DB/ORM-internal object, regardless of the attribute name used to reach it
-        # (e.g. `.query` -> Query, `.connection` -> BaseDatabaseWrapper, `meta` filter -> Apps).
+        # (e.g. `.query` -> Query, `.connection` -> BaseDatabaseWrapper).
         if isinstance(value, DANGEROUS_TYPES):
             return False
         # Deny reaching a model *class*, whether it is the object being traversed or the value handed back.

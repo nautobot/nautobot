@@ -2120,8 +2120,8 @@ properties:
       loaded from the database, whether read as an attribute or projected through a query.
 
       This setting does **not** affect user-authored Jinja2 templates (Export Templates, Computed Fields,
-      Custom Links, and so on). Those are always denied access to a sensitive field, regardless of this
-      setting.
+      Custom Links, and so on). Those are always denied access to a sensitive field, including filtering
+      on one, regardless of this setting.
     environment_variable: "NAUTOBOT_STRICT_SENSITIVE_FIELDS"
     type: "boolean"
     version_added: "2.4.41"
