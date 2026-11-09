@@ -3532,6 +3532,7 @@ class JobTest(
         dryrun_job_model.validated_save()
 
         mock_get_worker_count.return_value = 1
+        mock_enqueue_job.return_value = JobResult.objects.create(name="dryrun-approval-guard", user=self.user)
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
