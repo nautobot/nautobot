@@ -244,6 +244,22 @@ def render_jobresult_cancel_type(cancel_type):
     )
 
 
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)  # pylint: disable=not-callable
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
 class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
     def should_render(self, context):
         return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
@@ -929,10 +945,14 @@ class ObjectApprovalWorkflowView(generic.GenericView):
 #
 
 
-class ArchivedJobConsoleEntriesTab(object_detail.Tab):
+class ArchivedJobConsoleEntriesTab(object_detail.DistinctViewTab):
     def should_render(self, context):
         if not super().should_render(context):
             return False
+
+        if context.get("console_log_from_run", False):
+            return True
+
         return ArchivedJobConsoleEntry.objects.filter(job_result_id=get_obj_from_context(context).id).exists()
 
 
@@ -959,32 +979,44 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 ],
                 value_transforms={"status": [render_jobresult_status]},
             ),
-            object_detail.ObjectsTablePanel(
+            object_detail.Panel(
                 weight=200,
                 section=object_detail.SectionChoices.FULL_WIDTH,
-                add_button_route=None,
-                body_content_template_path="extras/inc/log_table_filter.html",
+                body_content_template_path="extras/inc/archivedjoblogentry_table_filter.html",
                 body_wrapper_template_path="components/panel/body_wrapper_table.html",
-                enable_related_link=False,
-                related_field_name="job_result",
-                table_attribute="job_log_entries",
-                table_class=tables.ArchivedJobLogEntryTable,
             ),
         ),
+        extra_buttons=[
+            JobResultButton(
+                weight=120,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_archivedjoblogentry"],
+                link_name=lambda ctx: (
+                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_archivedjobconsoleentry"],
+                render_on_tab_id=["job_console_entries"],
+                link_name=lambda ctx: reverse(
+                    "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
+                ),
+            ),
+        ],
         extra_tabs=[
             ArchivedJobConsoleEntriesTab(
                 weight=object_detail.Tab.WEIGHT_ADVANCED_TAB + 50,
+                url_name="extras:archivedjobresult_job_console_entries",
                 tab_id="job_console_entries",
                 label="Console Log",
                 layout=object_detail.LayoutChoices.ONE_OVER_TWO,
-                panels=[
-                    object_detail.Panel(
-                        label="Console Log",
-                        section=SectionChoices.FULL_WIDTH,
-                        weight=100,
-                        body_content_template_path="extras/inc/archivedjobresult_console_log.html",
-                    ),
-                ],
+                panels=[],
                 required_permissions=["extras.view_archivedjobconsoleentry"],
             )
         ],
@@ -1046,6 +1078,127 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
         ),
     )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action in ["retrieve", "job_console_entries", "modal"]:
+            job_class = None
+            if instance and instance.job_model:
+                job_class = instance.job_model.job_class
+            context.update(
+                {
+                    "job": job_class,
+                    "associated_record": None,
+                    "result": instance,
+                    "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
+                }
+            )
+
+        return context
+
+    @action(
+        detail=True,
+        url_path="log-table",
+        url_name="log-table",  # log_table would be better but we're following JobResultUIViewSet.log_table's pattern.
+        custom_view_base_action="view",
+    )
+    def log_table(self, request, pk=None):
+        """Custom action to return a rendered JobLogEntry table for a JobResult."""
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.restrict(request.user, "view").filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.restrict(request.user, "view")
+
+        log_table = tables.ArchivedJobLogEntryTable(data=queryset, user=request.user)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(log_table)
+
+        if request.headers.get("HX-Request"):
+            job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
+
+            context = {
+                "job_result": instance,
+                "job_is_pending": job_is_pending,
+                "has_logs": queryset.exists(),
+                "table_html": log_table.as_html(request),
+                "log_table_url": request.get_full_path(),
+            }
+            response = render(request, "extras/inc/archivedjobresult_log_table_partial.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
+
+        response = HttpResponse(log_table.as_html(request))
+        patch_vary_headers(response, ["HX-Request"])
+        return response
+
+    @action(
+        detail=True,
+        url_path="job-console-entries",
+        url_name="job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_archivedjobconsoleentry"],
+    )
+    def job_console_entries(self, request, pk=None):
+        """Display real-time console logs with live streaming for running jobs."""
+        job_result = self.get_object()
+
+        # Handle HTMX polling for new log entries
+        entries = ArchivedJobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        # Get last entry timestamp for polling initialization
+        last_entry = entries.last()
+
+        context = self.get_extra_context(request, job_result)
+        context.update(
+            {
+                "object": job_result,
+                "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
+                "verbose_name_plural": job_result._meta.verbose_name_plural,
+                "list_url": "extras:archivedjobresult_list",
+                "entries": entries,
+                "breadcrumbs": self.get_breadcrumbs(),
+                "view_action": "detail",
+                "job_is_pending": False,
+                "last_timestamp": last_entry.timestamp.isoformat() if last_entry else now().isoformat(),
+            }
+        )
+        response = render(request, "extras/archivedjobresult_retrieve_console_log.html", context)
+
+        return response
+
+    @action(
+        detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_archivedjobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for an ArchivedJobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = ArchivedJobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = localtime(entry.timestamp).strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
@@ -3998,22 +4151,6 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
         if key == "result" and value is None:
             return helpers.placeholder(value)  # instead of an explicitly rendered `null`
         return super().render_value(key, value, context)
-
-
-class JobResultButton(object_detail.Button):
-    """Custom Button that supports callable link_name and hides invalid buttons."""
-
-    def get_link(self, context):
-        """Resolve the link for this button."""
-        if callable(self.link_name):
-            return self.link_name(context)  # pylint: disable=not-callable
-        return None
-
-    def render(self, context):
-        """Render only if a valid link exists."""
-        if not self.get_link(context):
-            return ""  # Hide button if no link is resolvable
-        return super().render(context)
 
 
 class JobRunButton(JobResultButton):
