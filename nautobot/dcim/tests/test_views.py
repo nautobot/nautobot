@@ -29,6 +29,7 @@ from nautobot.core.testing import (
 from nautobot.core.testing.utils import (
     generate_random_device_asset_tag_of_specified_size,
 )
+from nautobot.data_validation.models import DataCompliance
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -931,6 +932,39 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         </div>
         """
         self.assertContains(response, total_utilization_html, html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_nonracked_devices_table_respects_object_permissions(self):
+        rack = self.racks[0]
+        device_type = DeviceType.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        visible_device = Device.objects.create(
+            name="Visible Non-Racked Device",
+            location=rack.location,
+            rack=rack,
+            position=None,
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+        )
+        hidden_device = Device.objects.create(
+            name="Hidden Non-Racked Device",
+            location=rack.location,
+            rack=rack,
+            position=None,
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+        )
+
+        self.add_permissions("dcim.view_rack")
+        self.add_permissions("dcim.view_device", constraints={"pk": str(visible_device.pk)})
+
+        response = self.client.get(reverse("dcim:rack", args=[rack.pk]))
+        self.assertHttpStatus(response, 200)
+        self.assertContains(response, visible_device.get_absolute_url())
+        self.assertNotContains(response, hidden_device.get_absolute_url())
 
 
 class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -3206,6 +3240,55 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_lldp_neighbors_queries_do_not_grow_with_cabled_interfaces(self):
+        """The LLDP neighbors tab should not query each cabled interface's connected endpoint separately,
+        whether the endpoint is an interface on a virtual chassis member or a circuit termination."""
+        self.add_permissions("dcim.napalm_read_device")
+        device, peer = self.devices[2], self.devices[1]
+        virtual_chassis = VirtualChassis.objects.create(name="LLDP Peer Stack", master=peer)
+        Device.objects.filter(pk=peer.pk).update(virtual_chassis=virtual_chassis, vc_position=1)
+        provider = Provider.objects.create(name="LLDP Provider")
+        circuit_type = CircuitType.objects.create(name="LLDP Circuit Type")
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        interface_status = self.interfaces[0].status
+        cable_status = Status.objects.get(name="Connected")
+        url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
+
+        def create_interface(parent, name):
+            return Interface.objects.create(
+                device=parent, name=name, type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+
+        query_counts = []
+        for i in range(1, 4):
+            Cable.objects.create(
+                termination_a=create_interface(device, f"LLDP {i}"),
+                termination_b=create_interface(peer, f"LLDP Peer {i}"),
+                status=cable_status,
+            )
+            circuit = Circuit.objects.create(
+                provider=provider, circuit_type=circuit_type, cid=f"LLDP Circuit {i}", status=circuit_status
+            )
+            Cable.objects.create(
+                termination_a=create_interface(device, f"LLDP Circuit {i}"),
+                termination_b=CircuitTermination.objects.create(
+                    circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=device.location
+                ),
+                status=cable_status,
+            )
+            # Warm shared caches before counting.
+            self.client.get(url)
+            with CaptureQueriesContext(connection) as queries:
+                response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, f"LLDP Peer {i}")
+            self.assertContains(response, 'data-chassis="LLDP Peer Stack"', count=i)
+            self.assertContains(response, f"LLDP Provider LLDP Circuit {i}")
+            query_counts.append(len(queries))
+
+        self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_primary_ips(self):
         """Test assigning a primary IP to a device."""
         self.add_permissions("dcim.change_device")
@@ -3491,6 +3574,30 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(ipaddresses),
                 sorted(interface_ips),
             )
+
+    def test_data_compliance_tab(self):
+        """A Module with compliance results gets a Data Compliance tab that lists them, rather than the main tab content."""
+        self.add_permissions("dcim.view_module", "data_validation.view_datacompliance")
+        module = Module.objects.first()
+        DataCompliance.objects.create(
+            compliance_class_name="ModuleSerialRule",
+            content_type=ContentType.objects.get_for_model(Module),
+            object_id=module.pk,
+            validated_object_str=str(module),
+            validated_attribute="serial",
+            message="Module serial is not compliant.",
+            valid=False,
+        )
+        data_compliance_url = module.get_data_compliance_url()
+
+        response = self.client.get(module.get_absolute_url())
+        self.assertBodyContains(response, f'href="{data_compliance_url}"')
+        self.assertBodyContains(response, "<td>Installed in</td>", html=True)
+
+        response = self.client.get(data_compliance_url)
+        self.assertBodyContains(response, "Module serial is not compliant.")
+        # The main tab's attribute panel is not rendered on this tab
+        self.assertNotContains(response, "<td>Installed in</td>", html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):

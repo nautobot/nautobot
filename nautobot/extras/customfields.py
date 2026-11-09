@@ -1,7 +1,6 @@
 import contextlib
 from datetime import date
 from logging import getLogger
-import sys
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -74,7 +73,7 @@ def _generate_bulk_object_changes(queryset, job_logger=logger):
     if change_context is None:
         return
 
-    print("Creating deferred ObjectChange records for bulk operation...", file=sys.stderr)
+    job_logger.debug("Creating deferred ObjectChange records for bulk operation...")
 
     # Note: we use change_logging() here instead of web_request_context() because we don't want these change records to
     #       trigger jobhooks and webhooks.
@@ -125,7 +124,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, job_logger=l
                     extra={"object": field},
                 )
             else:
-                print(f"No {ct.model} objects had value {old_value!r} for custom field `{field.key}`.", file=sys.stderr)
+                job_logger.debug("No %s objects had value %r for custom field `%s`.", ct.model, old_value, field.key)
             if count:
                 # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
                 _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
@@ -220,9 +219,11 @@ def delete_custom_field_data(field_key, content_type_pk_set, verbose=False, job_
                     display,
                 )
             else:
-                print(
-                    f"cf_cleanup.orphan_sweep: Deleted custom field `{field_key}` values from {count} {ct.model} object(s).",
-                    file=sys.stderr,
+                job_logger.debug(
+                    "cf_cleanup.orphan_sweep: Deleted custom field `%s` values from %d %s object(s).",
+                    field_key,
+                    count,
+                    ct.model,
                 )
         else:
             job_logger.debug("No objects had values for custom field `%s` on %s.", field_key, ct.model)
@@ -667,9 +668,10 @@ def provision_field(field_id, content_type_pk_set, dryrun=False, verbose=False, 
                 display,
             )
         elif dryrun:
-            print(
-                f"cf_cleanup.provision: No objects to provision for `{field.key}` on the `{ct.model}` model.",
-                file=sys.stderr,
+            job_logger.debug(
+                "cf_cleanup.provision: No objects to provision for `%s` on the `%s` model.",
+                field.key,
+                ct.model,
             )
         count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, field.default))
         if count:
@@ -695,9 +697,10 @@ def provision_field(field_id, content_type_pk_set, dryrun=False, verbose=False, 
             # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
             _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
         elif not dryrun:
-            print(
-                f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on the `{ct.model}` model.",
-                file=sys.stderr,
+            job_logger.debug(
+                "cf_cleanup.provision: No objects needed provisioning for `%s` on the `%s` model.",
+                field.key,
+                ct.model,
             )
 
         # If the field has a scope_filter, out-of-scope objects also need the key initialized to

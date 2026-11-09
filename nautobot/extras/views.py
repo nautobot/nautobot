@@ -2513,9 +2513,10 @@ class JobUIViewSet(NautobotUIViewSet):
     )
 
     def get_object(self):
-        # Reload the job class to ensure we have the latest version
         obj = super().get_object()
-        if self.action == "update":
+        # Edits always reload to pick up the latest Job code. The detail view reloads only when this process has
+        # not imported the Job yet, since JOBS_ROOT and Git repository Jobs are not loaded at startup.
+        if self.action == "update" or (self.action == "retrieve" and obj.installed and obj.job_class is None):
             get_job(obj.class_path, reload=True)
         return obj
 

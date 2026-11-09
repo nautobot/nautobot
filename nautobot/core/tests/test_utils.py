@@ -15,6 +15,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import override_settings, tag
+import redis.exceptions
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -24,7 +25,13 @@ from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, deprecation, filtering, lookup, querysets, requests
-from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key, get_request_cache, request_cache
+from nautobot.core.utils.cache import (
+    cache_get_or_set,
+    construct_cache_key,
+    get_request_cache,
+    invalidate_cache,
+    request_cache,
+)
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import (
     check_name_safe_to_import_privately,
@@ -239,6 +246,37 @@ class CacheGetOrSetTest(TestCase):
         cache_hit_callback.reset_mock()
         cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
         cache_hit_callback.assert_called_once_with(True)
+
+
+class InvalidateCacheTest(TestCase):
+    """
+    Validate the operation of `invalidate_cache()`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.cache_key = f"nautobot.core.tests.invalidate_cache.{uuid.uuid4()}"
+        self.pattern_key = f"{self.cache_key}.pattern(model=dcim.location)"
+        self.addCleanup(cache.delete_many, [self.cache_key, self.pattern_key])
+
+    def test_invalidates_immediately_and_again_on_commit(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            cache.set(self.cache_key, "old value")
+            cache.set(self.pattern_key, "old value")
+            invalidate_cache(keys=[self.cache_key], patterns=[f"{self.cache_key}.pattern(*)"])
+            # The writer's own transaction must not see the old value.
+            self.assertIsNone(cache.get(self.cache_key))
+            self.assertIsNone(cache.get(self.pattern_key))
+            # A concurrent reader that queried the database before the commit re-caches the old value.
+            cache.set(self.cache_key, "stale value")
+            cache.set(self.pattern_key, "stale value")
+        self.assertIsNone(cache.get(self.cache_key))
+        self.assertIsNone(cache.get(self.pattern_key))
+
+    def test_redis_connection_errors_are_suppressed(self):
+        with mock.patch.object(cache, "delete", side_effect=redis.exceptions.ConnectionError):
+            with self.captureOnCommitCallbacks(execute=True):
+                invalidate_cache(keys=[self.cache_key])
 
 
 class DictToFilterParamsTest(TestCase):

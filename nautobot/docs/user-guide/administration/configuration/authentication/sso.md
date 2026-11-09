@@ -581,6 +581,7 @@ the following in your settings:
 ```python
 SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_names",
     "social_core.pipeline.social_auth.social_uid",
     "social_core.pipeline.social_auth.auth_allowed",
     "social_core.pipeline.social_auth.social_user",
@@ -686,6 +687,7 @@ Setting `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true` installs the built-in functio
 ```python
 SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_names",
     "social_core.pipeline.social_auth.social_uid",
     "social_core.pipeline.social_auth.auth_allowed",
     "social_core.pipeline.social_auth.social_user",
