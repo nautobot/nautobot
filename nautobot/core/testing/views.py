@@ -24,7 +24,6 @@ from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
-import regex
 from tree_queries.models import TreeNode
 
 from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
@@ -2135,8 +2134,9 @@ class ViewTestCases:
             }
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
-            with self.assertRaisesRegex(regex.error, "invalid group reference"):
-                self.client.post(self._get_url("bulk_rename"), data)
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("replace", response.context["form"].errors)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):

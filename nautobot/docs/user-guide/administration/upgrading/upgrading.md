@@ -89,7 +89,7 @@ As with all dependencies, we would recommend that you follow usual industry best
     Support for Python 3.10 was removed.
 
 --- 3.1.0
-    - Support for versions of PostgreSQL older than 14.0 was removed.
+    Support for versions of PostgreSQL older than 14.0 was removed.
 
 --- 3.2.9 "Dropped support for Python 3.10"
     Support for Python 3.10 was removed.
