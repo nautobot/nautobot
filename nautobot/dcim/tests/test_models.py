@@ -560,6 +560,57 @@ class RearPortTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, Mode
 class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
     model = FrontPortTemplate
 
+    def test_missing_rear_port_template(self):
+        for parent_field in ("device_type", "module_type"):
+            for clean_method in ("clean", "full_clean"):
+                with self.subTest(parent_field=parent_field, clean_method=clean_method):
+                    instance = self.model(
+                        **{parent_field: getattr(self, parent_field)}, name="F1", type=PortTypeChoices.TYPE_LC_UPC
+                    )
+                    with self.assertRaises(ValidationError) as error:
+                        getattr(instance, clean_method)()
+                    self.assertIn("A rear port must be specified.", error.exception.message_dict["rear_port_template"])
+
+    def test_rear_port_template_parent_mismatch(self):
+        for parent_field in ("device_type", "module_type"):
+            with self.subTest(parent_field=parent_field):
+                parent = getattr(self, parent_field)
+                other_parent = type(parent).objects.exclude(pk=parent.pk).first()
+                rear_port = RearPortTemplate(
+                    **{parent_field: other_parent}, name="R1", type=PortTypeChoices.TYPE_MPO, positions=12
+                )
+                instance = self.model(
+                    **{parent_field: parent}, name="F1", type=PortTypeChoices.TYPE_LC_UPC, rear_port_template=rear_port
+                )
+                with self.assertRaisesRegex(
+                    ValidationError, f"must belong to the same {parent_field.replace('_', ' ')}"
+                ):
+                    instance.clean()
+
+    def test_unsaved_rear_port_template(self):
+        rear_port = RearPortTemplate(
+            device_type=self.device_type, name="R1", type=PortTypeChoices.TYPE_MPO, positions=12
+        )
+        instance = self.model(
+            device_type=self.device_type, name="F1", type=PortTypeChoices.TYPE_LC_UPC, rear_port_template=rear_port
+        )
+        instance.clean()
+        instance.rear_port_position = 13
+        with self.assertRaisesRegex(ValidationError, "has only 12 positions"):
+            instance.clean()
+
+    def test_null_rear_port_position(self):
+        instance = self.model(
+            device_type=self.device_type,
+            name="F1",
+            type=PortTypeChoices.TYPE_LC_UPC,
+            rear_port_template=self.device_rear_port,
+            rear_port_position=None,
+        )
+        with self.assertRaises(ValidationError) as error:
+            instance.full_clean()
+        self.assertIn("rear_port_position", error.exception.message_dict)
+
     @classmethod
     def setUpTestData(cls):
         cls.module_type = ModuleType.objects.filter(rear_port_templates__isnull=False).first()
