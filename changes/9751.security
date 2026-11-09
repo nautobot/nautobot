@@ -1,1 +1,0 @@
-Fixed the circuit "Swap Terminations" view not enforcing the `circuits.change_circuittermination` permission or object-level permission constraints on the circuit terminations being modified.
