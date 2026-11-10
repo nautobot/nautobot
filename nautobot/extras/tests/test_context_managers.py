@@ -7,11 +7,15 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.core.celery import app
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.testing import get_job_class_and_model, TransactionTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    Interface,
     Location,
     LocationType,
     Manufacturer,
@@ -24,8 +28,9 @@ from nautobot.extras.context_managers import (
     deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
-from nautobot.extras.models import Contact, ContactAssociation, JobHook, Note, Role, Status, Webhook
+from nautobot.extras.models import Contact, ContactAssociation, JobHook, Note, Role, Status, Tag, Webhook
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
+from nautobot.tenancy.models import Tenant, TenantGroup
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -280,16 +285,179 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_CREATE)
 
-    def test_delete(self):
-        """Test that deletes raise an exception"""
+    def test_create_then_delete_of_taggable_object(self):
+        """Test that a create followed by a delete of a taggable object is logged as two changes"""
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        with self.assertRaises(ValueError):
-            with web_request_context(self.user):
-                with deferred_change_logging_for_bulk_operation():
-                    location = Location(name="Test Location 1", location_type=location_type, status=location_status)
-                    location.save()
-                    location.delete()
+        tag = Tag.objects.create(name="Deferred Create Delete Tag")
+        tag.content_types.add(ContentType.objects.get_for_model(Location))
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                location = Location(name="Test Location 1", location_type=location_type, status=location_status)
+                location.save()
+                location.tags.add(tag)
+                location_pk = location.pk
+                location.delete()
+
+        oc_list = get_changes_for_model(Location).filter(request_id=change_id).order_by("time")
+        self.assertEqual(
+            [oc.action for oc in oc_list],
+            [ObjectChangeActionChoices.ACTION_CREATE, ObjectChangeActionChoices.ACTION_DELETE],
+        )
+        for oc in oc_list:
+            self.assertEqual(oc.changed_object_id, location_pk)
+            self.assertEqual(oc.object_data_v2["id"], str(location_pk))
+        self.assertEqual(oc_list[1].object_data["tags"], [tag.name])
+
+    def test_delete_of_taggable_object(self):
+        """Test that deleting a taggable object under deferred change logging logs its id, url and tags"""
+        tag = Tag.objects.create(name="Deferred Delete Tag")
+        tag.content_types.add(ContentType.objects.get_for_model(Tenant))
+        tenant = Tenant.objects.create(name="Deferred Delete Tenant")
+        tenant.tags.add(tag)
+        tenant_pk = tenant.pk
+        expected_v2 = serialize_object_v2(tenant)
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                tenant.delete()
+
+        oc = get_changes_for_model(Tenant).get(request_id=change_id)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(oc.changed_object_id, tenant_pk)
+        self.assertEqual(oc.object_data["tags"], [tag.name])
+        self.assertEqual(oc.object_data_v2["id"], str(tenant_pk))
+        self.assertEqual(oc.object_data_v2["url"], expected_v2["url"])
+        self.assertEqual(len(oc.object_data_v2["tags"]), 1)
+
+    def test_delete_of_non_taggable_object(self):
+        """Test that deleting a non-taggable object under deferred change logging logs its id and url"""
+        tenant_group = TenantGroup.objects.create(name="Deferred Delete Tenant Group")
+        tenant_group_pk = tenant_group.pk
+        expected_v2 = serialize_object_v2(tenant_group)
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                tenant_group.delete()
+
+        oc = get_changes_for_model(TenantGroup).get(request_id=change_id)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(oc.changed_object_id, tenant_group_pk)
+        self.assertEqual(oc.object_data_v2["id"], str(tenant_group_pk))
+        self.assertEqual(oc.object_data_v2["url"], expected_v2["url"])
+
+    def test_update_then_delete(self):
+        """Test that an update followed by a delete under deferred change logging is logged as a single delete"""
+        tenant_group = TenantGroup.objects.create(name="Deferred Update Delete Tenant Group")
+        tenant_group_pk = tenant_group.pk
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                tenant_group.description = "changed"
+                tenant_group.save()
+                tenant_group.delete()
+
+        oc = get_changes_for_model(TenantGroup).get(request_id=change_id)
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(oc.changed_object_id, tenant_group_pk)
+        self.assertEqual(oc.object_data_v2["id"], str(tenant_group_pk))
+
+    def test_create_then_delete_of_non_taggable_object(self):
+        """Test that a create followed by a delete under deferred change logging is logged as two changes"""
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                tenant_group = TenantGroup.objects.create(name="Deferred Create Delete Tenant Group")
+                tenant_group_pk = tenant_group.pk
+                tenant_group.delete()
+
+        oc_list = get_changes_for_model(TenantGroup).filter(request_id=change_id).order_by("time")
+        self.assertEqual(
+            [oc.action for oc in oc_list],
+            [ObjectChangeActionChoices.ACTION_CREATE, ObjectChangeActionChoices.ACTION_DELETE],
+        )
+        for oc in oc_list:
+            self.assertEqual(oc.changed_object_id, tenant_group_pk)
+            self.assertEqual(oc.object_data_v2["id"], str(tenant_group_pk))
+
+    def test_delete_with_cascade(self):
+        """Test that components deleted by cascade under deferred change logging are logged with their parent"""
+        device = Device.objects.create(
+            name="Deferred Cascade Device",
+            device_type=DeviceType.objects.first(),
+            role=Role.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+            location=Location.objects.filter(
+                location_type__content_types=ContentType.objects.get_for_model(Device)
+            ).first(),
+        )
+        device_pk = device.pk
+        interface_status = Status.objects.get_for_model(Interface).first()
+        for i in range(2):
+            Interface.objects.create(
+                device=device, name=f"deferred{i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+        interface_pks = set(device.interfaces.values_list("pk", flat=True))
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                device.delete()
+
+        device_oc = get_changes_for_model(Device).get(request_id=change_id)
+        self.assertEqual(device_oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(device_oc.changed_object_id, device_pk)
+        self.assertEqual(device_oc.object_data_v2["id"], str(device_pk))
+        interface_ocs = get_changes_for_model(Interface).filter(request_id=change_id)
+        self.assertEqual({oc.changed_object_id for oc in interface_ocs}, interface_pks)
+        for oc in interface_ocs:
+            self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+            self.assertEqual(oc.object_data_v2["id"], str(oc.changed_object_id))
+            self.assertEqual(oc.related_object_type, ContentType.objects.get_for_model(Device))
+            self.assertEqual(oc.related_object_id, device_pk)
+
+    def test_delete_children_then_parent(self):
+        """Test that components deleted before their parent under deferred change logging are logged with their parent"""
+        device = Device.objects.create(
+            name="Deferred Children Then Parent Device",
+            device_type=DeviceType.objects.first(),
+            role=Role.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+            location=Location.objects.filter(
+                location_type__content_types=ContentType.objects.get_for_model(Device)
+            ).first(),
+        )
+        device_pk = device.pk
+        Interface.objects.create(
+            device=device,
+            name="deferred0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=Status.objects.get_for_model(Interface).first(),
+        )
+        interface_pks = set(device.interfaces.values_list("pk", flat=True))
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            with deferred_change_logging_for_bulk_operation():
+                # Interfaces fetched through the device share its instance, whose pk is cleared by device.delete()
+                for interface in device.interfaces.all():
+                    interface.delete()
+                device.delete()
+
+        device_oc = get_changes_for_model(Device).get(request_id=change_id)
+        self.assertEqual(device_oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertEqual(device_oc.changed_object_id, device_pk)
+        interface_ocs = get_changes_for_model(Interface).filter(request_id=change_id)
+        self.assertEqual({oc.changed_object_id for oc in interface_ocs}, interface_pks)
+        for oc in interface_ocs:
+            self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
+            self.assertEqual(oc.related_object_type, ContentType.objects.get_for_model(Device))
+            self.assertEqual(oc.related_object_id, device_pk)
 
     def test_bulk_delete_has_user_in_change_log(self):
         """Test that the bulk delete operation adds the user to the change log"""
@@ -333,6 +501,22 @@ class BulkEditDeleteChangeLogging(TestCase):
         for oc in delete_changes:
             self.assertEqual(oc.user, self.user)
             self.assertEqual(oc.user_name, self.user.username)
+
+    def test_bulk_delete_serializes_each_object_once(self):
+        """Test that bulk delete does not also serialize deleted objects in the pre_delete signal handler"""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Parent BulkDelete", location_type=location_type, status=location_status)
+        Location.objects.create(name="Child A", location_type=location_type, status=location_status, parent=parent)
+        Location.objects.create(name="Child B", location_type=location_type, status=location_status, parent=parent)
+
+        with mock.patch.object(
+            Location, "to_objectchange", autospec=True, side_effect=Location.to_objectchange
+        ) as mock_to_objectchange:
+            with web_request_context(self.user):
+                bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=parent.pk))
+
+        self.assertEqual(mock_to_objectchange.call_count, 3)
 
     def test_bulk_delete_logs_contact_associations(self):
         """Bulk delete should log an ObjectChange for ContactAssociations the receiver cleans up."""
@@ -461,6 +645,7 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertEqual(len(oc_list_2) - len(oc_list_1), 1)
         self.assertEqual(oc_list_2[0].action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertIsNotNone(oc_list_2[0].changed_object_id)
+        self.assertEqual(oc_list_2[0].object_data_v2["id"], str(oc_list_2[0].changed_object_id))
         self.assertEqual(oc_list_2[0].user, self.user)
         self.assertEqual(oc_list_2[0].user_name, self.user.username)
 

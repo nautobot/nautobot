@@ -37,6 +37,7 @@ class ChangeContext:
     """
 
     defer_object_changes = False  # advanced usage, for creating object changes in bulk
+    skip_deleted_object_changes = False  # advanced usage, set when the caller creates delete object changes itself
 
     def __init__(
         self,
@@ -112,19 +113,17 @@ class ChangeContext:
             create_object_changes = []
             for key in self._object_change_batch(batch_size):
                 for entry in self.deferred_object_changes[key]:
-                    objectchange = entry["instance"].to_objectchange(entry["action"])
+                    # Entries for deleted objects carry an ObjectChange built before the object was deleted
+                    if "objectchange" in entry:
+                        objectchange = entry["objectchange"]
+                    else:
+                        objectchange = entry["instance"].to_objectchange(entry["action"])
                     if objectchange is not None:
                         objectchange.user = entry["user"]
                         objectchange.user_name = objectchange.user.username
                         objectchange.request_id = self.change_id
                         objectchange.change_context = self.context
                         objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                        if not objectchange.changed_object_id:  # changed_object was deleted
-                            # Clear out the GenericForeignKey to keep Django from complaining about an unsaved object:
-                            objectchange.changed_object = None
-                            # Set the component fields individually:
-                            objectchange.changed_object_id = entry.get("changed_object_id")
-                            objectchange.changed_object_type = entry.get("changed_object_type")
                         create_object_changes.append(objectchange)
                 self.deferred_object_changes.pop(key, None)
             ObjectChange.objects.bulk_create(create_object_changes, batch_size=batch_size)
