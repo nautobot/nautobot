@@ -1,0 +1,2 @@
+Changed dynamic dropdowns in forms to sort choices by name by default for models whose default ordering groups records by a related object.
+Changed the Circuit dropdown in the Circuit Termination filter form to sort by circuit ID.

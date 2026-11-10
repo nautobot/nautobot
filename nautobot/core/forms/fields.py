@@ -18,6 +18,7 @@ from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
+from tree_queries.models import TreeNode
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
@@ -491,7 +492,8 @@ class DynamicModelChoiceMixin:
     """
     Args:
         display_field (str): The name of the attribute of an API response object to display in the selection list
-        query_params (Optional[dict]): Additional key/value pairs to attach to the API request
+        query_params (Optional[dict]): Additional key/value pairs to attach to the API request. If no `sort` is given,
+            choices are sorted by `name` where appropriate for the model (see `_sort_by_name()`).
         initial_params (Optional[dict]): Child field references to use for selecting a parent field's initial value
         null_option (Optional[str]): The string used to represent a null selection (if any)
         disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
@@ -524,6 +526,9 @@ class DynamicModelChoiceMixin:
         self.query_params = query_params or {}
         # Default to "exclude_m2m=true" for improved performance, if not otherwise specified
         self.query_params.setdefault("exclude_m2m", "true")
+        queryset = kwargs.get("queryset")
+        if queryset is not None and "sort" not in self.query_params and self._sort_by_name(queryset.model):
+            self.query_params["sort"] = "name"
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
@@ -537,6 +542,25 @@ class DynamicModelChoiceMixin:
         self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def _sort_by_name(model):
+        """
+        Whether dropdown choices for `model` should be sorted by `name` rather than by the model's default ordering.
+
+        A model's default ordering often groups records by a parent object (e.g. `Tenant` by `tenant_group`) that
+        isn't shown in the dropdown, so the choices look unsorted. Models whose ordering is deliberate keep it:
+        tree models (ordered by hierarchy, displayed with their ancestry), models with a natural-ordering `_name`
+        field (so that "eth2" sorts before "eth10"), and models ordered by a user-defined `weight`. Models already
+        ordered by `name` alone need no explicit sort.
+        """
+        field_names = {field.name for field in model._meta.concrete_fields}
+        if "name" not in field_names or "_name" in field_names:
+            return False
+        if issubclass(model, TreeNode):
+            return False
+        ordering = list(model._meta.ordering)
+        return ordering != ["name"] and "weight" not in ordering
 
     @property
     def embedded_create_permissions(self):
