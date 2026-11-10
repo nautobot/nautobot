@@ -11,6 +11,7 @@ router.register("cloud-network-prefix-assignments", views.CloudNetworkPrefixAssi
 router.register("cloud-networks", views.CloudNetworkViewSet)
 router.register("cloud-resource-groups", views.CloudResourceGroupViewSet)
 router.register("cloud-resource-types", views.CloudResourceTypeViewSet)
+router.register("cloud-service-ip-address-assignments", views.CloudServiceIPAddressAssignmentViewSet)
 router.register("cloud-service-network-assignments", views.CloudServiceNetworkAssignmentViewSet)
 router.register("cloud-services", views.CloudServiceViewSet)
 

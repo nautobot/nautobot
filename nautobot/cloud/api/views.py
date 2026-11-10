@@ -54,3 +54,9 @@ class CloudServiceNetworkAssignmentViewSet(ModelViewSet):
     queryset = models.CloudServiceNetworkAssignment.objects.all()
     serializer_class = serializers.CloudServiceNetworkAssignmentSerializer
     filterset_class = filters.CloudServiceNetworkAssignmentFilterSet
+
+
+class CloudServiceIPAddressAssignmentViewSet(ModelViewSet):
+    queryset = models.CloudServiceIPAddressAssignment.objects.all()
+    serializer_class = serializers.CloudServiceIPAddressAssignmentSerializer
+    filterset_class = filters.CloudServiceIPAddressAssignmentFilterSet

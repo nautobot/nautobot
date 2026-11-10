@@ -1,5 +1,6 @@
 """Filtering for the vpn models."""
 
+from nautobot.cloud.models import CloudService
 from nautobot.core.filters import BaseFilterSet, MultiValueCharFilter, NaturalKeyOrPKMultipleChoiceFilter, SearchFilter
 from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.models import Device, Interface
@@ -203,6 +204,7 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
             "device__name": "icontains",
             "source_interface__name": "icontains",
             "source_fqdn": "icontains",
+            "cloud_service__name": "icontains",
         }
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
@@ -223,6 +225,11 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         queryset=Interface.objects.filter(type="tunnel"),
         to_field_name="name",
         label="Tunnel Interface (ID or name)",
+    )
+    cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudService.objects.all(),
+        to_field_name="name",
+        label="Cloud Service (ID or name)",
     )
     endpoint_a_vpn_tunnels = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNTunnel.objects.all(),

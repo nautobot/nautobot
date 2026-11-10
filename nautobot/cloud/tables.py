@@ -247,6 +247,11 @@ class CloudServiceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         url_params={"cloud_services": "pk"},
         verbose_name="Cloud Networks",
     )
+    ip_address_count = LinkedCountColumn(
+        viewname="ipam:ipaddress_list",
+        url_params={"cloud_services": "pk"},
+        verbose_name="IP Addresses",
+    )
     tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
 
@@ -264,6 +269,7 @@ class CloudServiceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "role",
             "tenant",
             "cloud_network_count",
+            "ip_address_count",
             "tags",
             "actions",
         )
@@ -276,5 +282,6 @@ class CloudServiceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "location",
             "status",
             "cloud_network_count",
+            "ip_address_count",
             "actions",
         )

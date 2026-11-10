@@ -37,7 +37,7 @@ from nautobot.extras.forms import (
     TagsBulkEditFormMixin,
 )
 from nautobot.extras.models import SecretsGroup
-from nautobot.ipam.models import Namespace, Prefix
+from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 
@@ -484,6 +484,11 @@ class CloudServiceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         queryset=CloudResourceType.objects.all(),
         query_params={"content_types": [CloudService._meta.label_lower]},
     )
+    ip_addresses = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(),
+        required=False,
+        label="IP addresses",
+    )
 
     class Meta:
         model = CloudService
@@ -495,6 +500,7 @@ class CloudServiceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "cloud_account",
             "cloud_resource_group",
             "cloud_networks",
+            "ip_addresses",
             "location",
             "status",
             "role",

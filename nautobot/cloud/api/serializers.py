@@ -70,3 +70,9 @@ class CloudServiceNetworkAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = models.CloudServiceNetworkAssignment
         fields = "__all__"
+
+
+class CloudServiceIPAddressAssignmentSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = models.CloudServiceIPAddressAssignment
+        fields = "__all__"

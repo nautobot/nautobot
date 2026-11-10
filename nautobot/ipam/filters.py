@@ -7,7 +7,7 @@ from django.db.models import Exists, OuterRef, Q
 import django_filters
 import netaddr
 
-from nautobot.cloud.models import CloudNetwork
+from nautobot.cloud.models import CloudNetwork, CloudService
 from nautobot.core.filters import (
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
@@ -466,6 +466,11 @@ class IPAddressFilterSet(
     parent = ModelMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
+    )
+    cloud_services = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CloudService.objects.all(),
+        to_field_name="name",
+        label="Cloud services (name or ID)",
     )
     prefix = MultiValueCharFilter(
         method="search_by_prefix",

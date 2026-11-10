@@ -441,6 +441,14 @@ class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
         through_fields=("cloud_service", "cloud_network"),
         blank=True,
     )
+    ip_addresses = models.ManyToManyField(
+        to="ipam.IPAddress",
+        through="cloud.CloudServiceIPAddressAssignment",
+        related_name="cloud_services",
+        through_fields=("cloud_service", "ip_address"),
+        blank=True,
+        verbose_name="IP addresses",
+    )
     clone_fields = [
         "cloud_account",
         "cloud_resource_group",
@@ -499,3 +507,23 @@ class CloudServiceNetworkAssignment(BaseModel):
 
     def __str__(self):
         return f"{self.cloud_network}: {self.cloud_service}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+)
+class CloudServiceIPAddressAssignment(BaseModel):
+    cloud_service = models.ForeignKey(CloudService, on_delete=models.CASCADE, related_name="ip_address_assignments")
+    ip_address = models.ForeignKey("ipam.IPAddress", on_delete=models.CASCADE, related_name="cloud_service_assignments")
+    is_metadata_associable_model = False
+
+    class Meta:
+        unique_together = ["cloud_service", "ip_address"]
+        ordering = ["cloud_service", "ip_address"]
+        verbose_name = "cloud service IP address assignment"
+
+    def __str__(self):
+        return f"{self.cloud_service}: {self.ip_address}"

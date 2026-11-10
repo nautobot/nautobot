@@ -1,3 +1,5 @@
+import django_filters
+
 from nautobot.cloud import models
 from nautobot.core.filters import (
     BaseFilterSet,
@@ -14,6 +16,7 @@ from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.filter_mixins import PrefixFilter
+from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 
@@ -247,6 +250,14 @@ class CloudServiceFilterSet(
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudResourceType.objects.all(),
     )
+    ip_addresses = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+        label="IP addresses (ID)",
+    )
+    has_ip_addresses = RelatedMembershipBooleanFilter(
+        field_name="ip_addresses",
+        label="Has IP addresses",
+    )
 
     class Meta:
         model = models.CloudService
@@ -288,4 +299,23 @@ class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
 
     class Meta:
         model = models.CloudServiceNetworkAssignment
+        fields = ["id"]
+
+
+class CloudServiceIPAddressAssignmentFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "cloud_service__name": "icontains",
+            "cloud_service__description": "icontains",
+        }
+    )
+    cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudService.objects.all(),
+    )
+    ip_address = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(),
+    )
+
+    class Meta:
+        model = models.CloudServiceIPAddressAssignment
         fields = ["id"]

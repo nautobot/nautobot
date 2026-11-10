@@ -64,7 +64,7 @@ from nautobot.core.ui.breadcrumbs import (
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.ipam.tables import PrefixTable
+from nautobot.ipam.tables import IPAddressTable, PrefixTable
 
 
 class CloudAccountUIViewSet(NautobotUIViewSet):
@@ -502,6 +502,24 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
                 object_field="extra_config",
                 label="Extra Config",
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=IPAddressTable,
+                table_filter="cloud_services",
+                table_title="IP Addresses",
+                include_columns=["address", "status", "role", "dns_name"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                table_class=CloudNetworkTable,
+                table_filter="cloud_services",
+                table_title="Cloud Networks",
+                exclude_columns=["cloud_service_count"],
+                add_button_route=None,
             ),
         ),
         extra_tabs=(
