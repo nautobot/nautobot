@@ -1083,7 +1083,7 @@ class CableTerminationFieldSetTestCase(TestCase):
         self.assertNotIn("disabled-indicator", attrs)
 
     def test_get_fields_pickers_filtered_by_termination_location(self):
-        """The pickers carry the location filter fed by the form's `termination_location` field."""
+        """Check that the pickers pass the `termination_location` field's value as their `location` query parameter."""
         device_result = CableTerminationFieldSet().get_fields("a_conn_1")
         parent_attrs = device_result["fields"]["a_conn_1_parent"].widget.attrs
         self.assertEqual(json.loads(parent_attrs["data-query-param-location"]), ["$termination_location"])
