@@ -31,7 +31,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models.change_logging import ObjectChange
-from nautobot.extras.utils import get_saved_view_or_none
+from nautobot.extras.utils import FeatureQuery, get_saved_view_or_none
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -83,7 +83,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         htmx_trigger = request.headers.get("HX-Trigger", None)
         is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
-        if view.action in ["list", "notes", "changelog"]:
+        if view.action in ["list", "notes", "changelog", "data_compliance"]:
             if view.action == "list":
                 permissions = kwargs.get("permissions", {})
                 self.saved_view = None
@@ -121,6 +121,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     )
                 )
                 table = table_class(data=objectchanges, orderable=False)
+            elif view.action == "data_compliance":
+                obj = kwargs.get("object")
+                table = table_class(obj.associated_data_compliance.restrict(request.user, "view"), user=request.user)
 
             # Apply the request context
             paginate = {
@@ -156,6 +159,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         if view.action_buttons is None:
             view.action_buttons = []
         for action in view.action_buttons:
+            if action in ("import", "export") and not FeatureQuery(action).includes(queryset.model):
+                continue
             if action in always_valid_actions or validated_viewname(queryset.model, action) is not None:
                 valid_actions.append(action)
             else:
@@ -278,6 +283,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 table = self.construct_table(view, object=instance)
             elif view.action == "changelog":
                 table = self.construct_table(view, object=instance, content_type=content_type)
+            elif view.action == "data_compliance":
+                table = self.construct_table(view, object=instance)
 
         context = {
             "content_type": content_type,

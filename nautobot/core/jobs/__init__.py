@@ -17,6 +17,7 @@ from django.core.exceptions import (
 )
 from django.db import DatabaseError, transaction
 from django.db.models import Prefetch, Q
+from django.db.models.constants import LOOKUP_SEP
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
@@ -88,7 +89,7 @@ from nautobot.extras.jobs import (
 from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
-from nautobot.extras.utils import get_saved_view_or_none
+from nautobot.extras.utils import FeatureQuery, get_saved_view_or_none
 
 name = "System Jobs"
 
@@ -198,6 +199,18 @@ class ExportFieldsStringVar(StringVar):
         return field
 
 
+def _require_feature_support(logger, model, feature):
+    """Abort unless `model` supports `feature`, which is `"export"` or `"import"`.
+
+    The `query_params` of the `content_type` variable only limit the choices that the UI form lists. Without this
+    check, a caller using the REST API or a scheduled Job could pass any content-type, including one for a
+    third-party library's model.
+    """
+    if not FeatureQuery(feature).includes(model):
+        logger.error("%s objects do not support %s", model._meta.label_lower, feature)
+        raise RunJobTaskFailed(f"The requested content-type does not support {feature}")
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects to CSV/JSON/YAML or using an ExportTemplate."""
 
@@ -205,7 +218,10 @@ class ExportObjectList(Job):
         model=ContentType,
         description="Type of objects to export",
         label="Content Type",
-        query_params={"can_view": True},  # not adding "has_serializer": True as it might just support export-templates
+        # The `has_serializer` filter is deliberately left out. A model without a serializer can still be exported
+        # with an Export Template, because that path renders the template from the queryset and doesn't use a
+        # serializer.
+        query_params={"can_view": True, "feature": "export"},
     )
     query_string = StringVar(
         description='Filter parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
@@ -380,7 +396,7 @@ class ExportObjectList(Job):
         if field_path.startswith("cf_"):
             # Custom fields sort via a JSON-field lookup rather than a field of the model.
             return True
-        for segment in field_path.split("__"):
+        for segment in field_path.split(LOOKUP_SEP):
             if model is None:
                 return False  # a previous segment was not a relation, so there is nothing left to traverse
             if segment == "pk":
@@ -419,16 +435,21 @@ class ExportObjectList(Job):
         covers every match field (otherwise a re-import couldn't resolve the key): a related match field is
         covered by selecting it whole, or by selecting every lookup of the related model's natural key.
         """
-        match_fields = import_utils.natural_key_match_fields(model, get_serializer_for_model(model))
+        serializer_class = get_serializer_for_model(model)
+        match_fields = import_utils.natural_key_match_fields(model, serializer_class)
         if match_fields is None:
             return None
         if export_field_paths is not None:
+            query_paths = getattr(serializer_class.Meta, "related_field_query_paths", {})
             for match_field in match_fields:
                 if match_field in export_field_paths:
                     continue
+                related_model = model
                 try:
-                    related_model = model._meta.get_field(match_field).related_model
-                except FieldDoesNotExist:
+                    for part in query_paths.get(match_field, match_field).split(LOOKUP_SEP):
+                        related_model = related_model._meta.get_field(part).related_model
+                except (AttributeError, FieldDoesNotExist):
+                    # The match field isn't a model field, or its query path passes through a non-relation field
                     return None
                 related_lookups = natural_key_lookups_for(related_model)
                 if related_lookups is None:
@@ -524,7 +545,7 @@ class ExportObjectList(Job):
         # field selects that field alongside the pk, and so may repeat a pk.
         pks = list(dict.fromkeys(queryset.values_list("pk", flat=True)))
 
-        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
+        selected_heads = {path.split(LOOKUP_SEP, 1)[0] for path in export_field_paths} if export_field_paths else None
 
         # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
         # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
@@ -535,6 +556,11 @@ class ExportObjectList(Job):
             for field in model._meta.fields
             if field.is_relation and (selected_heads is None or field.name in selected_heads)
         ]
+        fk_field_names.extend(
+            query_path
+            for name, query_path in getattr(serializer_class.Meta, "related_field_query_paths", {}).items()
+            if selected_heads is None or name in selected_heads
+        )
         if fk_field_names:
             queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
 
@@ -685,6 +711,7 @@ class ExportObjectList(Job):
                 content_type.model,
             )
             raise RunJobTaskFailed("Model not found")
+        _require_feature_support(self.logger, model, "export")
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
         saved_view = self._get_saved_view(query_params)
@@ -741,7 +768,7 @@ class ImportObjects(Job):
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import; defaults to the model the data declares for itself, if any.",
-        query_params={"can_import": True, "has_serializer": True},
+        query_params={"can_import": True, "has_serializer": True, "feature": "import"},
         required=False,
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
@@ -1021,6 +1048,7 @@ class ImportObjects(Job):
                 content_type.model,
             )
             raise RunJobTaskFailed("Model not found")
+        _require_feature_support(self.logger, model, "import")
         try:
             serializer_class = get_serializer_for_model(model)
         except SerializerNotFound:

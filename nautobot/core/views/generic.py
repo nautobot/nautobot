@@ -72,7 +72,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
-from nautobot.extras.utils import get_saved_view_filter_params, get_saved_view_or_none
+from nautobot.extras.utils import FeatureQuery, get_saved_view_filter_params, get_saved_view_or_none
 
 
 class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
@@ -215,6 +215,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         if self.action_buttons is None:
             self.action_buttons = []
         for action in self.action_buttons:
+            if action in ("import", "export") and not FeatureQuery(action).includes(self.queryset.model):
+                continue
             if action in always_valid_actions or validated_viewname(self.queryset.model, action) is not None:
                 valid_actions.append(action)
             else:
@@ -1225,6 +1227,8 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                         try:
                             for obj in selected_objects:
                                 obj.new_name = pattern.sub(replace, obj.name, timeout=timeout)
+                        except regex.error as e:
+                            form.add_error("replace", f"Invalid regex: {e}")
                         except TimeoutError:
                             form.add_error(
                                 "find",

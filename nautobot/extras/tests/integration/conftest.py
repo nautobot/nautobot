@@ -93,3 +93,79 @@ def created_note(create_object, created_location):
         assigned_object_id=created_location["id"],
         note=f"{unique_name()} original note",
     )
+
+
+@pytest.fixture
+def created_device_set(create_object, status_for, created_device):
+    """Devices owned by this test, split across two locations of their own.
+
+    Builds on created_device: its location gets a second device, and a second location of
+    the same type gets one more, so a group filtered on those locations has a membership
+    known in advance, regardless of other data in the instance. All records are deleted on
+    teardown.
+    """
+    first_location = created_device["location"]
+    second_location = create_object(
+        "dcim/locations/",
+        name=unique_name(),
+        location_type=first_location["location_type"]["id"],
+        status=status_for("dcim.location")["id"],
+    )
+
+    def _create_device(location):
+        return create_object(
+            "dcim/devices/",
+            name=unique_name(),
+            location=location["id"],
+            device_type=created_device["device_type"]["id"],
+            role=created_device["role"]["id"],
+            status=created_device["status"]["id"],
+        )
+
+    return {
+        "first_location": first_location,
+        "first_devices": [created_device["device"], _create_device(first_location)],
+        "second_location": second_location,
+        "second_devices": [_create_device(second_location)],
+    }
+
+
+@pytest.fixture
+def created_dynamic_group(create_object, created_device_set):
+    """A device group owned by this test, filtered on the first location of `created_device_set`.
+
+    Created through the REST API, which (unlike the UI) calculates the cached membership
+    on save, so the group starts with the first location's devices as its members.
+    """
+    return create_object(
+        "extras/dynamic-groups/",
+        name=unique_name(),
+        content_type="dcim.device",
+        group_type="dynamic-filter",
+        filter={"location": [created_device_set["first_location"]["name"]]},
+    )
+
+
+@pytest.fixture
+def created_static_group(create_object):
+    """An empty static device group owned by this test."""
+    return create_object(
+        "extras/dynamic-groups/",
+        name=unique_name(),
+        content_type="dcim.device",
+        group_type="static",
+    )
+
+
+@pytest.fixture(scope="session")
+def require_celery_worker(api):
+    """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.
+
+    Without a worker, a job such as Refresh Members is queued but never runs, and the test
+    would otherwise fail only after its poll times out.
+    """
+    response = api.get("/api/status/")
+    if not response.ok:
+        pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
+    if not response.json()["celery-workers-running"]:
+        pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")

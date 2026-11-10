@@ -29,10 +29,12 @@ article ul li {
     - _optional_ Opt out of specific model features **if and only if** there is a strong justification for doing so:
         - Contact/team association (`is_contact_associable_model = False`, OrganizationalModel/PrimaryModel only)
         - Dynamic-group association (`is_dynamic_group_associable_model = False`, OrganizationalModel/PrimaryModel only)
+        - Export support (`is_exportable_model = False`, any base class)
+        - Import support (`is_importable_model = False`, any base class)
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
         - Data Compliance (`is_data_compliance_model = False`, OrganizationalModel/PrimaryModel only)
-    - _optional_ Declare any field holding a credential or comparable secret in [`sensitive_fields`](sensitive-fields.md), so that the ORM will not return its value and user-authored templates cannot read it
+    - _optional_ Declare any field holding a credential or comparable secret in [`sensitive_fields`](sensitive-fields.md), so that the ORM will not return its value and user-authored templates cannot read or filter on it
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!

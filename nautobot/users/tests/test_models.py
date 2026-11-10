@@ -3,8 +3,11 @@ from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import ValidationError
 from django.test.utils import override_settings
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.users.models import ObjectPermission, Token
 
@@ -29,6 +32,34 @@ class TokenTest(ModelTestCases.BaseModelTestCase):
     def test_natural_key_does_not_expose_token_key(self):
         self.assertNotEqual(self.token.key, "")
         self.assertNotIn(self.token.key, self.token.natural_key())
+
+
+class TokenRestrictTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        Token.objects.create(user=User.objects.create_user(username="token-owner"))
+
+    def test_restrict_limits_every_user_to_their_own_tokens(self):
+        """No user may act on another user's Tokens through `restrict()`, whatever permissions they hold."""
+        superuser = User.objects.create_user(username="superuser", is_superuser=True)
+        self.add_permissions("users.view_token", "users.change_token", "users.delete_token")
+        exempt_user = User.objects.create_user(username="exempt-user")
+
+        for user, action, settings in (
+            (superuser, "view", {}),
+            (self.user, "view", {}),
+            (self.user, "change", {}),
+            (self.user, "delete", {}),
+            (exempt_user, "view", {"EXEMPT_VIEW_PERMISSIONS": ["*"]}),
+        ):
+            with self.subTest(user=user.username, action=action, settings=settings), override_settings(**settings):
+                own_token = Token.objects.create(user=user)
+                self.assertQuerySetEqual(Token.objects.restrict(user, action), [own_token])
+                own_token.delete()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_restrict_gives_anonymous_users_no_tokens(self):
+        self.assertFalse(Token.objects.restrict(AnonymousUser(), "view").exists())
 
 
 class UserConfigTest(ModelTestCases.BaseModelTestCase):
@@ -126,6 +157,42 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
 
         # Clear a non-existing value; should fail silently
         self.user.clear_config("invalid")
+
+    def test_valid_navbar_favorites_are_saved(self):
+        """A favorite whose link is relative to an instance is stored as submitted."""
+        favorites = [{"link": "/dcim/devices/?status=active", "name": "Active Devices", "tab_name": "Devices"}]
+        self.user.config_data["navbar_favorites"] = favorites
+        self.user.validated_save()
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.config_data["navbar_favorites"], favorites)
+
+    def test_invalid_navbar_favorites_are_rejected(self):
+        """Favorites must be a list of objects with string fields, a non-empty name and an instance-relative link."""
+        for description, favorites in (
+            ("an external link", [{"link": "https://google.com/", "name": "Devices"}]),
+            ("a protocol-relative link", [{"link": "//evil.example.com/", "name": "Devices"}]),
+            ("a scheme link", [{"link": "javascript:alert(0)", "name": "Devices"}]),
+            ("a page-relative link", [{"link": "dcim/devices/", "name": "Devices"}]),
+            ("a non-string link", [{"link": 5, "name": "Devices"}]),
+            ("an entry without a link", [{"name": "Devices"}]),
+            ("an empty name", [{"link": "/dcim/devices/", "name": ""}]),
+            ("a non-string tab name", [{"link": "/dcim/devices/", "name": "Devices", "tab_name": 5}]),
+            ("not a list", {"not": "a list"}),
+            ("not a list of objects", ["not an object"]),
+        ):
+            with self.subTest(description):
+                self.user.config_data["navbar_favorites"] = favorites
+                with self.assertRaises(ValidationError) as context:
+                    self.user.validated_save()
+                self.assertIn("config_data", context.exception.message_dict)
+
+    def test_a_non_object_config_is_rejected(self):
+        """`set_config()`, `clear_config()` and `all_config()` treat `config_data` as a dict, so other types are rejected."""
+        self.user.config_data = []
+        with self.assertRaises(ValidationError) as context:
+            self.user.validated_save()
+        self.assertIn("config_data", context.exception.message_dict)
 
     def test_config_writes_are_skipped_in_maintenance_mode(self):
         """While MAINTENANCE_MODE is enabled the database may be read-only, so config writes must not happen."""

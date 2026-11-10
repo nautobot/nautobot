@@ -346,7 +346,7 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.11"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --no-color --parallel"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -397,7 +397,7 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.14"
       - name: "Run unittest"
-        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
+        run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --no-color --parallel --coverage"
       - name: "Generate coverage comment"
         if: >
           contains(fromJson('["ltm-1.6","develop","next"]'), github.base_ref) &&
@@ -465,7 +465,7 @@ jobs:
   #         poetry-version: "2.1.4"
   #         python-version: "3.14"
   #     - name: "Run unittest"
-  #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-parallel"
+  #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-color --no-parallel"
   #   needs:
   #     - "check-migrations"
   #     - "check-schema"
@@ -601,7 +601,7 @@ jobs:
           python-version: "3.14"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
-        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
+        run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb --no-color"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -659,6 +659,15 @@ jobs:
           DJANGO_SUPERUSER_PASSWORD=admin poetry run nautobot-server createsuperuser \
             --noinput --username admin --email admin@example.com
           poetry run nautobot-server shell --command "from django.contrib.auth import get_user_model; from nautobot.users.models import Token; Token.objects.get_or_create(user=get_user_model().objects.get(username='admin'), key='${NAUTOBOT_PLAYWRIGHT_API_TOKEN}')"
+      - name: "Start Celery worker"
+        # Tests that click a job button (e.g. Refresh Members) need a worker to run the job.
+        run: |
+          nohup poetry run nautobot-server celery worker --loglevel INFO &> /tmp/nautobot-worker.log &
+          for _ in $(seq 1 30); do
+            poetry run nautobot-server celery inspect ping &> /dev/null && exit 0
+            sleep 2
+          done
+          echo "Celery worker did not come up"; tail -50 /tmp/nautobot-worker.log; exit 1
       - name: "Start Nautobot server"
         run: |
           nohup poetry run nautobot-server runserver 8080 --noreload --insecure &> /tmp/nautobot-server.log &
@@ -674,6 +683,9 @@ jobs:
       - name: "Server log on failure"
         if: "failure()"
         run: "tail -100 /tmp/nautobot-server.log"
+      - name: "Worker log on failure"
+        if: "failure()"
+        run: "tail -100 /tmp/nautobot-worker.log"
       - name: "Upload Playwright traces and screenshots on failure"
         if: "failure()"
         uses: "actions/upload-artifact@v4"

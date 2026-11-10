@@ -13,6 +13,7 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 | [Object permissions](../../../../user-guide/administration/guides/permissions.md) | ❌ | ✅ | ✅ | ✅ |
 | [`validated_save()`](../../../core/best-practices.md#model-validation) | ❌ | ✅ | ✅ | ✅ |
 | [Object Metadata](../../../../user-guide/platform-functionality/objectmetadata.md) | ❌ | ✅ | ✅ | ✅ |
+| [Import and export](../../../../user-guide/feature-guides/import-and-export.md) | ❌ | ✅ | ✅ | ✅ |
 | [Change logging](../../../../user-guide/platform-functionality/change-logging.md) | ❌ | ❌ | ✅ | ✅ |
 | [Contacts](../../../../user-guide/core-data-model/extras/contact.md) and [Teams](../../../../user-guide/core-data-model/extras/team.md) | ❌ | ❌ | ✅ | ✅ |
 | [Custom fields](../../../../user-guide/platform-functionality/customfield.md) | ❌ | ❌ | ✅ | ✅ |
@@ -42,9 +43,15 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
     Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceModelMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
 
 +++ 3.2.5 "Support for sensitive fields on all models"
-    A `BaseModel` subclass can declare fields holding credentials or comparable secrets in the class attribute `sensitive_fields`. The ORM then refuses to return those values unless a caller opts in explicitly, and user-authored Jinja2 templates can never read them. Filtering by such a field still works. See [Sensitive Model Fields](../../../core/sensitive-fields.md) for the opt-in methods and the limitations.
+    A `BaseModel` subclass can declare fields holding credentials or comparable secrets in the class attribute `sensitive_fields`. The ORM then refuses to return those values unless a caller opts in explicitly, and user-authored Jinja2 templates can never read them. Filtering by such a field still works in Python code, but not in a user-authored template. See [Sensitive Model Fields](../../../core/sensitive-fields.md) for the opt-in methods and the limitations.
 
     The ORM-side enforcement is governed by [`STRICT_SENSITIVE_FIELDS`](../../../../user-guide/administration/configuration/settings.md#strict_sensitive_fields), which defaults to `False` so that existing code reading such a field keeps working, and is expected to default to `True` in a future major release. Denial of template access is **not** governed by that setting and always applies. An App that declares `sensitive_fields` should therefore not assume the ORM enforcement is active on a given deployment, and should move its own reads to the opt-in methods now so that it keeps working when the default changes.
+
++++ 3.3.0 "Opting models out of import and export"
+    If a specific `BaseModel` subclass should not be importable, the model author can define the class attribute `is_importable_model = False` to opt it out, and its list view then no longer shows the "Import" button. Likewise, a model that should not be exportable can define `is_exportable_model = False`, and its list view then no longer shows the "Export" button. A model that sets `is_exportable_model = False` also can't be exported with an [Export Template](../../../../user-guide/platform-functionality/exporttemplate.md), so it should not declare the `export_templates` feature.
+
++/- 3.3.0 "Import and export restricted to Nautobot models"
+    The "Import Objects" and "Export Object List" system Jobs now accept only content-types for `BaseModel` subclasses (plus Django's `auth.Group`, and for export only, `contenttypes.ContentType`), rather than any installed model.
 
 Below is an example `models.py` file containing a basic model with two character fields:
 

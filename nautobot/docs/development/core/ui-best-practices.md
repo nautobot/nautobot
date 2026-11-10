@@ -267,11 +267,10 @@ Two linters enforce a subset of this automatically, so run them before opening a
     than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
     part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
 
-    Two rules are currently switched off. `color-contrast` (WCAG 1.4.3): the theme fails it in a handful of places, and
+    One rule is currently switched off. `color-contrast` (WCAG 1.4.3): the theme fails it in a handful of places, and
     correcting that means retuning palette tokens, which is a deferred product decision, so contrast is not checked
-    automatically anywhere. `target-size` (WCAG 2.5.8): the header's Search help link and the tag links in list
-    cells are under 24 px, and the rule will be switched back on when `NAUTOBOT-1667` is fixed. See `AXE_DISABLED_RULES` in
-    `nautobot/playwright/accessibility.py`, and pass `disabled_rules=()` to scan with both on.
+    automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/playwright/accessibility.py`, and pass
+    `disabled_rules=()` to scan with it on.
 
 Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
 on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its
@@ -368,6 +367,13 @@ When a colour is user-supplied, derive its text colour with the `fgcolor` templa
 actual WCAG contrast ratio.
 
 Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1).
+
+### Target size
+
+A pointer target needs to be at least 24 by 24 pixels, or else far enough from its neighbours that a 24 pixel area
+around each one stays clear (WCAG 2.5.8). Adding padding is usually the best way to make a target large enough,
+because padding enlarges the clickable area without changing how the control looks. A link inside a paragraph of text
+is exempt, because the surrounding text sets its size.
 
 ### Dynamic content
 
