@@ -87,7 +87,7 @@ dependencies = [
     # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
     "jsonschema (>=4.7.0,<5)",
     # Library to access Kubernetes API used to develop K8s integration
-    "kubernetes (>=37.0.2,<38)",
+    "kubernetes (>=37.0.1,<38)",
     # Rendering of markdown files to HTML
     "Markdown (>=3.11.3,<3.12)",
     # IP prefix and address handling

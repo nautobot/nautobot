@@ -7664,4 +7664,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "e7a285b5a2cdf68c9099db6380542f8308f7440b5b492a12b0f193df0195553e"
+content-hash = "6c8431b20193c05cb434d18980abf955ed020dc5f858db6f812c7eae930b490a"
