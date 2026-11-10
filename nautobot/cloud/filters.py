@@ -7,14 +7,17 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Manufacturer
+from nautobot.extras.filter_mixins import RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.filter_mixins import PrefixFilter
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 
-class CloudAccountFilterSet(NautobotFilterSet):
+class CloudAccountFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -87,7 +90,7 @@ class CloudAccountGroupFilterSet(NautobotFilterSet):
         fields = ["id", "name", "description", "tags"]
 
 
-class CloudResourceGroupFilterSet(NautobotFilterSet):
+class CloudResourceGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -137,7 +140,13 @@ class CloudResourceTypeFilterSet(NautobotFilterSet):
         fields = ["id", "name", "description", "tags"]
 
 
-class CloudNetworkFilterSet(NautobotFilterSet):
+class CloudNetworkFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -199,7 +208,13 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
         fields = ["id"]
 
 
-class CloudServiceFilterSet(NautobotFilterSet):
+class CloudServiceFilterSet(
+    NautobotFilterSet,
+    LocatableModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+    TenancyModelFilterSetMixin,
+):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",

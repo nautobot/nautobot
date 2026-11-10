@@ -9,6 +9,7 @@ from nautobot.core.models import BaseManager, BaseModel, ContentTypeRelatedQuery
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import FeatureQuery, extras_features
 
 # Long enough for an Azure resource ID of a nested resource (subscription, resource group, parent and child names),
@@ -35,15 +36,29 @@ def validate_name_unique_in_scope(instance, scope_fields, message):
         raise ValidationError({"name": message})
 
 
+def validate_location_content_type(instance):
+    """Reject a location whose location type does not permit this model's content type."""
+    if instance.location is not None:
+        if ContentType.objects.get_for_model(instance) not in instance.location.location_type.content_types.all():
+            raise ValidationError(
+                {
+                    "location": f"{instance._meta.verbose_name_plural.capitalize()} may not associate to locations "
+                    f'of type "{instance.location.location_type}".'
+                }
+            )
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class CloudAccount(PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Cloud Account.")
+    status = StatusField(blank=False, null=False)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     account_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, help_text="The account identifier of this Cloud Account."
@@ -62,6 +77,13 @@ class CloudAccount(PrimaryModel):
         null=True,
         help_text="The organisation container (management group, organizational unit or folder) of this account.",
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="cloud_accounts",
+        blank=True,
+        null=True,
+    )
     secrets_group = models.ForeignKey(
         to="extras.SecretsGroup",
         on_delete=models.SET_NULL,
@@ -72,6 +94,8 @@ class CloudAccount(PrimaryModel):
     clone_fields = [
         "provider",
         "cloud_account_group",
+        "status",
+        "tenant",
         "secrets_group",
     ]
 
@@ -213,6 +237,7 @@ class CloudAccountGroup(TreeModel, CloudResourceTypeMixin, PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
     "webhooks",
 )
 class CloudResourceGroup(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel):
@@ -225,9 +250,17 @@ class CloudResourceGroup(ProviderResourceIdMixin, CloudResourceTypeMixin, Primar
         on_delete=models.PROTECT,
         related_name="cloud_resource_groups",
     )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="cloud_resource_groups",
+        blank=True,
+        null=True,
+    )
     clone_fields = [
         "cloud_resource_type",
         "cloud_account",
+        "location",
     ]
 
     class Meta:
@@ -237,16 +270,25 @@ class CloudResourceGroup(ProviderResourceIdMixin, CloudResourceTypeMixin, Primar
     def __str__(self):
         return self.name
 
+    def clean(self):
+        super().clean()
+
+        validate_location_content_type(self)
+
 
 @extras_features(
     "custom_links",
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
+    "statuses",
     "webhooks",
 )
 class CloudNetwork(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_account = models.ForeignKey(to=CloudAccount, on_delete=models.PROTECT, related_name="cloud_networks")
     cloud_resource_group = models.ForeignKey(
@@ -259,6 +301,20 @@ class CloudNetwork(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
     parent = models.ForeignKey(
         to="cloud.CloudNetwork", on_delete=models.PROTECT, blank=True, null=True, related_name="children"
     )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="cloud_networks",
+        blank=True,
+        null=True,
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="cloud_networks",
+        blank=True,
+        null=True,
+    )
     prefixes = models.ManyToManyField(
         blank=True,
         related_name="cloud_networks",
@@ -270,6 +326,10 @@ class CloudNetwork(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
         "cloud_account",
         "cloud_resource_group",
         "parent",
+        "location",
+        "status",
+        "role",
+        "tenant",
     ]
     natural_key_field_names = ["cloud_account", "cloud_resource_group__name", "parent__name", "name"]
 
@@ -298,6 +358,8 @@ class CloudNetwork(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
             raise ValidationError(
                 {"cloud_resource_group": "The cloud resource group must belong to the same cloud account."}
             )
+
+        validate_location_content_type(self)
 
         # TODO: should we enforce that self.cloud_resource_type.provider == self.cloud_account.provider?
 
@@ -334,10 +396,14 @@ class CloudNetworkPrefixAssignment(BaseModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "locations",
+    "statuses",
     "webhooks",
 )
 class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    status = StatusField(blank=False, null=False)
+    role = RoleField(blank=True, null=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     cloud_account = models.ForeignKey(
         to=CloudAccount,
@@ -349,6 +415,20 @@ class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
     )
     cloud_resource_group = models.ForeignKey(
         to=CloudResourceGroup,
+        on_delete=models.PROTECT,
+        related_name="cloud_services",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="cloud_services",
+        blank=True,
+        null=True,
+    )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
         on_delete=models.PROTECT,
         related_name="cloud_services",
         blank=True,
@@ -366,6 +446,10 @@ class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
         "cloud_resource_group",
         "cloud_networks",
         "cloud_resource_type",
+        "location",
+        "status",
+        "role",
+        "tenant",
     ]
     natural_key_field_names = ["cloud_account", "cloud_resource_group__name", "name"]
 
@@ -386,6 +470,8 @@ class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
             raise ValidationError(
                 {"cloud_resource_group": "The cloud resource group must belong to the same cloud account."}
             )
+
+        validate_location_content_type(self)
 
     def validate_unique(self, exclude=None):
         validate_name_unique_in_scope(
