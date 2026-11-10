@@ -888,6 +888,83 @@ class ApprovalWorkflowViewTestCase(
         )
 
 
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class ObjectApprovalWorkflowViewRestrictionTestCase(TestCase):
+    """Regression tests for object-level permission enforcement on the object approval-workflow tab."""
+
+    def setUp(self):
+        super().setUp()
+        scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.scheduled_job = ScheduledJob.objects.create(
+            name="Approval Tab Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=timezone.now(),
+        )
+        workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Approval Tab Workflow",
+            model_content_type=scheduledjob_ct,
+            weight=0,
+            model_constraints={"job_model__name": "NoSuchJob"},
+        )
+        self.workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=scheduledjob_ct,
+            object_under_review_object_id=self.scheduled_job.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=workflow_definition,
+            sequence=100,
+            name="Approval Tab Stage",
+            min_approvers=1,
+            denial_message="denied",
+            approver_group=Group.objects.create(name="Approval Tab Approvers"),
+        )
+        stage = ApprovalWorkflowStage.objects.create(
+            approval_workflow=self.workflow,
+            approval_workflow_stage_definition=stage_definition,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=User.objects.first(),
+            comments="confidential decision",
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        self.url = reverse("extras:scheduledjob_approvalworkflow", kwargs={"pk": self.scheduled_job.pk})
+
+    def test_related_tables_restricted_without_stage_response_permissions(self):
+        """A user who may view the job and workflow, but not the stages/responses, sees empty related tables."""
+        self.add_permissions("extras.view_scheduledjob", "extras.view_approvalworkflow")
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.context["stage_table"].rows), 0)
+        self.assertEqual(len(response.context["response_table"].rows), 0)
+
+    def test_related_tables_visible_with_full_permissions(self):
+        """With view permission on every related model, the tables are populated."""
+        self.add_permissions(
+            "extras.view_scheduledjob",
+            "extras.view_approvalworkflow",
+            "extras.view_approvalworkflowstage",
+            "extras.view_approvalworkflowstageresponse",
+        )
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.context["stage_table"].rows), 1)
+        self.assertEqual(len(response.context["response_table"].rows), 1)
+
+    def test_without_view_approvalworkflow_permission_is_not_found(self):
+        """A user who may view the job but lacks view_approvalworkflow cannot reach the approval tab."""
+        self.add_permissions("extras.view_scheduledjob")
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 404)
+
+
 class ApprovalWorkflowStageViewTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
@@ -6719,6 +6796,7 @@ class JobTestCase(
     def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -6741,6 +6819,7 @@ class JobTestCase(
     def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         workflow = ApprovalWorkflowDefinition(
             name="Approval Definition",
@@ -6856,6 +6935,7 @@ class JobTestCase(
     def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",

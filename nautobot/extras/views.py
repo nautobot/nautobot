@@ -823,13 +823,17 @@ class ObjectApprovalWorkflowView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all changes for this object (and its related objects)
-        approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
+        approval_workflow = get_object_or_404(
+            ApprovalWorkflow.objects.restrict(request.user, "view"), object_under_review_object_id=obj.pk
+        )
         stage_table = tables.RelatedApprovalWorkflowStageTable(
-            ApprovalWorkflowStage.objects.filter(approval_workflow=approval_workflow),
+            ApprovalWorkflowStage.objects.restrict(request.user, "view").filter(approval_workflow=approval_workflow),
         )
         stage_table.columns.hide("approval_workflow")
         response_table = tables.RelatedApprovalWorkflowStageResponseTable(
-            ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage__approval_workflow=approval_workflow)
+            ApprovalWorkflowStageResponse.objects.restrict(request.user, "view").filter(
+                approval_workflow_stage__approval_workflow=approval_workflow
+            )
         )
 
         base_template = get_base_template(self.base_template, model)
