@@ -1694,7 +1694,6 @@ class LegacyObjectDataSettingTest(TestCase):
     def setUp(self):
         super().setUp()
         self.manufacturer = Manufacturer.objects.create(name="Snapshot Manufacturer")
-        get_changes_for_model(self.manufacturer).delete()
 
     def make_change(self, description):
         with context_managers.web_request_context(self.user, context_detail="snapshot"):
