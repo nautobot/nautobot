@@ -359,9 +359,19 @@ class CloudNetwork(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
                 {"cloud_resource_group": "The cloud resource group must belong to the same cloud account."}
             )
 
-        validate_location_content_type(self)
+        if (
+            self.cloud_resource_type_id is not None
+            and self.cloud_account_id is not None
+            and self.cloud_resource_type.provider_id != self.cloud_account.provider_id
+        ):
+            raise ValidationError(
+                {"cloud_resource_type": "The cloud resource type must have the same provider as the cloud account."}
+            )
 
-        # TODO: should we enforce that self.cloud_resource_type.provider == self.cloud_account.provider?
+        if self.parent is not None and self.parent.cloud_account_id != self.cloud_account_id:
+            raise ValidationError({"parent": "The parent cloud network must belong to the same cloud account."})
+
+        validate_location_content_type(self)
 
     def validate_unique(self, exclude=None):
         validate_name_unique_in_scope(
