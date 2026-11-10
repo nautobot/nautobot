@@ -18,8 +18,7 @@ from nautobot.playwright.helpers import unique_name
 def created_grouped_tenant(create_object):
     """A tenant group with one tenant in it, plus a tenant outside it, all created for this test.
 
-    The tenant in the group is the one a search by tenant group lists, and the tenant outside the group is the one it
-    leaves out.
+    A search by the tenant group should list the tenant in the group and leave out the tenant outside it.
     """
     group = create_object("tenancy/tenant-groups/", name=unique_name())
     tenant = create_object("tenancy/tenants/", name=unique_name(), tenant_group=group["id"])

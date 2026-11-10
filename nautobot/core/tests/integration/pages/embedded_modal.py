@@ -1,8 +1,8 @@
 """Component for the embedded-action modal of an object create form.
 
 A related-object field on a create form can have two buttons, "Add a new <model>" and
-"Search <models>". Each loads a form into the one `#embedded_action_modal` the create form
-renders. Creating an object there, or picking a search result, closes the modal and selects
+"Search <models>". Each button loads a form into the single `#embedded_action_modal` that the
+create form renders. Creating an object there, or picking a search result, closes the modal and selects
 that object in the field the button belongs to.
 
     form = DeviceCreatePage(auth_page, base_url)
@@ -122,11 +122,11 @@ class EmbeddedModal:
     # -------------------------------------------------------------------------
 
     def search(self, **filters):
-        """Set the search form fields named by *filters*, click Search and wait for the new results.
+        """Set each search form field whose name is a key in *filters*, click Search and wait for the new results.
 
-        A select field is picked by its option text, any other field is typed into. If a row from the old results is
-        picked before the new results arrive, HTMX replaces that row while its request is still running, and the pick
-        is lost.
+        For a select field, pick the option whose text is the value. For any other field, type the value in. Wait for
+        the new results before returning. If a row from the old results is picked before the new results arrive, HTMX
+        replaces that row while its request is still running, and the pick is lost.
         """
         for name, value in filters.items():
             if self.root.locator(f"select[name='{name}']").count():
@@ -150,8 +150,8 @@ class EmbeddedModal:
     def select_result(self, text):
         """Pick the one result row showing *text*.
 
-        The row's first cell links to the object, so a mouse click could follow the link. The row is a keyboard
-        button, so focus it and press Enter.
+        The row's first cell links to the object, so a mouse click could follow the link. The row has
+        `role="button"` and selects the object when Enter is pressed on it, so focus the row and press Enter.
         """
         row = self.result_rows(text)
         expect(row).to_have_count(1)

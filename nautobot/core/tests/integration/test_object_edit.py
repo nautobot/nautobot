@@ -154,7 +154,10 @@ class ObjectEditTestCase:
     def test_embedded_search_with_prefilled_content_type_scopes_the_results(
         self, auth_page, base_url, api_count, create_object
     ):
-        """The "Search roles" button lists only device roles, as many as the API counts, leaving out a rack role."""
+        """The "Search roles" button lists only device roles and leaves out a rack role.
+
+        The result total equals the number of device roles that the API returns.
+        """
         create_object("extras/roles/", name=unique_name(), content_types=["dcim.device"])
         create_object("extras/roles/", name=unique_name(), content_types=["dcim.rack"])
         device_roles = api_count("extras/roles/", content_types="dcim.device")
