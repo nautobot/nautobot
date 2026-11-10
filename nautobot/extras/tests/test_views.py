@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from http import HTTPStatus
 import json
 import re
-from unittest import mock
+from unittest import expectedFailure, mock
 import urllib.parse
 import uuid
 
@@ -1587,7 +1587,7 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
         url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
-        # Create constrained permission that only allows viewing first 2 entries
+        # Create constrained permission that allows viewing only the first entry
         obj_perm = ObjectPermission(name="View limited log entries", actions=["view"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -1633,7 +1633,7 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
         url = reverse("extras:archivedjobresult_job_console_entries", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
-        # Create constrained permission that only allows viewing first 2 entries
+        # Create constrained permission that allows viewing only the first entry
         obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -1687,7 +1687,7 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
         self.assertHttpStatus(response, [403, 404])
 
     def test_export_job_console_entries_with_permission(self):
-        """Test full page load with permission shows console log page."""
+        """Test that a user with permission can download the console entries as a text file."""
         url = reverse(
             "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
         )
@@ -1709,7 +1709,7 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
         url = reverse("extras:archivedjobresult_export_job_console_entries", kwargs={"pk": instance.pk})
         self.add_permissions("extras.view_archivedjobresult")
 
-        # Create constrained permission that only allows viewing first 2 entries
+        # Create constrained permission that allows viewing only the first entry
         obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
         obj_perm.save()
         obj_perm.users.add(self.user)
@@ -1730,10 +1730,11 @@ class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCas
 class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
     model = ArchivedObjectChange
 
+    @expectedFailure
     def test_filter_form_fields_are_working(self):
         # TODO: there's a baseline breakage here for the `time__gte` and `time__lte` fields, not failing in baseline
-        # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass as it SHOULD be.
-        pass
+        # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass (but it SHOULD be!).
+        super().test_filter_form_fields_are_working()
 
 
 class ComputedFieldTestCase(
@@ -5777,7 +5778,7 @@ class JobResultTestCase(
         self.assertHttpStatus(response, [403, 404])
 
     def test_export_job_console_entries_with_permission(self):
-        """Test full page load with permission shows console log page."""
+        """Test that a user with permission can download the console entries as a text file."""
         url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
         response = self.client.get(url)

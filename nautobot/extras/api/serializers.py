@@ -1215,8 +1215,8 @@ class ArchivedObjectChangeSerializer(ObjectChangeSerializer):
         model = ArchivedObjectChange
 
 
-# Not inheriting from JobResultSerializer because it's easier to start from baseline and add what we need,
-# rather than removing the `files` field from JobResultSerializer.
+# This serializer does not inherit from JobResultSerializer. It's easier to start from BaseModelSerializer and add
+# the needed fields than to remove the `files` field that JobResultSerializer includes but ArchivedJobResult lacks.
 class ArchivedJobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
 

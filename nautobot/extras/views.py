@@ -994,7 +994,7 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 icon="mdi-database-export",
                 required_permissions=["extras.view_archivedjoblogentry"],
                 link_name=lambda ctx: (
-                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result_id={ctx['object'].pk}&format=csv"
                 ),
             ),
             JobResultButton(
@@ -1099,11 +1099,11 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     @action(
         detail=True,
         url_path="log-table",
-        url_name="log-table",  # log_table would be better but we're following JobResultUIViewSet.log_table's pattern.
+        url_name="log-table",  # "log_table" would be more correct, but we're matching JobResultUIViewSet.log_table.
         custom_view_base_action="view",
     )
     def log_table(self, request, pk=None):
-        """Custom action to return a rendered JobLogEntry table for a JobResult."""
+        """Return a rendered ArchivedJobLogEntry table for an ArchivedJobResult."""
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
 
         filter_q = request.GET.get("q")
@@ -1147,14 +1147,16 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         custom_view_additional_permissions=["extras.view_archivedjobconsoleentry"],
     )
     def job_console_entries(self, request, pk=None):
-        """Display real-time console logs with live streaming for running jobs."""
+        """
+        Display the ArchivedJobConsoleEntry records for a given ArchivedJobResult.
+
+        Unlike JobResultUIViewSet.job_console_entries this doesn't support real-time streaming,
+        since an ArchivedJobResult is already completed, by definition.
+        """
         job_result = self.get_object()
 
         # Handle HTMX polling for new log entries
         entries = ArchivedJobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
-
-        # Get last entry timestamp for polling initialization
-        last_entry = entries.last()
 
         context = self.get_extra_context(request, job_result)
         context.update(
@@ -1166,8 +1168,6 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 "entries": entries,
                 "breadcrumbs": self.get_breadcrumbs(),
                 "view_action": "detail",
-                "job_is_pending": False,
-                "last_timestamp": last_entry.timestamp.isoformat() if last_entry else now().isoformat(),
             }
         )
         response = render(request, "extras/archivedjobresult_retrieve_console_log.html", context)
