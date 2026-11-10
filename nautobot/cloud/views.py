@@ -65,6 +65,19 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import IPAddressTable, PrefixTable
+from nautobot.load_balancers.tables import VirtualServerTable
+from nautobot.vpn.tables import VPNTunnelEndpointTable
+
+
+class RelatedObjectsTablePanel(object_detail.ObjectsTablePanel):
+    """An objects table panel that is only rendered when the object has related objects of this kind."""
+
+    def __init__(self, *, related_attribute, **kwargs):
+        self.related_attribute = related_attribute
+        super().__init__(**kwargs)
+
+    def should_render(self, context):
+        return super().should_render(context) and getattr(context["object"], self.related_attribute).exists()
 
 
 class CloudAccountUIViewSet(NautobotUIViewSet):
@@ -510,6 +523,26 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
                 table_filter="cloud_services",
                 table_title="IP Addresses",
                 include_columns=["address", "status", "role", "dns_name"],
+                add_button_route=None,
+            ),
+            RelatedObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                related_attribute="virtual_servers",
+                table_class=VirtualServerTable,
+                table_filter="cloud_service",
+                table_title="Virtual Servers",
+                include_columns=["name", "vip", "dns_name", "port", "protocol", "load_balancer_pool"],
+                add_button_route=None,
+            ),
+            RelatedObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=400,
+                related_attribute="vpn_tunnel_endpoints",
+                table_class=VPNTunnelEndpointTable,
+                table_filter="cloud_service",
+                table_title="VPN Tunnel Endpoints",
+                include_columns=["name", "source_ipaddress", "vpn_profile"],
                 add_button_route=None,
             ),
             object_detail.ObjectsTablePanel(
