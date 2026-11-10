@@ -65,6 +65,22 @@ menu_items = (
                         ),
                     ),
                     NavMenuItem(
+                        link="cloud:cloudaccountgroup_list",
+                        name="Cloud Account Groups",
+                        weight=350,
+                        permissions=[
+                            "cloud.view_cloudaccountgroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudaccountgroup_add",
+                                permissions=[
+                                    "cloud.add_cloudaccountgroup",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="cloud:cloudaccount_list",
                         name="Cloud Accounts",
                         weight=400,
@@ -76,6 +92,22 @@ menu_items = (
                                 link="cloud:cloudaccount_add",
                                 permissions=[
                                     "cloud.add_cloudaccount",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="cloud:cloudresourcegroup_list",
+                        name="Cloud Resource Groups",
+                        weight=450,
+                        permissions=[
+                            "cloud.view_cloudresourcegroup",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="cloud:cloudresourcegroup_add",
+                                permissions=[
+                                    "cloud.add_cloudresourcegroup",
                                 ],
                             ),
                         ),

@@ -3,7 +3,9 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
+    RelatedMembershipBooleanFilter,
     SearchFilter,
+    TreeNodeMultipleChoiceFilter,
 )
 from nautobot.dcim.models import Manufacturer
 from nautobot.extras.filters import NautobotFilterSet
@@ -26,6 +28,11 @@ class CloudAccountFilterSet(NautobotFilterSet):
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
     )
+    cloud_account_group = TreeNodeMultipleChoiceFilter(
+        queryset=models.CloudAccountGroup.objects.all(),
+        to_field_name="name",
+        label="Cloud account group, including its descendants (name or ID)",
+    )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
@@ -35,6 +42,7 @@ class CloudAccountFilterSet(NautobotFilterSet):
         model = models.CloudAccount
         fields = [
             "account_number",
+            "cloud_account_group",
             "description",
             "id",
             "name",
@@ -42,6 +50,71 @@ class CloudAccountFilterSet(NautobotFilterSet):
             "secrets_group",
             "tags",
         ]
+
+
+class CloudAccountGroupFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "cloud_resource_type__name": "icontains",
+        },
+    )
+    parent = TreeNodeMultipleChoiceFilter(
+        queryset=models.CloudAccountGroup.objects.all(),
+        to_field_name="name",
+        label="Parent cloud account group, including its descendants (name or ID)",
+    )
+    has_children = RelatedMembershipBooleanFilter(
+        field_name="children",
+        label="Has children",
+    )
+    cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudResourceType.objects.all(),
+        to_field_name="name",
+    )
+    cloud_accounts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudAccount.objects.all(),
+        to_field_name="name",
+    )
+    has_cloud_accounts = RelatedMembershipBooleanFilter(
+        field_name="cloud_accounts",
+        label="Has cloud accounts",
+    )
+
+    class Meta:
+        model = models.CloudAccountGroup
+        fields = ["id", "name", "description", "tags"]
+
+
+class CloudResourceGroupFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "provider_resource_id": "icontains",
+            "cloud_account__name": "icontains",
+            "cloud_resource_type__name": "icontains",
+        },
+    )
+    cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudAccount.objects.all(),
+        to_field_name="name",
+    )
+    cloud_account_group = TreeNodeMultipleChoiceFilter(
+        field_name="cloud_account__cloud_account_group",
+        queryset=models.CloudAccountGroup.objects.all(),
+        to_field_name="name",
+        label="Cloud account group, including its descendants (name or ID)",
+    )
+    cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudResourceType.objects.all(),
+        to_field_name="name",
+    )
+
+    class Meta:
+        model = models.CloudResourceGroup
+        fields = ["id", "name", "description", "provider_resource_id", "tags"]
 
 
 class CloudResourceTypeFilterSet(NautobotFilterSet):
@@ -69,6 +142,7 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "provider_resource_id": "icontains",
             "parent__name": "icontains",
             "parent__description": "icontains",
             "cloud_account__name": "icontains",
@@ -83,6 +157,16 @@ class CloudNetworkFilterSet(NautobotFilterSet):
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudAccount.objects.all(),
     )
+    cloud_account_group = TreeNodeMultipleChoiceFilter(
+        field_name="cloud_account__cloud_account_group",
+        queryset=models.CloudAccountGroup.objects.all(),
+        to_field_name="name",
+        label="Cloud account group, including its descendants (name or ID)",
+    )
+    cloud_resource_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudResourceGroup.objects.all(),
+        to_field_name="name",
+    )
     cloud_services = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudService.objects.all(),
     )
@@ -94,7 +178,7 @@ class CloudNetworkFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudNetwork
-        fields = ["id", "name", "description", "tags"]
+        fields = ["id", "name", "description", "provider_resource_id", "tags"]
 
 
 class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
@@ -120,6 +204,7 @@ class CloudServiceFilterSet(NautobotFilterSet):
         filter_predicates={
             "name": "icontains",
             "description": "icontains",
+            "provider_resource_id": "icontains",
             "cloud_account__name": "icontains",
             "cloud_account__description": "icontains",
             "cloud_networks__name": "icontains",
@@ -131,6 +216,16 @@ class CloudServiceFilterSet(NautobotFilterSet):
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudAccount.objects.all(),
     )
+    cloud_account_group = TreeNodeMultipleChoiceFilter(
+        field_name="cloud_account__cloud_account_group",
+        queryset=models.CloudAccountGroup.objects.all(),
+        to_field_name="name",
+        label="Cloud account group, including its descendants (name or ID)",
+    )
+    cloud_resource_group = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.CloudResourceGroup.objects.all(),
+        to_field_name="name",
+    )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudNetwork.objects.all(),
     )
@@ -140,7 +235,16 @@ class CloudServiceFilterSet(NautobotFilterSet):
 
     class Meta:
         model = models.CloudService
-        fields = ["id", "name", "description", "cloud_account", "cloud_networks", "cloud_resource_type", "tags"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "provider_resource_id",
+            "cloud_account",
+            "cloud_networks",
+            "cloud_resource_type",
+            "tags",
+        ]
 
 
 class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
