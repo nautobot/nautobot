@@ -6,6 +6,8 @@ Subclasses set ADD_PATH:
         ADD_PATH = "/dcim/devices/add/"
 """
 
+import re
+
 from playwright.sync_api import expect
 
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
@@ -18,6 +20,9 @@ class ObjectFormPage(BasePage):
 
     # The add form has a Create button and the edit form has an Update button.
     _SUBMIT_BUTTON = "button[name='_create'], button[name='_update']"
+    # Every detail URL ends in the object's pk. The group is unnamed because `to_have_url()` passes
+    # the pattern to the browser as a JavaScript RegExp, which does not accept `(?P<name>...)`.
+    _PK_IN_DETAIL_URL = re.compile(r"/([0-9a-f-]{36})/$")
 
     def __init__(self, page, base_url):
         """Fail fast on a subclass that forgot to set `ADD_PATH`."""
@@ -51,3 +56,9 @@ class ObjectFormPage(BasePage):
         themselves.
         """
         self._click_and_wait_for_navigation(self._SUBMIT_BUTTON)
+
+    def submit_and_return_pk(self):
+        """Click Create, wait for the redirect to the new object's detail view, and return its pk."""
+        self.submit()
+        expect(self.page).to_have_url(self._PK_IN_DETAIL_URL)
+        return self._PK_IN_DETAIL_URL.search(self.page.url).group(1)
