@@ -1,2 +1,2 @@
 Added `click_add` to `nautobot.playwright.list_page.ListPage`.
-Added `expect_heading`, `expect_on_add_form`, `expect_input_value` and `expect_field_error` to `nautobot.playwright.object_form_page.ObjectFormPage`, and extended its `fill_input` to fill textareas.
+Added `expect_heading`, `expect_on_add_form`, `expect_input_value` and `expect_field_error` to `nautobot.playwright.object_form_page.ObjectFormPage`.

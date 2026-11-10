@@ -171,9 +171,10 @@ def require_celery_worker(api):
         pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
 
 
-# The schema that created_schema_validation_tree binds its children to, and the data that they
-# contain. The API validates data against the bound schema on write, so a failing child cannot
-# be created directly. Tests make the children fail by changing the schema afterwards.
+# The schema that created_schema_validation_tree assigns to its child objects, and the context data
+# that each child contains. The API validates the data against the assigned schema on every write,
+# so a child whose data fails validation cannot be created directly. Instead, tests make the
+# children fail by changing the schema after the children exist.
 VALID_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -184,7 +185,7 @@ VALID_DATA = {"a": 123, "b": 456, "c": 777}
 
 @pytest.fixture
 def update_object(api):
-    """Callable that PATCHes *fields* onto the REST object *pk* at *endpoint* and returns the updated record."""
+    """Return a function that sends *fields* in a PATCH to object *pk* at *endpoint* and returns the updated record."""
 
     def _update(endpoint, pk, **fields):
         response = api.patch(f"/api/{endpoint}{pk}/", data=fields)
@@ -197,7 +198,7 @@ def update_object(api):
 
 @pytest.fixture
 def created_schema_validation_tree(create_object, update_object, status_for, created_device):
-    """A config context schema with one valid config context, device and virtual machine bound to it.
+    """Create a config context schema and assign it to one valid config context, device and virtual machine.
 
     These are the three kinds of object that the schema's Validation tab reports on. Each one
     has VALID_DATA as its context data. The config context is scoped to the device's location,

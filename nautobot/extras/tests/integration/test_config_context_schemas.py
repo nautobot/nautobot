@@ -1,4 +1,4 @@
-"""Config context schemas: the add form's valid and rejected submits, and the schema's Validation tab."""
+"""Tests for the config context schema add form (valid and rejected input) and the schema's Validation tab."""
 
 import json
 
@@ -23,8 +23,8 @@ NON_OBJECT_ERROR = (
 )
 
 # Each schema below replaces the one that created_schema_validation_tree creates, which has the
-# integer properties a, b and c. The data in its children, {"a": 123, "b": 456, "c": 777},
-# fails each one. The error messages come from the jsonschema library.
+# integer properties a, b and c. The context data of its child objects, {"a": 123, "b": 456, "c": 777},
+# fails validation against each schema below. The error messages come from the jsonschema library.
 RETYPED_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -60,7 +60,7 @@ class ConfigContextSchemaTestCase:
 
     @pytest.mark.behavioral
     def test_create_valid_config_context_schema(self, auth_page, base_url, api, create_object):
-        """A valid schema submitted from the list's Add button is created and opens on its detail view."""
+        """A valid schema submitted from the list's Add button is created, and the browser goes to its detail view."""
         name = unique_name()
         description = unique_name("ZZZ-description")
         create_object.track("extras/config-context-schemas/", name=name)
@@ -130,7 +130,7 @@ class ConfigContextSchemaTestCase:
 
     @pytest.mark.behavioral
     def test_validation_tab_reports_valid_children(self, auth_page, base_url, created_schema_validation_tree):
-        """Each panel lists its one bound object, and that object passes."""
+        """Each panel lists the one object that uses the schema, and that object passes validation."""
         tree = created_schema_validation_tree
         detail = ConfigContextSchemaDetailPage(auth_page, base_url)
         detail.navigate(tree["schema"]["id"])
@@ -144,7 +144,7 @@ class ConfigContextSchemaTestCase:
     def test_validation_tab_reports_schema_drift(
         self, auth_page, base_url, update_object, created_schema_validation_tree
     ):
-        """After the schema changes a property's type, each bound object fails with the type error."""
+        """After a property's type changes in the schema, each object that uses it fails with the type error."""
         tree = created_schema_validation_tree
         update_object("extras/config-context-schemas/", tree["schema"]["id"], data_schema=RETYPED_SCHEMA)
 
@@ -180,7 +180,10 @@ class ConfigContextSchemaTestCase:
     def test_validation_tab_reports_missing_required_property(
         self, auth_page, base_url, update_object, created_schema_validation_tree
     ):
-        """After the schema requires a property the bound objects lack, each one fails with the required-property error."""
+        """After the schema adds a required property that the objects' data lacks, each object fails validation.
+
+        Each object shows the required-property error.
+        """
         tree = created_schema_validation_tree
         update_object("extras/config-context-schemas/", tree["schema"]["id"], data_schema=REQUIRED_SCHEMA)
 

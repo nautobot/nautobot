@@ -14,7 +14,7 @@ class ConfigContextSchemaDetailPage(DetailPage):
     # An empty panel renders a single placeholder row with one colspan cell.
     _PANEL_DATA_ROWS = "tbody tr:not(:has(td[colspan]))"
     _VALIDATION_STATE_HEADER = "Validation state"
-    # The icons render_boolean draws, with title="Yes" and title="No".
+    # The icons that render_boolean draws for True (title="Yes") and False (title="No").
     _YES_ICON = "i.mdi-check-bold"
     _NO_ICON = "i.mdi-close-thick"
 
@@ -23,7 +23,7 @@ class ConfigContextSchemaDetailPage(DetailPage):
     # -------------------------------------------------------------------------
 
     def _validation_row(self, panel_title, row_name):
-        """Locator for the row of panel *panel_title* whose link text is exactly *row_name*."""
+        """Return the locator for the row in panel *panel_title* whose link text is exactly *row_name*."""
         return (
             self.panel(panel_title)
             .locator(self._PANEL_DATA_ROWS)
@@ -31,11 +31,11 @@ class ConfigContextSchemaDetailPage(DetailPage):
         )
 
     def _validation_cell(self, panel_title, row_name):
-        """Locator for the "Validation state" cell of *row_name* in panel *panel_title*.
+        """Return the locator for the "Validation state" cell of *row_name* in panel *panel_title*.
 
-        Find the column by its header in that panel's own table, because the three tables have
-        different columns. Do not look for the check icon anywhere in the row. The Config
-        Contexts table shows "Active" with the same icon as a pass.
+        This method finds the column by its header in that panel's own table, because the three
+        tables have different columns. It does not search the whole row for the check icon,
+        because the Config Contexts table also shows that icon in its "Active" column.
         """
         panel = self.panel(panel_title)
         expect(panel).to_have_count(1)

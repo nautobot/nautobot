@@ -23,7 +23,8 @@ class ObjectFormPage(BasePage):
     _TEXT_FIELD = "input[name='{field_name}'], textarea[name='{field_name}']"
     # The add form has a Create button and the edit form has an Update button.
     _SUBMIT_BUTTON = "button[name='_create'], button[name='_update']"
-    # render_field.html gives each field a container with has-error and an error list named by the field.
+    # render_field.html wraps each field in a container that gets the has-error class when the field is invalid,
+    # and lists the field's errors in an element whose id contains the field name.
     _FIELD_CONTAINER = "#id_{field_name}-container"
     _FIELD_ERRORS = "#id_{field_name}_error"
 
@@ -73,7 +74,10 @@ class ObjectFormPage(BasePage):
         expect(self.page.locator(self._TEXT_FIELD.format(field_name=field_name))).to_have_value(value)
 
     def expect_field_error(self, field_name, text, exact=False):
-        """Assert (auto-retrying) that the field *field_name* is flagged and its error list shows *text*."""
+        """Assert (auto-retrying) that field *field_name* is marked invalid and its error list shows *text*.
+
+        The field is marked invalid when its container has the has-error class.
+        """
         container = self.page.locator(self._FIELD_CONTAINER.format(field_name=field_name))
         expect(container).to_have_class(re.compile(r"\bhas-error\b"))
         errors = self.page.locator(self._FIELD_ERRORS.format(field_name=field_name))
