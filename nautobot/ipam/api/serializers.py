@@ -312,18 +312,41 @@ class AvailablePrefixSerializer(serializers.Serializer):
 #
 
 
-class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
-    address = IPFieldSerializer()
-    # namespace is not a model field, so we have to specify it explicitly
+class NamespaceParentedModelSerializerMixin(serializers.Serializer):
+    """The `namespace` field of a model whose `parent` Prefix is resolved from its Namespace and host(s).
+
+    The model's `namespace` is a property rather than a field. Setting it on an existing object moves the object
+    into that Namespace, re-resolving its `parent` there.
+    """
+
     namespace = NautobotHyperlinkedRelatedField(
-        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
+        view_name="ipam-api:namespace-detail", queryset=Namespace.objects.all(), required=False
     )
+
+    def validate(self, attrs):
+        if self.instance is None:
+            if not attrs.get("namespace") and not attrs.get("parent"):
+                raise ValidationError({"__all__": "One of parent or namespace must be provided"})
+        elif "namespace" in attrs:
+            # Setting the namespace clears `parent`, so put `namespace` first in the attributes that DRF sets.
+            # A `parent` given in the same request is then set afterward rather than cleared, and the model's
+            # clean() checks that it belongs to the namespace.
+            attrs = {"namespace": attrs.pop("namespace"), **attrs}
+
+        super().validate(attrs)
+        return attrs
+
+
+class IPAddressSerializer(NamespaceParentedModelSerializerMixin, NautobotModelSerializer, TaggedModelSerializerMixin):
+    address = IPFieldSerializer()
 
     class Meta:
         model = IPAddress
         fields = "__all__"
-        # The natural key's `host` is written as part of `address`, and `parent__namespace` as part of `parent`
-        import_match_fields = ["address", "parent"]
+        # The `namespace` field represents the natural key's `parent__namespace`, and `address` contains its `host`
+        import_match_fields = ["namespace", "address"]
+        related_field_query_paths = {"namespace": "parent__namespace"}
+        derived_fields_omitted_from_default_export = ["parent"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "mask_length": {"read_only": True},
@@ -331,16 +354,17 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
             "parent": {"required": False},
         }
 
-    def validate(self, attrs):
-        namespace = attrs.get("namespace", None)
-        parent = attrs.get("parent", None)
+    def translate_import_match_field_and_value_to_database_lookup(self, field_name, value):
+        """
+        Special case translation: `(address, netaddr.IPNetwork)` maps to `{host: netaddr.IPAddress}`, sans mask length.
 
-        # Only assert namespace/parent on create.
-        if self.instance is None and not any([namespace, parent]):
-            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
-
-        super().validate(attrs)
-        return attrs
+        This is so that a common use case of exporting an IPAddress (which exports `address`), then correcting the
+        mask length of the address, and reimporting it, matches the existing record's unchanged `host` value despite
+        the change in `mask_length`.
+        """
+        if field_name == "address":
+            return {"host": value.ip if value is not None else None}
+        return super().translate_import_match_field_and_value_to_database_lookup(field_name, value)
 
     def get_field_names(self, declared_fields, info):
         """Add reverse relations to the automatically discovered fields."""
@@ -356,35 +380,24 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
 #
 
 
-class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+class IPAddressRangeSerializer(
+    NamespaceParentedModelSerializerMixin, NautobotModelSerializer, TaggedModelSerializerMixin
+):
     start_address = IPAddressFieldSerializer()
     end_address = IPAddressFieldSerializer()
-    # namespace is not a model field, so we have to specify it explicitly
-    namespace = NautobotHyperlinkedRelatedField(
-        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
-    )
     size = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = IPAddressRange
         fields = "__all__"
-        # The natural key's `start_host` is written as `start_address`, and `parent__namespace` as part of `parent`
-        import_match_fields = ["start_address", "parent"]
+        # The `namespace` field represents the natural key's `parent__namespace`, and `start_address` its `start_host`
+        import_match_fields = ["namespace", "start_address"]
+        related_field_query_paths = {"namespace": "parent__namespace"}
+        derived_fields_omitted_from_default_export = ["parent"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "parent": {"required": False},
         }
-
-    def validate(self, attrs):
-        namespace = attrs.get("namespace", None)
-        parent = attrs.get("parent", None)
-
-        # Only assert namespace/parent on create (parent is auto-resolved from namespace + start/end host).
-        if self.instance is None and not any([namespace, parent]):
-            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
-
-        super().validate(attrs)
-        return attrs
 
 
 class AvailableIPSerializer(serializers.Serializer):

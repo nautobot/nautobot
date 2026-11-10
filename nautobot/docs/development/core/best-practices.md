@@ -120,9 +120,15 @@ class Token(BaseModel):
     sensitive_fields = ("key",)
 ```
 
-Filtering by such a field still works, since the guarantee is that the value is never returned rather than that the column cannot be referenced. See [Sensitive Model Fields](sensitive-fields.md) for the opt-in methods, the `STRICT_SENSITIVE_FIELDS` setting, and the limitations.
+Filtering by such a field still works in Python code, since the guarantee is that the value is never returned rather than that the column cannot be referenced. User-authored templates cannot filter on it, since a prefix or pattern lookup could disclose the value. See [Sensitive Model Fields](sensitive-fields.md) for the opt-in methods, the `STRICT_SENSITIVE_FIELDS` setting, and the limitations.
 
 Note that "sensitive" here means genuinely secret. A field that is merely internal or uninteresting is better marked by the existing convention of a leading underscore in its name, which keeps it out of filter forms, serializers and detail views without involving any of this machinery.
+
+### Jinja2 Template Filters
+
+A template filter registered with `@library.filter` runs as ordinary Python outside the sandbox that renders user-authored templates, so the sandbox's protections do not apply to anything the filter does with its arguments. Follow the rules in [Writing Safe Filters](../apps/api/platform-features/jinja2-filters.md#writing-safe-filters), which apply equally to core filters.
+
+Core filters in `nautobot/core/templatetags/helpers.py` are usually registered as Django template filters too (`@register.filter()`), and a Django template has no Jinja2 environment to read through. When such a filter must read an attribute named by the template, refuse names that start with an underscore and pass the name to `nautobot.core.templating.deny_sensitive_field_attribute()` before reading it, as `_build_hyperlink()` does.
 
 ### Slug Field
 

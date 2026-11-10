@@ -786,6 +786,14 @@ $nautobot-chevron-svg: "<svg viewBox='0 0 17 20' fill='none' xmlns='http://www.w
   }
 }
 
+/* Structured data rendered by render_json and render_yaml, including inside auto-layout tables. */
+code.language-json,
+code.language-yaml {
+  white-space: pre-wrap;
+  /* Override Bootstrap's code word-wrap so long tokens also reduce the table's minimum content width. */
+  overflow-wrap: anywhere;
+}
+
 /* Links */
 a,
 button {
@@ -1852,6 +1860,54 @@ $nb-toast-variants: (
         }
       }
     }
+  }
+}
+
+.nb-tag-link {
+  $nb-tag-link-min-size: 1.5rem; /* 24px, required to comply with WCAG 2.2 SC 2.5.8 Target Size (Minimum) */
+  $nb-tag-link-padding-block: ($nb-tag-link-min-size - $badge-font-size - $badge-padding-y * 2) * 0.5; /* 3px */
+
+  display: inline-flex;
+  justify-content: center;
+  min-inline-size: $nb-tag-link-min-size;
+  padding-block: $nb-tag-link-padding-block;
+
+  .badge {
+    @include transition($btn-transition);
+  }
+
+  &:focus-visible {
+    box-shadow: none; /* Reset the default focus ring on the tag link click target box, it looks off given the additional padding. */
+
+    .badge {
+      box-shadow: 0 0 0 $nb-tag-link-padding-block color-mix(in srgb, var(--nb-tag-bg, var(--#{$prefix}focus-ring-color)) 40%, transparent);
+    }
+  }
+
+  &:focus-visible,
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--nb-tag-color, var(--#{$prefix}body-color));
+  }
+
+  /*
+   * `.nb-tag-link` is `24px` tall, which is more than the default line height. To compensate, decrease the vertical
+   * padding of its containers so an element with a single line of tags keeps its height and neighboring content stays
+   * aligned. The padding correction works only for the edges, so each wrapped line still adds extra height.
+   */
+  @mixin nb-tag-link-container-padding-y($original-padding-y) {
+    $line-height: $line-height-base * $font-size-base;
+    padding-block: $original-padding-y - ($nb-tag-link-min-size - $line-height) * 0.5;
+  }
+  /* The cell rule uses a descendant instead of a child selector because `ipaddress_merge.html` nests its tags in a `<label>`. */
+  td:has(&) {
+    @include nb-tag-link-container-padding-y($table-cell-padding-y);
+  }
+  .table-sm td:has(&) {
+    @include nb-tag-link-container-padding-y($table-cell-padding-y-sm);
+  }
+  .card-body:has(> &) {
+    @include nb-tag-link-container-padding-y($card-spacer-y);
   }
 }
 

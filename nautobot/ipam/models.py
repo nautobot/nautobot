@@ -19,6 +19,7 @@ from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextF
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.dcim.models import Device, Interface, VirtualDeviceContext
 from nautobot.dcim.utils import is_host_interface_ip
 from nautobot.extras.models import RoleField, StatusField
@@ -100,7 +101,11 @@ class NamespaceParentedModelMixin:
             setattr(self, f"_{field_name}", getattr(self, field_name))
 
     @property
-    def _namespace(self):
+    def namespace(self):
+        """The Namespace this object belongs to, which is its parent Prefix's Namespace once saved.
+
+        Setting a Namespace clears `parent`, so that `clean()` re-resolves it within that Namespace.
+        """
         # if a namespace was explicitly set, use it
         if getattr(self, "_provided_namespace", None):
             return self._provided_namespace
@@ -108,11 +113,26 @@ class NamespaceParentedModelMixin:
             return self.parent.namespace
         return get_default_namespace()
 
-    @_namespace.setter
-    def _namespace(self, namespace):
+    @namespace.setter
+    def namespace(self, namespace):
         if namespace:
             self.parent = None
         self._provided_namespace = namespace
+
+    @property
+    def _namespace(self):
+        """Deprecated alias of `namespace`."""
+        warn_deprecated_at_caller(
+            "`_namespace` is deprecated, and will be removed in a future Nautobot release. Use `namespace` instead."
+        )
+        return self.namespace
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        warn_deprecated_at_caller(
+            "`_namespace` is deprecated, and will be removed in a future Nautobot release. Use `namespace` instead."
+        )
+        self.namespace = namespace
 
     def _get_closest_parent(self, host):
         """
@@ -123,7 +143,7 @@ class NamespaceParentedModelMixin:
         empty_values = [None, b"", ""]
         if host in empty_values:
             return None
-        namespace = self._namespace
+        namespace = self.namespace
         cache_key = (namespace.pk, host)
         if cache_key in self._closest_parent_cache:
             return self._closest_parent_cache[cache_key]
@@ -1805,7 +1825,7 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
 
         if self.host and self.ip_version:
             exclusive_range = IPAddressRange.objects.filter(
-                parent__namespace=self._namespace,
+                parent__namespace=self.namespace,
                 ip_version=self.ip_version,
                 is_exclusive=True,
                 start_host__lte=self.host,
@@ -1830,13 +1850,13 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
                     {
                         "parent": (
                             f"{self.parent} cannot be assigned as the parent of {self}. "
-                            f" In namespace {self._namespace}, the expected parent would be {closest_parent}."
+                            f" In namespace {self.namespace}, the expected parent would be {closest_parent}."
                         )
                     }
                 )
             # Otherwise, it was *implicitly* changed (e.g. by changing `namespace`), so just update it as appropriate.
             self.parent = closest_parent
-            self._namespace = None
+            self.namespace = None
 
         if self.host and self.parent_id:
             duplicate = IPAddress.objects.filter(parent_id=self.parent_id, host=self.host).exclude(pk=self.pk)
@@ -2218,12 +2238,12 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
                 {
                     "parent": (
                         f"{self.parent} cannot be assigned as the parent of {self}. "
-                        f"In namespace {self._namespace}, the expected parent would be {closest_start}."
+                        f"In namespace {self.namespace}, the expected parent would be {closest_start}."
                     )
                 }
             )
         self.parent = closest_start
-        self._namespace = None
+        self.namespace = None
 
     def _validate_no_range_overlap(self):
         """Must not intersect any other IP Address Range in the same namespace."""

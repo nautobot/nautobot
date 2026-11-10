@@ -335,6 +335,9 @@ The import log reports each updated object with the fields that changed and thei
 
 Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
 
+!!! tip
+    Any [sensitive field](../../development/core/sensitive-fields.md), such as a user's `password`, can never be used as a match field.
+
 When importing, you can override the match fields for a particular file either by editing the metadata directly before uploading the file, or by explicitly specifying match fields as an input to the "Import Objects" Job. This can be powerful for in-place updates where you know that a given field(s), even though not actually enforced unique by Nautobot itself, happen in your particular use case to be unique identifiers for the existing objects in the system. Overriding the match fields in this case can allow you to specify records in a simpler or more portable way than using a full natural-key field set or using the raw `id` values would.
 
 !!! warning "You own the uniqueness"
