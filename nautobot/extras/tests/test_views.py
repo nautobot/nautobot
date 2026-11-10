@@ -938,11 +938,8 @@ class ObjectApprovalWorkflowViewRestrictionTestCase(TestCase):
         self.url = reverse("extras:scheduledjob_approvalworkflow", kwargs={"pk": self.scheduled_job.pk})
 
     def test_related_tables_restricted_without_stage_response_permissions(self):
-        """A user who may view the parent job still reaches the tab, but sees no stages/responses they lack permission for."""
-        # Only view on the parent ScheduledJob, matching the submitter who is redirected here after
-        # scheduling a job: the page must remain reachable (not 404) and must not require
-        # view_approvalworkflow, but the stage/response content must be restricted away.
-        self.add_permissions("extras.view_scheduledjob")
+        """A user who may view the job and workflow, but not the stages/responses, sees empty related tables."""
+        self.add_permissions("extras.view_scheduledjob", "extras.view_approvalworkflow")
         response = self.client.get(self.url)
         self.assertHttpStatus(response, 200)
         self.assertEqual(len(response.context["stage_table"].rows), 0)
@@ -960,6 +957,12 @@ class ObjectApprovalWorkflowViewRestrictionTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertEqual(len(response.context["stage_table"].rows), 1)
         self.assertEqual(len(response.context["response_table"].rows), 1)
+
+    def test_without_view_approvalworkflow_permission_is_not_found(self):
+        """A user who may view the job but lacks view_approvalworkflow cannot reach the approval tab."""
+        self.add_permissions("extras.view_scheduledjob")
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 404)
 
 
 class ApprovalWorkflowStageViewTestCase(
@@ -6729,6 +6732,7 @@ class JobTestCase(
     def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -6751,6 +6755,7 @@ class JobTestCase(
     def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         workflow = ApprovalWorkflowDefinition(
             name="Approval Definition",
@@ -6866,6 +6871,7 @@ class JobTestCase(
     def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",

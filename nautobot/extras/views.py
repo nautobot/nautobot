@@ -822,12 +822,10 @@ class ObjectApprovalWorkflowView(generic.GenericView):
         else:
             obj = get_object_or_404(model, **kwargs)
 
-        # Gather all changes for this object (and its related objects). The workflow itself is
-        # reachable by anyone who may view the parent object (e.g. the submitter landing here after
-        # scheduling the job); object-level permissions are enforced on the stages and responses
-        # below, which is where the sensitive data lives. get_object_or_404 also avoids a 500 when
-        # no workflow exists for the object.
-        approval_workflow = get_object_or_404(ApprovalWorkflow, object_under_review_object_id=obj.pk)
+        # Gather all changes for this object (and its related objects)
+        approval_workflow = get_object_or_404(
+            ApprovalWorkflow.objects.restrict(request.user, "view"), object_under_review_object_id=obj.pk
+        )
         stage_table = tables.RelatedApprovalWorkflowStageTable(
             ApprovalWorkflowStage.objects.restrict(request.user, "view").filter(approval_workflow=approval_workflow),
         )
