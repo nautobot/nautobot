@@ -10,7 +10,7 @@ from tree_queries.query import TreeManager as TreeManager_, TreeQuerySet as Tree
 
 from nautobot.core.models import BaseManager, querysets
 from nautobot.core.signals import invalidate_max_depth_cache
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import construct_cache_key, invalidate_cache
 
 
 class TreeQuerySet(TreeQuerySet_, querysets.RestrictedQuerySet):
@@ -109,7 +109,7 @@ class TreeManager(TreeManager_, BaseManager.from_queryset(TreeQuerySet)):
         if max_depth is None:
             max_depth = self.max_tree_depth()
             # cache is explicitly invalidated by nautobot.core.signals.invalidate_max_depth_cache as needed
-            cache.set(cache_key, max_depth, timeout=None)
+            cache.set(cache_key, max_depth, timeout=settings.PERSISTENT_CACHE_TIMEOUT)
         return max_depth
 
 
@@ -192,20 +192,23 @@ class TreeModel(TreeNode):
             parent_changed = True
 
         if parent_changed and old_instance is not None:
-            for ancestor in old_instance.ancestors(include_self=False):
-                cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
-                cache.delete_pattern(f"{cache_key}(*)")
+            self._invalidate_cached_descendants_pks_of_ancestors(old_instance)
 
         super().save(*args, **kwargs)
 
         if parent_changed:
-            for ancestor in self.ancestors(include_self=False):
-                cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
-                cache.delete_pattern(f"{cache_key}(*)")
+            self._invalidate_cached_descendants_pks_of_ancestors(self)
 
     def delete(self, *args, **kwargs):
-        for ancestor in self.ancestors(include_self=False):
-            cache_key = construct_cache_key(ancestor, method_name="cacheable_descendants_pks", branch_aware=True)
-            cache.delete_pattern(f"{cache_key}(*)")
+        self._invalidate_cached_descendants_pks_of_ancestors(self)
 
         return super().delete(*args, **kwargs)
+
+    @staticmethod
+    def _invalidate_cached_descendants_pks_of_ancestors(instance):
+        invalidate_cache(
+            patterns=[
+                f"{construct_cache_key(ancestor, method_name='cacheable_descendants_pks', branch_aware=True)}(*)"
+                for ancestor in instance.ancestors(include_self=False)
+            ]
+        )

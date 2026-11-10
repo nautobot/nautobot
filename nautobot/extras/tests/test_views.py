@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from http import HTTPStatus
 import re
 from unittest import mock
@@ -2009,6 +2009,27 @@ class ContactAssociationTestCase(
         self.assertEqual(contact_association.associated_object_id, self.form_data["associated_object_id"])
         self.assertEqual(contact_association.role.pk, self.form_data["role"])
         self.assertEqual(contact_association.status.pk, self.form_data["status"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_contact_or_team_with_custom_field(self):
+        """Test that custom fields on ContactAssociation can be filled in when assigning a contact or team."""
+        custom_field = CustomField.objects.create(
+            key="contact_association_field",
+            label="Contact Association Field",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        custom_field.content_types.set([ContentType.objects.get_for_model(ContactAssociation)])
+        self.add_permissions("extras.add_contactassociation")
+
+        url = reverse("extras:object_contact_team_assign")
+        self.assertBodyContains(self.client.get(url), 'name="cf_contact_association_field"')
+
+        data = {**self.form_data, "cf_contact_association_field": "Some value"}
+        self.assertHttpStatus(self.client.post(url, data=post_data(data)), 302)
+        self.assertTrue(
+            ContactAssociation.objects.filter(_custom_field_data__contact_association_field="Some value").exists()
+        )
 
 
 class CustomLinkTestCase(
@@ -5387,6 +5408,29 @@ class JobResultTestCase(
         ts3 = self.console_entry_3.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
         self.assertEqual(lines[2], f"[{ts3}] {self.console_entry_3.text.strip()}")
 
+    def test_export_job_console_entries_uses_user_timezone(self):
+        """Exported timestamps are rendered in the user's timezone, matching the Console Log tab."""
+        entry = JobConsoleEntry.objects.create(job_result=self.job_result_pending, text="Running job")
+        # `timestamp` is `auto_now_add`, so it can only be set to a fixed value via a queryset update
+        JobConsoleEntry.objects.filter(pk=entry.pk).update(
+            timestamp=datetime(2026, 11, 5, 6, 5, 8, 449000, tzinfo=dt_timezone.utc)
+        )
+        self.user.set_config("timezone", "Asia/Singapore", commit=True)
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        ui_response = self.client.get(
+            reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        )
+        export_response = self.client.get(
+            reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        )
+
+        self.assertHttpStatus(ui_response, 200)
+        self.assertHttpStatus(export_response, 200)
+        # 06:05:08.449 UTC is 14:05:08.449 in Asia/Singapore (UTC+8)
+        self.assertIn("[14:05:08.449] Running job", export_response.content.decode().splitlines())
+        self.assertBodyContains(ui_response, "<span>[14:05:08.449]</span>")
+
     def test_export_job_console_entries_with_constrained_permission(self):
         """Test that constrained permissions filter console entries correctly."""
         url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
@@ -5931,6 +5975,47 @@ class JobTestCase(
         instance = Job.objects.get(job_class_name="ExampleJob")
         response = self.client.get(instance.get_absolute_url())
         self.assertBodyContains(response, apps.get_app_config("example_app").version)
+
+    def _override_time_limits(self, instance):
+        instance.soft_time_limit_override = True
+        instance.soft_time_limit = 350
+        instance.time_limit_override = True
+        instance.time_limit = 650
+        instance.save()
+
+    def test_job_detail_overridden_time_limits_loads_unregistered_job_class(self):
+        """A JOBS_ROOT Job not yet imported by this process is reloaded so its defaults render."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_pass
+        self._override_time_limits(instance)
+        with mock.patch.dict(registry["jobs"]):
+            registry["jobs"].pop(instance.class_path)
+            response = self.client.get(instance.get_absolute_url())
+            self.assertIn(instance.class_path, registry["jobs"])
+
+        self.assertBodyContains(response, "seconds (system default)")
+        self.assertNotIn("default is unknown", response.content.decode(response.charset))
+
+    def test_job_detail_overridden_time_limits_without_job_class(self):
+        """Overridden time limits render as unknown, rather than a 500, when the Job class can't be loaded."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_pass
+        self._override_time_limits(instance)
+        with mock.patch.dict(registry["jobs"]), mock.patch("nautobot.extras.jobs.import_jobs"):
+            registry["jobs"].pop(instance.class_path)
+            response = self.client.get(instance.get_absolute_url())
+
+        self.assertBodyContains(response, "overridden; default is unknown")
+
+    def test_job_detail_overridden_field_not_installed(self):
+        """An overridden field on a non-installed Job states once that its default is unknown."""
+        self.add_permissions("extras.view_job")
+        instance = self.test_not_installed
+        self._override_time_limits(instance)
+
+        response = self.client.get(instance.get_absolute_url())
+
+        self.assertBodyContains(response, "overridden; default is unknown (not currently installed)")
 
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()

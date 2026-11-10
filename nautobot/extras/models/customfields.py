@@ -4,6 +4,7 @@ import json
 import logging
 
 from django import forms
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
@@ -85,12 +86,19 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if not get_queryset:
                 listing, _ = cache_get_or_set(
                     list_cache_key,
-                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
-                    timeout=None,
+                    lambda: list(
+                        cache_get_or_set(cache_key, compute_queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)[0]
+                    ),
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                     cache_hit_callback=hit_callback,
                 )
                 return listing
-            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            queryset, _ = cache_get_or_set(
+                cache_key,
+                compute_queryset,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
+                cache_hit_callback=hit_callback,
+            )
             return queryset
 
     def populate_list_caches(self):
@@ -105,7 +113,7 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 self, method_name="get_for_model", branch_aware=True, model=label, listing=True
             )
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(cache_key, listings[label], timeout=None)
+            cache.set(cache_key, listings[label], timeout=settings.PERSISTENT_CACHE_TIMEOUT)
 
     def bulk_create(self, objs, *args, **kwargs):
         """Validate templates before saving."""
@@ -509,12 +517,19 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             if not get_queryset:
                 listing, _ = cache_get_or_set(
                     list_cache_key,
-                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
-                    timeout=None,
+                    lambda: list(
+                        cache_get_or_set(cache_key, compute_queryset, timeout=settings.PERSISTENT_CACHE_TIMEOUT)[0]
+                    ),
+                    timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                     cache_hit_callback=hit_callback,
                 )
                 return listing
-            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            queryset, _ = cache_get_or_set(
+                cache_key,
+                compute_queryset,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
+                cache_hit_callback=hit_callback,
+            )
             return queryset
 
     def keys_for_model(self, model):
@@ -536,7 +551,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             keys, _ = cache_get_or_set(
                 cache_key,
                 lambda: list(self.get_for_model(model).values_list("key", flat=True)),
-                timeout=None,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
                 cache_hit_callback=hit_callback,
             )
             return keys
@@ -566,7 +581,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                     listing=True,
                 ),
                 cf_listings[label][True],
-                timeout=None,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
             )
             cache.set(
                 construct_cache_key(
@@ -578,12 +593,12 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                     listing=True,
                 ),
                 cf_listings[label][False],
-                timeout=None,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
             )
             cache.set(
                 construct_cache_key(self, method_name="keys_for_model", branch_aware=True, model=label),
                 key_listings[label],
-                timeout=None,
+                timeout=settings.PERSISTENT_CACHE_TIMEOUT,
             )
 
 
@@ -725,7 +740,7 @@ class CustomField(
         if choices is None:
             choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_choices_cache
-            cache.set(cache_key, choices, timeout=None)
+            cache.set(cache_key, choices, timeout=settings.PERSISTENT_CACHE_TIMEOUT)
         return choices
 
     def get_in_scope_queryset(self, queryset, job_logger=logger):

@@ -288,6 +288,7 @@ SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "f
 if SSO_ENABLE_GROUP_SYNC:
     SOCIAL_AUTH_PIPELINE = (
         "social_core.pipeline.social_auth.social_details",
+        "social_core.pipeline.social_auth.social_names",
         "social_core.pipeline.social_auth.social_uid",
         "social_core.pipeline.social_auth.auth_allowed",
         "social_core.pipeline.social_auth.social_user",
@@ -1117,6 +1118,12 @@ CACHES = {
 
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
+# Number of seconds before persistent caches (custom fields, relationships, etc.) expire.
+# None means they never expire and are only refreshed when their underlying data changes.
+PERSISTENT_CACHE_TIMEOUT = None
+if "NAUTOBOT_PERSISTENT_CACHE_TIMEOUT" in os.environ and os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"] != "":
+    PERSISTENT_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"])
 
 #
 # Celery (used for background processing)
