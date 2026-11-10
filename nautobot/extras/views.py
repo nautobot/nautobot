@@ -26,7 +26,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.timezone import get_current_timezone, now
+from django.utils.timezone import get_current_timezone, localtime, now
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
@@ -2517,9 +2517,10 @@ class JobUIViewSet(NautobotUIViewSet):
     )
 
     def get_object(self):
-        # Reload the job class to ensure we have the latest version
         obj = super().get_object()
-        if self.action == "update":
+        # Edits always reload to pick up the latest Job code. The detail view reloads only when this process has
+        # not imported the Job yet, since JOBS_ROOT and Git repository Jobs are not loaded at startup.
+        if self.action == "update" or (self.action == "retrieve" and obj.installed and obj.job_class is None):
             get_job(obj.class_path, reload=True)
         return obj
 
@@ -4203,7 +4204,7 @@ class JobResultUIViewSet(
         lines = []
         for entry in entries:
             # Format: [14:30:45.123] text
-            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            ts = localtime(entry.timestamp).strftime("%H:%M:%S.%f")[:12]  # trim to ms
             lines.append(f"[{ts}] {entry.text.strip()}")
 
         content = "\n".join(lines)

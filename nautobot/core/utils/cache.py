@@ -1,12 +1,13 @@
 """Utilities for conveniently working with the Django/Redis cache."""
 
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import contextvars
 import logging
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import models
+from django.db import models, transaction
+import redis.exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,33 @@ def cache_get_or_set(cache_key, compute, *, timeout, cache_hit_callback=None):
     if cache_hit_callback is not None:
         cache_hit_callback(hit)
     return value, hit
+
+
+def invalidate_cache(*, keys=(), patterns=()):
+    """
+    Delete the given cache `keys` and `patterns` now, and again once the current database transaction commits.
+
+    The immediate delete lets the rest of the current transaction see its own changes. The second delete is needed
+    because a concurrent request that misses the cache before this transaction commits still reads the old data from
+    the database and can repopulate the cache with it; caches that never expire would otherwise stay stale until the
+    next change. Outside of a transaction, the second delete runs immediately and is a harmless no-op.
+
+    Args:
+        keys (Iterable[str]): Exact cache keys to delete.
+        patterns (Iterable[str]): Cache key patterns to delete, as accepted by `cache.delete_pattern()`.
+    """
+    keys = tuple(keys)
+    patterns = tuple(patterns)
+
+    def _invalidate():
+        with suppress(redis.exceptions.ConnectionError):
+            for key in keys:
+                cache.delete(key)
+            for pattern in patterns:
+                cache.delete_pattern(pattern)
+
+    _invalidate()
+    transaction.on_commit(_invalidate)
 
 
 def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):

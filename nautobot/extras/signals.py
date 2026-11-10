@@ -25,7 +25,7 @@ from nautobot.core.branching import BranchContext
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import changelog_comparable_fields, changelog_values_verdict, ChangeVerdict
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import construct_cache_key, invalidate_cache
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.change_consumers import invalidate_change_consumers_cache
 from nautobot.extras.choices import (
@@ -230,13 +230,16 @@ def invalidate_models_cache(sender, **kwargs):
     else:
         manager = sender.objects
 
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-        cache_key = construct_cache_key(manager, method_name="get_for_model", branch_aware=True)
-        cache.delete_pattern(f"{cache_key}(*)")
-        if hasattr(manager, "keys_for_model"):
-            cache_key = construct_cache_key(manager, method_name="keys_for_model", branch_aware=True)
-            cache.delete_pattern(f"{cache_key}(*)")
+    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+    method_names = ["get_for_model"]
+    if hasattr(manager, "keys_for_model"):
+        method_names.append("keys_for_model")
+    invalidate_cache(
+        patterns=[
+            f"{construct_cache_key(manager, method_name=method_name, branch_aware=True)}(*)"
+            for method_name in method_names
+        ]
+    )
 
 
 @receiver(post_delete, sender=CustomField)
@@ -245,12 +248,11 @@ def invalidate_models_cache(sender, **kwargs):
 @receiver(post_save, sender=CustomField)
 def invalidate_choices_cache(sender, instance, **kwargs):
     """Invalidate the choices cache for CustomFields."""
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        if sender is CustomField:
-            cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
-        else:
-            cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
-        cache.delete(cache_key)
+    if sender is CustomField:
+        cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
+    else:
+        cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
+    invalidate_cache(keys=[cache_key])
 
 
 @receiver(post_save, sender=Relationship)
@@ -258,14 +260,13 @@ def invalidate_choices_cache(sender, instance, **kwargs):
 @receiver(post_delete, sender=Relationship)
 def invalidate_relationship_models_cache(sender, **kwargs):
     """Invalidate the related-models caches for Relationships."""
-    for method_name in (
-        "get_for_model_source",
-        "get_for_model_destination",
-    ):
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-            cache_key = construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)
-            cache.delete_pattern(f"{cache_key}(*)")
+    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+    invalidate_cache(
+        patterns=[
+            f"{construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)}(*)"
+            for method_name in ("get_for_model_source", "get_for_model_destination")
+        ]
+    )
 
 
 @receiver(post_save, sender=CustomField)
@@ -275,8 +276,7 @@ def invalidate_relationship_models_cache(sender, **kwargs):
 @receiver(post_delete, sender=Relationship)
 def invalidate_openapi_schema_cache(sender, **kwargs):
     """Invalidate the openapi schema cache."""
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache.delete_pattern("openapi_schema_cache_*")
+    invalidate_cache(patterns=["openapi_schema_cache_*"])
 
 
 @receiver(pre_save)
@@ -378,11 +378,8 @@ def _record_unchanged_verdict(instance, stored_instance, using=None, update_fiel
 @receiver(post_save, sender=GitRepository)
 @receiver(post_delete, sender=GitRepository)
 def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache_key = construct_cache_key(
-            GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True
-        )
-        cache.delete_pattern(f"{cache_key}(*)")
+    cache_key = construct_cache_key(GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True)
+    invalidate_cache(patterns=[f"{cache_key}(*)"])
 
 
 def _object_change_branch_name(instance):

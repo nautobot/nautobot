@@ -34,9 +34,13 @@ A companion system check (`nautobot.core.E011`) reports a model that declares `s
 !!! note
     Called with no arguments, `values()` and `values_list()` will only return the model's non-sensitive fields.
 
+**Reading the attribute by name in a template.** A user-authored template is also refused a sensitive field when it is read by name on the template's behalf, rather than as an attribute. This covers the `field` argument of the `hyperlinked_object` and `hyperlinked_object_target_new_tab` filters, a model's `serializable_value()`, and `Field` methods such as `value_from_object()` and `value_to_string()` when given an instance whose model declares that field sensitive.
+
+**Filtering on the field in a template.** A user-authored template is refused any queryset lookup that references a sensitive field, whether as a keyword argument such as `filter(key__startswith=...)`, inside a `Q` object, or through a relation from another model such as `tokens__key`. A prefix or pattern lookup reveals whether any row matches, so repeated lookups would disclose the value one character at a time.
+
 ## What stays allowed
 
-**Filtering.** You can still look an object up by a sensitive field. The guarantee is that the value is never returned to you, not that the column cannot be referenced, and API token authentication depends on being able to find a token by its key:
+**Filtering, in code.** Python code can still look an object up by a sensitive field. The guarantee is that the value is never returned to you, not that the column cannot be referenced, and API token authentication depends on being able to find a token by its key. User-authored templates cannot filter on a sensitive field, as described [above](#what-gets-blocked):
 
 ```python
 >>> Token.objects.get(key=key_from_request_header)   # works
@@ -127,3 +131,7 @@ from nautobot.apps.models import SensitiveFieldsQuerySetMixin
 Note that a custom manager which overrides `get_queryset()` without calling `super()` will not pick up the protections.
 
 `nautobot-server check` reports this as `nautobot.core.E011` for any model that declares `sensitive_fields` while its default queryset lacks the mixin. Such a model still withholds the values from loaded instances, but `values()`, `values_list()`, `annotate()`, `alias()`, `aggregate()`, `order_by()` and `distinct()` will return them.
+
+## For App authors writing a Jinja2 filter
+
+The template protections above apply to what a template does itself, not to what a filter does with its arguments. A filter that reads an attribute named by the template with plain `getattr()`, or serializes a whole object, can disclose a sensitive field. See [Writing Safe Filters](../apps/api/platform-features/jinja2-filters.md#writing-safe-filters).
