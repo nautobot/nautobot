@@ -46,13 +46,6 @@ REQUIRED_SCHEMA = {
 REQUIRED_ERROR = "'d' is a required property"
 
 
-def schemas_named(api, name):
-    """Return the API records of every config context schema named *name*."""
-    response = api.get("/api/extras/config-context-schemas/", params={"name": name})
-    assert response.ok, f"GET config context schemas returned {response.status}: {response.text()}"
-    return response.json()["results"]
-
-
 def validation_rows(tree):
     """Map each Validation tab panel to the name of the one object that created_schema_validation_tree creates in it."""
     return {
@@ -86,17 +79,24 @@ class ConfigContextSchemaTestCase:
         detail.expect_heading(name)
         detail.expect_edit_button()
 
-        records = schemas_named(api, name)
-        assert len(records) == 1, f"Expected one schema named {name!r}, found {len(records)}"
-        detail.expect_url_contains(detail.DETAIL_PATH.format(pk=records[0]["id"]))
-        assert records[0]["data_schema"] == json.loads(VALID_SCHEMA_TEXT)
-        assert records[0]["description"] == description
+        response = api.get("/api/extras/config-context-schemas/", params={"name": name})
+        assert response.ok, (
+            f"GET /api/extras/config-context-schemas/ returned {response.status}: {response.text()[:200]}"
+        )
+        saved = response.json()["results"]
+        assert len(saved) == 1, f"Expected one schema named {name}, found {len(saved)}"
+        schema = saved[0]
+        detail.expect_url_contains(detail.DETAIL_PATH.format(pk=schema["id"]))
+        assert schema["data_schema"] == json.loads(VALID_SCHEMA_TEXT)
+        assert schema["description"] == description
 
     @pytest.mark.behavioral
-    def test_create_invalid_config_context_schema_bad_jsonschema_type(self, auth_page, base_url, api, create_object):
+    def test_create_invalid_config_context_schema_bad_jsonschema_type(
+        self, auth_page, base_url, api_count, create_object
+    ):
         """A schema that the jsonschema library rejects redisplays the form with the error and the submitted input."""
         name = unique_name()
-        # Tracked so teardown deletes the schema if a jsonschema upgrade starts to accept it.
+        # The name is tracked so that teardown deletes the schema if a jsonschema upgrade starts to accept it.
         create_object.track("extras/config-context-schemas/", name=name)
 
         form = ConfigContextSchemaFormPage(auth_page, base_url)
@@ -107,13 +107,13 @@ class ConfigContextSchemaTestCase:
         form.expect_on_add_form()
         form.expect_heading(ADD_FORM_HEADING)
         # The message comes from the jsonschema library, which poetry.lock pins to one version.
-        form.expect_data_schema_error("'not a valid type' is not valid under any of the given schemas")
-        form.expect_name(name)
+        form.expect_field_error("data_schema", "'not a valid type' is not valid under any of the given schemas")
+        form.expect_input_value("name", name)
         assert form.get_data_schema() == json.loads(BAD_TYPE_SCHEMA_TEXT)
-        assert schemas_named(api, name) == [], "A rejected schema should not be created"
+        assert api_count("extras/config-context-schemas/", name=name) == 0, "A rejected schema should not be created"
 
     @pytest.mark.behavioral
-    def test_create_invalid_config_context_schema_non_object(self, auth_page, base_url, api, create_object):
+    def test_create_invalid_config_context_schema_non_object(self, auth_page, base_url, api_count, create_object):
         """A schema that is not an object with properties is rejected with Nautobot's own message."""
         name = unique_name()
         create_object.track("extras/config-context-schemas/", name=name)
@@ -124,9 +124,9 @@ class ConfigContextSchemaTestCase:
         form.submit()
 
         form.expect_on_add_form()
-        form.expect_data_schema_error(NON_OBJECT_ERROR, exact=True)
-        form.expect_name(name)
-        assert schemas_named(api, name) == [], "A rejected schema should not be created"
+        form.expect_field_error("data_schema", NON_OBJECT_ERROR, exact=True)
+        form.expect_input_value("name", name)
+        assert api_count("extras/config-context-schemas/", name=name) == 0, "A rejected schema should not be created"
 
     @pytest.mark.behavioral
     def test_validation_tab_reports_valid_children(self, auth_page, base_url, created_schema_validation_tree):
