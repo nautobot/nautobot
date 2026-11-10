@@ -130,10 +130,10 @@ class ObjectEditTestCase:
     @pytest.mark.behavioral
     def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, created_grouped_tenant):
         """Picking a search result closes the modal and selects that tenant in the Tenant field."""
-        group, tenant = created_grouped_tenant["group"], created_grouped_tenant["tenant"]
+        tenant = created_grouped_tenant["tenant"]
         modal = open_device_form(auth_page, base_url)
         modal.open_search("tenants")
-        modal.search(tenant_group=group["name"])
+        modal.search(q=tenant["name"])
         modal.select_result(tenant["name"])
 
         modal.expect_closed()
