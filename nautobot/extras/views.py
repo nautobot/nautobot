@@ -4360,11 +4360,13 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     return helpers.placeholder(obj.object_repr)
             return super().render_value(key, value, context)
 
-    class LegacyObjectDataPanel(object_detail.ObjectTextPanel):
-        """Conditionally show the legacy `object_data` when not None."""
+    class SnapshotPanel(object_detail.ObjectTextPanel):
+        """Don't show snapshot panel if null, as `object_data` or `object_data_v2` can be"""
 
         def should_render(self, context):
-            return super().should_render(context) and get_obj_from_context(context).object_data is not None
+            return (
+                super().should_render(context) and getattr(get_obj_from_context(context), self.object_field) is not None
+            )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -4383,7 +4385,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     "change_context_detail",
                 ),
             ),
-            LegacyObjectDataPanel(
+            SnapshotPanel(
                 label="Object Data",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
@@ -4391,7 +4393,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
                 collapsed=True,
             ),
-            object_detail.ObjectTextPanel(
+            SnapshotPanel(
                 label="Object Data v2",
                 section=SectionChoices.LEFT_HALF,
                 weight=250,

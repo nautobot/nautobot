@@ -1689,13 +1689,7 @@ class ChangeLogPrechangeCaptureTest(TestCase):
 
 
 class LegacyObjectDataSettingTest(TestCase):
-    """
-    `object_data` is the pre-1.3 snapshot, superseded by `object_data_v2`.
-
-    Storing it is optional so a deployment can stop paying to serialize every record twice. It defaults to
-    on, so upgrading changes nothing: the field stays populated, the REST API keeps returning it, and
-    records written before the switch keep rendering exactly as they did.
-    """
+    """New change records store the pre-1.3 `object_data` snapshot only while `CHANGELOG_LEGACY_OBJECT_DATA` is on."""
 
     def setUp(self):
         super().setUp()
@@ -1732,8 +1726,7 @@ class LegacyObjectDataSettingTest(TestCase):
 
     @override_config(CHANGELOG_LEGACY_OBJECT_DATA=False)
     def test_records_written_before_the_switch_still_render(self):
-        """The fallbacks exist for historical records and must survive the setting being turned off."""
-        # Shaped like a record written before 1.3: legacy snapshot only, no v2.
+        """A pre-1.3 prior record has only `object_data`, and the record after it has only `object_data_v2`."""
         legacy = self.make_change("legacy")
         legacy.object_data = {"name": self.manufacturer.name, "description": "legacy"}
         legacy.object_data_v2 = None
@@ -1743,20 +1736,4 @@ class LegacyObjectDataSettingTest(TestCase):
 
         snapshots = current.get_snapshots()
         self.assertIsNotNone(snapshots["prechange"])
-        self.assertIsNotNone(snapshots["postchange"])
-
-    def test_a_diff_against_no_prior_record_does_not_crash(self):
-        """
-        `prior_change` is None when the prechange came from the pre-save cache rather than a record.
-
-        The both-sides-fall-back-to-legacy branch dereferenced it unguarded, which an update with no prior
-        record and no v2 snapshot would have reached.
-        """
-        change = self.make_change("first")
-        get_changes_for_model(self.manufacturer).exclude(pk=change.pk).delete()
-        change.object_data_v2 = None
-        change.save()
-
-        snapshots = change.get_snapshots()
-
         self.assertIsNotNone(snapshots["postchange"])

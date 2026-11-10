@@ -43,8 +43,9 @@ class ChangeLoggedModel(models.Model):
         """
         from nautobot.core.utils.config import get_settings_or_config
 
-        # The legacy snapshot is deprecated: `object_data_v2` supersedes it and every reader prefers it.
-        # Storing it is optional so a deployment can stop paying for two serializations of every record.
+        # The legacy `object_data` snapshot is deprecated. `object_data_v2` supersedes it, and code that reads a
+        # snapshot uses `object_data_v2` when it is present. Storing `object_data` is optional so that a deployment
+        # can avoid serializing every record twice.
         legacy_object_data = None
         if get_settings_or_config("CHANGELOG_LEGACY_OBJECT_DATA", fallback=True):
             legacy_object_data = serialize_object(self, extra=object_data_extra, exclude=object_data_exclude)
@@ -258,21 +259,13 @@ class ObjectChange(SavedViewMixin, BaseModel):
                 postchange = self.object_data
 
         if prechange and postchange:
-            # Both sides of a diff must be the same generation of snapshot. Which generations a record has
-            # depends on when it was written:
-            #   - since Nautobot 1.3 with CHANGELOG_LEGACY_OBJECT_DATA on: `object_data_v2` and `object_data`
-            #   - since Nautobot 1.3 with CHANGELOG_LEGACY_OBJECT_DATA off: `object_data_v2` only
-            #   - before Nautobot 1.3: `object_data` only
-            # A snapshot captured in pre_save (`prior_change` is None) is always v2 and always current, so it is
-            # compared to this record's v2 as is. Against a stored prior record there are four cases:
-            # 1. Both records were written since 1.3 with the setting on. `both_have_v2`. Compare v2 to v2.
-            # 2. Both records were written since 1.3 and the setting was off for at least one of them.
-            #    `both_have_v2` still. Compare v2 to v2.
-            # 3. The prior record is pre-1.3 and this record has `object_data`. Not `both_have_v2`, but
-            #    `both_have_legacy`. Compare legacy to legacy.
-            # 4. The prior record is pre-1.3 and this record has no `object_data` because the setting was off.
-            #    Neither. Compare legacy to v2 anyway: the result lists the keys the two schemas do not share as
-            #    changed, but it does not raise.
+            # Both sides of a diff should be the same snapshot generation. Records written before Nautobot 1.3
+            # have only `object_data`; records written with CHANGELOG_LEGACY_OBJECT_DATA off have only
+            # `object_data_v2`. A snapshot captured in pre_save (`prior_change` is None) is always v2.
+            # - Both records have v2: compare v2 to v2, as already set above.
+            # - The prior record is pre-1.3 and both have `object_data`: compare legacy to legacy.
+            # - The prior record is pre-1.3 and this record has no `object_data`: no shared generation exists,
+            #   so the diff compares legacy to v2 and reports the keys the two formats do not share as changed.
             if prior_change is not None:
                 both_have_v2 = self.object_data_v2 is not None and prior_change.object_data_v2 is not None
                 both_have_legacy = self.object_data is not None and prior_change.object_data is not None

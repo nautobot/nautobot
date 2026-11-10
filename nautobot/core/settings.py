@@ -126,6 +126,9 @@ if (
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
+
+# Whether new change records also store the legacy `object_data` snapshot (the format used before Nautobot 1.3)
+# alongside `object_data_v2`. Defaults to True if not set here.
 if "NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA" in os.environ and os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"] != "":
     CHANGELOG_LEGACY_OBJECT_DATA = is_truthy(os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"])
 
@@ -937,9 +940,10 @@ CONSTANCE_CONFIG = {
     ),
     "CHANGELOG_LEGACY_OBJECT_DATA": ConstanceConfigItem(
         default=True,
-        help_text="When `False` do not store `object_data` which was kept for records written before Nautobot 1.3. The `object_data_v2` "
-        "has superseded this, and the default will be changed to `False` in Nautobot 4.0. This saves space within your change "
-        "log infrastructure but removes this data from the API and UI. In most implementations False is preferred.",
+        help_text="When `False`, new change records do not store `object_data`, the snapshot format used before Nautobot 1.3. "
+        "`object_data_v2` has superseded it, and the default will change to `False` in Nautobot 4.0. Turning this off saves "
+        "space in the change log database, but the API and UI will not show `object_data` for records written while it is "
+        "off. Most deployments should set this to `False`.",
         field_type=bool,
     ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
