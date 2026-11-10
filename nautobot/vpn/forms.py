@@ -84,7 +84,6 @@ class VPNProfileBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, 
     tenant = DynamicModelChoiceField(
         required=False,
         queryset=Tenant.objects.all(),
-        query_params={"sort": "name"},
         label="Tenant",
     )
 
@@ -441,7 +440,6 @@ class VPNBulkEditForm(
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
-        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )
@@ -561,7 +559,6 @@ class VPNTunnelBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, N
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
-        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )
@@ -683,7 +680,7 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
         required=False,
         label="Protected Prefixes Dynamic Group",
         to_field_name="name",
-        query_params={"sort": "name", "content_type": "ipam.prefix"},
+        query_params={"content_type": "ipam.prefix"},
         help_text="Protected Prefixes behind the tunnel endpoint.",
     )
 
@@ -708,7 +705,6 @@ class VPNTunnelEndpointBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditForm
     )
     tenant = DynamicModelChoiceField(
         queryset=Tenant.objects.all(),
-        query_params={"sort": "name"},
         required=False,
         label="Tenant",
     )

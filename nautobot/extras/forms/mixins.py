@@ -179,7 +179,6 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
                     )
                 ),
                 query_params={
-                    "sort": "name",
                     "content_type": self._meta.model._meta.label_lower,
                     "group_type": DynamicGroupTypeChoices.TYPE_STATIC,
                 },

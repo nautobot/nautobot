@@ -384,7 +384,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelMultipleChoiceField)
         self.assertEqual(field.label, "My VLANs")
-        self.assertEqual(field.query_params, {"exclude_m2m": "true"})
+        self.assertEqual(field.query_params, {"exclude_m2m": "true", "sort": "name"})
 
         field = self.m2m_1.to_form_field("destination")
         self.assertFalse(field.required)

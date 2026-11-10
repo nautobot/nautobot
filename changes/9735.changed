@@ -1,1 +1,2 @@
-Changed the Tenant, Power Panel, Provider Network, Job, and Dynamic Group dropdowns in forms to sort by name, and the Circuit dropdowns to sort by circuit ID.
+Changed dynamic dropdowns in forms to sort choices by name by default for models whose default ordering groups records by a related object.
+Changed the Circuit dropdown in the Circuit Termination filter form to sort by circuit ID.
