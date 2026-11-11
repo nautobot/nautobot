@@ -459,6 +459,25 @@ class BulkEditDeleteChangeLogging(TestCase):
             self.assertEqual(oc.related_object_type, ContentType.objects.get_for_model(Device))
             self.assertEqual(oc.related_object_id, device_pk)
 
+    def test_delete_before_deferral(self):
+        """Test that a delete logged before deferred change logging starts does not break the deferred flush"""
+        tenant_group = TenantGroup.objects.create(name="Deleted Before Deferral")
+        tenant_group_pk = tenant_group.pk
+
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            tenant_group.delete()
+            with deferred_change_logging_for_bulk_operation():
+                TenantGroup.objects.create(name="Created During Deferral")
+
+        self.assertTrue(TenantGroup.objects.filter(name="Created During Deferral").exists())
+        delete_ocs = get_changes_for_model(TenantGroup).filter(
+            request_id=change_id, action=ObjectChangeActionChoices.ACTION_DELETE
+        )
+        self.assertTrue(delete_ocs.exists())
+        for oc in delete_ocs:
+            self.assertEqual(oc.changed_object_id, tenant_group_pk)
+
     def test_bulk_delete_has_user_in_change_log(self):
         """Test that the bulk delete operation adds the user to the change log"""
         location_type = LocationType.objects.get(name="Campus")

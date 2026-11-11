@@ -118,6 +118,12 @@ class ChangeContext:
                         objectchange = entry["objectchange"]
                     else:
                         objectchange = entry["instance"].to_objectchange(entry["action"])
+                        if objectchange is not None and not objectchange.changed_object_id:  # changed_object was deleted
+                            # Clear out the GenericForeignKey to keep Django from complaining about an unsaved object:
+                            objectchange.changed_object = None
+                            # Set the component fields individually:
+                            objectchange.changed_object_id = entry.get("changed_object_id")
+                            objectchange.changed_object_type = entry.get("changed_object_type")
                     if objectchange is not None:
                         objectchange.user = entry["user"]
                         objectchange.user_name = objectchange.user.username
