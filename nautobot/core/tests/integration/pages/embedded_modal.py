@@ -55,8 +55,7 @@ class EmbeddedModal:
     def open_search(self, verbose_name_plural):
         """Click "Search *verbose_name_plural*" on the parent form and wait for the first results to load.
 
-        Wait for the first results before returning. A search submitted while the first request is still running can be
-        overwritten by that request's response.
+        A search submitted while the first request is still running can be overwritten by that request's response.
         """
         self._open(f"Search {verbose_name_plural}")
         expect(self.root.locator(self._RESULTS_TABLE)).to_be_attached()
@@ -100,8 +99,8 @@ class EmbeddedModal:
     def expect_prefilled(self, name, *labels):
         """Assert (auto-retrying) that the modal select *name* has exactly the options *labels* selected.
 
-        Checks the option labels, e.g. "DCIM | device", because a create form's content type value is a
-        database id that differs between instances.
+        Checks the option labels, e.g. "DCIM | device", because the Role form's content type values are database ids
+        that differ between instances.
         """
         expect(self.root.locator(f"select[name='{name}'] option:checked")).to_have_text(list(labels))
 
@@ -124,9 +123,9 @@ class EmbeddedModal:
     def search(self, **filters):
         """Set each search form field whose name is a key in *filters*, click Search and wait for the new results.
 
-        For a select field, pick the option whose text is the value. For any other field, type the value in. Wait for
-        the new results before returning. If a row from the old results is picked before the new results arrive, HTMX
-        replaces that row while its request is still running, and the pick is lost.
+        For a select field, pick the option whose text is the value. For any other field, type the value in. If a row
+        from the old results is picked before the new results arrive, HTMX replaces that row while its request is still
+        running, and the pick is lost.
         """
         for name, value in filters.items():
             if self.root.locator(f"select[name='{name}']").count():

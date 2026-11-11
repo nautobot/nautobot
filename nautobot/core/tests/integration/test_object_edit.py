@@ -72,6 +72,7 @@ class ObjectEditTestCase:
     # Embedded create with a prefilled content type: the Dynamic groups and Role fields
     # -------------------------------------------------------------------------
 
+    @pytest.mark.behavioral
     def test_embedded_create_prefills_the_dynamic_group_content_type(self, auth_page, base_url):
         """The "Add a new dynamic group" button opens the form with the Device content type already selected."""
         modal = open_device_form(auth_page, base_url)
@@ -79,6 +80,7 @@ class ObjectEditTestCase:
 
         modal.expect_prefilled("content_type", DEVICE_CONTENT_TYPE)
 
+    @pytest.mark.behavioral
     def test_embedded_create_prefills_the_role_content_types(self, auth_page, base_url):
         """The "Add a new role" button opens the form with only the Device content type selected."""
         modal = open_device_form(auth_page, base_url)
@@ -128,9 +130,9 @@ class ObjectEditTestCase:
         expect(modal.result_rows(other["name"])).to_have_count(0)
 
     @pytest.mark.behavioral
-    def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, created_grouped_tenant):
+    def test_embedded_search_selects_the_picked_object(self, auth_page, base_url, create_object):
         """Picking a search result closes the modal and selects that tenant in the Tenant field."""
-        tenant = created_grouped_tenant["tenant"]
+        tenant = create_object("tenancy/tenants/", name=unique_name())
         modal = open_device_form(auth_page, base_url)
         modal.open_search("tenants")
         modal.search(q=tenant["name"])
@@ -143,6 +145,7 @@ class ObjectEditTestCase:
     # Embedded search with a prefilled content type: the Dynamic groups and Role fields
     # -------------------------------------------------------------------------
 
+    @pytest.mark.behavioral
     def test_embedded_search_prefills_the_dynamic_group_content_type(self, auth_page, base_url):
         """The "Search dynamic groups" button opens the filter form with the Device content type already selected."""
         modal = open_device_form(auth_page, base_url)
@@ -161,7 +164,7 @@ class ObjectEditTestCase:
         create_object("extras/roles/", name=unique_name(), content_types=["dcim.device"])
         create_object("extras/roles/", name=unique_name(), content_types=["dcim.rack"])
         device_roles = api_count("extras/roles/", content_types="dcim.device")
-        assert device_roles < api_count("extras/roles/"), "The rack role should leave some roles out"
+        assert device_roles < api_count("extras/roles/"), "Expected fewer device roles than roles in total"
 
         modal = open_device_form(auth_page, base_url)
         modal.open_search("roles")
