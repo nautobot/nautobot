@@ -1,0 +1,3 @@
+Updated dependency `django-taggit` to `>=7.0.0,<7.1`.
+Updated dependency `social-auth-app-django` to `>=8.0.0,<8.1`.
+Updated dependency `social-auth-core` to `>=7.0.0,<7.1`.
