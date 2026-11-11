@@ -1,0 +1,1 @@
+Fixed errors and change log entries with a null `id` and `url` when objects are deleted under deferred change logging, such as during a bulk edit.

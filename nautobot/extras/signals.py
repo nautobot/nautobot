@@ -418,6 +418,33 @@ def _create_or_update_object_change(change_context, instance, action):
         instance._state.fields_cache = original_cache
 
 
+def _build_deferred_objectchange(instance, action):
+    """
+    Build an unsaved ObjectChange for a deferred change log entry of an object that is about to be deleted.
+
+    The object must be serialized now, while it still has its primary key and its related rows (such as tag
+    assignments) still exist. Its generic foreign keys are detached so that the ObjectChange can be bulk-created
+    after the object is gone.
+    """
+    objectchange = instance.to_objectchange(action)
+    if objectchange is None:
+        return None
+
+    changed_object_type = objectchange.changed_object_type
+    changed_object_id = objectchange.changed_object_id
+    objectchange.changed_object = None
+    objectchange.changed_object_type = changed_object_type
+    objectchange.changed_object_id = changed_object_id
+
+    related_object_type = objectchange.related_object_type
+    related_object_id = objectchange.related_object_id
+    objectchange.related_object = None
+    objectchange.related_object_type = related_object_type
+    objectchange.related_object_id = related_object_id
+
+    return objectchange
+
+
 def _record_m2m_side_object_changes(change_context, through_instance, side_field_names):
     """
     Record an ACTION_UPDATE ObjectChange for each non-null, change-logged M2M "side" of an explicit
@@ -458,7 +485,7 @@ def _handle_deleted_object(sender, instance, **kwargs):
         notes.delete()
 
     # Record an ObjectChange if applicable
-    if hasattr(instance, "to_objectchange"):
+    if hasattr(instance, "to_objectchange") and not change_context.skip_deleted_object_changes:
         branch_name = _object_change_branch_name(instance)
         user = change_context.get_user(instance)
 
@@ -475,14 +502,19 @@ def _handle_deleted_object(sender, instance, **kwargs):
             unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
             save_new_objectchange = True
 
-            # if a change already exists for this change_id, user, and object, update it instead of creating a new one
-            # except in the case that the object was created and deleted in the same change_id
-            # we don't want to create a delete change for an object that never existed
+            # If a change already exists for this change_id, user, and object, convert it to a delete instead of
+            # adding a new one, unless it is a create: an object created and deleted in the same change_id is
+            # logged as a create followed by a delete
             if unique_object_change_id in change_context.deferred_object_changes:
                 cached_related_change = change_context.deferred_object_changes[unique_object_change_id][-1]
                 if cached_related_change["action"] != ObjectChangeActionChoices.ACTION_CREATE:
                     cached_related_change["action"] = ObjectChangeActionChoices.ACTION_DELETE
                     save_new_objectchange = False
+
+                if change_context.defer_object_changes:
+                    cached_related_change["objectchange"] = _build_deferred_objectchange(
+                        instance, cached_related_change["action"]
+                    )
 
                 related_changes = ObjectChange.objects.filter(
                     changed_object_type=changed_object_type,
@@ -504,15 +536,18 @@ def _handle_deleted_object(sender, instance, **kwargs):
                             save_new_objectchange = False
 
             if save_new_objectchange:
-                change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
-                    {
-                        "action": ObjectChangeActionChoices.ACTION_DELETE,
-                        "instance": instance,
-                        "user": user,
-                        "changed_object_id": changed_object_id,
-                        "changed_object_type": changed_object_type,
-                    }
-                )
+                entry = {
+                    "action": ObjectChangeActionChoices.ACTION_DELETE,
+                    "instance": instance,
+                    "user": user,
+                    "changed_object_id": changed_object_id,
+                    "changed_object_type": changed_object_type,
+                }
+                if change_context.defer_object_changes:
+                    entry["objectchange"] = _build_deferred_objectchange(
+                        instance, ObjectChangeActionChoices.ACTION_DELETE
+                    )
+                change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(entry)
                 if not change_context.defer_object_changes:
                     objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
                     if objectchange is not None:
