@@ -1,0 +1,1 @@
+Fixed the login page reloading itself every 15 seconds with a growing `next` parameter, caused by polling for new messages while signed out.
