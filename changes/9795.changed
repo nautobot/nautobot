@@ -1,0 +1,6 @@
+Changed `CloudAccount` names to be unique per provider instead of globally unique.
+Changed `CloudNetwork` names to be unique within their cloud account, cloud resource group and parent instead of globally unique.
+Changed `CloudService` names to be unique within their cloud account and cloud resource group instead of globally unique.
+Changed `status` to a required field on `CloudAccount`, `CloudNetwork` and `CloudService`. Existing records are set to "Active".
+Changed `VirtualServer.vip` to be optional for virtual servers attached to a cloud service.
+Changed the name of a `VPNTunnelEndpoint` attached to a cloud service to include the cloud service name.
