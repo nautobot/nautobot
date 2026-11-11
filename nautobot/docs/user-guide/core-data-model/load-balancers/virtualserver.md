@@ -9,7 +9,8 @@ The virtual server model provides the following fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Unique identifier for the virtual server. |
-| `vip` | ForeignKey to IPAddress | Yes | IP Address where the virtual server listens. Must come from IPAM. |
+| `vip` | ForeignKey to IPAddress | Conditional | IP Address where the virtual server listens. Must come from IPAM. Required unless the virtual server is attached to a cloud service. |
+| `dns_name` | string | No | Optional DNS name that clients use to reach the virtual server, such as the DNS name of a cloud load balancer. |
 | `port` | integer | No | Optional listening port. |
 | `protocol` | choice | No | Optional protocol used. Valid choices are "TCP", "UDP", "ICMP", "SCTP", "HTTP", "HTTPS", "HTTP2", "gRPC", "QUIC", "DNS" and "ANY".|
 | `source_nat_pool` | ForeignKey to Prefix | No | Optional NAT pool source prefix. Must be a valid Prefix from IPAM. |
@@ -30,6 +31,12 @@ The virtual server requires one of the following relationships to be set. This r
 - `virtual_chassis` (VirtualChassis)
 - `cloud_service` (CloudService)
 
++++ 3.3.0
+    The optional `dns_name` field has been added.
+
++/- 3.3.0
+    The `vip` field is now optional for a virtual server attached to a cloud service. It is still required in every other case.
+
 ## Details
 
 The `VirtualServer` model represents the front-end listener for client connections in a load balancing configuration. It defines the VIP (Virtual IP), port, protocol, and associations to backend pool and optional service components such as health monitors or SSL certificates.
@@ -37,7 +44,11 @@ The `VirtualServer` model represents the front-end listener for client connectio
 This model is central to load balancer logic, acting as the entry point for traffic distribution to Load Balancer Pools and ultimately to Pool Members.
 
 - Only one of `device`, `device_redundancy_group`, `cloud_service`, or `virtual_chassis` should be populated. Defining more than one can result in ambiguous associations and is not recommended.
-- The `vip` field must be an existing IPAddress from the IPAM app.
+- The `vip` field, when set, must be an existing IPAddress from the IPAM app. It is required unless `cloud_service` is set.
 - If `ssl_offload` is enabled, `certificate_profiles` should be defined.
 - If referencing a health check monitor, it must be created first. Note that only pool-level and member-level monitors influence backend availability decisions.
 - A virtual server can be created without a pool or certificates (e.g., under construction or partially defined).
+
+### Cloud Load Balancers
+
+A cloud load balancer, such as an AWS Application Load Balancer, can be modeled as a virtual server attached to the [cloud service](../cloud/cloudservice.md) that represents it. Cloud load balancers are typically reached through a DNS name, and their IP addresses are managed by the cloud provider. For this reason, a virtual server attached to a cloud service does not require a `vip`, and the DNS name of the load balancer can be recorded in the `dns_name` field. The virtual servers attached to a cloud service are listed in the detail view of the cloud service.
