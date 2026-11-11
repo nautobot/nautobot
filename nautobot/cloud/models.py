@@ -489,6 +489,15 @@ class CloudService(ProviderResourceIdMixin, CloudResourceTypeMixin, PrimaryModel
                 {"cloud_resource_group": "The cloud resource group must belong to the same cloud account."}
             )
 
+        if (
+            self.cloud_resource_type_id is not None
+            and self.cloud_account_id is not None
+            and self.cloud_resource_type.provider_id != self.cloud_account.provider_id
+        ):
+            raise ValidationError(
+                {"cloud_resource_type": "The cloud resource type must have the same provider as the cloud account."}
+            )
+
         validate_location_content_type(self)
 
     def validate_unique(self, exclude=None):

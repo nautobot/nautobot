@@ -1,9 +1,8 @@
-import django_filters
-
 from nautobot.cloud import models
 from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
+    ModelMultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -250,7 +249,7 @@ class CloudServiceFilterSet(
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudResourceType.objects.all(),
     )
-    ip_addresses = django_filters.ModelMultipleChoiceFilter(
+    ip_addresses = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="IP addresses (ID)",
     )
@@ -312,7 +311,7 @@ class CloudServiceIPAddressAssignmentFilterSet(BaseFilterSet):
     cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.CloudService.objects.all(),
     )
-    ip_address = django_filters.ModelMultipleChoiceFilter(
+    ip_address = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
     )
 
