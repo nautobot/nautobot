@@ -570,11 +570,11 @@ def get_archived_model_from_live_model(live_model):
     Retrieves the archived model derived from a live model.
 
     Args:
-        archived_model (type): The archived model to resolve the live model for.
+        live_model (type): The live model to resolve the archived model for.
 
     Returns:
-        (type | None): The live model, or None where the archived model is not named for one or names
-            one that is not registered.
+        (type | None): The archived model, or None where no model named `Archived<LiveModel>` is
+            registered in the live model's app.
     """
     try:
         return apps.get_model(live_model._meta.app_label, f"{ARCHIVED_MODEL_NAME_PREFIX}{live_model.__name__}")
