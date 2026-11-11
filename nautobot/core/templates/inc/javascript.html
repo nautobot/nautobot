@@ -31,7 +31,10 @@
             '{% url "user:navbar_favorites_delete" %}',
             '{{ settings.BRANDING_TITLE|escapejs }}',
         );
-        window.nb.messages.watchMessages('{% url "messages" %}');
+        {# The messages view requires login, so polling it from a signed-out page only gets redirected to the login view. #}
+        {% if request.user.is_authenticated %}
+            window.nb.messages.watchMessages('{% url "messages" %}');
+        {% endif %}
     });
 </script>
 {% if settings.BRANDING_FILEPATHS.javascript %}
