@@ -25,7 +25,7 @@ NAVBAR = {
     },
 }
 
-# The limited-permission user may view only Relationships, so Extensibility is the only tab above that this user sees.
+# The limited-permission user may view only Relationships, so Extensibility is the only tab in NAVBAR that this user sees.
 LIMITED_OBJECT_TYPES = ("extras.relationship",)
 
 
@@ -33,13 +33,14 @@ class NavBarTestCase:
     """The sidenav shows every tab, group and item for the admin, and only the permitted ones for a limited user."""
 
     def test_navbar_render_superuser(self, auth_page, base_url):
-        """For the admin, each tab holds its groups and items, and opening the tab displays them."""
+        """For the admin, each tab contains its groups and items, and opening the tab displays them."""
         HomePage(auth_page, base_url).navigate()
         nav = NavMenu(auth_page)
 
         for tab_name, groups in NAVBAR.items():
             nav.expect_tab(tab_name)
-            # The flyout is closed, so these labels are read from the DOM text; inner_text() would read them as ''.
+            # The flyout is closed, so group_labels() and item_labels() read the labels with text_content().
+            # inner_text() would return '' for every label in a closed flyout.
             nav.expect_tab_collapsed(tab_name)
             for group_name, items in groups.items():
                 assert group_name in nav.group_labels(tab_name), (
@@ -61,7 +62,7 @@ class NavBarTestCase:
     # storage_state=None starts the browser context without the admin's saved login, so the test can log in as its own user.
     @pytest.mark.browser_context_args(storage_state=None)
     def test_navbar_render_with_limited_permissions(self, page, base_url, created_view_only_user):
-        """A user who can view only relationships gets the Extensibility tab with Relationships and no Organization tab."""
+        """A user who can view only relationships sees the Extensibility tab with Relationships and no Organization tab."""
         user = created_view_only_user(*LIMITED_OBJECT_TYPES)
         log_in(page, user["username"], user["password"])
         HomePage(page, base_url).navigate()

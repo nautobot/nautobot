@@ -85,7 +85,7 @@ class HomeTestCase:
         """A collapsed panel stays collapsed after a reload, because its state is saved to the user's config.
 
         `default_homepage_layout` starts the admin with every panel expanded and restores the admin's saved
-        layout afterwards, even if an assertion fails, so the collapse does not carry into other tests.
+        layout afterwards, even if an assertion fails, so the collapsed panel does not affect other tests.
         """
         home = HomePage(auth_page, base_url)
         home.navigate()

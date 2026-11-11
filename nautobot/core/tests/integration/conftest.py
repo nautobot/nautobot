@@ -14,7 +14,7 @@ import pytest
 
 @pytest.fixture
 def default_homepage_layout(api):
-    """Start the session user on the default home page layout, with every panel expanded, and restore theirs on teardown.
+    """Start the session user on the default home page layout, with every panel expanded, and restore the user's saved layout on teardown.
 
     The home page saves each panel's position and collapsed state to `homepage_layout.panels` in
     `/api/users/config/`. Without this fixture, a panel collapsed in one test would stay collapsed in every

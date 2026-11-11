@@ -32,7 +32,7 @@ class HomePage(BasePage):
 
     _PANELS = "#draggable-homepage-panels"
     _COLUMN = "#draggable-homepage-panels > .nb-panel-group"
-    # Overrides BasePage's panel title, so the inherited panel(), expect_panel(), expect_no_panel() and
+    # Replaces BasePage's _PANEL_TITLE selector, so the inherited panel(), expect_panel(), expect_no_panel() and
     # expect_panel_to_contain() find home page panels, whose name is the card header's <h2>.
     _PANEL_TITLE = "#draggable-homepage-panels .card > .card-header > h2"
     # One <li> per item. A grouped item ("Connections") contains one link per member, each in its own <p>.
