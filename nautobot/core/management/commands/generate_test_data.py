@@ -67,7 +67,9 @@ class Command(BaseCommand):
             )
             from nautobot.cloud.factory import (
                 CloudAccountFactory,
+                CloudAccountGroupFactory,
                 CloudNetworkFactory,
+                CloudResourceGroupFactory,
                 CloudResourceTypeFactory,
                 CloudServiceFactory,
             )
@@ -287,8 +289,10 @@ class Command(BaseCommand):
         _create_batch(ModuleFactory, 20)
         _create_batch(SoftwareVersionFactory, 5, description="without Devices")
         _create_batch(SoftwareImageFileFactory, 5, description="without DeviceTypes")
-        _create_batch(CloudAccountFactory, 10)
         _create_batch(CloudResourceTypeFactory, 20)
+        _create_batch(CloudAccountGroupFactory, 10)
+        _create_batch(CloudAccountFactory, 10)
+        _create_batch(CloudResourceGroupFactory, 10)
         _create_batch(CloudNetworkFactory, 20)
         _create_batch(CloudServiceFactory, 20)
         _create_batch(CircuitTypeFactory, 40)

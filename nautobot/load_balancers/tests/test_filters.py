@@ -20,6 +20,7 @@ class VirtualServerFilterTestCase(
         ("created",),
         ("last_updated",),
         ("vip",),
+        ("dns_name",),
         ("name",),
         ("port",),
         ("protocol",),

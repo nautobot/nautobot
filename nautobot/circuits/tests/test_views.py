@@ -184,6 +184,7 @@ class CircuitTerminationTestCase(
         cloud_account = CloudAccount.objects.create(
             name="Test Cloud Account",
             provider=manufacturer,
+            status=Status.objects.get_for_model(CloudAccount).first(),
         )
         cloud_resource_type = CloudResourceType.objects.create(
             name="VPC Network",
@@ -193,6 +194,7 @@ class CircuitTerminationTestCase(
             name="Test Cloud Network",
             cloud_account=cloud_account,
             cloud_resource_type=cloud_resource_type,
+            status=Status.objects.get_for_model(CloudNetwork).first(),
         )
 
         # Location Type and Location

@@ -588,6 +588,8 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     filterset = IPAddressFilterSet
     tenancy_related_name = "ip_addresses"
     generic_filter_tests = (
+        ["cloud_services", "cloud_services__id"],
+        ["cloud_services", "cloud_services__name"],
         ["nat_inside", "nat_inside__id"],
         ["services", "services__id"],
         ["services", "services__name"],
