@@ -96,6 +96,41 @@ def created_note(create_object, created_location):
 
 
 @pytest.fixture
+def created_relationship(create_object):
+    """A one-to-one relationship from a manufacturer to a platform, with one association between a manufacturer and a platform that this fixture creates.
+
+    `advanced_ui` starts False, so the association shows on each peer's main tab.
+    """
+    unique = unique_name()
+    manufacturer = create_object("dcim/manufacturers/", name=f"{unique}-manufacturer")
+    platform = create_object("dcim/platforms/", name=f"{unique}-platform")
+    relationship = create_object(
+        "extras/relationships/",
+        label=unique,
+        key=unique.replace("-", "_").lower(),
+        type="one-to-one",
+        source_type="dcim.manufacturer",
+        source_label=f"{unique}-source-label",
+        destination_type="dcim.platform",
+        destination_label=f"{unique}-destination-label",
+    )
+    association = create_object(
+        "extras/relationship-associations/",
+        relationship=relationship["id"],
+        source_type="dcim.manufacturer",
+        source_id=manufacturer["id"],
+        destination_type="dcim.platform",
+        destination_id=platform["id"],
+    )
+    return {
+        "relationship": relationship,
+        "association": association,
+        "manufacturer": manufacturer,
+        "platform": platform,
+    }
+
+
+@pytest.fixture
 def created_device_set(create_object, status_for, created_device):
     """Devices owned by this test, split across two locations of their own.
 

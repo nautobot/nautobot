@@ -60,7 +60,7 @@ from nautobot.core.choices import ImportModeChoices
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
-from nautobot.core.jobs.import_utils import detect_import_format, natural_key_match_fields
+from nautobot.core.jobs.import_utils import detect_import_format, natural_key_match_fields, validate_match_fields
 from nautobot.core.testing import (
     create_job_result_and_run_job,
     get_job_class_and_model,
@@ -112,7 +112,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.utils import populate_model_features_registry
-from nautobot.ipam.api.serializers import VLANSerializer
+from nautobot.ipam.api.serializers import IPAddressSerializer, VLANSerializer
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressRange,
@@ -272,11 +272,30 @@ class MatchFieldsTests(TestCase):
 
     def test_match__serializer_declared_match_fields(self):
         """A serializer declares the match fields its model's natural key isn't spelled in."""
-        self.assertEqual(self.match_fields(IPAddress), ["address", "parent"])
+        # IPAddress natural-key is [parent__namespace, host] but its serializer has a custom `import_match_fields`
+        self.assertEqual(self.match_fields(IPAddress), ["namespace", "address"])
+        # Prefix natural-key is [namespace, network, prefix_length] but its serializer has custom `import_match_fields`
         self.assertEqual(self.match_fields(Prefix), ["prefix", "namespace"])
-        self.assertEqual(self.match_fields(IPAddressRange), ["start_address", "parent"])
-        self.assertEqual(self.match_fields(IPAddress, ["address", "parent", "type"]), ["address", "parent"])
+        # IPAddressRange natural-key is [parent__namespace, start_address] but its serializer has `import_match_fields`
+        self.assertEqual(self.match_fields(IPAddressRange), ["namespace", "start_address"])
+
+        # When explicitly providing `export_field_paths`, the serializer's `import_match_fields` still work as expected.
+        # If the `export_field_paths` align with the `import_match_fields`, the `import_match_fields` are still used:
+        self.assertEqual(self.match_fields(IPAddress, ["address", "namespace", "type"]), ["namespace", "address"])
+        self.assertEqual(self.match_fields(IPAddress, ["address", "namespace__name"]), ["namespace", "address"])
+        # If the `export_field_paths` don't cover the `import_match_fields`, None is returned, as usual.
         self.assertIsNone(self.match_fields(IPAddress, ["address"]))
+
+    def test_match__serializer_only_field_needs_a_query_path(self):
+        """A writable field that exists only on the serializer can't be matched on, unless mapped to a lookup."""
+
+        class UnmappedNamespaceIPAddressSerializer(IPAddressSerializer):
+            class Meta(IPAddressSerializer.Meta):
+                related_field_query_paths = {}
+
+        validate_match_fields(["address", "namespace"], IPAddressSerializer)
+        with self.assertRaisesRegex(ValueError, r"Invalid match field\(s\): namespace\."):
+            validate_match_fields(["address", "namespace"], UnmappedNamespaceIPAddressSerializer)
 
 
 @tag("unit")
@@ -3409,16 +3428,39 @@ class MatchKeyTests(ImportExportJobTestCase):
             job_result, "Invalid match field(s): content_types__model", level=LogLevelChoices.LOG_ERROR
         )
 
-    def test_match__serializer_only_field(self):
-        """A writable serializer field that existing records can't be looked up by is refused before any row runs."""
+    def test_match__sensitive_field(self):
+        """A field that the model declares sensitive is rejected as a match field before any row is imported."""
         job_result = self.run_import(
-            "address,namespace__name,status__name\n10.0.0.1/24,Global,Active",
-            model=IPAddress,
-            match_fields="address,namespace",
+            "username,password\nsensitive-match-user,guessed-password",
+            model=User,
+            match_fields="password",
             expected_status=JobResultStatusChoices.STATUS_FAILURE,
         )
-        self.assertJobLogEntry(job_result, "Invalid match field(s): namespace.", level=LogLevelChoices.LOG_ERROR)
+        self.assertJobLogEntry(job_result, "Invalid match field(s): password.", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists())
+        self.assertFalse(User.objects.filter(username="sensitive-match-user").exists())
+
+    def test_match__serializer_only_field_with_a_query_path(self):
+        """A serializer-only field that is mapped to a lookup, such as IP Address's `namespace`, can be matched on."""
+        namespace = Namespace.objects.create(name="Serializer-only Match Namespace")
+        Prefix.objects.create(
+            prefix="10.98.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_address = IPAddress.objects.create(
+            address="10.98.0.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+
+        job_result = self.run_import(
+            f"address,namespace__name,description\n10.98.0.1/24,{namespace.name},Matched",
+            model=IPAddress,
+            match_fields="address,namespace",
+        )
+
+        self.assertImport(
+            job_result, created=0, updated=1, match_fields=["address", "namespace"], source="run parameter"
+        )
+        ip_address.refresh_from_db()
+        self.assertEqual(ip_address.description, "Matched")
 
     def test_match__specified_fields_must_be_matchable(self):
         """With match fields you specify, a record that can't be matched on them is an error, and isn't created."""
@@ -4158,8 +4200,74 @@ class NaturalKeyRoundTripTests(ImportExportJobTestCase):
             status=Status.objects.get_for_model(IPAddressRange).first(),
         )
         self.assertRoundTripUpdatesInPlace(Prefix, [prefix], ["prefix", "namespace"])
-        self.assertRoundTripUpdatesInPlace(IPAddress, [ip_address], ["address", "parent"])
-        self.assertRoundTripUpdatesInPlace(IPAddressRange, [ip_address_range], ["start_address", "parent"])
+        self.assertRoundTripUpdatesInPlace(IPAddress, [ip_address], ["namespace", "address"])
+        self.assertRoundTripUpdatesInPlace(IPAddressRange, [ip_address_range], ["namespace", "start_address"])
+
+    def test_roundtrip__ip_address_matches_on_host_not_mask_length(self):
+        """An IP address is matched on its host alone, as its natural key is, so a file can change its mask length."""
+        namespace = Namespace.objects.create(name="Round Trip Namespace")
+        Prefix.objects.create(
+            prefix="10.99.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_address = IPAddress.objects.create(
+            address="10.99.0.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        exported = self.export_text(self.run_export(model=IPAddress, query_string=f"id={ip_address.pk}"))
+
+        job_result = self.run_import(exported.replace("10.99.0.1/24", "10.99.0.1/25"), model=IPAddress)
+
+        self.assertImport(
+            job_result, created=0, updated=1, match_fields=["namespace", "address"], source="file directive"
+        )
+        ip_address.refresh_from_db()
+        self.assertEqual(ip_address.mask_length, 25)
+
+    def test_roundtrip__ip_address_matches_after_its_parent_changes(self):
+        """An export leaves out the IP address's parent Prefix, and the import computes the parent again.
+
+        As a result, the file still updates the IP address after a narrower Prefix becomes its parent.
+        """
+        namespace = Namespace.objects.create(name="Round Trip Namespace")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(prefix="10.99.0.0/16", namespace=namespace, status=prefix_status)
+        ip_address = IPAddress.objects.create(
+            address="10.99.0.1/24",
+            namespace=namespace,
+            status=Status.objects.get_for_model(IPAddress).first(),
+            description="before reparenting",
+        )
+        exported = self.export_text(self.run_export(model=IPAddress, query_string=f"id={ip_address.pk}"))
+        new_parent = Prefix.objects.create(prefix="10.99.0.0/24", namespace=namespace, status=prefix_status)
+
+        job_result = self.run_import(exported.replace("before reparenting", "after reparenting"), model=IPAddress)
+
+        self.assertImport(
+            job_result, created=0, updated=1, match_fields=["namespace", "address"], source="file directive"
+        )
+        ip_address.refresh_from_db()
+        self.assertEqual(ip_address.parent, new_parent)
+        self.assertEqual(ip_address.description, "after reparenting")
+
+    def test_export__derived_field_is_omitted_unless_selected(self):
+        namespace = Namespace.objects.create(name="Derived Field Namespace")
+        Prefix.objects.create(
+            prefix="10.99.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_address = IPAddress.objects.create(
+            address="10.99.0.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        query_string = f"id={ip_address.pk}"
+
+        with self.subTest("No selection"):
+            header = self.export_header(self.run_export(model=IPAddress, query_string=query_string))
+            self.assertIn("namespace__name", header)
+            self.assertFalse([column for column in header if column.startswith("parent")])
+
+        with self.subTest("Selected"):
+            header = self.export_header(
+                self.run_export(model=IPAddress, query_string=query_string, export_fields="address,parent")
+            )
+            self.assertIn("parent__network", header)
 
     def test_roundtrip__exported_null_relation_clears_the_relation(self):
         """A relation the file gives as null is cleared on update, however the file spells that null."""

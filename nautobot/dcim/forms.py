@@ -4487,6 +4487,13 @@ class CableForm(NautobotModelForm):
         queryset=CableType.objects.all(),
         required=False,
     )
+    termination_location = DynamicModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        label="Location",
+        help_text="Restrict the termination choices below to a single location. Leave empty to connect terminations across locations.",
+        embedded_create=False,
+    )
 
     class Meta:
         model = Cable
@@ -4631,6 +4638,16 @@ class CableForm(NautobotModelForm):
         initial_a_id = self.initial.get("termination_a_id")
         if not existing_a and initial_a_type and initial_a_id:
             self._load_initial_a_termination(initial_a_type, initial_a_id, existing_a)
+
+        locations = list(
+            {
+                getattr(term, "location", None) or getattr(term.parent, "location", None)
+                for term in (*existing_a.values(), *existing_b.values())
+                if term is not None
+            }
+        )
+        if len(locations) == 1 and locations[0] is not None:
+            self.initial["termination_location"] = locations[0].pk
 
         # B-side type override from URL params (used by the connect flow when the user clicked a
         # specific "Connect to X" link). No PK to pre-fill the termination from — the user picks

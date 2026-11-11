@@ -127,6 +127,11 @@ if (
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
 
+# Whether new change records also store the legacy `object_data` snapshot (the format used before Nautobot 1.3)
+# alongside `object_data_v2`. Defaults to True if not set here.
+if "NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA" in os.environ and os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"] != "":
+    CHANGELOG_LEGACY_OBJECT_DATA = is_truthy(os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"])
+
 # Whether a save that modifies none of an object's field values should be left out of the change log.
 # Set to False to record such saves anyway, as Nautobot did before 3.3.0.
 CHANGELOG_SKIP_UNCHANGED_SAVES = is_truthy(os.getenv("NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES", "True"))
@@ -340,6 +345,7 @@ SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "f
 if SSO_ENABLE_GROUP_SYNC:
     SOCIAL_AUTH_PIPELINE = (
         "social_core.pipeline.social_auth.social_details",
+        "social_core.pipeline.social_auth.social_names",
         "social_core.pipeline.social_auth.social_uid",
         "social_core.pipeline.social_auth.auth_allowed",
         "social_core.pipeline.social_auth.social_user",
@@ -933,6 +939,14 @@ CONSTANCE_CONFIG = {
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the top of all pages.",
     ),
+    "CHANGELOG_LEGACY_OBJECT_DATA": ConstanceConfigItem(
+        default=True,
+        help_text="When `False`, new change records do not store `object_data`, the snapshot format used before Nautobot 1.3. "
+        "`object_data_v2` has superseded it, and the default will change to `False` in Nautobot 4.0. Turning this off saves "
+        "space in the change log database, but the API and UI will not show `object_data` for records written while it is "
+        "off. Most deployments should set this to `False`.",
+        field_type=bool,
+    ),
     "CHANGELOG_RETENTION": ConstanceConfigItem(
         default=90,
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
@@ -1101,7 +1115,7 @@ CONSTANCE_CONFIG = {
 
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
-    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
+    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
@@ -1176,6 +1190,12 @@ CACHES = {
 
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
+# Number of seconds before persistent caches (custom fields, relationships, etc.) expire.
+# None means they never expire and are only refreshed when their underlying data changes.
+PERSISTENT_CACHE_TIMEOUT = None
+if "NAUTOBOT_PERSISTENT_CACHE_TIMEOUT" in os.environ and os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"] != "":
+    PERSISTENT_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"])
 
 #
 # Celery (used for background processing)
