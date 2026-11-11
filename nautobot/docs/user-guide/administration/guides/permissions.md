@@ -178,6 +178,8 @@ Token access is hard-scoped to the requesting user rather than governed by objec
 
 - Any authenticated user can list, view, create, edit, and delete **their own** tokens from their user profile. The token key is displayed in clear text on this page.
 - The REST API `/api/users/tokens/` endpoint requires the `users.view_token` permission, but the results are **always filtered to the requesting user's own tokens** — granting `users.view_token` (even without constraints) does _not_ expose other users' tokens.
+- Code that applies object permissions to tokens, such as Nautobot's system Jobs, likewise only ever returns the requesting user's own tokens.
+- Tokens can't be exported or imported with the "Export Object List" and "Import Objects" system Jobs, as that would write token keys to a file that other users may be able to download.
 - Not even a superuser can view another user's tokens through the Nautobot UI or REST API.
 - The one exception is the [Django admin](#the-django-admin), where staff users with token permissions can view and manage all users' tokens.
 

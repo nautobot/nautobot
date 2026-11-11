@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 import datetime
 from importlib import resources
 import json
@@ -14,9 +14,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
-from django.db.models import Model
-from django.db.models.manager import BaseManager
-from django.db.models.query import QuerySet
 from django.template.defaultfilters import stringfilter
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
@@ -34,7 +31,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
-from nautobot.core.templating import DANGEROUS_TYPES
+from nautobot.core.templating import deny_sensitive_field_attribute
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -319,25 +316,11 @@ def render_yaml(value, syntax_highlight=True):
     return rendered_yaml
 
 
-def _meta_value_is_unsafe(value):
-    """Return True if a `_meta` attribute value must not be exposed to a sandboxed template."""
-    if isinstance(value, (BaseManager, QuerySet, *DANGEROUS_TYPES)):
-        return True
-    if isinstance(value, type) and issubclass(value, Model):
-        return True
-    if isinstance(value, Mapping):
-        return any(_meta_value_is_unsafe(key) or _meta_value_is_unsafe(item) for key, item in value.items())
-    if isinstance(value, (list, tuple, set, frozenset)):
-        return any(_meta_value_is_unsafe(item) for item in value)
-    return False
-
-
-@library.filter()
 @register.filter()
 def meta(obj, attr):
     """
-    Return the specified Meta attribute of a model. This is needed because Django does not permit templates
-    to access attributes which begin with an underscore (e.g. _meta).
+    Return the specified Meta attribute of a model (Django template filter). This is needed because Django does not
+    permit templates to access attributes which begin with an underscore (e.g. _meta).
 
     Args:
         obj (models.Model): Class or Instance of a Django Model
@@ -346,12 +329,46 @@ def meta(obj, attr):
     Returns:
         (any): return the value of the attribute
     """
-    value = getattr(obj._meta, attr, "")
-    # This filter is an escape hatch onto `_meta` for benign metadata (verbose_name, app_label, ...), and
-    # unlike normal attribute access it does not pass through the sandbox's is_safe_attribute checks.
-    if _meta_value_is_unsafe(value):
-        raise SecurityError(f"access to model _meta.{attr} is not allowed in templates")
-    return value
+    return getattr(obj._meta, attr, "")
+
+
+# The `_meta` attributes the Jinja `meta` filter will return: plain strings that identify the model. Everything else on
+# `_meta` holds or leads to ORM machinery (managers, fields, the app registry), so it is refused outright rather than
+# screened value by value.
+JINJA_META_ATTRS = frozenset(
+    {
+        "app_label",
+        "label",
+        "label_lower",
+        "model_name",
+        "object_name",
+        "verbose_name",
+        "verbose_name_plural",
+    }
+)
+
+
+# Using name="meta" allows us to define the same filter as above in both places with different function names.
+# TODO 4.0: consider removing the `meta` filter from Jinja entirely, leaving it a Django-only filter.
+@library.filter(name="meta")
+def meta_jinja(obj, attr):
+    """Return one of a model's identifying Meta attributes, such as `app_label` or `verbose_name` (Jinja template filter).
+
+    Unlike the Django template filter, this Jinja variant returns only the attributes in `JINJA_META_ATTRS`, since
+    user-authored templates must not reach the rest of `_meta`.
+
+    Args:
+        obj (models.Model): Class or Instance of a Django Model
+        attr (str): name of the attribute to access
+
+    Returns:
+        (str): the value of the attribute
+    """
+    if attr not in JINJA_META_ATTRS:
+        raise SecurityError(
+            f"_meta.{attr} cannot be accessed from a template; only {', '.join(sorted(JINJA_META_ATTRS))} are available."
+        )
+    return meta(obj, attr)
 
 
 @library.filter()
@@ -1648,6 +1665,12 @@ def _build_hyperlink(value, field="", target="", rel=""):
     """
     if value is None:
         return placeholder(value)
+
+    # `field` comes from the template, and is read here rather than through the sandbox's attribute hook,
+    # so the same refusals of private attributes and sensitive fields have to be applied explicitly.
+    if field.startswith("_"):
+        raise SecurityError(f"{field} is a private attribute and cannot be accessed from a template.")
+    deny_sensitive_field_attribute(value, field)
 
     attributes = {}
     display = getattr(value, field) if hasattr(value, field) else str(value)

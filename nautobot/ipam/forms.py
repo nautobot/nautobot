@@ -541,7 +541,7 @@ class NamespaceFormMixin(forms.ModelForm):
         actual model field, it gets ignored by default.
         """
         namespace = self.cleaned_data.pop("namespace")
-        setattr(self.instance, "_namespace", namespace)
+        self.instance.namespace = namespace
         # Since 'parent' is always derived from 'namespace', we set the current instance's 'parent' to 'None'.
         # This prevents the model from revalidating the 'parent', which could raise a validation error when the current
         # parent differs from the parent derived from the new `namespace`.

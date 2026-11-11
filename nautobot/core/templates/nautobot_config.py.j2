@@ -37,6 +37,10 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 # CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
+# Number of seconds before persistent caches (custom fields, relationships, etc.) expire.
+# None means they never expire and are only refreshed when their underlying data changes.
+# PERSISTENT_CACHE_TIMEOUT = None
+
 # Celery Beat heartbeat file path - will be touched by Beat each time it wakes up as a proof-of-health.
 # CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
 #     "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
@@ -347,6 +351,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 # if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
 #     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
+
+# Whether new change records also store the legacy `object_data` snapshot (the format used before Nautobot 1.3)
+# alongside `object_data_v2`. Defaults to True if not set here.
+#
+# if "NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA" in os.environ and os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"] != "":
+#     CHANGELOG_LEGACY_OBJECT_DATA = is_truthy(os.environ["NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"])
 
 # If True, all origins will be allowed. Other settings restricting allowed origins will be ignored.
 # Defaults to False. Setting this to True can be dangerous, as it allows any website to make
