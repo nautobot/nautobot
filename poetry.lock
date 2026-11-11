@@ -1885,14 +1885,14 @@ doc = ["Sphinx", "sphinx-rtd-theme", "sphinxcontrib-spelling"]
 
 [[package]]
 name = "faker"
-version = "40.52.0"
+version = "40.54.0"
 description = "Faker is a Python package that generates fake data for you."
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "faker-40.52.0-py3-none-any.whl", hash = "sha256:73f3f9c0a82cfc5ca341972ef4282e7ec2fffe340d2fabe018238ae0da062ec1"},
-    {file = "faker-40.52.0.tar.gz", hash = "sha256:a57e48f8e9430917a75d7b53a1568dd10cf4f442058c1fab8a4253c81b2a745a"},
+    {file = "faker-40.54.0-py3-none-any.whl", hash = "sha256:2dd88ee8cb63a9149e19ef48bdd73879bc3854d8ba2d6c1535e902a762e603f7"},
+    {file = "faker-40.54.0.tar.gz", hash = "sha256:38fba73e32699a9f1071724d67e5a66a84bf057987cffb27c9d0c979fda3f135"},
 ]
 
 [package.dependencies]
@@ -3032,14 +3032,14 @@ tabulate = ">=0.9.0,<0.10.0"
 
 [[package]]
 name = "markdown-it-py"
-version = "4.2.0"
+version = "4.3.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev"]
 files = [
-    {file = "markdown_it_py-4.2.0-py3-none-any.whl", hash = "sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a"},
-    {file = "markdown_it_py-4.2.0.tar.gz", hash = "sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49"},
+    {file = "markdown_it_py-4.3.0-py3-none-any.whl", hash = "sha256:7aa1511a46c39138de78d9eba92ce47e63124d8003fc98b3a351909e04239efa"},
+    {file = "markdown_it_py-4.3.0.tar.gz", hash = "sha256:91a58fa5b72c71a40cf7177250fd767480d7a2bb3ac426ccfb76fb90305fdaaa"},
 ]
 
 [package.dependencies]
@@ -3047,12 +3047,13 @@ mdurl = ">=0.1,<1.0"
 
 [package.extras]
 benchmarking = ["psutil", "pytest", "pytest-benchmark"]
-compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "markdown-it-pyrs", "mistletoe (>=1.0,<2.0)", "mistune (>=3.0,<4.0)", "panflute (>=2.3,<3.0)"]
+compare = ["markdown (>=3.4,<4.0)", "markdown-it-pyrs", "mistletoe (>=1.0,<2.0)", "mistune (>=3.0,<4.0)", "panflute (>=2.3,<3.0)"]
+coverage = ["coverage", "pytest-cov"]
 linkify = ["linkify-it-py (>=1,<3)"]
 plugins = ["mdit-py-plugins (>=0.5.0)"]
 profiling = ["gprof2dot"]
 rtd = ["ipykernel", "jupyter_sphinx", "mdit-py-plugins (>=0.5.0)", "myst-parser", "pyyaml", "sphinx", "sphinx-book-theme (>=1.0,<2.0)", "sphinx-copybutton", "sphinx-design"]
-testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions", "pytest-timeout", "requests"]
+testing = ["flit_core (>=3.4,<5)", "pytest", "pytest-regressions", "pytest-timeout", "requests"]
 
 [[package]]
 name = "markdown-version-annotations"
@@ -3681,30 +3682,30 @@ files = [
 
 [[package]]
 name = "mysqlclient"
-version = "2.3.0"
+version = "2.3.1"
 description = "Python interface to MySQL"
 optional = true
 python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"mysql\""
 files = [
-    {file = "mysqlclient-2.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:3153c5c9538b1fe6363b1c61b7e0d31e8007624bfa3de70dcca00b4d2461ca93"},
-    {file = "mysqlclient-2.3.0-cp310-cp310-win_arm64.whl", hash = "sha256:fb94f509834cbe119c93c2b661d6115ff293d5db9300d8a410126923b5960d48"},
-    {file = "mysqlclient-2.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:6a691aab1a6d22fb04aa08977ced9ecf0c1c781d0d985f7814972c3626db9390"},
-    {file = "mysqlclient-2.3.0-cp311-cp311-win_arm64.whl", hash = "sha256:8b3a5ebc0a2983bc252116dd132ab4c746085fa727b5c98c09edcda09dc09d0f"},
-    {file = "mysqlclient-2.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:effb81eb6d1f1df6c1d95f63f117bec5007e9c64487e9fa17d5696f2a5338358"},
-    {file = "mysqlclient-2.3.0-cp312-cp312-win_arm64.whl", hash = "sha256:7c3c4b3edcc7dc50d23fb5634e0e82bce8ab7de5b83d03fddc1c9979c18607a4"},
-    {file = "mysqlclient-2.3.0-cp313-cp313-win_amd64.whl", hash = "sha256:60365cce6765b94eeb621aa0f9505044ec9b4ea191cd68500f0a35b2d6d2758b"},
-    {file = "mysqlclient-2.3.0-cp313-cp313-win_arm64.whl", hash = "sha256:a6beb9ca67a9224ff4b45f7f9118f0932038fa38d59ca2e38ae35b5225984d7d"},
-    {file = "mysqlclient-2.3.0-cp314-cp314-win_amd64.whl", hash = "sha256:5d4c53eb9c5625dd68b6fed32c8cf00ba19cd1c3073645dec309a9d16bd029e2"},
-    {file = "mysqlclient-2.3.0-cp314-cp314-win_arm64.whl", hash = "sha256:cfe14103280d5a4968fe8a3ace2a8939ef68a1d881aec9872d06746106b49f7f"},
-    {file = "mysqlclient-2.3.0-cp314-cp314t-win_amd64.whl", hash = "sha256:673891700dafbc66a6a8df12059b53a65905ec6e8dec615392fb984299880c0d"},
-    {file = "mysqlclient-2.3.0-cp314-cp314t-win_arm64.whl", hash = "sha256:fe27c63ba9088b28467bf276f93f0b4a9062beabaeeb9692593e774d1146cce2"},
-    {file = "mysqlclient-2.3.0-cp315-cp315-win_amd64.whl", hash = "sha256:3c601984c286c51080e0d3e9a857bc014713e6338b5f9c0a5df453a341b14022"},
-    {file = "mysqlclient-2.3.0-cp315-cp315-win_arm64.whl", hash = "sha256:3d39527a5525b4ebff99721d063f4fe9e459b9e437c7b7698374966d92d4355d"},
-    {file = "mysqlclient-2.3.0-cp315-cp315t-win_amd64.whl", hash = "sha256:24164ba592065ae5ff0149bb5707d05772335935059474fb75d864e5d0f94d63"},
-    {file = "mysqlclient-2.3.0-cp315-cp315t-win_arm64.whl", hash = "sha256:f1ec49f73dad7df8f2da4d9de0f875f03c8bd44fbe77878522204c0646822f63"},
-    {file = "mysqlclient-2.3.0.tar.gz", hash = "sha256:bea8294964266f6486f1ca514ccfcdbc54d4fe0d32882b38c1d4594df870be8b"},
+    {file = "mysqlclient-2.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:e8cbc4638d4f54bd52e765f8dcb922768ccf67b62d3078c7f5bca95731427153"},
+    {file = "mysqlclient-2.3.1-cp310-cp310-win_arm64.whl", hash = "sha256:3304642a210a76f078c8d7cd2613f00e998d8e324d92a0ec67276906483d7067"},
+    {file = "mysqlclient-2.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:271ee7ca278bd5d7f6673fa99fc9c19eb9729f718f929c65f734ea0dfa8677fd"},
+    {file = "mysqlclient-2.3.1-cp311-cp311-win_arm64.whl", hash = "sha256:4b1fdf51050dc77e5061631f7cfdc4f838048bb235d03de4cd0900581aec727d"},
+    {file = "mysqlclient-2.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:1008dc952b6e501b442c78e918ce7216aa0496308e3bcbca63dd3d10608f4b7e"},
+    {file = "mysqlclient-2.3.1-cp312-cp312-win_arm64.whl", hash = "sha256:0f91115b30a5a9b9deb7f265a6d10859e28099ab1f748430451c284150281997"},
+    {file = "mysqlclient-2.3.1-cp313-cp313-win_amd64.whl", hash = "sha256:987b514ed469894b68aa4a177da182a28dfa4958399450d0f7e89fb7c1074cf7"},
+    {file = "mysqlclient-2.3.1-cp313-cp313-win_arm64.whl", hash = "sha256:e0ce44f4993410b7b9eb41ad0d114576edd3ea5f4f9e1152a1b2bf746dfaa96f"},
+    {file = "mysqlclient-2.3.1-cp314-cp314-win_amd64.whl", hash = "sha256:6a35ac1f42f54dc6e24fe765bc285d477ff8f37de75326fd4ae53d33e7171bdc"},
+    {file = "mysqlclient-2.3.1-cp314-cp314-win_arm64.whl", hash = "sha256:4a0f0d28b8f77dd2d0fa71f17bea4a9bacd3d988771ad7866661c865aaa782f5"},
+    {file = "mysqlclient-2.3.1-cp314-cp314t-win_amd64.whl", hash = "sha256:fa1ce1b6ec87a3bb880b459c181626fcc6bf1e52180ab78ec408147b968538cd"},
+    {file = "mysqlclient-2.3.1-cp314-cp314t-win_arm64.whl", hash = "sha256:7818f5bb20724a07f2d9da21e415f834bb608d5ff139e52e6880df12c6e65146"},
+    {file = "mysqlclient-2.3.1-cp315-cp315-win_amd64.whl", hash = "sha256:c61c397181da7301ce9a775d394539dd93fe5b2ba3ec393cc42cb05c37aa9fe4"},
+    {file = "mysqlclient-2.3.1-cp315-cp315-win_arm64.whl", hash = "sha256:891148327eda166abb6d9cfcc5f35a8e2ab81804b8836f070d1e126df1e522b8"},
+    {file = "mysqlclient-2.3.1-cp315-cp315t-win_amd64.whl", hash = "sha256:7aee4e672f973879b53efb53d705b7efca7efd64bfe8500c5d294902e0033ab0"},
+    {file = "mysqlclient-2.3.1-cp315-cp315t-win_arm64.whl", hash = "sha256:0d1599dc27d006208291080bab35d0f82cbe6ba23587def7c8ed7daffaed0fe8"},
+    {file = "mysqlclient-2.3.1.tar.gz", hash = "sha256:c07e1b83b530fd6c5888259f36afad1980d21fcb33ba97384650dd23c8f73ea8"},
 ]
 
 [[package]]
@@ -6781,15 +6782,15 @@ files = [
 
 [[package]]
 name = "textfsm"
-version = "2.1.0"
+version = "2.1.1"
 description = "Python module for parsing semi-structured text into python tables."
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"napalm\""
 files = [
-    {file = "textfsm-2.1.0-py2.py3-none-any.whl", hash = "sha256:55886490474890fa09ade0e8c9555a913fd325724842293364dc44ea705b3616"},
-    {file = "textfsm-2.1.0.tar.gz", hash = "sha256:45c18ff2b7c90163dfdff7e20d3f482514cc7aac26bc2547744e79dfa761e458"},
+    {file = "textfsm-2.1.1-py2.py3-none-any.whl", hash = "sha256:bddc87e11b937474579c7e564b06f18a07e88f9eaed06f0e802d97bb8e9c5850"},
+    {file = "textfsm-2.1.1.tar.gz", hash = "sha256:78243c7dfd1848ddaf53602fb3634773d64002224077eea2c59239a90ca95c55"},
 ]
 
 [[package]]
