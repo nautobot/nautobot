@@ -1,0 +1,1 @@
+Deprecated the module-level function `nautobot.playwright.base_page.select2_filter_pick`. Call the `BasePage.select2_filter_pick` method instead.

@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
 
-from nautobot.playwright.base_page import BasePage, select2_filter_pick, select2_filter_search
+from nautobot.playwright.base_page import BasePage
 
 
 class ListPage(BasePage):
@@ -355,14 +355,14 @@ class ListPage(BasePage):
         Pass `exact=False` for fields whose options render an ancestry path
         (e.g. location fields: "Parent → Child").
         """
-        select2_filter_pick(self.page, field_name, search=value, pick_text=value, exact=exact)
+        self.select2_filter_pick(field_name, search=value, pick_text=value, exact=exact)
 
     def search_filter_options(self, field_name, search):
         """Click the drawer's filter field named *field_name* and type *search* into its search box.
 
         The dropdown stays open afterwards.
         """
-        select2_filter_search(self.page, field_name, search)
+        self.select2_filter_search(field_name, search)
 
     def expect_filter_option_count(self, text, count):
         """Assert (auto-retrying) that the open dropdown has exactly *count* options containing *text*."""

@@ -1,1 +1,1 @@
-Added `select2_filter_search` and the `ListPage` helpers `search_filter_options`, `expect_filter_option_count` and `expect_no_filter_options` to `nautobot.playwright`.
+Added the `BasePage` methods `select2_filter_search` and `select2_filter_pick`, and the `ListPage` helpers `search_filter_options`, `expect_filter_option_count` and `expect_no_filter_options`, to `nautobot.playwright`.
