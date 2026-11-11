@@ -3,13 +3,19 @@ The contract between each archived log model and the live model it archives.
 
 An archived model has to stay field-compatible with its live model. It differs in only two ways: each foreign key to a
 model that isn't archived is stored as a `<name>_id` identifier column, and `ArchivedJobResult` adds `user_name`, since
-its username can't be read through a `user` foreign key. Foreign keys between archived models are real foreign keys. Nothing else catches a field added to a live model and not to its archived model:
-it produces no migration error and no failure anywhere else, and every record rotated afterwards is missing it.
+its username can't be read through a `user` foreign key. Foreign keys between archived models are real foreign keys.
+
+`find_archive_schema_drift()` is what compares the two, and `ArchiveSchemaDriftTestCase` covers that
+comparison. Nothing else catches a field added to a live model and not to its archived model: it produces
+no migration error and no failure anywhere else, and every record rotated afterwards is missing it.
 """
 
+from unittest import mock
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.test import SimpleTestCase
 from django.utils import timezone
 
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
@@ -17,77 +23,78 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import (
-    ArchivedJobConsoleEntry,
     ArchivedJobLogEntry,
     ArchivedJobResult,
     ArchivedObjectChange,
-    JobConsoleEntry,
     JobLogEntry,
     JobResult,
     ObjectChange,
 )
+from nautobot.extras.models.archive import (
+    _find_archived_model_drift,
+    ARCHIVED_MODEL_NAME_PREFIX,
+    find_archive_schema_drift,
+    get_all_archived_models,
+    get_archived_model_and_live_model_pairs,
+    get_live_model_from_archived_model,
+    get_live_model_name_from_archived_model,
+)
 
-# Each live model beside the model it is archived to.
-ARCHIVED_FROM = {
-    ObjectChange: ArchivedObjectChange,
-    JobResult: ArchivedJobResult,
-    JobLogEntry: ArchivedJobLogEntry,
-    JobConsoleEntry: ArchivedJobConsoleEntry,
-}
+# Each live model beside the model it is archived to. Resolved from the archived models' names rather than
+# written out here, so that this module cannot disagree with what the comparison resolves. A model that
+# fails to resolve is caught by
+# `ArchiveSchemaDriftTestCase.test_every_archived_model_resolves_its_live_model_from_its_name`.
+ARCHIVED_FROM = {live_model: archived_model for archived_model, live_model in get_archived_model_and_live_model_pairs()}
 ARCHIVED_MODELS = tuple(ARCHIVED_FROM.values())
 
 
+def format_drift_check_data(drift):
+    """Render drift findings one per line, so an assertion failure names each one."""
+    return "\n".join(
+        f"  - {archived_model._meta.label}: {message}"
+        for archived_model, _live_model, messages in drift
+        for message in messages
+    )
+
+
+def stub_field(field, name):
+    """A real Django field instance carrying the name a model would have given it."""
+    field.name = name
+    return field
+
+
+class StubRelation:
+    """Stands in for a relation field, which cannot be built outside a model class."""
+
+    is_relation = True
+
+    def __init__(self, name, related_model, null=False):
+        self.name = name
+        self.related_model = related_model
+        self.null = null
+
+
+class StubMeta:
+    def __init__(self, label, fields, many_to_many=()):
+        self.label = label
+        self.fields = fields
+        self.many_to_many = many_to_many
+
+
+def stub_model(label, fields, many_to_many=(), archived_only_field_names=()):
+    """A stand-in model exposing only what the drift comparison reads."""
+    return type(
+        label.rpartition(".")[2],
+        (),
+        {
+            "_meta": StubMeta(label, fields, many_to_many),
+            "archived_only_field_names": archived_only_field_names,
+        },
+    )
+
+
 class ArchivedLogModelTestCase(TestCase):
-    """The archived log models have to stay field-compatible with the live models they archive."""
-
-    def test_archived_fields_match_live_fields(self):
-        """
-        Every live field is present on the archived model, by name or, for a foreign key to a model that isn't
-        archived, as a `<name>_id` column.
-
-        This is the check that catches the failure mode nothing else does: a field added to a live model
-        and not to its archived model produces no migration error and no test failure anywhere else.
-        """
-        # Recorded on the archived model because the foreign key it was read through isn't archived.
-        expected_extra = {JobResult: {"user_name"}}
-
-        for live, archived in ARCHIVED_FROM.items():
-            with self.subTest(model=live.__name__):
-                archived_fields = {f.name for f in archived._meta.fields}
-                missing = set()
-                for field in live._meta.fields:
-                    if field.name in archived_fields:
-                        continue
-                    if field.is_relation and f"{field.name}_id" in archived_fields:
-                        continue
-                    missing.add(field.name)
-                self.assertEqual(missing, set(), f"{archived.__name__} is missing live fields")
-
-                live_names = {f.name for f in live._meta.fields}
-                extra = {name for name in archived_fields - live_names if name.removesuffix("_id") not in live_names}
-                self.assertEqual(extra, expected_extra.get(live, set()))
-
-    def test_archived_fields_match_live_field_types(self):
-        """
-        A field shared with the live model has the same type and length, so rotation can copy its value as is.
-
-        A foreign key to another live model that is archived must point to that model's archived counterpart.
-        Nullability is checked for every field, including foreign keys held as ids: an archived column that
-        rejected a null its live counterpart allows would fail rotation.
-        """
-        for live, archived in ARCHIVED_FROM.items():
-            for live_field in live._meta.fields:
-                with self.subTest(model=live.__name__, field=live_field.name):
-                    if live_field.is_relation and live_field.related_model in ARCHIVED_FROM:
-                        archived_field = archived._meta.get_field(live_field.name)
-                        self.assertIs(archived_field.related_model, ARCHIVED_FROM[live_field.related_model])
-                    elif live_field.is_relation:
-                        archived_field = archived._meta.get_field(f"{live_field.name}_id")
-                    else:
-                        archived_field = archived._meta.get_field(live_field.name)
-                        self.assertIs(type(archived_field), type(live_field))
-                        self.assertEqual(archived_field.max_length, live_field.max_length)
-                    self.assertEqual(archived_field.null, live_field.null)
+    """How an archived record behaves when compared against its live counterpart."""
 
     def test_unresolved_relations_return_none(self):
         """Reaching for a live relation by name gets None, where the live record would follow the relation."""
@@ -180,3 +187,198 @@ class ArchivedLogModelTestCase(TestCase):
         for archived in ARCHIVED_MODELS:
             with self.subTest(model=archived.__name__):
                 self.assertIn(archived._meta.model_name, GLOBAL_SEARCH_EXCLUDE_LIST)
+
+
+class ArchiveSchemaDriftTestCase(SimpleTestCase):
+    """
+    The comparison between each archived model and the live model it archives.
+
+    `test_no_schema_drift_from_the_live_models` asserts the real models are in step. The rest drive one
+    comparison branch each, so that a branch which silently checks nothing cannot pass as a clean archive.
+    """
+
+    def test_no_schema_drift_from_the_live_models(self):
+        drift_check_data = find_archive_schema_drift()
+        self.assertEqual(
+            drift_check_data,
+            [],
+            f"archived models no longer match the live models they archive:\n{format_drift_check_data(drift_check_data)}",
+        )
+
+    def test_every_archived_model_resolves_its_live_model_from_its_name(self):
+        archived_model_pairs = get_archived_model_and_live_model_pairs()
+
+        self.assertEqual(set(get_all_archived_models()), {archived_model for archived_model, _ in archived_model_pairs})
+        for archived_model, live_model in archived_model_pairs:
+            with self.subTest(archived_model=archived_model.__name__):
+                self.assertEqual(archived_model.__name__, f"{ARCHIVED_MODEL_NAME_PREFIX}{live_model.__name__}")
+                self.assertEqual(archived_model._meta.app_label, live_model._meta.app_label)
+
+    def test_a_name_that_does_not_follow_the_convention_resolves_to_nothing(self):
+        class NotNamedForALiveModel:
+            pass
+
+        class ArchivedNoSuchModel:
+            _meta = ArchivedObjectChange._meta
+
+        self.assertIsNone(get_live_model_name_from_archived_model(NotNamedForALiveModel))
+        self.assertEqual(get_live_model_name_from_archived_model(ArchivedNoSuchModel), "NoSuchModel")
+        self.assertEqual(get_live_model_name_from_archived_model(ArchivedObjectChange), "ObjectChange")
+
+        self.assertIs(get_live_model_from_archived_model(ArchivedObjectChange), ObjectChange)
+        self.assertIsNone(get_live_model_from_archived_model(NotNamedForALiveModel))
+        self.assertIsNone(get_live_model_from_archived_model(ArchivedNoSuchModel))
+
+    def test_a_mismatched_pair_reports_the_gaps_against_real_models(self):
+        """Two real models that do not archive each other, so every kind of gap appears at once."""
+        drift_check_data = find_archive_schema_drift([(ArchivedJobLogEntry, JobResult)])
+
+        archived_model, live_model, messages = drift_check_data[0]
+        self.assertIs(archived_model, ArchivedJobLogEntry)
+        self.assertIs(live_model, JobResult)
+        self.assertIn("`extras.ArchivedJobLogEntry` is missing the field `extras.JobResult.name`", messages)
+        self.assertIn("`extras.ArchivedJobLogEntry` is missing the field `extras.JobResult.status`", messages)
+        # A live foreign key to a model that is not archived is held as `<name>_id`.
+        self.assertIn("`extras.ArchivedJobLogEntry` is missing the field `extras.JobResult.job_model`", messages)
+
+    def test_a_column_only_on_the_archived_model_is_reported(self):
+        """The reverse gap: a column rotation would never populate, because no live field feeds it."""
+        drift_check_data = find_archive_schema_drift([(ArchivedJobResult, JobLogEntry)])
+
+        self.assertEqual(len(drift_check_data), 1)
+        _archived_model, _live_model, messages = drift_check_data[0]
+        self.assertIn(
+            "`extras.ArchivedJobResult.worker` has no counterpart on `extras.JobLogEntry` and is not in "
+            "`archived_only_field_names`.",
+            messages,
+        )
+
+    def test_a_declared_denormalization_is_not_reported(self):
+        """
+        `ArchivedJobResult.user_name` has no live counterpart on purpose, and says so.
+
+        The live model reads the username through its `user` foreign key, which can't be followed from an
+        archived record, so rotation copies it. Declared in `archived_only_field_names`, it is not drift.
+        """
+        self.assertIn("user_name", ArchivedJobResult.archived_only_field_names)
+        self.assertNotIn(
+            ArchivedJobResult,
+            [archived_model for archived_model, _live_model, _messages in find_archive_schema_drift()],
+        )
+
+    def test_an_archived_model_not_named_for_a_live_model_raises(self):
+        with mock.patch("nautobot.extras.models.archive.ARCHIVED_MODEL_NAME_PREFIX", "Retained"):
+            with self.assertRaises(LookupError):
+                find_archive_schema_drift()
+
+    def test_an_archived_model_whose_live_model_does_not_exist_raises(self):
+        with mock.patch(
+            "nautobot.extras.models.archive.get_live_model_name_from_archived_model", return_value="NoSuchModel"
+        ):
+            with self.assertRaises(LookupError):
+                find_archive_schema_drift()
+
+    def test_a_field_missing_from_the_archived_model_is_reported(self):
+        live_model = stub_model("extras.Widget", [stub_field(models.CharField(max_length=10), "name")])
+        archived_model = stub_model("extras.ArchivedWidget", [])
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            ["`extras.ArchivedWidget` is missing the field `extras.Widget.name`"],
+        )
+
+    def test_a_field_of_a_different_type_is_reported(self):
+        live_model = stub_model("extras.Widget", [stub_field(models.CharField(max_length=10), "name")])
+        archived_model = stub_model("extras.ArchivedWidget", [stub_field(models.IntegerField(), "name")])
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            ["`extras.ArchivedWidget.name` is a `IntegerField` but `extras.Widget.name` is a `CharField`"],
+        )
+
+    def test_a_field_that_holds_fewer_characters_is_reported(self):
+        live_model = stub_model("extras.Widget", [stub_field(models.CharField(max_length=100), "name")])
+        archived_model = stub_model("extras.ArchivedWidget", [stub_field(models.CharField(max_length=50), "name")])
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            [
+                "`extras.ArchivedWidget.name` has a max_length of `50` and does not match the "
+                "`extras.Widget.name` max_length of `100`."
+            ],
+        )
+
+    def test_a_field_with_different_nullability_is_reported(self):
+        live_model = stub_model("extras.Widget", [stub_field(models.CharField(max_length=10, null=False), "name")])
+        archived_model = stub_model(
+            "extras.ArchivedWidget", [stub_field(models.CharField(max_length=10, null=True), "name")]
+        )
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            [
+                "`extras.ArchivedWidget.name` has nullability set to `null=True`. This differs with "
+                "`extras.Widget.name` which has nullability set to `null=False`."
+            ],
+        )
+
+    def test_a_many_to_many_field_on_the_live_model_is_reported(self):
+        """An archived model holds no many-to-many table, so the values are lost whatever else matches."""
+        live_model = stub_model("extras.Widget", [], many_to_many=[stub_field(models.CharField(), "tags")])
+        archived_model = stub_model("extras.ArchivedWidget", [])
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            [
+                "`extras.ArchivedWidget` cannot hold `extras.Widget.tags` because it is a many-to-many "
+                "field, so its values are lost when a record is archived."
+            ],
+        )
+
+    def test_an_undeclared_column_on_the_archived_model_is_reported(self):
+        live_model = stub_model("extras.Widget", [])
+        archived_model = stub_model("extras.ArchivedWidget", [stub_field(models.CharField(max_length=10), "extra")])
+
+        self.assertEqual(
+            _find_archived_model_drift(archived_model, live_model),
+            [
+                "`extras.ArchivedWidget.extra` has no counterpart on `extras.Widget` and is not in "
+                "`archived_only_field_names`."
+            ],
+        )
+
+    def test_a_demoted_column_of_the_wrong_type_is_reported(self):
+        """`Job` uses a UUID primary key, so an integer column cannot hold the reference."""
+        archived_model = stub_model("extras.ArchivedWidget", [stub_field(models.IntegerField(), "job_model_id")])
+
+        messages = _find_archived_model_drift(archived_model, JobResult)
+
+        self.assertIn(
+            "`extras.ArchivedWidget.job_model_id` is a `integer` column but it must be a `uuid` column "
+            "to hold a `extras.Job` primary key.",
+            messages,
+        )
+
+    def test_a_demoted_column_that_is_still_a_relation_is_reported(self):
+        archived_model = stub_model("extras.ArchivedWidget", [StubRelation("job_model_id", ArchivedObjectChange)])
+
+        messages = _find_archived_model_drift(archived_model, JobResult)
+
+        self.assertIn(
+            "`extras.ArchivedWidget.job_model_id` is a relation to `extras.ArchivedObjectChange` but it must "
+            "be a plain identifier column, because `extras.JobResult.job_model` points at `extras.Job` "
+            "which is not archived.",
+            messages,
+        )
+
+    def test_a_relation_pointing_at_the_wrong_archived_model_is_reported(self):
+        """`JobLogEntry.job_result` is archived, so the archived field must point at `ArchivedJobResult`."""
+        archived_model = stub_model("extras.ArchivedWidget", [StubRelation("job_result", ArchivedObjectChange)])
+
+        messages = _find_archived_model_drift(archived_model, JobLogEntry)
+
+        self.assertIn(
+            "`extras.ArchivedWidget.job_result` points at `extras.ArchivedObjectChange` but it must point at "
+            "`extras.ArchivedJobResult`, the archived model for `extras.JobResult`.",
+            messages,
+        )
