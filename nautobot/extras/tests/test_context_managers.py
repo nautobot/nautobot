@@ -331,7 +331,7 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertEqual(oc.object_data["tags"], [tag.name])
         self.assertEqual(oc.object_data_v2["id"], str(tenant_pk))
         self.assertEqual(oc.object_data_v2["url"], expected_v2["url"])
-        self.assertEqual(len(oc.object_data_v2["tags"]), 1)
+        self.assertEqual(oc.object_data_v2["tags"], expected_v2["tags"])
 
     def test_delete_of_non_taggable_object(self):
         """Test that deleting a non-taggable object under deferred change logging logs its id and url"""
@@ -366,6 +366,7 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc.changed_object_id, tenant_group_pk)
         self.assertEqual(oc.object_data_v2["id"], str(tenant_group_pk))
+        self.assertEqual(oc.object_data["description"], "changed")
 
     def test_create_then_delete_of_non_taggable_object(self):
         """Test that a create followed by a delete under deferred change logging is logged as two changes"""
