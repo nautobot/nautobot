@@ -2,7 +2,648 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 1000 proper-names -->
+<!-- pyml disable-num-lines 2000 proper-names -->
+## GHSA-546w-cg72-vf5w
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 9, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An information-disclosure vulnerability in the Jinja2 template sandbox's handling of queryset filtering. It is an incomplete fix for GHSA-8f2w-54mq-66gg and GHSA-5q66-3x3p-rxmh. A user-authored template can filter on a sensitive field to infer the REST API token keys and password hashes of other users, including administrators, even with <code>STRICT_SENSITIVE_FIELDS</code> enabled, so this is an account-takeover path from a low-privileged account.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-546w-cg72-vf5w">GHSA-546w-cg72-vf5w</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.46</li>
+        <li>&ge;3.0.0, &lt;3.2.9</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.46 (<a href="https://github.com/nautobot/nautobot/commit/d318a3f3cf60766b93a219bf1d4d61a9f291cbd9">patch</a>)</li>
+        <li>3.2.9 (<a href="https://github.com/nautobot/nautobot/commit/bc26571e4de0fa75545a0650091d7875ab4c5ee9">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-w2v9-g37h-x98j
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 9, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An information-disclosure vulnerability in Nautobot's Jinja2 template sandbox, where template filters and model or field methods that look up an attribute by name were not subject to the <code>sensitive_fields</code> control. It is an incomplete fix for GHSA-8f2w-54mq-66gg and GHSA-5q66-3x3p-rxmh. A user-authored template can use them to display the REST API token keys and password hashes of other users, including administrators, so this is an account-takeover path from a low-privileged account.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-w2v9-g37h-x98j">GHSA-w2v9-g37h-x98j</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.46</li>
+        <li>&ge;3.0.0, &lt;3.2.9</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.46 (<a href="https://github.com/nautobot/nautobot/commit/d318a3f3cf60766b93a219bf1d4d61a9f291cbd9">patch</a>)</li>
+        <li>3.2.9 (<a href="https://github.com/nautobot/nautobot/commit/bc26571e4de0fa75545a0650091d7875ab4c5ee9">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-h3qx-qrj8-q6wf
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 9, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>The "Export Object List" system Job checked API tokens (<code>users.token</code>) only against standard object permissions. Nautobot's UI and REST API always limit a user to their own tokens, but this Job had no such restriction. A user who could run the Job and had unrestricted permission to view tokens (such as a superuser account) could therefore export other users' tokens, including their full keys, and then use those keys to authenticate to the REST API as those users.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-h3qx-qrj8-q6wf">GHSA-h3qx-qrj8-q6wf</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.46</li>
+        <li>&ge;3.0.0, &lt;3.2.9</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.46 (<a href="https://github.com/nautobot/nautobot/commit/aa231b21cc31ea6ef3c59c786a38f9e599ff9e52">patch</a>)</li>
+        <li>3.2.9 (<a href="https://github.com/nautobot/nautobot/commit/0f2f645b443f09c9e312423db677f35866d2cf57">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-mqq2-g399-v4mp
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Required Validation Rule records could inject malicious content into a rule's custom error message, which would be rendered into other object forms, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-mqq2-g399-v4mp">GHSA-mqq2-g399-v4mp</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/704feea63289d162c10b6b2dc23866adea1c424a">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-37vj-5gff-ww9c
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>In a REST API POST/PATCH/PUT request, or a row of the Import Objects system Job, a related object can be identified by a dictionary of attributes, for example <code>"rack": {"name": "R1"}</code>. When evaluating this dictionary, Nautobot did not apply sufficient restrictions to the potential structure of this dictionary, allowing a crafted request to verify the existence or nonexistence of nested related objects matching the specified data.
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-37vj-5gff-ww9c">GHSA-37vj-5gff-ww9c</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-rg7h-q6c5-hr4h
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>When creating or updating an object via the REST API or the Import Objects Job, the permissions check for <code>view</code> permissions on referenced related objects did not run for references to <code>User</code> and <code>Group</code> objects.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-rg7h-q6c5-hr4h">GHSA-rg7h-q6c5-hr4h</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-5qqh-654x-4g4q
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Device Type or Software Version records could inject malicious content into a device type's model name or a software version's alias or version string, which would be rendered unescaped in the software image summary on the Device, Virtual Machine and Inventory Item create and edit forms, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-5qqh-654x-4g4q">GHSA-5qqh-654x-4g4q</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;2.2.0, &lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/39cdda210250c2c744f1fbd6ddd444aa82ba4243">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/5b8e9232f1a3b1609ddacb937e8b411038a92bca">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-mw4m-fgfr-qc98
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Job execution paths that take an object(s) chosen by the user didn't check whether the user had permission to view the specified object(s) before passing the object(s) to the requested <code>Job</code> or <code>JobButtonReceiver</code>.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-mw4m-fgfr-qc98">GHSA-mw4m-fgfr-qc98</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-hjmc-4p4r-6fhx
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user permitted to create objects of one type, and permitted to run the Import Objects job, could use the job to create objects and link them to related objects they can't view, for example assigning a new device to a tenant or location outside their permissions. They could also learn whether a given related object exists from whether the job succeeds.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-hjmc-4p4r-6fhx">GHSA-hjmc-4p4r-6fhx</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/d400577b0603de9634c4943819b0d52cc9eb4d5d">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/f739f4d96d41297e362cd4ca0cdc4dcecd1d93d4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-gpjq-54xp-rrj5
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Custom Field or Custom Field Choice records could inject malicious content into a custom field's label or choice values, which would be rendered unescaped on the Import Objects page, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-gpjq-54xp-rrj5">GHSA-gpjq-54xp-rrj5</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;2.2.0, &lt;2.4.45</li>
+        <li>&ge;3.0.0, &lt;3.2.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.45 (<a href="https://github.com/nautobot/nautobot/commit/f1ff10f6452b5e38e56a46ba902567e8ac0bf64b">patch</a>)</li>
+        <li>3.2.8 (<a href="https://github.com/nautobot/nautobot/commit/2c5aabeb120896da5d5294a849fc4590fc4edfb2">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-w9cw-3w8f-phq4
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>When a Nautobot <code>RegularExpressionValidationRule</code> enables <code>context_processing</code>, its pattern is first rendered as a Jinja2 template with the object being validated in scope. Values submitted on the request under validation are therefore interpolated into the regular expression before it is compiled, which means a user can influence the structure of the pattern rather than only the string tested against it.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-w9cw-3w8f-phq4">GHSA-w9cw-3w8f-phq4</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/82b6d102cb880c59a6236e9bec94f36ac43d14c7">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-8894-x54w-hhpm
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's data validation engine evaluates a <code>RegularExpressionValidationRule</code> against submitted values using Python's standard <code>re</code> module, which places no bound on backtracking. If a rule's pattern is one that exhibits catastrophic backtracking, a submitted value that fails to match can consume worker time without bound.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-8894-x54w-hhpm">GHSA-8894-x54w-hhpm</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/82b6d102cb880c59a6236e9bec94f36ac43d14c7">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-gffr-x2x7-7fgh
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot evaluates a custom field's <code>validation_regex</code> against submitted values using Python's standard <code>re</code> module, which places no bound on backtracking. If a custom field is configured with a pattern that exhibits catastrophic backtracking, a submitted value that fails to match can consume worker time without bound.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-gffr-x2x7-7fgh">GHSA-gffr-x2x7-7fgh</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/24ead05fd570d220984643a099e78695a04df844">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/82b6d102cb880c59a6236e9bec94f36ac43d14c7">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-5q66-3x3p-rxmh
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An information-disclosure vulnerability in Nautobot's handling of user-authored Jinja2 templates. It is an incomplete fix for GHSA-8f2w-54mq-66gg. The disclosed values are REST API token keys and user password hashes belonging to other users, including administrators. A disclosed API token grants the full REST API privileges of the user it belongs to, so this is an account-takeover path from a low-privileged account.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-5q66-3x3p-rxmh">GHSA-5q66-3x3p-rxmh</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/bc38b5e82d6391c3e40f2b143d2e6cce7c545525">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/35dc20e4d47304ec346a0d8f20a9f6478718f12b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-9fgc-m542-2g84
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>October 13, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A Jinja2 template sandbox escape. An authenticated user with any template-authoring permission can make template rendering run arbitrary read queries against the database.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-9fgc-m542-2g84">GHSA-9fgc-m542-2g84</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.44</li>
+        <li>&ge;3.0.0, &lt;3.2.7</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.44 (<a href="https://github.com/nautobot/nautobot/commit/bc38b5e82d6391c3e40f2b143d2e6cce7c545525">patch</a>)</li>
+        <li>3.2.7 (<a href="https://github.com/nautobot/nautobot/commit/35dc20e4d47304ec346a0d8f20a9f6478718f12b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-m6h7-g92h-9p44
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 28, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Missing permissions enforcement on the REST API <code>/trace/</code> and <code>/paths/</code> endpoints for various cable-termination models. A user granted view permission on a cable termination through a constrained `ObjectPermission` received the full serialized detail of every other termination and cable along that cable path, including objects on devices outside their permitted scope.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44">GHSA-m6h7-g92h-9p44</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.43</li>
+        <li>&ge;3.0.0, &lt;3.2.6</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.43 (<a href="https://github.com/nautobot/nautobot/commit/406ec35a23ebe929df61172d5147f7cef102d3e5">patch</a>)</li>
+        <li>3.2.6 (<a href="https://github.com/nautobot/nautobot/commit/3bca201bf8a7f33be1cf792110e46e720bfaf38c">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-2v7j-x3g6-qj94
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An incomplete fix for GHSA-p99c-c9qx-34fw leaves Nautobot's Jinja2 template sandbox escapable, allowing a low-privileged authenticated user to read any row and column in the Nautobot database, bypassing object permissions.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94">GHSA-2v7j-x3g6-qj94</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-8f2w-54mq-66gg
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A low-privileged authenticated user can harvest the cleartext REST API token of any other user, including a superuser, without ever holding permission on tokens, users, or secrets. The same mechanism discloses each affected user's password hash.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg">GHSA-8f2w-54mq-66gg</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## GHSA-x69f-q4wj-vx72
 

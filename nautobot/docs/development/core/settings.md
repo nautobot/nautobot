@@ -4,7 +4,7 @@ Best practices when adding, updating, and deprecating/removing Nautobot configur
 
 ## Consider Constance
 
-If the setting is one that would be desirable to configure at run time rather than install time, and the nature of the setting is such that it *can* be changed at run time without requiring a server reload or similar operations to fully take effect, consider implementing it as a [`django-constance`](https://django-constance.readthedocs.io/en/latest/) setting.
+If the setting is one that would be desirable to configure at run time rather than install time, and the nature of the setting is such that it _can_ be changed at run time without requiring a server reload or similar operations to fully take effect, consider implementing it as a [`django-constance`](https://django-constance.readthedocs.io/en/latest/) setting.
 
 ### Constance Advantages
 
@@ -22,7 +22,7 @@ If the setting is one that would be desirable to configure at run time rather th
 
 For all settings where it's feasible to do so, you should make sure that it's configurable via environment variable as an alternative to directly editing `nautobot_config.py`. Exceptions would be for settings that cannot easily be defined as an environment variable string, such as Python functions, complex dicts, etc.
 
-The environment variable should typically be named `NAUTOBOT_<setting_name>` unless there is a *strong* existing convention in other tools for a different name.
+The environment variable should typically be named `NAUTOBOT_<setting_name>` unless there is a _strong_ existing convention in other tools for a different name.
 
 For Constance-enabled settings, the general pattern would be:
 
@@ -80,8 +80,8 @@ The special keys added specifically for documentation are as follows:
 Markdown rendering is supported for the `description`, `details`, and `default_literal` fields. The `see_also` field is also rendered as Markdown, but only the link text should include any markdown formatting.
 
 !!! info
-    Markdown is *technically* supported in other fields, but it's not recommended to use it outside of the fields above as it may not render as expected in all contexts.
+    Markdown is _technically_ supported in other fields, but it's not recommended to use it outside of the fields above as it may not render as expected in all contexts.
 
 ### Technical Details of Settings Documentation
 
-The `optional-settings.md` and `required-settings.md` files are rendered as Jinja2 templates via [`Mkdocs-Macros`](https://mkdocs-macros-plugin.readthedocs.io/en/latest/). The file `nautobot/docs/macros.py` is responsible for loading `settings.yaml` into the template context for rendering. `mkdocs.yml` instructs Mkdocs-Macros to run that file at documentation rendering time. The macros and templating are *not* enabled for all documentation by default - instead, only the files with `render_macros: true` in their headers will be templated.
+The `optional-settings.md` and `required-settings.md` files are rendered as Jinja2 templates via [`Mkdocs-Macros`](https://mkdocs-macros-plugin.readthedocs.io/en/latest/). The file `nautobot/docs/macros.py` is responsible for loading `settings.yaml` into the template context for rendering. `mkdocs.yml` instructs Mkdocs-Macros to run that file at documentation rendering time. The macros and templating are _not_ enabled for all documentation by default - instead, only the files with `render_macros: true` in their headers will be templated.

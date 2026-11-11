@@ -49,7 +49,7 @@ To assist with identifying any remaining instances of deprecated code in your co
 
 Many legacy HTML templates have been removed. The majority of the removed templates are model specific such as `circuits/circuit.html` or `dcim/device/base.html` and have been superseded by generic templates such as `generic/object_retrieve.html`.
 
-In order to ease the transition from these deprecated templates for app developers, we have included a migration script in Nautobot v2.4.21+ that will recursively parse through a directory's html files and replace any extends directives (`{% extends ... %}`) that reference a deprecated template with the replacement template. This script does not require Nautobot to be running and it can be run with the command `nautobot-migrate-deprecated-templates <path> [--dry-run]`. For more details, including a full table of deprecated templates and their replacements, see [Deprecated Templates](../development/apps/migration/code-updates.md#deprecated-templates).
+In order to ease the transition from these deprecated templates for app developers, we have included a migration script in Nautobot v2.4.21+ that will recursively parse through a directory's html files and replace any extends directives (`{% extends ... %}`) that reference a deprecated template with the replacement template. This script does not require Nautobot to be running and it can be run with the command `nautobot-migrate-deprecated-templates <path> [--dry-run]`. For more details, including a full table of deprecated templates and their replacements, see [Deprecated Templates](../development/apps/migration/from-v2/code-updates.md#deprecated-templates).
 
 #### Removed Branding Options
 
@@ -143,7 +143,7 @@ The Device model has replaced its single `cluster` foreign-key field with a many
 
 To provide a modicum of backwards-compatibility, the Device model and queryset still support a singular `cluster` property which can be retrieved and (in some cases) set for the case of a single associated Cluster, but App authors, Job Authors, and GraphQL users are encouraged to migrate to using `clusters` as soon as possible. The `cluster` property will raise a `MultipleObjectsReturned` exception if the Device in question has more than one associated Cluster.
 
-Note that due to technical limitations, the Device REST API does *not* support a `cluster` field in Nautobot v3, so users of the REST API *must* migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
+Note that due to technical limitations, the Device REST API does _not_ support a `cluster` field in Nautobot v3, so users of the REST API _must_ migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
 
 #### Filter Standardization Improvements ([#1889](https://github.com/nautobot/nautobot/issues/1889))
 
@@ -207,7 +207,6 @@ As Python 3.9 has reached end-of-life, Nautobot 3.0 requires a minimum of Python
 Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.0.11 (2026-04-08)

@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.urls import reverse
 
-from nautobot.apps.testing import ViewTestCases
+from nautobot.core.testing.views import ViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Status
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup

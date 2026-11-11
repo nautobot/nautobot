@@ -44,7 +44,7 @@ The implementation of private repository access can vary from Git provider to Gi
 * For Bitbucket, there are two options: [personal access tokens](https://confluence.atlassian.com/bitbucketserver/personal-access-tokens-939515499.html) or [OAuth2](https://developer.atlassian.com/cloud/bitbucket/oauth-2/) depending on the product.
 
 !!! note
-    When defining a [secrets group](./secret.md#secrets-groups) for a Git repository, the group must contain assigned secret(s) with an *access type* of `HTTP(S)` and *secret type(s)* of `Token` (and `Username`, if required by the provider).
+    When defining a [secrets group](./secret.md#secrets-groups) for a Git repository, the group must contain assigned secret(s) with an _access type_ of `HTTP(S)` and _secret type(s)_ of `Token` (and `Username`, if required by the provider).
 
 Whenever a Git repository record is created, updated, or deleted, Nautobot automatically enqueues a background task that will asynchronously execute to clone, fetch, or delete a local copy of the Git repository on the filesystem (located under [`GIT_ROOT`](../administration/configuration/settings.md#git_root)) and then create, update, and/or delete any database records managed by this repository. The progress and eventual outcome of this background task are recorded as a `JobResult` record that may be viewed from the Git repository user interface.
 
@@ -70,7 +70,7 @@ Jobs can be defined in Python files located in a `/jobs/` directory or `jobs.py`
 +/- 2.0.0
     Jobs provided by a Git repository are loaded as real Python modules and now support inter-module relative Python imports (i.e., you can package Python "libraries" into a Git repository and then import them from Jobs in that repository). As a result, the top-level directory of Git repositories that provide jobs must now contain an `__init__.py` file.
 
-When syncing or re-syncing a Git repository, the Nautobot database records corresponding to any provided jobs will automatically be refreshed. If a job is removed as a result of the sync, the corresponding database record will *not* be automatically deleted, but will be marked as `installed = False` and will no longer be runnable. A user with appropriate access permissions can delete leftover `Job` database records if desired, but note that this will result in any existing `JobResult` records no longer having a direct reference back to the `Job` that they originated from.
+When syncing or re-syncing a Git repository, the Nautobot database records corresponding to any provided jobs will automatically be refreshed. If a job is removed as a result of the sync, the corresponding database record will _not_ be automatically deleted, but will be marked as `installed = False` and will no longer be runnable. A user with appropriate access permissions can delete leftover `Job` database records if desired, but note that this will result in any existing `JobResult` records no longer having a direct reference back to the `Job` that they originated from.
 
 ### Configuration Contexts
 
@@ -372,7 +372,7 @@ Like other Nautobot features, Git repositories can be managed via [Nautobot's RE
 
 ### Define a Git Repository to Consume
 
-To use the Nautobot REST API to define a Git repository for Nautobot to consume, issue a `POST` request to the model's *list* endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all operations; see the [authentication documentation](./rest-api/authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version, so all of these examples will do that too:
+To use the Nautobot REST API to define a Git repository for Nautobot to consume, issue a `POST` request to the model's _list_ endpoint with JSON data pertaining to the object being created. Note that a REST API token is required for all operations; see the [authentication documentation](./rest-api/authentication.md) for more information. Also be sure to set the `Content-Type` HTTP header to `application/json`. As always, it's a good practice to also set the `Accept` HTTP header to include the requested REST API version, so all of these examples will do that too:
 
 ```no-highlight
 curl -s -X POST \
@@ -388,7 +388,7 @@ http://nautobot/api/extras/git-repositories/ \
 
 ### List Existing Repositories
 
-Just like other Nautobot apps and models, it is possible to use the Nautobot REST API to list existing configured repositories by issuing a `GET` request to the model's *list* endpoint. As usual, objects are listed under the response object's `results` parameter:
+Just like other Nautobot apps and models, it is possible to use the Nautobot REST API to list existing configured repositories by issuing a `GET` request to the model's _list_ endpoint. As usual, objects are listed under the response object's `results` parameter:
 
 ```no-highlight
 curl -s -X GET \
@@ -500,7 +500,7 @@ Which returns, for example:
 
 ### Query the Data Handled by a Defined Repository
 
-It's even possible to query the API to discover resource types that have been created and managed by a specific repository. For example, this `GET` query on the `jobs` model's *list* endpoint is filtered through a `module_name__isw=demo_git_datasource` [query filter](./rest-api/filtering.md#string-fields) to identify those jobs that were created from the `demo-git-datasource` Git repository:
+It's even possible to query the API to discover resource types that have been created and managed by a specific repository. For example, this `GET` query on the `jobs` model's _list_ endpoint is filtered through a `module_name__isw=demo_git_datasource` [query filter](./rest-api/filtering.md#string-fields) to identify those jobs that were created from the `demo-git-datasource` Git repository:
 
 ```no-highlight
 curl -s -X GET \

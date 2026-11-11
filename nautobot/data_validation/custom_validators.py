@@ -14,7 +14,6 @@ import inspect
 import logging
 from math import isclose
 import os
-import re
 from typing import Optional
 
 from django.conf import settings
@@ -23,8 +22,9 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import pluralize
 from django.utils import timezone
 
-from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.data import render_jinja2_for_regex
 from nautobot.core.utils.module_loading import import_modules_privately
+from nautobot.core.utils.regex import InvalidRegexError, regex_match, RegexTimeoutError
 from nautobot.data_validation.models import (
     DataCompliance,
     MinMaxValidationRule,
@@ -66,7 +66,7 @@ class BaseValidator(CustomValidator):
                 )
                 # Render the regular_expression as a jinja2 string and ensure it is valid
                 try:
-                    regular_expression = render_jinja2(rule.regular_expression, self.context)
+                    regular_expression = render_jinja2_for_regex(rule.regular_expression, self.context)
                     validate_regex(regular_expression)
                 # TODO: Switch to a less broad exception.
                 except Exception:  # pylint: disable=broad-exception-caught
@@ -84,7 +84,18 @@ class BaseValidator(CustomValidator):
             else:
                 regular_expression = rule.regular_expression
 
-            if not re.match(regular_expression, field_value):
+            try:
+                matched = regex_match(regular_expression, field_value)
+            except (InvalidRegexError, RegexTimeoutError) as exc:
+                LOGGER.error("Data validation rule '%s' could not be evaluated: %s", rule, exc.messages[0])
+                self.validation_error(
+                    {
+                        rule.field: f"Data validation rule '{rule}' could not be evaluated: {exc.messages[0]} "
+                        "Either fix the validation rule or disable it in order to save this data."
+                    }
+                )
+
+            if not matched:
                 self.validation_error(
                     {rule.field: rule.error_message or f"Value does not conform to regex: {regular_expression}"}
                 )

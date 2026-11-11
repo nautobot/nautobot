@@ -23,7 +23,7 @@ from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.serializers import StatsSerializer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import serialize_object_for_user
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewname, validated_viewname
@@ -103,6 +103,11 @@ class PathEndpointMixin:
     def trace(self, request, pk):
         """
         Trace a complete cable path and return each segment as a three-tuple of (termination, cable, termination).
+
+        Each element is serialized according to the requesting user's permission to view that specific object;
+        an element the user may not view is restricted to its brief `{id, object_type, url, display}` form.
+        Elements are never omitted and the path is never truncated, so the number and shape of the returned
+        segments does not depend on the requesting user's permissions.
         """
         obj = get_object_or_404(self.queryset, pk=pk)
 
@@ -114,20 +119,16 @@ class PathEndpointMixin:
                 # Split paths
                 break
 
-            # Serialize each object
-            serializer_a = get_serializer_for_model(near_end)
-            x = serializer_a(near_end, context={"request": request}).data
-            if cable is not None:
-                y = serializers.TracedCableSerializer(cable, context={"request": request}).data
-            else:
-                y = None
-            if far_end is not None:
-                serializer_b = get_serializer_for_model(far_end)
-                z = serializer_b(far_end, context={"request": request}).data
-            else:
-                z = None
-
-            path.append((x, y, z))
+            # Serialize each object. Unlike `obj` above, the traversed nodes are loaded by
+            # `CablePath.get_path()` from each model's default manager with no user context, so they are NOT
+            # filtered by `restrict(user, "view")` and must be permission-checked individually.
+            path.append(
+                (
+                    serialize_object_for_user(near_end, request),
+                    serialize_object_for_user(cable, request, serializer_class=serializers.TracedCableSerializer),
+                    serialize_object_for_user(far_end, request),
+                )
+            )
 
         return Response(path)
 
@@ -428,7 +429,6 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",
         "virtual_chassis__master",
-        "parent_bay",
     ).prefetch_related("primary_ip4__nat_outside_list", "primary_ip6__nat_outside_list")
     serializer_class = serializers.DeviceSerializer
     filterset_class = filters.DeviceFilterSet
@@ -635,7 +635,8 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = FrontPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
-        *FrontPort.connection_prefetch_related_fields()
+        *FrontPort.connection_prefetch_related_fields(),
+        *FrontPort.cable_peer_prefetch_related_fields(),
     )
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
@@ -643,7 +644,8 @@ class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
     queryset = RearPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
-        *RearPort.connection_prefetch_related_fields()
+        *RearPort.connection_prefetch_related_fields(),
+        *RearPort.cable_peer_prefetch_related_fields(),
     )
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet

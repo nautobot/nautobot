@@ -1133,8 +1133,10 @@ class RackUIViewSet(NautobotUIViewSet):
 
         if self.action == "retrieve":
             # Get 0U and child devices located within the rack
-            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
-                "device_type__manufacturer"
+            nonracked_devices = (
+                Device.objects.restrict(request.user, "view")
+                .filter(rack=instance, position__isnull=True)
+                .select_related("device_type__manufacturer")
             )
             nonracked_devices_table = tables.DeviceTable(nonracked_devices)
             paginate = {
@@ -2827,7 +2829,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.action == "retrieve":
+        if self.action == "list":
+            # The table can't infer these relations from the primary_ip property.
+            queryset = queryset.select_related("primary_ip4", "primary_ip6")
+        elif self.action == "retrieve":
             queryset = queryset.select_related(
                 "controller_managed_device_group__controller",
                 "device_redundancy_group",
@@ -2867,6 +2872,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     label="Dynamic Groups",
                     url_name="dcim:device_dynamicgroups",
                     related_object_attribute="dynamic_groups",
+                    required_permissions=["extras.view_dynamicgroup"],
+                    hide_if_empty=True,
                     panels=(
                         object_detail.DynamicGroupsTextPanel(weight=100),
                         object_detail.ObjectsTablePanel(
@@ -3937,9 +3944,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
     )
     def lldp_neighbors(self, request, *args, **kwargs):
         instance = self.get_object()
-        interfaces = Interface.optimize_queryset_for_cable_columns(
-            instance.all_interfaces.restrict(request.user, "view")
-        ).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+        interfaces = (
+            Interface.optimize_queryset_for_cable_columns(instance.all_interfaces.restrict(request.user, "view"))
+            # The template displays each interface's connected endpoint so it can be compared with what LLDP reports.
+            # Without this prefetch, the page runs extra queries on every row to load the cable path and its destination.
+            .prefetch_related(Interface.connection_destination_prefetch())
+            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+        )
         return Response(
             {
                 "template": "dcim/device/lldp_neighbors.html",
@@ -6563,38 +6574,31 @@ class ModuleFamilyUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.ModuleFamilySerializer
     table_class = tables.ModuleFamilyTable
     lookup_field = "pk"
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if not instance:
-            return context
-
-        if self.action == "retrieve":
-            module_types = (
-                ModuleType.objects.restrict(request.user, "view")
-                .filter(module_family=instance)
-                .select_related("manufacturer")
-            )
-            module_type_table = tables.ModuleTypeTable(module_types, orderable=False)
-
-            module_bays = (
-                ModuleBay.objects.restrict(request.user, "view")
-                .filter(module_family=instance)
-                .select_related("parent_device", "parent_module")
-            )
-            module_bay_table = tables.ModuleBayTable(module_bays, orderable=False)
-
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(module_type_table)
-            RequestConfig(request, paginate).configure(module_bay_table)
-
-            context["module_type_table"] = module_type_table
-            context["module_bay_table"] = module_bay_table
-
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ModuleTypeTable,
+                table_filter="module_family",
+                select_related_fields=["manufacturer"],
+                exclude_columns=["module_family"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=tables.ModuleBayTable,
+                table_filter="module_family",
+                select_related_fields=["parent_device", "parent_module"],
+                exclude_columns=["module_family"],
+            ),
+        )
+    )
 
 
 class DeviceFamilyUIViewSet(NautobotUIViewSet):

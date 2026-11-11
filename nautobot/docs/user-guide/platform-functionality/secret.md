@@ -10,21 +10,21 @@ Secrets can be grouped and assigned a specific purpose as members of a Secrets G
 
 A Secrets Group provides a way to collect and assign a purpose to one or more Secrets. The Secrets Group can then be attached to any object that needs to reference and make use of these Secrets, such as a Git repository needing a username/token to authenticate to a private GitHub repository, or a device using a group of Secrets to drive its NAPALM integration.
 
-When creating or editing a Secrets Group, you can assign any number of defined Secrets to this group, assigning each secret an *access type* and a *secret type* that are unique within the context of this group. Some examples of how a Secrets Group might be populated for use by a given feature:
+When creating or editing a Secrets Group, you can assign any number of defined Secrets to this group, assigning each secret an _access type_ and a _secret type_ that are unique within the context of this group. Some examples of how a Secrets Group might be populated for use by a given feature:
 
 | Feature                   | Access Type | Secrets Type(s)                                     |
 |---------------------------|-------------|-----------------------------------------------------|
 | Git private repository    | `HTTP(S)`   | `Token`, possibly also `Username`                   |
 | Device NAPALM integration | `Generic`   | `Username`, `Password`, possibly an enable `Secret` |
 
-A Secrets Group is not limited to containing secrets of a single *access type* either - for example, a Nautobot App that supports both NETCONF and gNMI protocols to interact with a device could be able to make use of a Secrets Group containing distinct secrets for each protocol.
+A Secrets Group is not limited to containing secrets of a single _access type_ either - for example, a Nautobot App that supports both NETCONF and gNMI protocols to interact with a device could be able to make use of a Secrets Group containing distinct secrets for each protocol.
 
 ## Secrets Providers
 
 Each Secret is associated with a secrets provider (not to be confused with a circuit provider), which provides the functionality needed to retrieve a specific value from a particular source of secrets. Each secrets provider also defines the set of parameters that a given Secret must specify in order to retrieve a secret value from this provider. Nautobot includes the following built-in secrets providers:
 
-- *Environment Variable* - for retrieving a secret value defined in an environment variable; Secrets using this provider must specify the `variable` name to retrieve.
-- *Text File* - for retrieving a secret value stored in a text file; Secrets using this provider must specify the absolute `path` of the file to retrieve.
+- _Environment Variable_ - for retrieving a secret value defined in an environment variable; Secrets using this provider must specify the `variable` name to retrieve.
+- _Text File_ - for retrieving a secret value stored in a text file; Secrets using this provider must specify the absolute `path` of the file to retrieve.
 
 !!! tip
     When using the Text File secrets provider, any leading and trailing whitespace or newlines will be stripped.
@@ -38,8 +38,8 @@ When defining a new Secret, you will need to select the desired secrets provider
 
 In some cases you may have a collection of closely related secrets values that all follow a similar retrieval pattern. For example you might have a directory of text files each containing the unique password for a specific device, or have defined a set of environment variables providing authentication tokens for each different Git repository. In this case, to reduce the need for repeated data entry, Nautobot provides an option to use Jinja2 templates to dynamically alter the provider parameters of a given Secret based on the requesting object. The relevant object is passed to Jinja2 as `obj`. Thus, for example:
 
-- A "Device Password" secret could use the *Text File* provider and specify the file `path` as `"/opt/nautobot/device_passwords/{{ obj.location.name }}/{{ obj.name }}.txt"`, so that a device `csr1` at location `NYC` would be able to retrieve its password value from `/opt/nautobot/device_passwords/NYC/csr1.txt`.
-- A "Git Token" secret could use the *Environment Variable* provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | upper }}"`, so that a Git repository `golden_config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
+- A "Device Password" secret could use the _Text File_ provider and specify the file `path` as `"/opt/nautobot/device_passwords/{{ obj.location.name }}/{{ obj.name }}.txt"`, so that a device `csr1` at location `NYC` would be able to retrieve its password value from `/opt/nautobot/device_passwords/NYC/csr1.txt`.
+- A "Git Token" secret could use the _Environment Variable_ provider and specify the `variable` name as `"GIT_TOKEN_{{ obj.slug | upper }}"`, so that a Git repository `golden_config` would be able to retrieve its token value from `$GIT_TOKEN_GOLDEN_CONFIG`.
 
 !!! note
     To access custom fields of an object within a template, use the `cf` attribute. For example, `{{ obj.cf.color }}` will return the value (if any) for the custom field with a key of `color` on `obj`.
@@ -53,7 +53,7 @@ Secrets are of course closely linked to security, and as such they pose a number
 
 ### Leakage of Secret Values
 
-By design, the UI, REST API, and GraphQL do **not** provide access to retrieve or report the actual value of any given Secret, as these values are only meant for use *within* Nautobot itself.
+By design, the UI, REST API, and GraphQL do **not** provide access to retrieve or report the actual value of any given Secret, as these values are only meant for use _within_ Nautobot itself.
 
 !!! tip
     If you need to use a secret value for some other purpose (such as to manually log into a device, or query an authenticated REST API endpoint yourself), you should be retrieving the value directly from the appropriate secrets provider rather than trying to relay it through Nautobot.
@@ -61,7 +61,7 @@ By design, the UI, REST API, and GraphQL do **not** provide access to retrieve o
 However, code is power, and with power comes responsibility.
 
 !!! warning
-    Any user or process that has the ability to execute code within Nautobot has the **potential** to access the value of any Secret, and a user or process that has the ability to execute *arbitrary* code absolutely **can** access Secrets.
+    Any user or process that has the ability to execute code within Nautobot has the **potential** to access the value of any Secret, and a user or process that has the ability to execute _arbitrary_ code absolutely **can** access Secrets.
 
 What does this mean in practice?
 

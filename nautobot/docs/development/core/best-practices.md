@@ -107,6 +107,29 @@ Fortunately, Nautobot provides a `ForeignKeyWithAutoRelatedName` model field cla
 
 Nautobot doesn't currently have a similar class provided for `ManyToManyField`; in this case you'll probably be best, for now, to just use `related_name="%(app_label)s_%(class)s_related"` for any abstract base class's ManyToManyField if a reverse relation is desired.
 
+### Sensitive Fields
+
++++ 3.2.5
+
+A field holding a credential or a comparable secret, such as an API token or a signing key, should be declared in the model's `sensitive_fields`. The ORM then refuses to return its value unless a caller opts in explicitly, and user-authored Jinja2 templates can never read it at all.
+
+```python
+class Token(BaseModel):
+    key = models.CharField(max_length=40, unique=True)
+
+    sensitive_fields = ("key",)
+```
+
+Filtering by such a field still works in Python code, since the guarantee is that the value is never returned rather than that the column cannot be referenced. User-authored templates cannot filter on it, since a prefix or pattern lookup could disclose the value. See [Sensitive Model Fields](sensitive-fields.md) for the opt-in methods, the `STRICT_SENSITIVE_FIELDS` setting, and the limitations.
+
+Note that "sensitive" here means genuinely secret. A field that is merely internal or uninteresting is better marked by the existing convention of a leading underscore in its name, which keeps it out of filter forms, serializers and detail views without involving any of this machinery.
+
+### Jinja2 Template Filters
+
+A template filter registered with `@library.filter` runs as ordinary Python outside the sandbox that renders user-authored templates, so the sandbox's protections do not apply to anything the filter does with its arguments. Follow the rules in [Writing Safe Filters](../apps/api/platform-features/jinja2-filters.md#writing-safe-filters), which apply equally to core filters.
+
+Core filters in `nautobot/core/templatetags/helpers.py` are usually registered as Django template filters too (`@register.filter()`), and a Django template has no Jinja2 environment to read through. When such a filter must read an attribute named by the template, refuse names that start with an underscore and pass the name to `nautobot.core.templating.deny_sensitive_field_attribute()` before reading it, as `_build_hyperlink()` does.
+
 ### Slug Field
 
 +/- 2.0.0
@@ -204,7 +227,7 @@ class Rack(...):
 ```
 
 !!! tip
-    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the *least surprising* outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
+    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the _least surprising_ outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
 
 ## Getting URL Routes
 
@@ -288,6 +311,14 @@ Using dotted notation:
 >>> get_route_for_model("dcim.device", "list")
 "dcim:device_list"
 ```
+
+## HTTP Method Semantics
+
+HTTP `GET` handlers must not perform database writes. Nautobot must be able to serve read traffic against a database that refuses writes, such as while `MAINTENANCE_MODE` is enabled or when reads are served from a replica. `GET` is also a safe method by definition, so browser prefetching, monitoring probes, and automation clients polling the REST API all issue `GET` requests on the assumption that nothing changes; a write makes each of those a state change, and multiplies write load on the primary.
+
+If a view needs to persist something it computes while rendering, have the client send it back in a subsequent `PATCH` or `POST` rather than writing it during the `GET`.
+
+That said, some existing handlers still follow the older pattern of saving a user preference during a `GET`: the job list view persists the chosen display (`list` or `tiles`), and the config context views persist the chosen format (`json` or `yaml`), each taken from a query parameter.
 
 ## REST API Best Practices
 

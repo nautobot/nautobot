@@ -147,7 +147,7 @@ echo $NAUTOBOT_CONFIG
 !!! warning
     Be cautious not to confuse extra applications with Nautobot Apps which are installed using the [`PLUGINS`](settings.md#plugins) setting. They are similar, but distinctly different!
 
-Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, *you cannot safely do this*.
+Nautobot, being a Django application, allows for installation of additional dependencies utilizing the [`INSTALLED_APPS`](https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-INSTALLED_APPS) settings. Due to the highly specialized nature of Nautobot, _you cannot safely do this_.
 
 For example, let's assume that you want to install the popular [`django-health-check`](https://django-health-check.readthedocs.io/en/latest/) application to your Nautobot deployment which requires you to add one or more `health_check` entries to your `INSTALLED_APPS`.
 

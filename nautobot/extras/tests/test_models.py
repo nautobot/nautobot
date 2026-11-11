@@ -14,13 +14,15 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models.deletion import Collector
 from django.db.utils import IntegrityError
 from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
-from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+from jinja2.exceptions import SecurityError, TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
@@ -42,6 +44,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -59,6 +62,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
@@ -103,6 +107,7 @@ from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProv
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
 from nautobot.ipam.models import IPAddress
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import Token
 from nautobot.virtualization.models import (
     Cluster,
     ClusterGroup,
@@ -527,6 +532,33 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
         rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
         self.assertEqual(rendered_value, "")
+
+    def test_render_method_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94: the sandbox-escape gadgets are blocked end to end.
+
+        Exercises the full ComputedField.render() path (not just render_jinja2), which swallows the
+        SecurityError and returns fallback_value, proving no DB contents are rendered.
+        """
+        fallback = "BLOCKED"
+        gadget_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            key="sandbox_escape_gadget",
+            label="Sandbox Escape Gadget",
+            fallback_value=fallback,
+            weight=51,
+        )
+        for template in [
+            # QuerySet.extra() raw-SQL injection. Harmless `SELECT 1`: extra() is refused at attribute
+            # access before any SQL runs, so this asserts the block without being a drop-in exploit.
+            "{{ obj.status.content_types.all().extra(select={'zz': '(SELECT 1)'}).values('zz')[:1]|list }}",
+            # ContentType.model_class() pivot to an arbitrary model's unrestricted manager.
+            "{{ obj.status.content_types.all().first().model_class().objects.count() }}",
+            # ContentType.get_all_objects_for_this_type() pivot (bypasses the model-class guard).
+            "{{ obj.status.content_types.all().first().get_all_objects_for_this_type().count() }}",
+        ]:
+            with self.subTest(template=template):
+                gadget_field.template = template
+                self.assertEqual(gadget_field.render(context={"obj": self.location1}), fallback)
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1644,6 +1676,44 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
         ExportTemplate.objects.create(
             content_type=self.device_ct, name="Export Template 1", template_code="hello world"
         )
+
+    def test_render_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94 via the ExportTemplate.render() path.
+
+        ExportTemplate injects a live `queryset` into the render context and propagates render errors
+        (unlike ComputedField, which swallows them), so a sandbox-escape gadget must raise.
+        """
+        for template_code in [
+            # QuerySet.extra() raw-SQL injection, reached directly off the injected queryset.
+            "{{ queryset.extra(select={'z': '(SELECT 1)'}) | list }}",
+            # Data-mutating manager method must be refused on the queryset path too.
+            "{{ queryset.update(name='pwned') }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                gadget_template = ExportTemplate(
+                    content_type=self.device_ct,
+                    name="Sandbox Escape Export Template",
+                    template_code=template_code,
+                )
+                with self.assertRaises(SecurityError):
+                    gadget_template.render(Device.objects.all())
+
+    def test_render_narrows_a_bare_projection_on_a_model_with_sensitive_fields(self):
+        """Integration regression for GHSA-5q66-3x3p-rxmh via the ExportTemplate.render() path.
+
+        A projection naming no fields selects every concrete column, so the sandbox narrows it to the
+        model's non-sensitive fields rather than letting the declared sensitive ones through.
+        """
+        user = User.objects.create_user(username="export-template-bare-projection")
+        token = Token.objects.create(user=user, description="export template regression")
+        export_template = ExportTemplate(
+            content_type=ContentType.objects.get_for_model(Token),
+            name="Bare Projection Export Template",
+            template_code="{{ queryset.values() | list }}",
+        )
+        rendered = export_template.render(Token.objects.filter(user=user))
+        self.assertNotIn(token.key, rendered)
+        self.assertIn(token.description, rendered)
 
     def test_name_contenttype_uniqueness(self):
         """
@@ -4274,6 +4344,41 @@ class SecretsGroupTest(ModelTestCases.BaseModelTestCase):
 
 class StaticGroupAssociationTest(ModelTestCases.BaseModelTestCase):
     model = StaticGroupAssociation
+
+    def test_cascade_delete_survives_concurrent_group_delete(self):
+        """Deleting a member object succeeds when another request deletes its group mid-cascade."""
+        device_type = DeviceType.objects.create(manufacturer=Manufacturer.objects.first(), model="Device Type 1")
+        device = Device.objects.create(
+            name="Device 1",
+            device_type=device_type,
+            role=Role.objects.get_for_model(Device).first(),
+            location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        # An empty filter matches every device, so saving the group caches a row for this device.
+        group = DynamicGroup.objects.create(
+            name="Dynamic Group 1",
+            content_type=ContentType.objects.get_for_model(Device),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={},
+        )
+        self.assertTrue(
+            StaticGroupAssociation.all_objects.filter(dynamic_group=group, associated_object_id=device.pk).exists()
+        )
+
+        user = get_user_model().objects.create_user(username="staticgroupassociationuser")
+        with web_request_context(user):
+            # What `DELETE /api/dcim/devices/<pk>/` does first: collect the cascade, including the cached row.
+            collector = Collector(using="default")
+            collector.collect([device])
+            # A second request, with its own change_id, deletes the group before the first one reaches `pre_delete`.
+            with web_request_context(user, change_id=uuid.uuid4()):
+                group.delete()
+            # Own savepoint, so a failure here does not also break the context manager's exit query.
+            with transaction.atomic():
+                collector.delete()
+
+        self.assertFalse(Device.objects.filter(pk=device.pk).exists())
 
 
 class StatusTest(ModelTestCases.BaseModelTestCase):

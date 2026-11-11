@@ -348,7 +348,7 @@ class TokenListView(GenericView):
     view_titles = Titles(titles={"*": "API Tokens"})
 
     def get(self, request):
-        tokens = Token.objects.filter(user=request.user)
+        tokens = Token.objects.with_sensitive_fields("key").filter(user=request.user)
 
         return render(
             request,
@@ -368,7 +368,10 @@ class TokenEditView(GenericView):
         if pk is not None:
             if not request.user.has_perm("users.change_token"):
                 return HttpResponseForbidden()
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
+            token = get_object_or_404(
+                Token.objects.with_sensitive_fields("key").filter(user=request.user),
+                pk=pk,
+            )
         else:
             if not request.user.has_perm("users.add_token"):
                 return HttpResponseForbidden()
@@ -390,7 +393,10 @@ class TokenEditView(GenericView):
 
     def post(self, request, pk=None):
         if pk is not None:
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
+            token = get_object_or_404(
+                Token.objects.with_sensitive_fields("key").filter(user=request.user),
+                pk=pk,
+            )
             form = TokenForm(request.POST, instance=token)
         else:
             token = Token()

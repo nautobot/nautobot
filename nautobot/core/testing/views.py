@@ -1,9 +1,11 @@
 import contextlib
+import html
 import re
 import signal
 import traceback
 from typing import Optional, Sequence
 from unittest import mock, skipIf
+from urllib.parse import parse_qs, urlsplit
 import uuid
 
 from django import forms as django_forms
@@ -18,11 +20,10 @@ from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
-import regex
 from tree_queries.models import TreeNode
 
 from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
@@ -361,6 +362,71 @@ class ViewTestCases:
                 else:
                     # If it wasn't for the legacy button template check above, this would be the only thing needed here.
                     self.assertBodyContains(response, button, html=True)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_get_object_action_links_have_valid_return_url(self):
+            """Links on the detail view and its tabs that carry a `return_url` must point back to a path."""
+            # As a superuser, every permission-gated button on every related-object table is rendered
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            detail_url = instance.get_absolute_url()
+            urls = [detail_url, *self._get_detail_extra_action_urls(detail_url).values()]
+
+            for url in urls:
+                with self.subTest(url=url):
+                    response = self.client.get(url)
+                    if url == detail_url:
+                        self.assertHttpStatus(response, 200)
+                    elif response.status_code != 200:
+                        continue
+                    invalid_links = []
+                    for href in re.findall(r'href="([^"]*)"', response.content.decode(response.charset)):
+                        query = parse_qs(urlsplit(html.unescape(href)).query, keep_blank_values=True)
+                        if any(not return_url.startswith("/") for return_url in query.get("return_url", [])):
+                            invalid_links.append(href)
+                    self.assertEqual(invalid_links, [], f"Links on {url} have a return_url without a path")
+
+        @staticmethod
+        def _get_detail_extra_action_urls(detail_url):
+            """Map each GET extra action of the viewset serving `detail_url` (its tabs) to that action's URL."""
+            match = resolve(detail_url)
+            view_class = getattr(match.func, "cls", None)
+            if view_class is None or not hasattr(view_class, "get_extra_actions"):
+                return {}
+            route_prefix = f"{match.namespace}:{match.url_name}"
+            return {
+                extra_action.__name__: reverse(f"{route_prefix}_{extra_action.url_name}", kwargs=match.kwargs)
+                for extra_action in view_class.get_extra_actions()
+                if extra_action.detail and "get" in extra_action.mapping
+            }
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_get_object_extra_actions_do_not_render_legacy_detail_template(self):
+            """
+            Tabs of a detail view without `object_detail_content` must not fall back to the model's custom detail template.
+
+            That template only knows about the `retrieve` action, so on any other tab it renders the main tab's content
+            with whatever context `retrieve` would have provided missing, instead of the tab's own content.
+            """
+            self.user.is_superuser = True
+            self.user.save()
+            instance = self._get_queryset().first()
+            detail_url = instance.get_absolute_url()
+            if self.client.get(detail_url).context.get("object_detail_content") is not None:
+                self.skipTest("Tabs are rendered by `object_detail_content`")
+
+            app_label, model_name = self.model._meta.app_label, self.model._meta.model_name
+            detail_templates = {f"{app_label}/{model_name}_retrieve.html", f"{app_label}/{model_name}.html"}
+            for action, url in self._get_detail_extra_action_urls(detail_url).items():
+                with self.subTest(action=action):
+                    response = self.client.get(url)
+                    self.assertHttpStatus(response, 200)
+                    # Only the top-level template matters; e.g. `generic/object_notes.html` extends the detail template
+                    # as its base on purpose and overrides the content block.
+                    self.assertNotIn(
+                        response.templates[0].name, detail_templates, f"{url} renders the `retrieve` template"
+                    )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_has_advanced_tab(self):
@@ -2068,8 +2134,9 @@ class ViewTestCases:
             }
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
-            with self.assertRaisesRegex(regex.error, "invalid group reference"):
-                self.client.post(self._get_url("bulk_rename"), data)
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            self.assertIn("replace", response.context["form"].errors)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):

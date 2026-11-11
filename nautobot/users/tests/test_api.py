@@ -122,6 +122,8 @@ class UserTest(APIViewTestCases.APIViewTestCase):
 
     def test_update_object(self):
         """Add validation that a partial update can change the password if requested."""
+        # `update_data` references a group, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable
+        self.add_permissions("auth.view_group")
         user = self._get_queryset().first()
         super().test_update_object()
         user.refresh_from_db()
@@ -196,6 +198,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    def _get_queryset(self):
+        return Token.objects.with_sensitive_fields("key")
+
     def setUp(self):
         super().setUp()
 
@@ -262,8 +267,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn("key", response.data)
         self.assertEqual(len(response.data["key"]), 40)
-        token = Token.objects.get(user=self.basic_auth_user_granted)
-        self.assertEqual(token.key, response.data["key"])
+        self.assertTrue(Token.objects.filter(user=self.basic_auth_user_granted, key=response.data["key"]).exists())
 
     def test_create_token_basic_authentication_permissionless_user(self):
         """
@@ -451,6 +455,24 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
             actions=["view", "add", "change", "delete"],
             constraints={"name": "TEST100"},
         )
+
+    # Each of these tests references users and groups, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable.
+
+    def test_create_object(self):
+        self.add_permissions("users.view_user", "auth.view_group")
+        super().test_create_object()
+
+    def test_bulk_create_objects(self):
+        self.add_permissions("users.view_user", "auth.view_group")
+        super().test_bulk_create_objects()
+
+    def test_update_object(self):
+        # Granted under a name that sorts last, rather than through `add_permissions()`: the test updates the first
+        # ObjectPermission by name, and updating this one would revoke the very permissions it grants.
+        permission = ObjectPermission.objects.create(name="zz view users and groups", actions=["view"])
+        permission.users.add(self.user)
+        permission.object_types.add(ContentType.objects.get_for_model(User), ContentType.objects.get_for_model(Group))
+        super().test_update_object()
 
     # TODO: Unskip after resolving #2908, #2909
     @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")

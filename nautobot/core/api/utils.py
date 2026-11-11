@@ -353,6 +353,15 @@ def get_brief_representation(instance, request=None, *, include_display=False):
     return result
 
 
+def get_request_with_user(context):
+    """The request in a serializer `context` that has a user, for restricting related objects by permission, else None.
+
+    Without one, as when a serializer is used programmatically, related objects are not restricted.
+    """
+    request = context.get("request")
+    return request if getattr(request, "user", None) is not None else None
+
+
 def user_can_view_object(request, instance):
     """
     Return whether the requesting user is permitted to view the given related object.
@@ -402,3 +411,35 @@ def user_can_view_object(request, instance):
         query_filter = qs_filter_from_constraints(constraints, {"$user": user})
         cache[cache_key] = model._default_manager.filter(query_filter, pk=instance.pk).exists()
     return cache[cache_key]
+
+
+def serialize_object_for_user(instance, request, serializer_class=None):
+    """
+    Serialize an object in full, or in brief form if the requesting user is not permitted to view it.
+
+    This is the counterpart of `return_nested_serializer_data_based_on_depth()` for endpoints that serialize
+    related objects *outside* of normal serializer field traversal - notably the DCIM `trace` and `paths`
+    actions, which walk a `CablePath` and serialize each node with that node's own full serializer. Such nodes
+    are loaded from their model's default manager with no user context (see `CablePath.get_path()`), so unlike
+    the endpoint's primary object they are not filtered by `restrict(user, "view")` and must be checked here.
+
+    Args:
+        instance (BaseModel): The object to serialize; may be None, in which case None is returned.
+        request (Request): The active request, used for the permission check and for URL construction.
+        serializer_class (type): The serializer to use when the user is permitted to view `instance`.
+            Defaults to `get_serializer_for_model(instance)`.
+
+    Returns:
+        dict: The full serializer data, or the object's brief `{id, object_type, url, display}` representation
+            if the user is not permitted to view it. `None` if `instance` is `None`.
+    """
+    if instance is None:
+        return None
+    if not user_can_view_object(request, instance):
+        # Object would be fully serialized, but is downgraded due to permissions. Include "display" so that
+        # the human-friendly value is still exposed, matching the UI and the `?depth` downgrade behavior.
+        return get_brief_representation(instance, request, include_display=True)
+    if serializer_class is None:
+        serializer_class = get_serializer_for_model(instance)
+
+    return serializer_class(instance, context={"request": request}).data

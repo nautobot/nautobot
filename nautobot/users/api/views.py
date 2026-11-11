@@ -43,7 +43,7 @@ class GroupViewSet(ModelViewSet):
 
 
 class TokenViewSet(ModelViewSet):
-    queryset = RestrictedQuerySet(model=Token).select_related("user")  # pylint: disable=not-callable  # no idea why?
+    queryset = Token.objects.with_sensitive_fields("key").select_related("user")
     serializer_class = serializers.TokenSerializer
     filterset_class = filters.TokenFilterSet
 

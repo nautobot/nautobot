@@ -1,4 +1,0 @@
-Fixed the Saved View edit form to apply the same ownership and permission checks as the other Saved View operations.
-Fixed enforcement of the documented `extras.change_savedview` permission requirement for setting or clearing the global default Saved View.
-Fixed a server error when an invalid or unknown `saved_view` UUID was supplied as a query parameter on an object list view.
-Fixed the table configuration form not taking its column ordering from the applied Saved View, inconsistently with the columns of the rendered table.

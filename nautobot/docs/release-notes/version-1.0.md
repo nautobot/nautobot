@@ -40,10 +40,10 @@ In addition to the previously available virtual-environment-based developer work
 
 [Git integration](../user-guide/feature-guides/git-data-source.md) offers users an option to integrate into a more traditional NetDevOps pipeline for managing Python modules, Jinja templates, and YAML/JSON data.  There are several use cases that have historically required users to either manage Python modules on the filesystem or use Jinja2 templates within the GUI. With this new feature, users can add a Git repository from the UI or REST API, the contents of which will be synchronized into Nautobot immediately and can be later refreshed on-demand. This allows users to more easily update and manage:
 
-- *Jobs* - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
-- *Export Templates* - store your Jinja templates used to create an export template in a Git repository
-- *Config Contexts* - store your YAML/JSON data used within a config context in a Git repository
-- *Arbitrary Files* - usable by custom plugins and apps
+- **Jobs** - store your Python modules that define Jobs (formerly known as Custom Scripts and/or Reports) in a Git repository
+- **Export Templates** - store your Jinja templates used to create an export template in a Git repository
+- **Config Contexts** - store your YAML/JSON data used within a config context in a Git repository
+- **Arbitrary Files** - usable by custom plugins and apps
 
 Not only does this integration and feature simplify management of these features in Nautobot, it offers users the ability to use Git workflows for the management of the jobs, templates, and data ensuring there has been proper review and approval before updating them on the system.
 

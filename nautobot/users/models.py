@@ -11,7 +11,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
+from nautobot.core.exceptions import SensitiveFieldError
+from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -69,6 +70,14 @@ class User(BaseModel, AbstractUser):
     documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
     is_metadata_associable_model = False
+    # The password hash is offline-crackable, so user-authored templates must never reach it and it must
+    # not be projected out of a query.
+    sensitive_fields = ("password",)
+    # It is kept on the instance rather than withheld, because Django reads `self.password` directly when
+    # verifying a password and when validating a session on every request. Withholding it would cost a
+    # re-fetch per request and buy nothing: the disclosure route being closed here is the template one,
+    # which is refused whether or not the value is present on the object.
+    sensitive_fields_kept_on_instance = ("password",)
 
     class Meta:
         db_table = "auth_user"
@@ -144,10 +153,15 @@ class User(BaseModel, AbstractUser):
         both cases, the existing key must first be cleared. This safeguard is in place to help avoid inadvertently
         overwriting the wrong key.
 
+        Does nothing while `MAINTENANCE_MODE` is enabled, as the database is then expected to be read-only.
+
         :param path: Dotted path to the configuration key. For example, 'foo.bar' sets self.config_data['foo']['bar'].
         :param value: The value to be written. This can be any type supported by JSON.
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
+        if settings.MAINTENANCE_MODE:
+            return
+
         d = self.config_data
         keys = path.split(".")
 
@@ -183,9 +197,14 @@ class User(BaseModel, AbstractUser):
 
         Invalid keys will be ignored silently.
 
+        Does nothing while `MAINTENANCE_MODE` is enabled, as the database is then expected to be read-only.
+
         :param path: Dotted path to the configuration key. For example, 'foo.bar' deletes self.config_data['foo']['bar'].
         :param commit: If true, the UserConfig instance will be saved once the new value has been applied.
         """
+        if settings.MAINTENANCE_MODE:
+            return
+
         d = self.config_data
         keys = path.split(".")
 
@@ -232,6 +251,21 @@ class AdminGroup(Group):
 #
 
 
+class TokenQuerySet(RestrictedQuerySet):
+    """
+    A `RestrictedQuerySet` that also limits every user, superusers included, to their own Tokens.
+
+    An object permission can limit a user to their own Tokens with the constraint `{"user": "$user"}`. Without this
+    queryset, a superuser, a user whose permission lacks that constraint, or any user when view permissions are exempt
+    could view, change, or delete other users' Tokens, including their keys, through any code that calls `restrict()`.
+    """
+
+    def restrict(self, user, action="view"):
+        if not user.is_authenticated:
+            return self.none()
+        return super().restrict(user, action).filter(user=user)
+
+
 class Token(BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
@@ -245,19 +279,25 @@ class Token(BaseModel):
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    objects = BaseManager.from_queryset(TokenQuerySet)()
+
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    sensitive_fields = ("key",)
 
     class Meta:
         ordering = ["created"]
 
     def __str__(self):
         # Only display the last 24 bits of the token to avoid accidental exposure.
-        return f"{self.key[-6:]} ({self.user})"
+        try:
+            return f"{self.key[-6:]} ({self.user})"
+        except SensitiveFieldError:
+            return f"Token {self.pk} ({self.user})"
 
     def save(self, *args, **kwargs):
-        if not self.key:
+        if not self.present_in_database and not self.__dict__.get("key"):
             self.key = self.generate_key()
         return super().save(*args, **kwargs)
 

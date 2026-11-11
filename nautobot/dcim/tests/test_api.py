@@ -35,6 +35,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -101,16 +102,35 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
+BRIEF_REPRESENTATION_KEYS = {"id", "object_type", "url", "display"}
+"""Keys of the brief representation that a path object the user cannot view is downgraded to."""
+
+VERBOTEN_TRACED_CABLE_FIELDS = (
+    # Private fields, which `BaseModelSerializer.get_field_names()` filters out everywhere else.
+    "_abs_length",
+    "_custom_field_data",
+    # Forward M2M accessors, which cost a query each and list every termination on the cable
+    # without any lane structure. Compare `CableSerializer.Meta.exclude`.
+    "circuit_terminations",
+    "console_ports",
+    "console_server_ports",
+    "front_ports",
+    "interfaces",
+    "power_feeds",
+    "power_outlets",
+    "power_ports",
+    "rear_ports",
+)
+
+
 class Mixins:
     class ComponentTraceMixin(APITestCase):
         """Mixin for `ComponentModel` classes that support `trace` tests."""
 
         peer_termination_type = None
 
-        def test_trace(self):
-            """
-            Test tracing a device component's attached cable.
-            """
+        def _create_traced_cable(self):
+            """Cable the first instance of `self.model` to a new peer termination on a new Device."""
             if self.model is Interface:
                 obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
             else:
@@ -134,10 +154,43 @@ class Mixins:
             cable_status = Status.objects.get_for_model(Cable).first()
             cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=cable_status)
             cable.save()
+            return obj, peer_obj, cable
 
-            self.add_permissions(f"dcim.view_{self.model._meta.model_name}")
-            url = reverse(f"dcim-api:{self.model._meta.model_name}-trace", kwargs={"pk": obj.pk})
-            response = self.client.get(url, **self.header)
+        def _get_trace_url(self, obj):
+            return reverse(f"dcim-api:{self.model._meta.model_name}-trace", kwargs={"pk": obj.pk})
+
+        def _add_full_trace_permissions(self):
+            """Grant `view` on the origin's model, the peer termination's model, and Cable."""
+            self.add_permissions(
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+                f"{self.peer_termination_type._meta.app_label}.view_{self.peer_termination_type._meta.model_name}",
+                "dcim.view_cable",
+            )
+
+        def _constrain_view_to_object(self, obj):
+            """Grant `view` on `self.model`, constrained to `obj` alone.
+
+            An ObjectPermission also satisfies the model-level view gate, so no separate add_permissions()
+            call is needed. A constrained (rather than unconstrained) grant is used so that this covers peer
+            terminations of the same model as the origin, e.g. Interface-to-Interface.
+            """
+            obj_perm = ObjectPermission(
+                name="View trace origin only",
+                constraints={"pk": str(obj.pk)},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        def test_trace(self):
+            """
+            Test tracing a device component's attached cable as a user permitted to view every path element.
+            """
+            obj, peer_obj, cable = self._create_traced_cable()
+
+            self._add_full_trace_permissions()
+            response = self.client.get(self._get_trace_url(obj), **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(len(response.data), 1)
@@ -145,6 +198,140 @@ class Mixins:
             self.assertEqual(segment1[0]["name"], obj.name)
             self.assertEqual(segment1[1]["label"], cable.label)
             self.assertEqual(segment1[2]["name"], peer_obj.name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_trace_masks_objects_the_user_cannot_view(self):
+            """
+            Trace a cable path as a user permitted to view only the origin object.
+
+            Path elements the user is not permitted to view (here, the Cable and the peer termination) must be
+            downgraded to their brief representation rather than exposing full detail, being reported as null,
+            being omitted, or truncating the path.
+            """
+            obj, peer_obj, cable = self._create_traced_cable()
+
+            self._constrain_view_to_object(obj)
+            response = self.client.get(self._get_trace_url(obj), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            # The shape of the path does not depend on the requesting user's permissions.
+            self.assertEqual(len(response.data), 1)
+            segment1 = response.data[0]
+            self.assertEqual(len(segment1), 3)
+            # The origin is viewable, so it is still rendered in full.
+            self.assertEqual(segment1[0]["name"], obj.name)
+            # The Cable and the peer termination are not viewable, so they are masked.
+            for element, masked_obj in ((segment1[1], cable), (segment1[2], peer_obj)):
+                self.assertEqual(set(element.keys()), BRIEF_REPRESENTATION_KEYS)
+                self.assertEqual(str(element["id"]), str(masked_obj.pk))
+                self.assertEqual(element["object_type"], masked_obj._meta.label_lower)
+                self.assertEqual(element["display"], getattr(masked_obj, "display", str(masked_obj)))
+            self.assert_no_verboten_content(response)
+
+        def test_trace_cable_omits_private_and_termination_list_fields(self):
+            """
+            The Cable representation returned by `trace` excludes private fields and per-model termination lists.
+            """
+            obj, _, cable = self._create_traced_cable()
+
+            self._add_full_trace_permissions()
+            response = self.client.get(self._get_trace_url(obj), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            traced_cable = response.data[0][1]
+            # The fields callers actually rely on are still present.
+            self.assertEqual(traced_cable["label"], cable.label)
+            for field_name in ("status", "type"):
+                self.assertIn(field_name, traced_cable)
+            # A cable the user may view is a strict superset of the brief form used when they may not,
+            # so a client can read id/object_type/url/display without knowing which form it received.
+            self.assertLessEqual(BRIEF_REPRESENTATION_KEYS, set(traced_cable))
+            for field_name in VERBOTEN_TRACED_CABLE_FIELDS:
+                self.assertNotIn(field_name, traced_cable)
+
+    class PassThroughPortPathsMixin(APITestCase):
+        """Mixin for `FrontPort`/`RearPort` classes that support the `paths` action."""
+
+        def _create_pass_through_path(self):
+            """Cable `interface_a - front_port | rear_port - interface_b` and return this model's port."""
+            device_kwargs = {
+                "location": Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+                "device_type": DeviceType.objects.first(),
+                "role": Role.objects.get_for_model(Device).first(),
+                "status": Status.objects.get_for_model(Device).first(),
+            }
+            patch_panel = Device.objects.create(name="Paths Patch Panel", **device_kwargs)
+            rear_port = RearPort.objects.create(device=patch_panel, name="Paths RP", positions=1)
+            front_port = FrontPort.objects.create(
+                device=patch_panel,
+                name="Paths FP",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rear_port,
+                rear_port_position=1,
+            )
+            intf_status = Status.objects.get_for_model(Interface).first()
+            interfaces = [
+                Interface.objects.create(
+                    device=Device.objects.create(name=f"Paths Device {suffix}", **device_kwargs),
+                    name=f"Paths eth{index}",
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    status=intf_status,
+                )
+                for index, suffix in enumerate(("A", "B"))
+            ]
+            cable_status = Status.objects.get_for_model(Cable).first()
+            Cable.objects.create(
+                termination_a=interfaces[0], termination_b=front_port, label="Paths Cable 1", status=cable_status
+            )
+            Cable.objects.create(
+                termination_a=rear_port, termination_b=interfaces[1], label="Paths Cable 2", status=cable_status
+            )
+            return front_port if self.model is FrontPort else rear_port
+
+        def _get_paths_url(self, obj):
+            return reverse(f"dcim-api:{self.model._meta.model_name}-paths", kwargs={"pk": obj.pk})
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_paths_masks_objects_the_user_cannot_view(self):
+            """
+            Retrieve a pass-through port's cable paths as a user permitted to view only that port.
+
+            Every other node along the path, including the Cables, must be downgraded to its brief
+            representation, and the path must not be shortened or have nodes omitted.
+            """
+            port = self._create_pass_through_path()
+
+            obj_perm = ObjectPermission(
+                name="View pass-through port only",
+                constraints={"pk": str(port.pk)},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(self._get_paths_url(port), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            # A cable path is built from each end of the run, so both traverse this port.
+            expected_paths = CablePath.objects.filter(path__contains=port)
+            returned_paths = {str(returned["id"]): returned["path"] for returned in response.data}
+            self.assertEqual(set(returned_paths), {str(cable_path.pk) for cable_path in expected_paths})
+            self.assertNotEqual(len(returned_paths), 0)
+
+            for cable_path in expected_paths:
+                # Compare against the path as stored, so neither truncation nor omission can pass unnoticed.
+                expected_nodes = cable_path.get_path()
+                path = returned_paths[str(cable_path.pk)]
+                self.assertEqual([str(node["id"]) for node in path], [str(node.pk) for node in expected_nodes])
+                for node, expected_node in zip(path, expected_nodes):
+                    if expected_node == port:
+                        # The port itself is viewable, so it is still rendered in full.
+                        self.assertEqual(node["name"], port.name)
+                    else:
+                        self.assertEqual(set(node.keys()), BRIEF_REPRESENTATION_KEYS)
+                        self.assertEqual(node["object_type"], expected_node._meta.label_lower)
+            self.assert_no_verboten_content(response)
 
     class BaseComponentTestMixin(APIViewTestCases.APIViewTestCase):
         """Mixin class for all `ComponentModel` model class tests."""
@@ -1183,6 +1370,28 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
                 "description": "Reservation #6",
             },
         ]
+
+    # Each of these tests references a user, which `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make viewable.
+
+    def test_create_object(self):
+        self.add_permissions("users.view_user")
+        super().test_create_object()
+
+    def test_bulk_create_objects(self):
+        self.add_permissions("users.view_user")
+        super().test_bulk_create_objects()
+
+    def test_update_object(self):
+        self.add_permissions("users.view_user")
+        super().test_update_object()
+
+    def test_get_put_round_trip(self):
+        self.add_permissions("users.view_user")
+        super().test_get_put_round_trip()
+
+    def test_recreate_object_csv(self):
+        self.add_permissions("users.view_user")
+        super().test_recreate_object_csv()
 
 
 class DeviceFamilyTest(APIViewTestCases.APIViewTestCase):
@@ -2275,7 +2484,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         """
         Listing devices must not run an extra query per device to resolve the reverse one-to-one `parent_bay`.
         """
-        self.add_permissions("dcim.view_device")
+        self.add_permissions("dcim.view_device", "dcim.view_devicebay")
         list_url = reverse("dcim-api:device-list")
 
         parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
@@ -2296,6 +2505,91 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         with AssertNoRepeatedQueries(self):
             response = self.client.get(list_url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # AssertNoRepeatedQueries allows up to 10 repeats, more than this test has devices, so check for the per-row query
+        # directly. Without the join, the serializer looks up each Device's parent bay in a separate query that filters
+        # on installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one is
+        # a per-row query. At depth 1 the API renders parent_bay as a nested DeviceBay rather than a reference.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        for depth in (0, 1):
+            with self.subTest(depth=depth):
+                with CaptureQueriesContext(connection) as ctx:
+                    response = self.client.get(f"{list_url}?depth={depth}&limit=0", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(len([result for result in response.json()["results"] if result["parent_bay"]]), 2)
+                self.assertEqual(
+                    [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+                )
+
+    def test_parent_bay_location_and_rack_must_match_parent_device(self):
+        """Installing a device in a device bay requires matching the parent's location/rack (#8497)."""
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        rack = Rack.objects.create(
+            name="Parent bay test rack",
+            location=parent_device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        parent_device.rack = rack
+        parent_device.save()
+
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.change_device",
+            "dcim.view_device",
+            "dcim.view_devicetype",
+            "extras.view_role",
+            "extras.view_status",
+            "dcim.view_location",
+            "dcim.view_rack",
+            "dcim.view_devicebay",
+        )
+        url = reverse("dcim-api:device-list")
+
+        # An unracked child cannot be installed in a bay of a racked parent device
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #7",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_1.pk,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "must first be assigned to the location/rack of the parent device",
+            response.content.decode(response.charset),
+        )
+        device_bay_1.refresh_from_db()
+        self.assertIsNone(device_bay_1.installed_device)
+
+        # A child assigned to the parent's location and rack installs successfully
+        data["rack"] = rack.pk
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created_device = Device.objects.get(name="Device parent bay test #7")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
+
+        # An existing child in a different location cannot be installed via PATCH
+        other_location = (
+            Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
+            .exclude(pk=parent_device.location.pk)
+            .first()
+        )
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=other_location,
+            name="Device parent bay test #8",
+            status=parent_device.status,
+        )
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        device_bay_2.refresh_from_db()
+        self.assertIsNone(device_bay_2.installed_device)
 
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
@@ -2789,6 +3083,30 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 response = self.client.get(f"{url}?limit=0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
+    def test_interface_list_joins_the_nested_device_parent_bay_only_at_depth_1(self):
+        """At depth 1, each interface includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
+        self.add_permissions("dcim.view_interface", "dcim.view_device")
+        url = reverse("dcim-api:interface-list")
+        bay_table = connection.ops.quote_name(DeviceBay._meta.db_table)
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in (result["device"] or {})]), 1
+        )
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if f"FROM {bay_table}" in q["sql"]], [])
+
+        # At depth 0 the API renders each device as a reference (id, object_type and url) without parent_bay, so the
+        # query has no reason to join the device bay table.
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual([q["sql"] for q in ctx.captured_queries if bay_table in q["sql"]], [])
+
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
@@ -3065,12 +3383,18 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
 
 
-class FrontPortTest(Mixins.BasePortTestMixin):
+class FrontPortTest(Mixins.PassThroughPortPathsMixin, Mixins.BasePortTestMixin):
     model = FrontPort
     peer_termination_type = Interface
     update_data = {"label": "updated label", "description": "updated description"}
 
     def test_trace(self):
+        """FrontPorts don't support trace."""
+
+    def test_trace_masks_objects_the_user_cannot_view(self):
+        """FrontPorts don't support trace."""
+
+    def test_trace_cable_omits_private_and_termination_list_fields(self):
         """FrontPorts don't support trace."""
 
     @classmethod
@@ -3206,13 +3530,36 @@ class FrontPortTest(Mixins.BasePortTestMixin):
             {"non_field_errors": ["The fields device, name must make a unique set."]},
         )
 
+    def test_front_port_list_avoids_cable_peer_n_plus_one(self):
+        """Serializing the front ports list must not read each port's cable termination separately."""
+        self.add_permissions("dcim.view_frontport")
+        rear_port = RearPort.objects.create(device=self.device, name="n-plus-one", positions=15)
+        for position in range(1, 16):
+            FrontPort.objects.create(
+                device=self.device,
+                name=f"n-plus-one-{position}",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rear_port,
+                rear_port_position=position,
+            )
+        url = reverse("dcim-api:frontport-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
-class RearPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
+
+class RearPortTest(Mixins.PassThroughPortPathsMixin, Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = RearPort
     peer_termination_type = Interface
     modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     def test_trace(self):
+        """RearPorts don't support trace."""
+
+    def test_trace_masks_objects_the_user_cannot_view(self):
+        """RearPorts don't support trace."""
+
+    def test_trace_cable_omits_private_and_termination_list_fields(self):
         """RearPorts don't support trace."""
 
     @classmethod
@@ -3236,6 +3583,17 @@ class RearPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin)
                 "type": PortTypeChoices.TYPE_8P8C,
             },
         ]
+
+    def test_rear_port_list_avoids_cable_peer_n_plus_one(self):
+        """Serializing the rear ports list must not read each port's cable termination separately."""
+        self.add_permissions("dcim.view_rearport")
+        device = Device.objects.first()
+        for i in range(15):
+            RearPort.objects.create(device=device, name=f"n-plus-one-{i}", type=PortTypeChoices.TYPE_8P8C)
+        url = reverse("dcim-api:rearport-list")
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
 
 class DeviceBayTest(Mixins.BaseComponentTestMixin):
@@ -3317,6 +3675,29 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "installed_device": devices[4].pk,
             },
         ]
+
+    def test_device_bay_list_joins_the_nested_device_parent_bay_at_depth_1(self):
+        """At depth 1, each device bay includes its full nested Device.
+
+        Device.parent_bay is a reverse one-to-one relation, so the list query must join it.
+        """
+        self.add_permissions("dcim.view_devicebay", "dcim.view_device")
+        url = reverse("dcim-api:devicebay-list")
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(f"{url}?depth=1&limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(
+            len([result for result in response.json()["results"] if "parent_bay" in result["device"]]), 1
+        )
+        # Without the join, the serializer looks up each Device's parent bay in a separate query that filters on
+        # installed_device_id. The list query itself has no WHERE clause on that column, so any query that has one
+        # is a per-row query.
+        installed_device_column = (
+            f"{connection.ops.quote_name(DeviceBay._meta.db_table)}.{connection.ops.quote_name('installed_device_id')}"
+        )
+        self.assertEqual(
+            [q["sql"] for q in ctx.captured_queries if f"WHERE {installed_device_column} =" in q["sql"]], []
+        )
 
 
 class InventoryItemTest(Mixins.BaseComponentTestMixin, APIViewTestCases.TreeModelAPIViewTestCaseMixin):

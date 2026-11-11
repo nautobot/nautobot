@@ -116,12 +116,26 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
 @receiver(m2m_changed, sender=VRFDeviceAssignment)
 def vrf_device_disassociated(sender, instance, action, reverse, model, pk_set, **kwargs):
     """Prevent removing a VRF from a parent object while its interfaces still reference that VRF."""
-    if action != "pre_remove" or not pk_set:
-        return
-    if isinstance(instance, VRF):
-        pairs = [(instance, parent) for parent in model.objects.filter(pk__in=pk_set)]
+    if action == "pre_remove":
+        if not pk_set:
+            return
+        if isinstance(instance, VRF):
+            pairs = [(instance, parent) for parent in model.objects.filter(pk__in=pk_set)]
+        else:
+            pairs = [(vrf, instance) for vrf in VRF.objects.filter(pk__in=pk_set)]
+    elif action == "pre_clear":
+        if isinstance(instance, VRF):
+            pairs = [
+                (instance, through.parent)
+                for through in instance.device_assignments.select_related(
+                    "device", "virtual_machine", "virtual_device_context"
+                )
+            ]
+        else:
+            pairs = [(through.vrf, instance) for through in instance.vrf_assignments.select_related("vrf")]
     else:
-        pairs = [(vrf, instance) for vrf in VRF.objects.filter(pk__in=pk_set)]
+        return
+
     for vrf, parent in pairs:
         interfaces = interfaces_assigned_to_vrf(vrf, parent)
         if interfaces.exists():

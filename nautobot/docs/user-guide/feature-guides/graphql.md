@@ -121,13 +121,13 @@ In Nautobot, there is a link to the GraphQL web interface at the bottom right-ha
 
 ### Documentation Explorer
 
-If you're new to GraphQL, take a little bit of time to explore the *Documentation Explorer*. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within *Documentation Explorer* is specific to creating queries in Nautobot.
+If you're new to GraphQL, take a little bit of time to explore the _Documentation Explorer_. This can be accomplished by clicking the `< Docs` link in the GraphiQL interface. The information within _Documentation Explorer_ is specific to creating queries in Nautobot.
 
 ![Documentation Explorer](./images/graphql/01-graphiql-explorer-light.png#only-light){ .on-glb }
 ![Documentation Explorer](./images/graphql/01-graphiql-explorer-dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
-In the *Documentation Explorer*, search for `devices`. The results are all of the models that utilize the `devices` model.
+In the _Documentation Explorer_, search for `devices`. The results are all of the models that utilize the `devices` model.
 
 ![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query-light.png#only-light){ .on-glb }
 ![Documentation Explorer: Devices](./images/graphql/02-graphiql-explorer-device-query-dark.png#only-dark){ .on-glb }
@@ -141,7 +141,7 @@ From the `devices` query, select `devices` from `Query.devices`. This will displ
 
 ### First Query
 
-Now that you have a basic understanding of how to obtain information to query from the *Documentation Explorer*, let's craft a query. Earlier in the guide, a sample REST API call was performed to obtain device information. While the query had a lot of important information, it also lacked a lot of information. In this section, lets explore how to craft a GraphQL query that displays all of the information that we want.
+Now that you have a basic understanding of how to obtain information to query from the _Documentation Explorer_, let's craft a query. Earlier in the guide, a sample REST API call was performed to obtain device information. While the query had a lot of important information, it also lacked a lot of information. In this section, lets explore how to craft a GraphQL query that displays all of the information that we want.
 
 GraphQL queries are encapsulated in `query { }` flags (simply `{ }` is also acceptable). With that in mind, let's craft our query from the GraphiQL interface to inspect all devices and display their device names. To do this, let's execute:
 
@@ -220,7 +220,7 @@ As an example. We can query devices by their location. This is done by adding `(
     ![GraphQL: Query Results](./images/graphql/08-graphql-query-04-dark.png#only-dark){ .on-glb }
     [//]: # "`https://next.demo.nautobot.com/graphql/`"
 
-GraphQL also allows you to filter by multiple attributes at once if desired. You can use the *Documentation Explorer* to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `location`.
+GraphQL also allows you to filter by multiple attributes at once if desired. You can use the _Documentation Explorer_ to assist you in finding criteria attributes to filter on. In this example, I add the `role` attribute in addition to `location`.
 
 ```graphql
 query {

@@ -29,6 +29,7 @@ from nautobot.core.testing import (
 from nautobot.core.testing.utils import (
     generate_random_device_asset_tag_of_specified_size,
 )
+from nautobot.data_validation.models import DataCompliance
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -176,6 +177,33 @@ def create_test_device(name):
     )
 
     return device
+
+
+def create_test_module_type_component_templates(module_type):
+    """
+    Convenience method for creating one of each component template on a ModuleType, so that its views
+    (and those of any Module of this type created afterward) render component tables with rows.
+    """
+    ConsolePortTemplate.objects.create(module_type=module_type, name="Console Port Template 1")
+    ConsoleServerPortTemplate.objects.create(module_type=module_type, name="Console Server Port Template 1")
+    power_port_template = PowerPortTemplate.objects.create(module_type=module_type, name="Power Port Template 1")
+    PowerOutletTemplate.objects.create(
+        module_type=module_type, name="Power Outlet Template 1", power_port_template=power_port_template
+    )
+    InterfaceTemplate.objects.create(
+        module_type=module_type, name="Interface Template 1", type=InterfaceTypeChoices.TYPE_1GE_FIXED
+    )
+    rear_port_template = RearPortTemplate.objects.create(
+        module_type=module_type, name="Rear Port Template 1", type=PortTypeChoices.TYPE_8P8C, positions=1
+    )
+    FrontPortTemplate.objects.create(
+        module_type=module_type,
+        name="Front Port Template 1",
+        type=PortTypeChoices.TYPE_8P8C,
+        rear_port_template=rear_port_template,
+        rear_port_position=1,
+    )
+    ModuleBayTemplate.objects.create(module_type=module_type, name="Module Bay Template 1", position="1")
 
 
 class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
@@ -613,7 +641,6 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         user2 = User.objects.create_user(username="testuser2")
-        user3 = User.objects.create_user(username="testuser3")
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
@@ -629,17 +656,23 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "rack": rack.pk,
             "units": "10,11,12",
-            "user": user3.pk,
             "tenant": None,
             "description": "Rack reservation",
             "tags": [t.pk for t in Tag.objects.get_for_model(RackReservation)],
         }
 
         cls.bulk_edit_data = {
-            "user": user3.pk,
             "tenant": None,
             "description": "New description",
         }
+
+    def setUp(self):
+        super().setUp()
+        # Reserved for the test user, whom a user may always view, as `EXEMPT_VIEW_PERMISSIONS = ["*"]` does not make
+        # other users viewable. `user` must remain the first field of `bulk_edit_data`, which is the one
+        # `test_bulk_edit_objects_with_constrained_permission` edits.
+        self.form_data = {**self.form_data, "user": self.user.pk}
+        self.bulk_edit_data = {"user": self.user.pk, **self.bulk_edit_data}
 
 
 class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -869,9 +902,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
+            <span>32%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
-                32%
+                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 32%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 32)">32%</span>
             </div>
         </div></td>
         """
@@ -879,9 +913,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
+            <span>65%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
-                65%
+                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 65%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 65)">65%</span>
             </div>
         </div></td>
         """
@@ -889,13 +924,47 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <div title="Used: 3789&#13;Count: 7680" class="progress text-center">
+            <span>49%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
-                49%
+                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 49%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 49)">49%</span>
             </div>
         </div>
         """
         self.assertContains(response, total_utilization_html, html=True)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_nonracked_devices_table_respects_object_permissions(self):
+        rack = self.racks[0]
+        device_type = DeviceType.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        visible_device = Device.objects.create(
+            name="Visible Non-Racked Device",
+            location=rack.location,
+            rack=rack,
+            position=None,
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+        )
+        hidden_device = Device.objects.create(
+            name="Hidden Non-Racked Device",
+            location=rack.location,
+            rack=rack,
+            position=None,
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+        )
+
+        self.add_permissions("dcim.view_rack")
+        self.add_permissions("dcim.view_device", constraints={"pk": str(visible_device.pk)})
+
+        response = self.client.get(reverse("dcim:rack", args=[rack.pk]))
+        self.assertHttpStatus(response, 200)
+        self.assertContains(response, visible_device.get_absolute_url())
+        self.assertNotContains(response, hidden_device.get_absolute_url())
 
 
 class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1352,6 +1421,34 @@ module-bays:
             response_content,
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_embedded_create_form_invalid_returns_modal_partial(self):
+        """
+        An invalid HTMX (embedded modal) submission returns the modal partial, not the full create page.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/9062.
+        """
+        self.add_permissions("dcim.add_devicetype")
+        url = self._get_url("add")
+        response = self.client.post(
+            url,
+            post_data(
+                {
+                    "manufacturer": Manufacturer.objects.first().pk,
+                    "model": "Device Type Y",
+                    "u_height": -1,  # invalid
+                }
+            ),
+            headers={"HX-Request": "true"},
+        )
+
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('data-nb-obj-type="device type"', content)
+        self.assertIn("embedded_id_", content)
+        self.assertNotIn('id="nb-create-form"', content)
+        self.assertNotIn("<!DOCTYPE", content)
+
 
 class ModuleTypeTestCase(
     ViewTestCases.GetObjectViewTestCase,
@@ -1371,11 +1468,12 @@ class ModuleTypeTestCase(
         Module.objects.all().delete()
         ModuleType.objects.all().delete()
 
-        ModuleType.objects.create(
+        module_type = ModuleType.objects.create(
             model="Test Module Type 1",
             manufacturer=manufacturers[0],
             comments="test comment",
         )
+        create_test_module_type_component_templates(module_type)
         ModuleType.objects.create(
             model="Test Module Type 2",
             manufacturer=manufacturers[0],
@@ -1401,6 +1499,25 @@ class ModuleTypeTestCase(
             "manufacturer": manufacturers[1].pk,
             "comments": "changed comment",
         }
+
+    def test_detail_component_table_action_buttons_have_correct_return_url(self):
+        """Assert that a component template's edit/delete buttons return to the correct tab of the ModuleType view."""
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.view_interfacetemplate",
+            "dcim.change_interfacetemplate",
+            "dcim.delete_interfacetemplate",
+        )
+        interface_template = InterfaceTemplate.objects.get(module_type__model="Test Module Type 1")
+        module_type = interface_template.module_type
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        return_url = f"{module_type.get_absolute_url()}%3Ftab=interfaces"
+        for action in ("edit", "delete"):
+            action_url = reverse(f"dcim:interfacetemplate_{action}", kwargs={"pk": interface_template.pk})
+            self.assertIn(f'href="{action_url}?return_url={return_url}"', content)
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
@@ -2451,7 +2568,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Prefix.objects.create(prefix="1.1.1.1/24", namespace=namespace, status=cls.prefix_status)
         Prefix.objects.create(prefix="2.2.2.2/24", namespace=namespace, status=cls.prefix_status)
         Prefix.objects.create(prefix="3.3.3.3/24", namespace=namespace, status=cls.prefix_status)
-        ipaddresses = (
+        cls.ipaddresses = (
             IPAddress.objects.create(address="1.1.1.1/32", namespace=namespace, status=cls.ipaddr_status),
             IPAddress.objects.create(address="2.2.2.2/32", namespace=namespace, status=cls.ipaddr_status),
             IPAddress.objects.create(address="3.3.3.3/32", namespace=namespace, status=cls.ipaddr_status),
@@ -2465,7 +2582,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Interface.objects.create(device=cls.devices[0], name="Interface A3", status=intf_status, role=intf_role),
         )
 
-        for device, ipaddress in zip(cls.devices, ipaddresses):
+        for device, ipaddress in zip(cls.devices, cls.ipaddresses):
             RelationshipAssociation(
                 relationship=cls.relationships[0], source=device, destination=ipaddress
             ).validated_save()
@@ -2540,6 +2657,46 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[1].pk,
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
+
+    def test_primary_ip_queries_do_not_grow_with_device_count(self):
+        """Rendering the default primary IP column must not add queries per device."""
+        self.add_permissions("dcim.view_device")
+        namespace = self.ipaddresses[0].parent.namespace
+        Prefix.objects.create(prefix="2001:db8::/64", namespace=namespace, status=self.prefix_status)
+        for index, (device, ipaddress) in enumerate(zip(self.devices, self.ipaddresses), start=1):
+            interface = Interface.objects.create(
+                device=device,
+                name="Loopback0",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=self.interfaces[0].status,
+            )
+            device.primary_ip4 = ipaddress
+            device.primary_ip6 = IPAddress.objects.create(
+                address=f"2001:db8::{index}/128", namespace=namespace, status=self.ipaddr_status
+            )
+            interface.ip_addresses.add(device.primary_ip4, device.primary_ip6)
+            device.validated_save()
+
+        url = self._get_url("list")
+        for prefer_ipv4 in (True, False):
+            with self.subTest(prefer_ipv4=prefer_ipv4), override_config(PREFER_IPV4=prefer_ipv4):
+                # Warm shared caches before comparing fully rendered HTMX requests.
+                self.client.get(url, {"per_page": 1}, headers={"HX-Request": "true"})
+                query_counts = []
+                for count in range(1, len(self.devices) + 1):
+                    with CaptureQueriesContext(connection) as queries:
+                        response = self.client.get(url, {"per_page": count}, headers={"HX-Request": "true"})
+                    query_counts.append(len(queries))
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/list_view_table.html")
+                    self.assertEqual(len(response.context["table"].page), count)
+                    for row in response.context["table"].page.object_list:
+                        address = row.record.primary_ip
+                        self.assertContains(
+                            response, f'<a href="{address.get_absolute_url()}">{address}</a>', html=True
+                        )
+
+                self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
 
     def _build_device_bay_chain(self, parent_count):
         """Create a parent->child DeviceBay chain and return (devices, bays)."""
@@ -3083,6 +3240,55 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(url), 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_lldp_neighbors_queries_do_not_grow_with_cabled_interfaces(self):
+        """The LLDP neighbors tab should not query each cabled interface's connected endpoint separately,
+        whether the endpoint is an interface on a virtual chassis member or a circuit termination."""
+        self.add_permissions("dcim.napalm_read_device")
+        device, peer = self.devices[2], self.devices[1]
+        virtual_chassis = VirtualChassis.objects.create(name="LLDP Peer Stack", master=peer)
+        Device.objects.filter(pk=peer.pk).update(virtual_chassis=virtual_chassis, vc_position=1)
+        provider = Provider.objects.create(name="LLDP Provider")
+        circuit_type = CircuitType.objects.create(name="LLDP Circuit Type")
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        interface_status = self.interfaces[0].status
+        cable_status = Status.objects.get(name="Connected")
+        url = reverse("dcim:device_lldp_neighbors", kwargs={"pk": device.pk})
+
+        def create_interface(parent, name):
+            return Interface.objects.create(
+                device=parent, name=name, type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+
+        query_counts = []
+        for i in range(1, 4):
+            Cable.objects.create(
+                termination_a=create_interface(device, f"LLDP {i}"),
+                termination_b=create_interface(peer, f"LLDP Peer {i}"),
+                status=cable_status,
+            )
+            circuit = Circuit.objects.create(
+                provider=provider, circuit_type=circuit_type, cid=f"LLDP Circuit {i}", status=circuit_status
+            )
+            Cable.objects.create(
+                termination_a=create_interface(device, f"LLDP Circuit {i}"),
+                termination_b=CircuitTermination.objects.create(
+                    circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=device.location
+                ),
+                status=cable_status,
+            )
+            # Warm shared caches before counting.
+            self.client.get(url)
+            with CaptureQueriesContext(connection) as queries:
+                response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, f"LLDP Peer {i}")
+            self.assertContains(response, 'data-chassis="LLDP Peer Stack"', count=i)
+            self.assertContains(response, f"LLDP Provider LLDP Circuit {i}")
+            query_counts.append(len(queries))
+
+        self.assertEqual(max(query_counts), min(query_counts), msg=query_counts)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_primary_ips(self):
         """Test assigning a primary IP to a device."""
         self.add_permissions("dcim.change_device")
@@ -3190,6 +3396,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ModuleType.objects.create(model="Module Type 1", manufacturer=manufacturer),
             ModuleType.objects.create(model="Module Type 2", manufacturer=manufacturer),
         )
+        create_test_module_type_component_templates(moduletypes[0])
 
         moduleroles = Role.objects.get_for_model(Module)[:2]
 
@@ -3294,8 +3501,8 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         url = reverse("dcim:module_interfaces", kwargs={"pk": module.pk})
         response = self.client.get(url)
-        # Assert that "Add IP address" appears for each of the three interfaces
-        self.assertBodyContains(response, "Add IP address", count=3)
+        # Assert that "Add IP address" appears for each of the module's interfaces
+        self.assertBodyContains(response, "Add IP address", count=module.interfaces.count())
 
     def test_module_interface_assign_ipaddress(self):
         module = Module.objects.first()
@@ -3368,10 +3575,39 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(interface_ips),
             )
 
+    def test_data_compliance_tab(self):
+        """A Module with compliance results gets a Data Compliance tab that lists them, rather than the main tab content."""
+        self.add_permissions("dcim.view_module", "data_validation.view_datacompliance")
+        module = Module.objects.first()
+        DataCompliance.objects.create(
+            compliance_class_name="ModuleSerialRule",
+            content_type=ContentType.objects.get_for_model(Module),
+            object_id=module.pk,
+            validated_object_str=str(module),
+            validated_attribute="serial",
+            message="Module serial is not compliant.",
+            valid=False,
+        )
+        data_compliance_url = module.get_data_compliance_url()
+
+        response = self.client.get(module.get_absolute_url())
+        self.assertBodyContains(response, f'href="{data_compliance_url}"')
+        self.assertBodyContains(response, "<td>Installed in</td>", html=True)
+
+        response = self.client.get(data_compliance_url)
+        self.assertBodyContains(response, "Module serial is not compliant.")
+        # The main tab's attribute panel is not rendered on this tab
+        self.assertNotContains(response, "<td>Installed in</td>", html=True)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_module_modulebays(self):
-        module = Module.objects.filter(module_bays__isnull=True).first()
         status_active = Status.objects.get_for_model(Module).first()
+        # The seeded modules get bays from their type's templates; this one's type has none, so it starts with no bays.
+        module = Module.objects.create(
+            module_type=ModuleType.objects.get(model="Module Type 2"),
+            location=Module.objects.first().location,
+            status=status_active,
+        )
 
         # A bay on this module, containing a submodule that itself has a nested bay.
         bay = ModuleBay.objects.create(parent_module=module, name="Module View Bay A")
@@ -5614,6 +5850,26 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         breakout_body = self.client.get(breakout_cable.get_absolute_url()).content.decode()
         for marker in breakout_only_markers:
             self.assertIn(marker, breakout_body, msg=f"Breakout cable detail missing expected {marker!r}")
+
+    def test_cable_detail_view_shows_connectors_for_symmetric_multi_connector_cable(self):
+        """A 2x2 cable (multi-connector, not a breakout) shows connector labels on its detail page."""
+        self.add_permissions("dcim.view_cable")
+        symmetric_type = CableType.objects.create(name="Cable View 2x2", a_connectors=2, b_connectors=2, total_lanes=2)
+        self.assertFalse(symmetric_type.is_breakout)
+        interface_a, interface_b = Interface.objects.filter(cable_termination__isnull=True).exclude(
+            type__in=NONCONNECTABLE_IFACE_TYPES
+        )[:2]
+        cable = Cable.objects.create(
+            termination_a=interface_a,
+            termination_b=interface_b,
+            cable_type=symmetric_type,
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        body = self.client.get(cable.get_absolute_url()).content.decode()
+
+        for marker in (">A1<", ">B1<", "2A &rarr; 2B"):
+            self.assertIn(marker, body, msg=f"Symmetric cable detail missing expected {marker!r}")
 
     def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
         """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""

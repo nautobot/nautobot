@@ -90,6 +90,9 @@ Whether you are getting started for the first time, looking to build a local lab
 
     * You’ll have to find something else to do with all that freed-up time now that you’re not maintaining on-prem applications and infrastructure.
 
+!!! tip "Running Nautobot across multiple servers"
+    For a deployment that can survive the failure of a single server, see the [High Availability](../guides/high-availability.md) guide.
+
 ## About Dependencies
 
 This section describes the system dependencies required for Nautobot. They can be all installed on a single system, or distributed across your environment. That will be up to you. Our install instructions assume a single system install, and that is good for most use cases. More advanced configurations are also possible, but are not covered here.
@@ -100,7 +103,7 @@ The following minimum versions are required for Nautobot to operate:
 
 | Dependency | Role         | Minimum Version |
 | ---------- | ------------ | --------------- |
-| Python     | Application  | 3.10            |
+| Python     | Application  | 3.11            |
 | PostgreSQL | Database     | 14.0            |
 | MySQL      | Database     | 8.0.11          |
 | Redis      | Cache, Queue | 4.0             |
@@ -121,11 +124,17 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 --- 2.4.20 "Python 3.9 support removed"
     Python 3.9 support was removed.
 
+--- 2.4.46 "Python 3.10 support removed"
+    Python 3.10 support was removed.
+
 +++ 3.0.0 "Python 3.13 support added"
     Python 3.13 support was added.
 
 +++ 3.1.0 "Python 3.14 support added"
     Python 3.14 support was added.
+
+--- 3.2.9 "Python 3.10 support removed"
+    Python 3.10 support was removed.
 
 #### Database
 

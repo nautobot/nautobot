@@ -2,7 +2,8 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
-from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
+from nautobot.core.api import NautobotModelSerializer, ValidatedModelSerializer
+from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 
 from .. import choices, models
 
@@ -69,7 +70,7 @@ class VPNPhase2PolicySerializer(TaggedModelSerializerMixin, NautobotModelSeriali
         fields = "__all__"
 
 
-class VPNProfilePhase1PolicyAssignmentSerializer(NautobotModelSerializer):
+class VPNProfilePhase1PolicyAssignmentSerializer(ValidatedModelSerializer):
     """Serializer for `VPNProfilePhase1PolicyAssignment` objects."""
 
     class Meta:
@@ -77,7 +78,7 @@ class VPNProfilePhase1PolicyAssignmentSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class VPNProfilePhase2PolicyAssignmentSerializer(NautobotModelSerializer):
+class VPNProfilePhase2PolicyAssignmentSerializer(ValidatedModelSerializer):
     """Serializer for `VPNProfilePhase2PolicyAssignment` objects."""
 
     class Meta:

@@ -1,6 +1,8 @@
 from io import StringIO
+from pathlib import Path
 import re
 import subprocess
+import sys
 from unittest import mock
 import uuid
 
@@ -14,6 +16,7 @@ from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices, JobResultS
 from nautobot.extras.jobs_console_log import (
     JobConsoleLogExecutor,
     JobConsoleLogSubprocessError,
+    resolve_nautobot_server_executable,
     store_job_output_line,
     StreamReader,
 )
@@ -192,7 +195,7 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
             result = executor.execute()
         mock_popen.assert_called_once_with(
             [
-                "nautobot-server",
+                resolve_nautobot_server_executable(),
                 "execute_job_result",
                 f"{self.job_result.pk}",
                 f"--config={settings.SETTINGS_PATH}",
@@ -313,3 +316,32 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
         )
         command = executor._build_command()
         self.assertIn(str(test_uuid), command[-1])
+
+    def test_build_command_uses_resolved_executable(self):
+        # Regression for #9424: the console-log subprocess must not rely on a
+        # bare "nautobot-server" PATH lookup, which fails under systemd.
+        executor = JobConsoleLogExecutor(job_result_pk=self.job_result.pk, job_kwargs={})
+        command = executor._build_command()
+        self.assertEqual(command[0], resolve_nautobot_server_executable())
+        self.assertNotEqual(command[0], "nautobot-server")
+
+
+class ResolveNautobotServerExecutableTestCase(TestCase):
+    """Test resolve_nautobot_server_executable fallbacks."""
+
+    def test_prefers_path_lookup(self):
+        with mock.patch("nautobot.extras.jobs_console_log.shutil.which", return_value="/usr/local/bin/nautobot-server"):
+            self.assertEqual(resolve_nautobot_server_executable(), "/usr/local/bin/nautobot-server")
+
+    def test_falls_back_to_sibling_of_python_executable(self):
+        with mock.patch("nautobot.extras.jobs_console_log.shutil.which", return_value=None):
+            sibling = Path(sys.executable).parent / "nautobot-server"
+            with mock.patch.object(Path, "is_file", return_value=True):
+                self.assertEqual(resolve_nautobot_server_executable(), str(sibling))
+
+    def test_last_resort_bare_command(self):
+        with (
+            mock.patch("nautobot.extras.jobs_console_log.shutil.which", return_value=None),
+            mock.patch.object(Path, "is_file", return_value=False),
+        ):
+            self.assertEqual(resolve_nautobot_server_executable(), "nautobot-server")

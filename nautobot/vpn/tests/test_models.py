@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.apps.testing import ModelTestCases
+from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.factory import DeviceFactory
 from nautobot.dcim.models import Device, Interface, Module

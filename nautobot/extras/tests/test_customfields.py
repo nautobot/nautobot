@@ -1,4 +1,3 @@
-import contextlib
 from datetime import date
 import io
 import json
@@ -128,6 +127,14 @@ ALL_FIELDS_DATA = (
         "empty_value": "",
     },
 )
+
+
+# A pattern that backtracks catastrophically, paired with a subject that can never match it. Wide
+# alternation rather than a nested quantifier, because the `regex` module optimizes the classic
+# `((((a*)*)*)*)*` form away. Short enough to satisfy the 500-character `validation_regex` limit and
+# to compile under stdlib `re`, so the custom field saves normally and only matching is affected.
+REDOS_PATTERN = "(a|a|a|a|a)+$"
+REDOS_SUBJECT = "a" * 20 + "X"
 
 
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
@@ -430,6 +437,53 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
 
             # Delete the custom field
             cf.delete()
+
+    def test_regex_validation_is_time_bounded(self):
+        """A `validation_regex` that backtracks catastrophically must reject the value, not hang."""
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="cf_test_redos",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location = Location.objects.first()
+        location.cf[cf.key] = REDOS_SUBJECT
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            location.validated_save()
+
+    def test_json_regex_validation_is_time_bounded(self):
+        """The JSON branch serializes the value before matching, and must be bounded too."""
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_JSON,
+            label="cf_test_redos_json",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location = Location.objects.first()
+        location.cf[cf.key] = REDOS_SUBJECT
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            location.validated_save()
+
+    def test_form_field_regex_validation_is_time_bounded(self):
+        """The generated form field validates with the same pattern, via its own validator."""
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="cf_test_redos_form",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            cf.to_form_field().clean(REDOS_SUBJECT)
 
     def test_to_filter_field(self):
         with self.subTest("Assert CustomField Select Type renders the correct filter form field and widget"):
@@ -2556,6 +2610,21 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
                     cfc = CustomFieldChoice.objects.create(custom_field=cf, value=value)
                     cfc.validated_save()
 
+    def test_regex_validation_is_time_bounded(self):
+        """A `validation_regex` that backtracks catastrophically must reject the choice, not hang."""
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            label="cf_test_redos_choice",
+            required=False,
+            validation_regex=REDOS_PATTERN,
+        )
+        cf.save()
+        cf.content_types.set([ContentType.objects.get_for_model(Location)])
+
+        cfc = CustomFieldChoice(custom_field=cf, value=REDOS_SUBJECT)
+        with self.assertRaisesMessage(ValidationError, "catastrophic backtracking"):
+            cfc.validated_save()
+
             # Delete the custom field
             cf.delete()
 
@@ -4010,7 +4079,7 @@ class CustomFieldDefensiveCoverage(TestCase):
             update_custom_field_choice_data(uuid.uuid4(), "old", "new")
 
     def test_update_choice_data_select_no_matches(self):
-        """UPDATE SELECT: no objects have old_value — prints to stderr, returns True."""
+        """UPDATE SELECT: no objects have old_value — logs debug, returns True."""
         cf = CustomField.objects.create(
             label="sel-no-match",
             type=CustomFieldTypeChoices.TYPE_SELECT,
@@ -4023,12 +4092,14 @@ class CustomFieldDefensiveCoverage(TestCase):
 
         Location.objects.filter(pk=self.location.pk).update(_custom_field_data={cf.key: "ValidA"})
 
-        stderr_buf = io.StringIO()
-        with contextlib.redirect_stderr(stderr_buf):
+        with self.assertLogs("nautobot.extras.customfields", level="DEBUG") as cm:
             result = update_custom_field_choice_data(cf.pk, "NonExistentValue", "ValidA")
         self.assertTrue(result)
-        self.assertIn(
-            f"No location objects had value 'NonExistentValue' for custom field `{cf.key}`.", stderr_buf.getvalue()
+        self.assertTrue(
+            any(
+                f"No location objects had value 'NonExistentValue' for custom field `{cf.key}`." in msg
+                for msg in cm.output
+            )
         )
 
         self.location.refresh_from_db()

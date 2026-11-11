@@ -161,7 +161,7 @@ Since automatic provisioning is only performed when a custom field's content typ
 
 If a custom field is created with `required=False` and then later changed to `required=True`, all of the associated objects that do not yet have a value for this field will fail validation the next time they're saved unless updated with a valid value. Similarly, changes to the validation fields for a custom field will not automatically result in changes to affected objects, but may require changes the next time those objects are edited in order to bring them into compliance with the updated validation rules.
 
-If a custom field's `default` value is changed, newly created objects will use the new default, but existing objects that were set to the previous default value will *not* automatically be updated.
+If a custom field's `default` value is changed, newly created objects will use the new default, but existing objects that were set to the previous default value will _not_ automatically be updated.
 
 ## Deleting Custom Fields
 

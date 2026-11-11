@@ -2,7 +2,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.apps.testing import FormTestCases
+from nautobot.core.testing.forms import FormTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
 from nautobot.ipam.models import Prefix, VLAN

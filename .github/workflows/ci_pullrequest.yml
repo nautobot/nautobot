@@ -30,12 +30,14 @@ jobs:
       - name: "Install OSS Nautobot Apps to verify dependency compatibility"
         # nautobot-app-chatops[ipfabric] requires `ipfabric<7.0` as it uses APIs that are removed in later versions.
         # nautobot-app-ssot[ipfabric] requires a more current version of `ipfabric`, so they are incompatible.
-        # This is unlikely to be resolved any time soon so we are skipping the chatops extra intentionally for now.
+        # nautobot-app-chatops[meraki] requires `meraki<=1.45.0` while nautobot-app-ssot[meraki]
+        # requires `meraki>=3.0.2,<4`, so they are incompatible as well.
+        # This is unlikely to be resolved any time soon so we are skipping these chatops extras intentionally for now.
         run: >-
           poetry add
           'git+https://github.com/nautobot/nautobot-app-bgp-models.git@main'
           'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@main'
-          'git+https://github.com/nautobot/nautobot-app-chatops.git@main[aci,aristacv,ansible,grafana,meraki,panorama,slurpit]'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@main[aci,aristacv,ansible,grafana,panorama,slurpit]'
           'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@main'
           'git+https://github.com/nautobot/nautobot-app-design-builder.git@main'
           'git+https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt.git@main'
@@ -314,7 +316,7 @@ jobs:
             exit 1
           fi
   tests-postgres:
-    name: "Unit tests (PostgreSQL and Python 3.10)"
+    name: "Unit tests (PostgreSQL and Python 3.11)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -342,7 +344,7 @@ jobs:
         with:
           poetry-install-options: "--extras=remote_storage"
           poetry-version: "2.1.4"
-          python-version: "3.10"
+          python-version: "3.11"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
     needs:
@@ -491,7 +493,7 @@ jobs:
   #     - "djhtml"
   #     - "djlint"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.10)"
+    name: "Run migrations against test dataset (MySQL and Python 3.11)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -521,7 +523,7 @@ jobs:
         with:
           poetry-install-options: "--extras=mysql --extras=remote_storage"
           poetry-version: "2.1.4"
-          python-version: "3.10"
+          python-version: "3.11"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
     needs:

@@ -16,6 +16,7 @@ from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
+    REGEX_TIMEOUT_DEFAULT as _REGEX_TIMEOUT_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
 
@@ -82,6 +83,13 @@ if "NAUTOBOT_BANNER_LOGIN" in os.environ and os.environ["NAUTOBOT_BANNER_LOGIN"]
     BANNER_LOGIN = os.environ["NAUTOBOT_BANNER_LOGIN"]
 if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != "":
     BANNER_TOP = os.environ["NAUTOBOT_BANNER_TOP"]
+
+# Many-to-many association model sides to exclude from automatic change logging, as a JSON object.
+if (
+    "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS" in os.environ
+    and os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"] != ""
+):
+    CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = json.loads(os.environ["NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"])
 
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
@@ -280,6 +288,7 @@ SSO_ENABLE_GROUP_SYNC = is_truthy(os.getenv("NAUTOBOT_SSO_ENABLE_GROUP_SYNC", "f
 if SSO_ENABLE_GROUP_SYNC:
     SOCIAL_AUTH_PIPELINE = (
         "social_core.pipeline.social_auth.social_details",
+        "social_core.pipeline.social_auth.social_names",
         "social_core.pipeline.social_auth.social_uid",
         "social_core.pipeline.social_auth.auth_allowed",
         "social_core.pipeline.social_auth.social_user",
@@ -385,6 +394,10 @@ FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
 STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
+
+# Whether the ORM refuses to return the value of a field listed in a model's `sensitive_fields`.
+# TODO 4.0: change the default to True.
+STRICT_SENSITIVE_FIELDS = is_truthy(os.getenv("NAUTOBOT_STRICT_SENSITIVE_FIELDS", "False"))
 
 #
 # Django REST framework (API)
@@ -705,6 +718,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RequestCacheMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
+    "nautobot.core.middleware.HtmxLoginRedirectMiddleware",
     "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
@@ -872,6 +886,24 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
+    "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS": ConstanceConfigItem(
+        default={},
+        help_text=mark_safe(
+            "Many-to-many association models whose associated objects should not receive an automatic change "
+            "record when an association is created or deleted. Map each association model "
+            "(<code>app_label.modelname</code>) to a list of the sides to exclude. Each side is the name of a "
+            "foreign key field on the association model itself (for example <code>vrf</code> on "
+            "<code>VRFPrefixAssignment</code>), not the name of the related model. "
+            "Only the listed sides are excluded; an empty list excludes nothing. "
+            "Excluded objects also do not trigger webhooks, job hooks, or events for association changes. "
+            "Enter a dictionary in JSON format, for example:\n"
+            '<pre><code class="language-json">{\n'
+            '    "ipam.vrfprefixassignment": ["prefix"],\n'
+            '    "cloud.cloudnetworkprefixassignment": ["cloud_network", "prefix"]\n'
+            "}</code></pre>",
+        ),
+        field_type="optional_json_field",
+    ),
     "DEVICE_UNIQUENESS": ConstanceConfigItem(
         default="location_tenant_name",
         help_text=(
@@ -1011,7 +1043,7 @@ CONSTANCE_CONFIG = {
 
 CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
-    "Change Logging": ["CHANGELOG_RETENTION"],
+    "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
@@ -1086,6 +1118,12 @@ CACHES = {
 
 # Number of seconds to cache ContentType lookups. Set to 0 to disable caching.
 CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
+
+# Number of seconds before persistent caches (custom fields, relationships, etc.) expire.
+# None means they never expire and are only refreshed when their underlying data changes.
+PERSISTENT_CACHE_TIMEOUT = None
+if "NAUTOBOT_PERSISTENT_CACHE_TIMEOUT" in os.environ and os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"] != "":
+    PERSISTENT_CACHE_TIMEOUT = int(os.environ["NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"])
 
 #
 # Celery (used for background processing)
@@ -1181,6 +1219,10 @@ CELERY_BEAT_SCHEDULER = "nautobot.core.celery.schedulers:NautobotDatabaseSchedul
 # Sets an age out timer of redis lock. This is NOT implicitly applied to locks, must be added
 # to a lock creation as `timeout=settings.REDIS_LOCK_TIMEOUT`
 REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
+
+# Seconds allowed for a single evaluation of an operator-supplied regular expression against
+# user-supplied data, such as a custom field `validation_regex` or a data validation rule.
+REGEX_TIMEOUT = float(os.getenv("NAUTOBOT_REGEX_TIMEOUT", str(_REGEX_TIMEOUT_DEFAULT)))
 
 #
 # Custom branding (logo and title)

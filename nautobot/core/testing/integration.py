@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Any, Optional
 
 from django.conf import settings
@@ -16,6 +15,13 @@ from splinter.browser import Browser
 from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core import testing
+from nautobot.core.testing.axe import (
+    AXE_DEFAULT_IMPACTS,
+    AXE_DEFAULT_TAGS,
+    AXE_DISABLED_RULES,
+    AXE_EXCLUDE_SELECTORS,
+    get_axe_core_source,
+)
 
 # URL used to connect to the Selenium host
 SELENIUM_URL = os.getenv("NAUTOBOT_SELENIUM_URL", "http://localhost:4444/wd/hub")
@@ -25,24 +31,6 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "nautobot")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
-
-AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "axe.min.js"
-
-# WCAG 2.2 A and AA. The earlier tags are needed too: axe tags each rule with the version that introduced it, so
-# `wcag22*` alone matches only `target-size` -- which selecting by tag also runs despite axe disabling it by default.
-AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa")
-
-# Impact is how badly a violation affects a user, not how important the criterion is: `meta-viewport` is a WCAG AA
-# failure reported at `moderate`. Narrowing this hides conformance failures.
-AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
-
-# django-debug-toolbar's container. Dev-only dependency, added to `INSTALLED_APPS` under `if DEBUG` by the development
-# configs, so no user can reach it. Tests run with `DEBUG` off; this is for scans run by hand.
-AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
-
-# `color-contrast` is a WCAG 1.4.3 AA rule and the theme currently fails it in several places. Fixing it means retuning
-# palette tokens, which is a product decision that has been deferred, so the rule is off rather than left failing.
-AXE_DISABLED_RULES = ("color-contrast",)
 
 
 class ObjectsListMixin:
@@ -514,7 +502,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         Assert that the page currently loaded in the browser has no axe-core violations.
 
         `context` limits the scan to a CSS selector, `exclude` drops selectors from it, and `disabled_rules` names rules
-        not to run at all -- pass `()` to scan with everything the tags select. Skips if axe-core is not installed.
+        not to run at all -- pass `()` to scan with everything the tags select. Errors if axe-core cannot be loaded.
         Failures name the rule, impact, help text and the first five offending selectors per rule.
 
         Only violations are reported. axe's `incomplete` bucket -- checks it could not decide -- needs a human, so read
@@ -523,13 +511,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         that paints its background, so a label overflowing its container reports as undecidable when it is really a
         layout bug.
         """
-        if not AXE_CORE_PATH.is_file():
-            self.skipTest(
-                f"axe-core not found at {AXE_CORE_PATH}. Run `npm install` in `nautobot/ui` to enable "
-                "accessibility assertions."
-            )
-
-        self.browser.execute_script(AXE_CORE_PATH.read_text(encoding="utf-8"))
+        self.browser.execute_script(get_axe_core_source())
 
         # `axe.run` returns a promise, so this needs `execute_async_script`: the driver appends a resolve callback as the
         # final argument.

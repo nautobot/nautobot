@@ -18,10 +18,10 @@ The default (unfiltered) Location list view (`/dcim/locations/`) includes displa
 
 +++ 3.1.0 "Added exemptions for specific filters"
 
-There are a small set of filters which, when applied individually or in combination, *do not* remove the hierarchy display, because these filters preserve the hierarchy of the filtered set of Locations. Examples of such filters include `max_depth` and `subtree`. The "default filter" described in the next section, for much the same reason, also does not remove indentation when in effect.
+There are a small set of filters which, when applied individually or in combination, _do not_ remove the hierarchy display, because these filters preserve the hierarchy of the filtered set of Locations. Examples of such filters include `max_depth` and `subtree`. The "default filter" described in the next section, for much the same reason, also does not remove indentation when in effect.
 
 !!! tip
-    The hierarchy-preserving filters only preserve the hierarchy display if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
+    The hierarchy-preserving filters only preserve the hierarchy display if they are the _only_ filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
 
     * `/dcim/locations/max_depth=2` -- hierarchy shown
     * `/dcim/locations/max_depth=2&sort=status` -- hierarchy hidden due to sorting

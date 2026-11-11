@@ -12,6 +12,7 @@ from nautobot.core.utils.data import (
     is_uuid,
     merge_dicts_without_collision,
     render_jinja2,
+    render_jinja2_for_regex,
     shallow_compare_dict,
     to_meters,
     validate_jinja2,
@@ -65,6 +66,7 @@ from nautobot.core.utils.querysets import (
     maybe_prefetch_related,
     maybe_select_related,
 )
+from nautobot.core.utils.regex import regex_match, regex_search
 from nautobot.core.utils.requests import (
     add_nautobot_version_query_param_to_url,
     convert_querydict_to_dict,
@@ -72,6 +74,7 @@ from nautobot.core.utils.requests import (
     ensure_content_type_and_field_name_in_query_params,
     get_filterable_params_from_filter_params,
     is_single_choice_field,
+    mock_wsgi_request,
     normalize_querydict,
 )
 from nautobot.extras.utils import (
@@ -161,13 +164,17 @@ __all__ = (
     "method_deprecated_in_favor_of",
     "migrate_content_type_references_to_new_model",
     "migrate_role_data",
+    "mock_wsgi_request",
     "normalize_querydict",
     "permission_is_exempt",
     "populate_model_features_registry",
     "qs_filter_from_constraints",
     "refresh_job_model_from_job_class",
+    "regex_match",
+    "regex_search",
     "remove_prefix_from_cf_key",
     "render_jinja2",
+    "render_jinja2_for_regex",
     "resolve_permission",
     "resolve_permission_ct",
     "rgb_to_hex",

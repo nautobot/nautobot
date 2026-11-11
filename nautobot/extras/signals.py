@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
+from django.db.models import QuerySet
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -22,7 +23,7 @@ import redis.exceptions
 from nautobot.core.branching import BranchContext
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import construct_cache_key, invalidate_cache
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
@@ -55,6 +56,7 @@ from nautobot.extras.models.approvals import (
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.utils import (
+    get_change_logged_m2m_side_field_names,
     get_change_logged_m2m_through_side_field_names,
     get_explicit_m2m_through_side_field_names,
     refresh_job_model_from_job_class,
@@ -192,13 +194,16 @@ def invalidate_models_cache(sender, **kwargs):
     else:
         manager = sender.objects
 
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-        cache_key = construct_cache_key(manager, method_name="get_for_model", branch_aware=True)
-        cache.delete_pattern(f"{cache_key}(*)")
-        if hasattr(manager, "keys_for_model"):
-            cache_key = construct_cache_key(manager, method_name="keys_for_model", branch_aware=True)
-            cache.delete_pattern(f"{cache_key}(*)")
+    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+    method_names = ["get_for_model"]
+    if hasattr(manager, "keys_for_model"):
+        method_names.append("keys_for_model")
+    invalidate_cache(
+        patterns=[
+            f"{construct_cache_key(manager, method_name=method_name, branch_aware=True)}(*)"
+            for method_name in method_names
+        ]
+    )
 
 
 @receiver(post_delete, sender=CustomField)
@@ -207,12 +212,11 @@ def invalidate_models_cache(sender, **kwargs):
 @receiver(post_save, sender=CustomField)
 def invalidate_choices_cache(sender, instance, **kwargs):
     """Invalidate the choices cache for CustomFields."""
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        if sender is CustomField:
-            cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
-        else:
-            cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
-        cache.delete(cache_key)
+    if sender is CustomField:
+        cache_key = construct_cache_key(instance, method_name="choices", branch_aware=True)
+    else:
+        cache_key = construct_cache_key(instance.custom_field, method_name="choices", branch_aware=True)
+    invalidate_cache(keys=[cache_key])
 
 
 @receiver(post_save, sender=Relationship)
@@ -220,14 +224,13 @@ def invalidate_choices_cache(sender, instance, **kwargs):
 @receiver(post_delete, sender=Relationship)
 def invalidate_relationship_models_cache(sender, **kwargs):
     """Invalidate the related-models caches for Relationships."""
-    for method_name in (
-        "get_for_model_source",
-        "get_for_model_destination",
-    ):
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
-            cache_key = construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)
-            cache.delete_pattern(f"{cache_key}(*)")
+    # TODO: *maybe* target more narrowly, e.g. only clear the cache for specific related content-types?
+    invalidate_cache(
+        patterns=[
+            f"{construct_cache_key(Relationship.objects, method_name=method_name, branch_aware=True)}(*)"
+            for method_name in ("get_for_model_source", "get_for_model_destination")
+        ]
+    )
 
 
 @receiver(post_save, sender=CustomField)
@@ -237,8 +240,7 @@ def invalidate_relationship_models_cache(sender, **kwargs):
 @receiver(post_delete, sender=Relationship)
 def invalidate_openapi_schema_cache(sender, **kwargs):
     """Invalidate the openapi schema cache."""
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache.delete_pattern("openapi_schema_cache_*")
+    invalidate_cache(patterns=["openapi_schema_cache_*"])
 
 
 @receiver(pre_save)
@@ -259,11 +261,8 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
 @receiver(post_save, sender=GitRepository)
 @receiver(post_delete, sender=GitRepository)
 def invalidate_gitrepository_provided_contents_cache(sender, **kwargs):
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        cache_key = construct_cache_key(
-            GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True
-        )
-        cache.delete_pattern(f"{cache_key}(*)")
+    cache_key = construct_cache_key(GitRepository.objects, method_name="get_for_provided_contents", branch_aware=True)
+    invalidate_cache(patterns=[f"{cache_key}(*)"])
 
 
 def _object_change_branch_name(instance):
@@ -312,6 +311,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
         action = ObjectChangeActionChoices.ACTION_UPDATE
+    elif kwargs.get("action") == "post_clear":
+        # Clearing a relationship sends no pk_set, but its empty state must still be recorded.
+        action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
@@ -323,7 +325,7 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # A new record of an explicit M2M through model (created directly, e.g. via its REST API endpoint,
         # rather than through an M2M manager, which bulk-creates and so never fires post_save) is an update
         # to both of the objects it associates. m2m_changed additions are handled separately below.
-        side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+        side_field_names = get_change_logged_m2m_side_field_names(sender)
         if side_field_names:
             _record_m2m_side_object_changes(change_context, instance, side_field_names)
     elif kwargs.get("action") == "post_add" and kwargs["pk_set"] and not sender._meta.auto_created:
@@ -333,7 +335,12 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         # a time (Nautobot's global pre_delete receiver rules out Django's fast-delete path), so
         # _handle_deleted_m2m_through_object records the other side exactly once per object.
         other_model = kwargs["model"]
-        if sender in get_change_logged_m2m_through_side_field_names() and hasattr(other_model, "to_objectchange"):
+        # A self-referential through model's sides can't be told apart here, as both relate to `other_model`;
+        # its added objects are logged unless both of its sides are excluded.
+        if hasattr(other_model, "to_objectchange") and any(
+            sender._meta.get_field(side_field_name).related_model is other_model
+            for side_field_name in get_change_logged_m2m_side_field_names(sender)
+        ):
             for other_instance in other_model.objects.filter(pk__in=kwargs["pk_set"]).iterator():
                 _create_or_update_object_change(change_context, other_instance, ObjectChangeActionChoices.ACTION_UPDATE)
 
@@ -421,6 +428,12 @@ def _record_m2m_side_object_changes(change_context, through_instance, side_field
         side_object = getattr(through_instance, field_name, None)
         if side_object is None or not hasattr(side_object, "to_objectchange"):
             continue
+        # Reading a forward one-to-one caches `through_instance` on the side object as its reverse relation
+        # (e.g. `interface.cable_termination`); drop it so the snapshot reflects the database, where a deleted
+        # through record no longer exists.
+        side_field = through_instance._meta.get_field(field_name)
+        if side_field.one_to_one and side_field.remote_field.is_cached(side_object):
+            side_field.remote_field.delete_cached_value(side_object)
         _create_or_update_object_change(change_context, side_object, ObjectChangeActionChoices.ACTION_UPDATE)
 
 
@@ -525,16 +538,17 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     an update to both of the objects it associated.
 
     post_delete (rather than pre_delete) is required for snapshot correctness: the side objects' serialized
-    data includes their M2M memberships, which must reflect the association's removal. The side objects
-    themselves still exist at this point because cascade deletes are excluded below, and the through
-    record's foreign key values remain readable on the in-memory `instance`.
+    data includes their M2M memberships, which must reflect the association's removal. The recorded side
+    objects themselves still exist at this point because cascade deletes are excluded below (or, for an
+    opted-in cascade, the side being deleted is not recorded), and the through record's foreign key values
+    remain readable on the in-memory `instance`.
     """
     change_context = change_context_state.get()
 
     if change_context is None:
         return
 
-    side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+    side_field_names = get_change_logged_m2m_side_field_names(sender)
     if not side_field_names:
         return
 
@@ -549,10 +563,29 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
     # dispatch within that one request. It also matches long-standing behavior, as the m2m_changed
     # signal never fires for cascades either; the deleted object's own DELETE change record still
     # captures its association memberships where its REST API representation includes them.
-    if not (origin is instance or getattr(origin, "model", None) is sender):
+    if origin is instance or getattr(origin, "model", None) is sender:
+        _record_m2m_side_object_changes(change_context, instance, side_field_names)
         return
 
-    _record_m2m_side_object_changes(change_context, instance, side_field_names)
+    # A through model may list in `m2m_change_logged_cascade_sides` the sides whose deletion is known to
+    # cascade to a small, bounded number of its records (e.g. a Cable's handful of CableToCableTerminations).
+    # When such a side's object (or queryset) is the origin, record the surviving sides. The origin side
+    # itself is never recorded: its pre_delete handler has already logged its DELETE, which an UPDATE here
+    # would overwrite.
+    # TODO 4.0: record surviving sides on every cascade, gated by `CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` instead of
+    # `m2m_change_logged_cascade_sides`, ideally once change records store a delta rather than a full serialization.
+    origin_model = origin.model if isinstance(origin, QuerySet) else type(origin)
+    origin_side_field_names = {
+        field_name
+        for field_name in getattr(sender, "m2m_change_logged_cascade_sides", ())
+        if sender._meta.get_field(field_name).related_model is origin_model
+    }
+    if origin_side_field_names:
+        _record_m2m_side_object_changes(
+            change_context,
+            instance,
+            [field_name for field_name in side_field_names if field_name not in origin_side_field_names],
+        )
 
 
 #

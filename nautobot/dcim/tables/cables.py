@@ -31,6 +31,7 @@ class CableTypeTable(BaseTable):
     is_shuffle = BooleanColumn()
     total_strands = tables.Column(orderable=False)
     is_breakout = BooleanColumn(orderable=False)
+    is_multi_connector = BooleanColumn(orderable=False)
     cable_count = LinkedCountColumn(
         viewname="dcim:cable_list",
         url_params={"cable_type": "pk"},
@@ -56,6 +57,7 @@ class CableTypeTable(BaseTable):
             "polarity_method",
             "total_strands",
             "is_breakout",
+            "is_multi_connector",
             "cable_count",
             "tags",
             "actions",

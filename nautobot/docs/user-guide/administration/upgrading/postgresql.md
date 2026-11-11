@@ -51,7 +51,7 @@ If you're running PostgreSQL directly on Linux as a system service, as an altern
 2. Stop the existing PostgreSQL system service.
 3. Back up the current database.
 4. Install the new version of PostgreSQL, coexisting with the old version rather than replacing it, and ensure that the new version's system service is not running at this time.
-5. Run *the new version's* `pg_upgrade` command, pointing to the old and new PostgreSQL binary and data directories.
+5. Run _the new version's_ `pg_upgrade` command, pointing to the old and new PostgreSQL binary and data directories.
 6. Start the new PostgreSQL system service.
 7. Start Nautobot and related system services.
 

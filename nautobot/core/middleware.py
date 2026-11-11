@@ -2,16 +2,21 @@ import json
 import logging
 import re
 import time
+from urllib.parse import urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import ProgrammingError
-from django.http import Http404
+from django.http import Http404, HttpResponse, QueryDict
+from django.shortcuts import resolve_url
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
+from django.utils.cache import patch_vary_headers
 from django.utils.deprecation import MiddlewareMixin
+from django.utils.http import url_has_allowed_host_and_scheme
 from django_structlog.middlewares import RequestMiddleware
 from django_structlog.signals import bind_extra_request_failed_metadata
 from opentelemetry import trace
@@ -89,6 +94,65 @@ class ExternalAuthMiddleware(MiddlewareMixin):
         if settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS:
             # Assign default object permissions to the user
             assign_permissions_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS)
+
+
+class HtmxLoginRedirectMiddleware:
+    """
+    Turn a login redirect into an `HX-Redirect` so that HTMX navigates the whole window to the login page.
+
+    HTMX issues its requests through `XMLHttpRequest`, which follows a 302 transparently. Without this, HTMX sees a
+    200 carrying the login page and swaps it into whatever `hx-target` was in play, dropping the login form into a
+    modal body or a table region instead of replacing the page.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.headers.get("HX-Request") and self._redirects_to_login(response):
+            login_url = response["Location"]
+            return self._hx_redirect(request, login_url)
+        return response
+
+    def _hx_redirect(self, request, login_url):
+        """Return a 204 telling HTMX to navigate the window to `login_url`."""
+        hx_redirect = HttpResponse(status=204)
+        hx_redirect["HX-Redirect"] = self._login_url_with_next(request, login_url)
+        patch_vary_headers(hx_redirect, ["HX-Request"])
+        return hx_redirect
+
+    @staticmethod
+    def _redirects_to_login(response):
+        """Return whether `response` sends the client to the login page."""
+        location = response.headers.get("Location")
+        if not location or not 300 <= response.status_code < 400:
+            return False
+        login_path = urlsplit(resolve_url(settings.LOGIN_URL)).path
+        return urlsplit(location).path == login_path
+
+    @staticmethod
+    def _login_url_with_next(request, login_url):
+        """Return `login_url` with `next` pointing at the page the user was viewing rather than the HTMX endpoint."""
+        browser_url = request.headers.get("HX-Current-URL")
+        allowed_hosts = {request.get_host()}
+        require_https = request.is_secure()
+        if not (
+            browser_url and url_has_allowed_host_and_scheme(browser_url, allowed_hosts, require_https=require_https)
+        ):
+            return login_url
+
+        # `next` must be site-relative, so drop the scheme and host HTMX sent.
+        browser_parts = urlsplit(browser_url)
+        next_url = urlunsplit(("", "", browser_parts.path, browser_parts.query, ""))
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts, require_https=require_https):
+            return login_url
+
+        # Replace only `next`, so any query string already on `LOGIN_URL` survives.
+        scheme, netloc, path, query, fragment = urlsplit(login_url)
+        querystring = QueryDict(query, mutable=True)
+        querystring[REDIRECT_FIELD_NAME] = next_url
+        return urlunsplit((scheme, netloc, path, querystring.urlencode(safe="/"), fragment))
 
 
 class RequestCacheMiddleware:

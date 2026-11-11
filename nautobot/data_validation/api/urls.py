@@ -1,6 +1,6 @@
 """Django API urlpatterns declaration for data_validation app."""
 
-from nautobot.apps.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 from nautobot.data_validation.api import views
 
 router = OrderedDefaultRouter(view_name="Data Validation Engine")

@@ -30,7 +30,7 @@ from nautobot.core.jobs.customfields import (
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.utils.requests import get_filterable_params_from_filter_params, mock_wsgi_request
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -130,6 +130,17 @@ class GitRepositoryDryRun(Job):
             self.logger.info(f"Repository dry run completed in {job_result.duration}")
 
 
+# API tokens are never imported or exported, as either would write their keys to a file that other users may read.
+IMPORT_EXPORT_EXCLUDED_MODELS = ("users.token",)
+
+
+def _require_import_export_support(logger, content_type):
+    """Abort if the content-type is one that `ImportObjects` and `ExportObjectList` refuse to handle."""
+    if f"{content_type.app_label}.{content_type.model}" in IMPORT_EXPORT_EXCLUDED_MODELS:
+        logger.error("%s.%s objects do not support import/export", content_type.app_label, content_type.model)
+        raise RunJobTaskFailed("The requested content-type does not support import/export")
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects via CSV or ExportTemplate."""
 
@@ -188,6 +199,7 @@ class ExportObjectList(Job):
         return {}
 
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
+        _require_import_export_support(self.logger, content_type)
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
@@ -299,11 +311,13 @@ class ImportObjects(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def _perform_atomic_operation(self, data, serializer_class, queryset):
+    def _perform_atomic_operation(self, data, serializer_class, queryset, serializer_context):
         new_objs = []
         with contextlib.suppress(AbortTransaction):
             with transaction.atomic():
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
                 if validation_failed:
                     raise AbortTransaction
                 return new_objs, validation_failed
@@ -311,11 +325,11 @@ class ImportObjects(Job):
         self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 
-    def _perform_operation(self, data, serializer_class, queryset):
+    def _perform_operation(self, data, serializer_class, queryset, serializer_context):
         new_objs = []
         validation_failed = False
         for row, entry in enumerate(data, start=1):
-            serializer = serializer_class(data=entry, context={"request": None})
+            serializer = serializer_class(data=entry, context=serializer_context)
             if serializer.is_valid():
                 try:
                     with transaction.atomic():
@@ -339,6 +353,7 @@ class ImportObjects(Job):
         return new_objs, validation_failed
 
     def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
+        _require_import_export_support(self.logger, content_type)
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -371,17 +386,28 @@ class ImportObjects(Job):
         else:
             csv_bytes = BytesIO(csv_data.encode("utf-8"))
 
+        # A request carrying the user, so that the related objects a row references are looked up only among those
+        # the user may view (see `WritableSerializerMixin.to_internal_value()`).
+        # A GET request, as the import has always been processed, so that opt-in fields such as `relationships` are
+        # not newly accepted from the data; see `OptInFieldsMixin`.
+        request = mock_wsgi_request(user=self.user, SERVER_NAME="import_objects")
+        serializer_context = {"request": request}
+
         new_objs = []
         try:
             data = NautobotCSVParser().parse(
                 stream=csv_bytes,
-                parser_context={"request": None, "serializer_class": serializer_class},
+                parser_context={"request": request, "serializer_class": serializer_class},
             )
             self.logger.info("Processing %d rows of data", len(data))
             if roll_back_if_error:
-                new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_atomic_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
             else:
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+                new_objs, validation_failed = self._perform_operation(
+                    data, serializer_class, queryset, serializer_context
+                )
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)

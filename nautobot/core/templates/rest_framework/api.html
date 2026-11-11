@@ -108,14 +108,13 @@
                 {% endif %}
 
                 <div class="request-info pt-4" aria-label="{% trans "request info" %}">
-                    <pre class="language-json"><b>{{ request.method }}</b> {{ request.get_full_path }}</pre>
+                    <pre><b>{{ request.method }}</b> {{ request.get_full_path }}</pre>
                 </div>
 
                 <div class="response-info" aria-label="{% trans "response info" %}">
-                    <pre class="language-json"><span class="meta nocode"><b>HTTP {{ response.status_code }} {{ response.status_text }}</b>{% for key, val in response_headers|items %}
-                        <b>{{ key }}:</b> <span class="lit">{{ val|urlize }}</span>{% endfor %}
-                        
-                    </span>{{ content|urlize }}</pre>
+                    <pre><b>HTTP {{ response.status_code }} {{ response.status_text }}</b>{% for key, val in response_headers|items %}
+<b>{{ key }}:</b> <span class="lit">{{ val }}</span>{% endfor %}</pre>
+                    <pre class="language-json">{{ content }}</pre>
                 </div>
             </div>
         {% endblock %}
@@ -130,34 +129,42 @@
     {% block script %}
         {% include 'inc/javascript.html' %}
         <script src="{% static "rest_framework/js/ajax-form.js" %}"></script>
-        <script src="{% static "rest_framework/js/default.js" %}"></script>
         <script>
-            function linkifyHighlightedUrls() {
+            function linkifyHighlightedUrls(el) {
                 // Find all hljs-string spans
-                const stringSpans = document.querySelectorAll('span.hljs-string');
+                const stringSpans = el.querySelectorAll('span.hljs-string');
 
                 stringSpans.forEach(span => {
                     const text = span.textContent;
 
-                    // Check if the string starts with "http
+                    // Check if the string is a quoted HTTP or HTTPS URL
                     if (text.match(/^["']https?:\/\/.*["']$/)) {
-                        // Extract the URL (remove quotes)
                         const url = text.slice(1, -1); // Remove opening and closing quotes
+                        try {
+                            const parsedUrl = new URL(url, window.location.origin);
+                            if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+                                // Create a clickable link while preserving the syntax highlighting
+                                const link = document.createElement('a');
+                                link.href = parsedUrl.href;
+                                link.className = 'hljs-string'; // Maintain the syntax highlighting class
+                                link.textContent = text; // Keep the original text with quotes
 
-                        // Create a clickable link while preserving the syntax highlighting
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.className = 'hljs-string'; // Maintain the syntax highlighting class
-                        link.textContent = text; // Keep the original text with quotes
-
-                        // Replace the span with the link
-                        span.parentNode.replaceChild(link, span);
+                                // Replace the span with the link
+                                span.parentNode.replaceChild(link, span);
+                            }
+                        } catch (e) {
+                            ;
+                        }
                     }
                 });
             }
             $(document).ready(function() {
                 $('form').ajaxForm();
-                linkifyHighlightedUrls();
+            });
+            hljs.addPlugin({
+                'after:highlightElement': ({ el, result, text }) => {
+                    linkifyHighlightedUrls(el);
+                }
             });
         </script>
     {% endblock script %}

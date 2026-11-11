@@ -6,7 +6,7 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -15,6 +15,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.core import settings
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
     CableStatusChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -751,6 +752,22 @@ class CableLengthTestCase(TestCase):
         cable.save()
         cable.full_clean()
 
+    def test_cable_length_unit_miles(self):
+        """Miles is an offered CableLengthUnitChoices value, so saving a cable in miles must work."""
+        interfacestatus = Status.objects.get_for_model(Interface).first()
+        interface5 = Interface.objects.create(device=self.device1, name="eth2", status=interfacestatus)
+        interface6 = Interface.objects.create(device=self.device2, name="eth2", status=interfacestatus)
+        cable = Cable(
+            termination_a=interface5,
+            termination_b=interface6,
+            length_unit=CableLengthUnitChoices.UNIT_MILE,
+            length=2,
+            status=self.status,
+        )
+        cable.validated_save()
+        cable.refresh_from_db()
+        self.assertEqual(cable._abs_length, Decimal("3218.6880"))
+
 
 class InterfaceTemplateCustomFieldTestCase(TestCase):
     def test_instantiate_model(self):
@@ -1412,12 +1429,32 @@ class LocationTypeTestCase(TestCase):
         location_type = LocationType.objects.get(name="Campus")
         device_ct = ContentType.objects.get_for_model(Device)
 
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
             location_type.content_types.remove(device_ct)
-        self.assertIn(
-            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
-            str(cm.exception),
-        )
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
+            device_ct.location_types.remove(location_type)
+
+    def test_clearing_content_type(self):
+        """Validation check to prevent clearing in-use content types from a LocationType."""
+        location_type = LocationType.objects.get(name="Campus")
+
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the content type"), transaction.atomic():
+            location_type.content_types.clear()
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the location type"), transaction.atomic():
+            ContentType.objects.get_for_model(Device).location_types.clear()
+
+    def test_clearing_content_type_handles_invalid_types(self):
+        location_type = LocationType.objects.create(name="wrong content types")
+
+        # Not a locatable model
+        location_type.content_types.add(ContentType.objects.get_for_model(Status))
+        # Not a resolvable model
+        location_type.content_types.add(ContentType.objects.create(app_label="dcim", model="nosuchmodel"))
+        # Locatable but lacking an actual `location` database field (it uses LocationToLocationsQuerySetMixin)
+        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+
+        # Should succeed despite the above
+        location_type.content_types.clear()
 
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
@@ -1932,19 +1969,20 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
-        self.location_type_2.content_types.clear()
+        location_type = LocationType.objects.create(name="Sub-floor", parent=self.location_type_2)
+        location = Location.objects.create(
+            name="Sub-floor Leaf", status=self.device_status, location_type=location_type, parent=self.location_2
+        )
         device = Device(
             name="Device 3",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_2,
+            location=location,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
-        self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
-        )
+        self.assertIn(f'Devices may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_device_cluster_location_mismatch(self):
         with self.subTest("Invalid cluster assignment at creation time"):
@@ -4373,6 +4411,85 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # A PowerPort on a single-connector cable type must not raise the breakout-eligibility error.
         cable.add_termination(self.power_port1, cable_end="A", connector=1)
         self.assertEqual(cable.terminations.count(), 1)
+
+    def test_get_cable_peer_symmetric_multi_connector_follows_lane_mapping(self):
+        """On a polarity-shuffled 2x2 cable, get_cable_peer() returns the peer that the lane mapping assigns.
+
+        The 2x2 cable type is multi-connector but not a breakout.
+        """
+        shuffle_type = CableType(
+            name="Peer resolution polarity-shuffled 2x2",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=2,
+            mapping=[
+                {"label": "1", "a_position": 1, "b_position": 1, "a_connector": 1, "b_connector": 2},
+                {"label": "2", "a_position": 1, "b_position": 1, "a_connector": 2, "b_connector": 1},
+            ],
+        )
+        shuffle_type.validated_save()
+        self.assertFalse(shuffle_type.is_breakout)
+        self.assertTrue(shuffle_type.is_multi_connector)
+
+        interface_status = self.interface1.status
+        a1 = Interface.objects.create(device=self.device1, name="shuffle-a1", status=interface_status)
+        a2 = Interface.objects.create(device=self.device1, name="shuffle-a2", status=interface_status)
+        b1 = Interface.objects.create(device=self.device2, name="shuffle-b1", status=interface_status)
+        b2 = Interface.objects.create(device=self.device2, name="shuffle-b2", status=interface_status)
+
+        # Cable.save() places termination_a/b on the connectors in mapping[0]: A1 and B2.
+        cable = Cable(termination_a=a1, termination_b=b2, cable_type=shuffle_type, status=self.status)
+        cable.save()
+        cable.add_termination(a2, "A", connector=2)
+        cable.add_termination(b1, "B", connector=1)
+
+        expected_peers = {a1: b2, a2: b1, b1: a2, b2: a1}
+        for termination, expected_peer in expected_peers.items():
+            with self.subTest(termination=termination.name):
+                termination.refresh_from_db()
+                self.assertEqual(termination.get_cable_peer(), expected_peer)
+                self.assertEqual(termination.get_cable_peers(), [expected_peer])
+                # Each connector maps to exactly one far connector, so breakout_fans_out() returns False.
+                self.assertFalse(termination.breakout_fans_out())
+
+        # The CablePath traced from each termination ends at the peer the lane mapping assigns and is not split.
+        for origin, expected_destination in expected_peers.items():
+            with self.subTest(origin=origin.name):
+                path = CablePath.objects.get(
+                    origin_type=ContentType.objects.get_for_model(Interface), origin_id=origin.pk
+                )
+                self.assertEqual(path.destination, expected_destination)
+                self.assertFalse(path.is_split)
+
+    def test_get_cable_peers_symmetric_identity_multi_connector_one_peer_per_connector(self):
+        """On a 3x3 identity-mapped cable (not a breakout), get_cable_peers() returns one peer per connector."""
+        trunk_type = CableType(name="Peer resolution identity 3x3", a_connectors=3, b_connectors=3, total_lanes=3)
+        trunk_type.validated_save()
+        self.assertFalse(trunk_type.is_breakout)
+
+        rears_a = [
+            RearPort.objects.create(device=self.device1, name=f"identity-a{i}", type="lc", positions=1)
+            for i in (1, 2, 3)
+        ]
+        rears_b = [
+            RearPort.objects.create(device=self.device2, name=f"identity-b{i}", type="lc", positions=1)
+            for i in (1, 2, 3)
+        ]
+        cable = Cable(termination_a=rears_a[0], termination_b=rears_b[0], cable_type=trunk_type, status=self.status)
+        cable.save()
+        for connector in (2, 3):
+            cable.add_termination(rears_a[connector - 1], "A", connector=connector)
+            cable.add_termination(rears_b[connector - 1], "B", connector=connector)
+
+        for connector, (rear_a, rear_b) in enumerate(zip(rears_a, rears_b), start=1):
+            with self.subTest(connector=connector):
+                rear_a.refresh_from_db()
+                rear_b.refresh_from_db()
+                self.assertEqual(rear_a.get_cable_peers(), [rear_b])
+                self.assertEqual(rear_b.get_cable_peers(), [rear_a])
+                self.assertEqual(rear_a.get_cable_peer(peer_connector=connector), rear_b)
+                # Requesting a B-side connector that this lane does not map to returns None.
+                self.assertIsNone(rear_a.get_cable_peer(peer_connector=connector % 3 + 1))
 
 
 class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):

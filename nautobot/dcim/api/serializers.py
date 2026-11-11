@@ -9,6 +9,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from nautobot.core.api import (
+    BaseModelSerializer,
     ChoiceField,
     ContentTypeField,
     NautobotModelSerializer,
@@ -19,9 +20,9 @@ from nautobot.core.api import (
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
-    get_serializer_for_model,
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
+    serialize_object_for_user,
     user_can_view_object,
 )
 from nautobot.core.models.utils import get_all_concrete_models
@@ -602,6 +603,27 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 raise ValidationError(
                     {
                         "installed_device": f"Cannot install device; parent bay is already taken ({parent_bay.installed_device})"
+                    }
+                )
+
+            # Child devices must be assigned to the same location/rack as the parent device (mirrors the
+            # PopulateDeviceBayForm queryset used by the UI).
+            if "location" in attrs or self.instance is None:
+                device_location = attrs.get("location")
+            else:
+                device_location = self.instance.location
+            if "rack" in attrs or self.instance is None:
+                device_rack = attrs.get("rack")
+            else:
+                device_rack = self.instance.rack
+            if device_location != parent_bay.device.location or device_rack != parent_bay.device.rack:
+                raise ValidationError(
+                    {
+                        "parent_bay": (
+                            "Cannot install device; child devices must first be assigned to the location/rack "
+                            f"of the parent device (location: {parent_bay.device.location}, "
+                            f"rack: {parent_bay.device.rack})"
+                        )
                     }
                 )
 
@@ -1241,7 +1263,7 @@ class WritableCableSerializer(CableSerializer):
     terminations = CableTerminationsPayloadField(required=False)
 
 
-class TracedCableSerializer(serializers.ModelSerializer):
+class TracedCableSerializer(BaseModelSerializer):
     """
     Used only while tracing a cable path.
     """
@@ -1302,12 +1324,11 @@ class CablePathSerializer(serializers.ModelSerializer):
         )
     )
     def get_path(self, obj):
-        ret = []
-        for node in obj.get_path():
-            serializer = get_serializer_for_model(node)
-            context = {"request": self.context["request"]}
-            ret.append(serializer(node, context=context).data)
-        return ret
+        # Path nodes are loaded by `CablePath.get_path()` from each model's default manager with no user
+        # context, so each node must be permission-checked before being serialized in full. Note this applies
+        # regardless of `?depth`, unlike the `origin`/`destination` fields above.
+        request = self.context["request"]
+        return [serialize_object_for_user(node, request) for node in obj.get_path()]
 
 
 #

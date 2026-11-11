@@ -1,6 +1,6 @@
 """Custom choices for the vpn models."""
 
-from nautobot.apps.choices import ChoiceSet
+from nautobot.core.choices import ChoiceSet
 
 
 class VPNTunnelStatusChoices(ChoiceSet):

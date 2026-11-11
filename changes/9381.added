@@ -1,1 +1,0 @@
-Added a `/api/extras/saved-views/<uuid>/set-default/` REST API endpoint, allowing a user to set (`POST`) or clear (`DELETE`) their own default Saved View without requiring any Saved View permissions.

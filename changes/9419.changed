@@ -1,1 +1,0 @@
-Changed Nautobot's `MultiValue<type>Filter`, `MultipleChoiceFilter`, `ModelMultipleChoiceFilter`, and derived filter classes to automatically derive their `distinct` flag from the filter's field path, rather than always defaulting to `distinct=True`.

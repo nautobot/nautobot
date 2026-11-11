@@ -1,22 +1,38 @@
+from types import SimpleNamespace
+from unittest import mock
 import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.test import RequestFactory
 from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.request import Request
 
+from nautobot.core.api.fields import SerializedPKRelatedField
+from nautobot.core.api.serializers import WritableNestedSerializer
 from nautobot.core.authentication import assign_permissions_to_user
+from nautobot.core.models.querysets import (
+    _is_natural_key_lookup,
+    get_related_paths,
+    restrict_queryset,
+    restrict_related_lookups,
+)
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.core.utils import lookup
-from nautobot.dcim.models import Location, LocationType
-from nautobot.extras.models import ObjectChange, Status
+from nautobot.dcim.models import Interface, Location, LocationType, Rack, RackGroup, RackReservation
+from nautobot.extras.models import Note, ObjectChange, Status
 from nautobot.ipam.models import Namespace, Prefix
+from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission, Token
+from nautobot.vpn.models import VPNTunnelEndpoint
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -292,6 +308,79 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertFalse(sso_auth_enabled(tuple(TEST_AUTHENTICATION_BACKENDS)))
 
 
+class RelatedObjectRestrictionTestCase(TestCase):
+    """The related-object fields an App may build on restrict the objects they accept to those the user may view."""
+
+    class TenantNestedSerializer(WritableNestedSerializer):
+        class Meta:
+            model = Tenant
+            fields = ["id"]
+
+    class TenantsSerializer(serializers.Serializer):
+        tenants = SerializedPKRelatedField(serializer=serializers.Serializer, queryset=Tenant.objects.all(), many=True)
+
+    def setUp(self):
+        super().setUp()
+        self.visible_tenant = Tenant.objects.create(name="Visible Tenant")
+        self.hidden_tenant = Tenant.objects.create(name="Hidden Tenant")
+        obj_perm = ObjectPermission.objects.create(
+            name="Tenant permission", actions=["view"], constraints={"name": "Visible Tenant"}
+        )
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Tenant))
+        self.request = RequestFactory().get("/")
+        self.request.user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+
+    def test_writable_nested_serializer(self):
+        serializer = self.TenantNestedSerializer(context={"request": self.request})
+        self.assertEqual(serializer.to_internal_value(self.visible_tenant.pk), self.visible_tenant)
+        with self.assertRaises(ValidationError):
+            serializer.to_internal_value(self.hidden_tenant.pk)
+
+    def test_writable_nested_serializer_lookups(self):
+        serializer = self.TenantNestedSerializer(context={"request": self.request})
+        self.assertEqual(serializer.to_internal_value({"name": "Visible Tenant"}), self.visible_tenant)
+        with self.assertRaisesRegex(ValidationError, "is not a permitted lookup"):
+            serializer.to_internal_value({"name": {"startswith": "Visible"}})
+
+    def test_serialized_pk_related_field(self):
+        context = {"request": self.request}
+        serializer = self.TenantsSerializer(data={"tenants": [self.visible_tenant.pk]}, context=context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer = self.TenantsSerializer(data={"tenants": [self.hidden_tenant.pk]}, context=context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("tenants", serializer.errors)
+
+    def test_users_and_groups_are_unrestricted_for_a_user_who_may_view_them_all(self):
+        """No filter at all is added, rather than one that happens to match everything."""
+        superuser = User.objects.create(username="restriction-superuser", is_superuser=True)
+        for queryset in (User.objects.all(), Group.objects.all()):
+            with self.subTest(model=queryset.model):
+                self.assertIs(restrict_queryset(queryset, superuser), queryset)
+
+    def test_manager_is_restricted(self):
+        """A manager, as a serializer may pass for its model, is restricted as its queryset would be."""
+        for manager in (Tenant.objects, User.objects):
+            with self.subTest(model=manager.model):
+                self.assertQuerySetEqual(
+                    restrict_queryset(manager, self.user), restrict_queryset(manager.all(), self.user), ordered=False
+                )
+        self.assertNotIn(self.hidden_tenant, restrict_queryset(Tenant.objects, self.user))
+
+    def test_user_may_view_but_not_change_themselves(self):
+        """The exception for a user's own record is for viewing it only."""
+        other_user = User.objects.create(username="other-user")
+        self.assertQuerySetEqual(
+            restrict_queryset(User.objects.filter(pk__in=[self.user.pk, other_user.pk]), self.user), [self.user]
+        )
+        self.assertFalse(restrict_queryset(User.objects.filter(pk=self.user.pk), self.user, "change").exists())
+
+    def test_anonymous_user_may_view_no_users_or_groups(self):
+        for queryset in (User.objects.all(), Group.objects.all()):
+            with self.subTest(model=queryset.model):
+                self.assertFalse(restrict_queryset(queryset, AnonymousUser()).exists())
+
+
 class ObjectPermissionAPIViewTestCase(TestCase):
     client_class = NautobotTestClient
 
@@ -546,6 +635,158 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertEqual(response.status_code, 204)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_user_permission_constraints(self):
+        """A related user, though `users.User` has no `restrict()`, can be referenced only if it may be viewed."""
+        self.location_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        rack = Rack.objects.create(
+            name="Permission Rack", location=self.locations[0], status=Status.objects.get_for_model(Rack).first()
+        )
+        other_user = User.objects.create(username="other-user")
+        for model, actions in ((RackReservation, ["add"]), (Rack, ["view"])):
+            obj_perm = ObjectPermission.objects.create(name=f"{model._meta.model_name} permission", actions=actions)
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(model))
+        url = reverse("dcim-api:rackreservation-list")
+
+        # Attempt to reference a user that the requesting user may not view
+        data = {"rack": rack.pk, "units": [1], "user": other_user.pk, "description": "Permission Reservation"}
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
+        self.assertFalse(RackReservation.objects.filter(description="Permission Reservation").exists())
+
+        # Reference themselves, which a user may always do
+        data["user"] = self.user.pk
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RackReservation.objects.get(description="Permission Reservation").user, self.user)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_group_permission_constraints(self):
+        """A related group, though `auth.Group` has no `restrict()`, can be referenced only if it may be viewed."""
+        # `create_user()` sets an unusable password, rather than a blank one that would fail the update's validation
+        other_user = User.objects.create_user(username="other-user")
+        visible_group = Group.objects.create(name="Visible Group")
+        hidden_group = Group.objects.create(name="Hidden Group")
+        for model, actions, constraints in (
+            (User, ["change"], None),
+            (Group, ["view"], {"name": visible_group.name}),
+        ):
+            obj_perm = ObjectPermission.objects.create(
+                name=f"{model._meta.model_name} permission", actions=actions, constraints=constraints
+            )
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(model))
+        url = reverse("users-api:user-detail", kwargs={"pk": other_user.pk})
+
+        # Attempt to reference a group that the requesting user may not view
+        response = self.client.patch(url, {"groups": [hidden_group.pk]}, format="json", **self.header)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Related object not found using the provided attribute", response.content)
+        self.assertFalse(other_user.groups.exists())
+
+        # Reference a group that the requesting user may view
+        response = self.client.patch(url, {"groups": [visible_group.pk]}, format="json", **self.header)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertQuerySetEqual(other_user.groups.all(), [visible_group])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_content_types_are_not_restricted(self):
+        """`ContentType` has no `restrict()` either, but any user may view content types, so may reference them."""
+        self.assertQuerySetEqual(
+            restrict_queryset(ContentType.objects.all(), self.user), ContentType.objects.all(), ordered=False
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_note_on_unviewable_user(self):
+        """A note may be assigned only to an object the user may view, a user included."""
+        other_user = User.objects.create(username="other-user")
+        obj_perm = ObjectPermission.objects.create(name="Note permission", actions=["add"])
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Note))
+        url = reverse("extras-api:note-list")
+
+        def post_note(assigned_object_id):
+            data = {"note": "A note", "assigned_object_type": "users.user", "assigned_object_id": assigned_object_id}
+            return self.client.post(url, data, format="json", **self.header)
+
+        # Attempt to assign a note to a user that the requesting user may not view, which looks like a nonexistent one
+        response = post_note(other_user.pk)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), post_note(uuid.uuid4()).json())
+        self.assertFalse(Note.objects.filter(assigned_object_id=other_user.pk).exists())
+
+        # Assign a note to themselves, which a user may always reference
+        response = post_note(self.user.pk)
+        self.assertEqual(response.status_code, 201, response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_related_object_lookup_restrictions(self):
+        """A related object may be looked up only by exact matches on fields the user may see.
+
+        Lookups such as `__startswith`, reverse relations, and sensitive fields are refused outright, as they could
+        otherwise reveal data such as another user's API token one character at a time, by whether the related
+        object is found. A lookup through another related object only matches through objects the user may view,
+        unless it is part of the natural key that identifies the object.
+        """
+        self.location_type.content_types.add(
+            ContentType.objects.get_for_model(Rack), ContentType.objects.get_for_model(RackGroup)
+        )
+        rack_group = RackGroup.objects.create(
+            name="Hidden Rack Group", location=self.locations[0], description="Hidden description"
+        )
+        rack = Rack.objects.create(
+            name="Lookup Rack",
+            location=self.locations[0],
+            rack_group=rack_group,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        other_user = User.objects.create_user(username="other-user")
+        token = Token.objects.create(user=other_user)
+        RackReservation.objects.create(rack=rack, units=[10], user=other_user, description="Other Reservation")
+        for model, actions in ((RackReservation, ["add"]), (Rack, ["view"])):
+            obj_perm = ObjectPermission.objects.create(name=f"{model._meta.model_name} permission", actions=actions)
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(model))
+        url = reverse("dcim-api:rackreservation-list")
+
+        def reserve(rack_lookup, unit):
+            data = {"rack": rack_lookup, "units": [unit], "user": self.user.pk, "description": "Lookup Reservation"}
+            return self.client.post(url, data, format="json", **self.header)
+
+        # Nested dicts and `__`-separated keys are equivalent spellings of the same lookups; both are covered.
+        for _lookup in (
+            {
+                "pk": str(rack.pk),
+                "rack_reservations": {"user": {"tokens": {"key": {"startswith": token.key[:2]}}}},
+            },
+            {"pk": str(rack.pk), "rack_reservations__user__tokens__key__startswith": "zz"},
+            {"name": {"startswith": "Lookup"}},
+            {"pk": str(rack.pk), "rack_reservations": {"description": "Other Reservation"}},
+            {"pk": str(rack.pk), "rack_reservations": {"user": {"password": other_user.password}}},
+        ):
+            with self.subTest(lookup=_lookup):
+                response = reserve(_lookup, 1)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn(b"is not a permitted lookup", response.content)
+
+        # A lookup through an unviewable rack group can't find the rack, whether or not the value matches
+        response = reserve({"name": rack.name, "rack_group": {"description": "Hidden description"}}, 1)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Related object not found", response.content)
+
+        # The rack group's natural key, by which exports identify the rack, still finds it
+        response = reserve({"name": rack.name, "rack_group": {"name": rack_group.name}}, 2)
+        self.assertEqual(response.status_code, 201, response.content)
+
+        # As does the same lookup through the rack group, once the user may view it
+        obj_perm = ObjectPermission.objects.create(name="rackgroup permission", actions=["view"])
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(RackGroup))
+        response = reserve({"name": rack.name, "rack_group": {"description": "Hidden description"}}, 3)
+        self.assertEqual(response.status_code, 201, response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_related_object_permission_constraints_on_get_requests(self):
         """
         Users who have permission to view Location objects, but not LocationType and Status objects
@@ -725,3 +966,80 @@ class ObjectPermissionAPIViewTestCase(TestCase):
             response_user2.data["count"], ObjectChange.objects.filter(Q(user=obj_user2) | Q(action="delete")).count()
         )
         self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
+
+
+class RestrictRelatedLookupsTestCase(TestCase):
+    """`restrict_related_lookups()` adds as little cost as it can, as it runs for every related object an import names."""
+
+    def setUp(self):
+        super().setUp()
+        self.superuser = User.objects.create(username="lookup-superuser", is_superuser=True)
+
+    def test_simple_lookups_do_not_determine_the_natural_key(self):
+        request = SimpleNamespace(user=self.user)
+        with mock.patch.object(Rack, "csv_natural_key_field_lookups") as natural_key_lookups:
+            restrict_related_lookups(Rack.objects.all(), {"pk": uuid.uuid4(), "name": "Rack"}, request)
+        natural_key_lookups.assert_not_called()
+
+    def test_natural_key_is_determined_once_per_request(self):
+        request = SimpleNamespace(user=self.user)
+        with mock.patch.object(
+            Rack, "csv_natural_key_field_lookups", return_value=["name", "rack_group__name"]
+        ) as natural_key_lookups:
+            for _ in range(3):
+                restrict_related_lookups(Rack.objects.all(), {"rack_group__description": "Group"}, request)
+        natural_key_lookups.assert_called_once()
+
+    def test_no_restriction_is_added_for_a_user_who_may_view_everything(self):
+        queryset = Rack.objects.all()
+        request = SimpleNamespace(user=self.superuser)
+        self.assertIs(restrict_related_lookups(queryset, {"rack_group__description": "Group"}, request), queryset)
+
+    def test_natural_key_is_remembered_on_a_drf_request(self):
+        """The REST API passes a DRF `Request`, which proxies attributes to the Django request it wraps."""
+        request = Request(RequestFactory().get("/"))
+        request.user = self.user
+        with mock.patch.object(
+            Rack, "csv_natural_key_field_lookups", return_value=["name", "rack_group__name"]
+        ) as natural_key_lookups:
+            for _ in range(2):
+                restrict_related_lookups(Rack.objects.all(), {"rack_group__description": "Group"}, request)
+        natural_key_lookups.assert_called_once()
+
+
+class RelatedLookupRulesTestCase(TestCase):
+    """The shapes of lookup that may identify a related object, beyond those `test_related_object_lookup_restrictions`
+    covers through the REST API."""
+
+    def test_permitted_lookups(self):
+        """Lookups that identify an object without revealing anything, which must keep working."""
+        for model, lookup_, related_paths in (
+            (Rack, "pk", []),
+            (Rack, "name", []),
+            (Rack, "location_id", []),  # A foreign key's column name
+            (Rack, "rack_group__pk", [("rack_group", RackGroup)]),
+            (VPNTunnelEndpoint, "source_interface__name", [("source_interface", Interface)]),  # A one-to-one
+        ):
+            with self.subTest(model=model, lookup=lookup_):
+                self.assertEqual(get_related_paths(model, lookup_), related_paths)
+
+    def test_natural_key_of_any_depth(self):
+        """A natural key through a tree names as many ancestors as the tree is deep, however deep that is."""
+        request = SimpleNamespace(user=self.user)
+        deep_lookup = "location__" + "parent__" * 6 + "name"
+        self.assertTrue(_is_natural_key_lookup(RackGroup, deep_lookup, request))
+        self.assertTrue(_is_natural_key_lookup(Location, "parent__" * 6 + "name", request))
+        self.assertFalse(_is_natural_key_lookup(RackGroup, "location__parent__description", request))
+
+    def test_null_relation_is_not_restricted(self):
+        """A lookup through a related object that is null passes through no object, so reveals nothing."""
+        location_type = LocationType.objects.get(name="Campus")
+        location_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        rack = Rack.objects.create(
+            name="Groupless Rack",
+            location=Location.objects.filter(location_type=location_type).first(),
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        params = {"name": rack.name, "rack_group__description": None}
+        queryset = restrict_related_lookups(Rack.objects.all(), params, SimpleNamespace(user=self.user))
+        self.assertEqual(queryset.get(**params), rack)

@@ -6,7 +6,7 @@ authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
 ]
 license = {text = "Apache-2.0"}
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 
 [tool.poetry]
 packages = [
@@ -19,7 +19,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = [

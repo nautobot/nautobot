@@ -170,6 +170,7 @@ class TokenAdminForm(forms.ModelForm):
 @admin.register(Token)
 class TokenAdmin(NautobotModelAdmin):
     form = TokenAdminForm
+    # TODO 4.0: drop "key" from the change list?
     list_display = ["key", "user", "created", "expires", "write_enabled", "description"]
 
 

@@ -62,6 +62,14 @@ This behavior applies to foreign key fields, one-to-one fields, [generic relatio
 !!! note
     Related objects belonging to models that are not subject to object-level permissions — for example Django's built-in `Group` and `ContentType` models — are not downgraded, as there is no object-level `view` permission to enforce for them.
 
+### Cable Trace and Path Endpoints
+
+A few endpoints return related objects that are reached by traversing a cable path rather than by following a serializer field. These are the `trace` action, available on interfaces, console ports, console server ports, power ports, power outlets, power feeds, and circuit terminations; and the `paths` action, available on the pass-through front ports and rear ports.
+
+Every object returned by these endpoints is serialized according to the user's permission to view it, including each `Cable` along the path: objects the user is permitted to view are serialized in full, and objects the user is not permitted to view are restricted to the same brief representation plus `display` described above. Unlike the rest of the API, this applies regardless of the `?depth` query parameter.
+
+Objects the user cannot view are always restricted rather than omitted, so neither the number of segments returned by `trace` nor the length of the `path` returned by `paths` depends on the requesting user's permissions. This means the shape of a cable path never itself reveals whether objects were hidden, and clients can continue to rely on the position of each element within a segment.
+
 ## Related Objects on Write
 
 When creating (`POST`) or updating (`PATCH`/`PUT`) an object, any related object(s) referenced in the request body, whether single-relation or many-relation, must be object(s) that the user has permission to view. This applies whether the related object is referenced by primary key, by URL, or by a dictionary of attributes, and it honors object-level constraints — a user may only reference related objects that fall within their view constraints.

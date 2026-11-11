@@ -1,6 +1,6 @@
 """Django API urlpatterns declaration for the vpn models."""
 
-from nautobot.apps.api import OrderedDefaultRouter
+from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
 

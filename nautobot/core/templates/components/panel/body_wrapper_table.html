@@ -1,4 +1,4 @@
-<div class="collapse show" {% if body_id %} id="{{ body_id }}"{% endif %}>
+<div class="collapse{% if not collapsed %} show{% endif %}" {% if body_id %} id="{{ body_id }}"{% endif %}>
     <div class="table-responsive">
         {{ body_content }}
     </div>

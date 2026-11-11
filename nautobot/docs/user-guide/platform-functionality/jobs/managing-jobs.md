@@ -2,14 +2,14 @@
 
 _A guide for administrators and power users who need to enable, configure, or retire Jobs after they've been installed._
 
-From this point forward we assume the Job *code* is already present in Nautobot.  
-The sections below walk through the operational tasks you perform **after** installation—enabling or hiding a job, overriding its metadata, steering it to Celery or Kubernetes queues, and eventually deleting or archiving the record.  
+From this point forward we assume the Job _code_ is already present in Nautobot.
+The sections below walk through the operational tasks you perform **after** installation—enabling or hiding a job, overriding its metadata, steering it to Celery or Kubernetes queues, and eventually deleting or archiving the record.
 Required permissions for each action are listed at the end of the page.
 
 !!! tip "Job record vs Job class"
     A **Job class** is the Python code on disk; a **Job record** is the database row that stores its metadata and enabled state.
 
-    Editing code updates the class immediately, but the record keeps the **previous values** until you refresh it (e.g., with `nautobot-server post_upgrade` or a Git repo resync).  
+    Editing code updates the class immediately, but the record keeps the **previous values** until you refresh it (e.g., with `nautobot-server post_upgrade` or a Git repo resync).
     Conversely, overriding a field in the record never changes the source code—clear the override flag to revert to whatever the class defines.
 
 ## Enabling and disabling Jobs
@@ -29,9 +29,9 @@ To enable or disable a Job:
 
 ## Overriding Job metadata
 
-Sometimes you need to change how a Job appears or behaves without touching its source code—for example, hiding a vendor‑specific Job from general users or increasing the timeout for a long‑running audit Job. You can accomplish this by ***overriding*** metadata attributes directly on the Job record.
+Sometimes you need to change how a Job appears or behaves without touching its source code—for example, hiding a vendor‑specific Job from general users or increasing the timeout for a long‑running audit Job. You can accomplish this by **overriding** metadata attributes directly on the Job record.
 
-### Editable attributes  
+### Editable attributes
 
 | Attribute | Purpose | Typical use‑case |
 |-----------|---------|------------------|
@@ -45,7 +45,7 @@ Sometimes you need to change how a Job appears or behaves without touching its s
 | **job_queues** | Restrict Job execution to specific Job Queues. | Route intensive Jobs to isolated or Kubernetes workers. |
 | **is_singleton** | Prevent multiple simultaneous executions. | Inventory synchronization Jobs. |
 
-### How to set or clear an override  
+### How to set or clear an override
 
 1. Navigate to **Jobs > Jobs** and select the Job.
 2. Click **Edit**.
@@ -58,7 +58,7 @@ To revert to the original Job class value, clear the override checkbox and save.
 !!! note
     Overrides only apply in the database and never update Job source code.
 
-### Best‑practice tips  
+### Best‑practice tips
 
 - **Combine edits:** If enabling a Job, also set metadata overrides (e.g., grouping) simultaneously for cleaner change history.
 - **Document changes:** Clearly document why overrides are set in the description field to help future administrators.

@@ -1058,10 +1058,10 @@ def markdownlint(context, fix=False):
     if fix:
         # Disable md044 (proper-names) only while fixing: its fixer over-applies
         # proper-name capitalization to URLs, link/image targets, icons, etc.
-        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
+        command = "pymarkdown --disable-rules md044 fix --recurse changes examples nautobot/docs *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
-    command = "pymarkdown scan --recurse nautobot/docs examples *.md"
+    command = "pymarkdown scan --recurse changes examples nautobot/docs *.md"
     run_command(context, command)
 
 
@@ -1197,10 +1197,10 @@ def tests(
     if coverage:
         append_arg = " --append" if append_coverage and not parallel else ""
         parallel_arg = " --parallel-mode" if parallel else ""
-        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli"
     else:
-        command = f"nautobot-server test {label}"
-    command += f" --config={config_file}"
+        command = "nautobot-server"
+    command += f" --config={config_file} test {label}"
     # booleans
     if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"

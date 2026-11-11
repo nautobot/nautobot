@@ -143,7 +143,7 @@ Once all steps are completed Nautobot should now have the `Continue to SSO` butt
 Keycloak admin console is reachable via `http://localhost:8087/admin/` with user `admin` and password `admin`. The below users are pre-configured within Keycloak, at this time their permissions are not directly mapped to any permissions provided by default by Nautobot. This will be a later enhancement to the local development environment.
 
 | Username           | Password    |
-+--------------------+-------------+
+|--------------------|-------------|
 | `nautobot_unpriv`  | `unpriv123` |
 | `nautobot_admin`   | `admin123`  |
 | `nautobot_auditor` | `audit123`  |

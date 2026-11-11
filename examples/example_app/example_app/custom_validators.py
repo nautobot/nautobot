@@ -1,4 +1,4 @@
-from nautobot.apps.models import CustomValidator
+from nautobot.apps.models import ComplianceError, CustomValidator, DataComplianceRule
 
 
 class LocationCustomValidator(CustomValidator):
@@ -40,4 +40,29 @@ class RelationshipAssociationCustomValidator(CustomValidator):
             )
 
 
-custom_validators = [LocationCustomValidator, RelationshipAssociationCustomValidator]
+class ModuleFamilyDescriptionComplianceRule(DataComplianceRule):
+    """Example of a DataComplianceRule that flags any ModuleFamily without a description."""
+
+    model = "dcim.modulefamily"
+
+    def audit(self):
+        if not self.context["object"].description:
+            raise ComplianceError({"description": "Module Family must have a description."})
+
+
+class ModuleSerialComplianceRule(DataComplianceRule):
+    """Example of a DataComplianceRule that flags any Module without a serial number."""
+
+    model = "dcim.module"
+
+    def audit(self):
+        if not self.context["obj"].serial:
+            raise ComplianceError({"serial": "Module must have a serial number."})
+
+
+custom_validators = [
+    LocationCustomValidator,
+    RelationshipAssociationCustomValidator,
+    ModuleFamilyDescriptionComplianceRule,
+    ModuleSerialComplianceRule,
+]

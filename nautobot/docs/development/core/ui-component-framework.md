@@ -277,6 +277,8 @@ It will generate:
 
 The Panel component serves as a base class for creating individual display panels within a Layout system. You'll rarely use it directly, but it's important to understand as the base class for the more feature-filled subclasses described below.
 
+Every panel body is collapsible via its header. Pass `collapsed=True` to any panel to have it render initially collapsed, for example to keep a verbose panel out of the way until the user asks for it.
+
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.Panel)
 
 #### Panel Examples
@@ -298,6 +300,7 @@ Panel(
     weight=200,
     section=SectionChoices.RIGHT_HALF,
     label="Optional Params Included",
+    collapsed=True,
     body_content_template_path="path/to/template/body_content_template.html",
     header_extra_content_template_path="path/to/template/header_extra_content_template.html",
     footer_content_template_path="path/to/template/footer_content_template.html",

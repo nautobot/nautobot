@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import FieldError
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
@@ -32,4 +33,16 @@ class CeleryWorkerNotRunningException(APIException):
 class FilterSetFieldNotFound(Exception):
     """
     An exception indicating that a filterset field could not be found.
+    """
+
+
+class SensitiveFieldError(FieldError):
+    """
+    An exception indicating that a field listed in `Model.sensitive_fields` was retrieved without opting in.
+
+    Deliberately derives from `FieldError` and *not* from `AttributeError`: an `AttributeError` would make
+    `hasattr(obj, field_name)` return False and `getattr(obj, field_name, "")` return the default, so generic
+    code and Django templates would silently render nothing instead of surfacing that a value was withheld.
+    `FieldError` is also the family Django raises for an unusable field reference in a query, so callers that
+    already handle user-supplied field names degrade to a skipped column or a 400 rather than a 500.
     """

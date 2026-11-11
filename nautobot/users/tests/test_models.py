@@ -1,9 +1,12 @@
+from copy import deepcopy
 from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.test.utils import override_settings
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.users.models import ObjectPermission, Token
 
@@ -28,6 +31,34 @@ class TokenTest(ModelTestCases.BaseModelTestCase):
     def test_natural_key_does_not_expose_token_key(self):
         self.assertNotEqual(self.token.key, "")
         self.assertNotIn(self.token.key, self.token.natural_key())
+
+
+class TokenRestrictTest(TestCase):
+    def setUp(self):
+        super().setUp()
+        Token.objects.create(user=User.objects.create_user(username="token-owner"))
+
+    def test_restrict_limits_every_user_to_their_own_tokens(self):
+        """No user may act on another user's Tokens through `restrict()`, whatever permissions they hold."""
+        superuser = User.objects.create_user(username="superuser", is_superuser=True)
+        self.add_permissions("users.view_token", "users.change_token", "users.delete_token")
+        exempt_user = User.objects.create_user(username="exempt-user")
+
+        for user, action, settings in (
+            (superuser, "view", {}),
+            (self.user, "view", {}),
+            (self.user, "change", {}),
+            (self.user, "delete", {}),
+            (exempt_user, "view", {"EXEMPT_VIEW_PERMISSIONS": ["*"]}),
+        ):
+            with self.subTest(user=user.username, action=action, settings=settings), override_settings(**settings):
+                own_token = Token.objects.create(user=user)
+                self.assertQuerySetEqual(Token.objects.restrict(user, action), [own_token])
+                own_token.delete()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_restrict_gives_anonymous_users_no_tokens(self):
+        self.assertFalse(Token.objects.restrict(AnonymousUser(), "view").exists())
 
 
 class UserConfigTest(ModelTestCases.BaseModelTestCase):
@@ -125,6 +156,28 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
 
         # Clear a non-existing value; should fail silently
         self.user.clear_config("invalid")
+
+    def test_config_writes_are_skipped_in_maintenance_mode(self):
+        """While MAINTENANCE_MODE is enabled the database may be read-only, so config writes must not happen."""
+        self.user.set_config("maintenance.existing", 101, commit=True)
+        self.assertEqual(
+            self.user.get_config("maintenance.existing"),
+            101,
+            "the key this test relies on was not created, so the cases below would prove nothing",
+        )
+        unchanged = deepcopy(self.user.config_data)
+
+        for description, write in (
+            ("overwrite an existing key", lambda: self.user.set_config("maintenance.existing", 999, commit=True)),
+            ("add a new key", lambda: self.user.set_config("maintenance.added", 1, commit=True)),
+            ("clear an existing key", lambda: self.user.clear_config("maintenance.existing", commit=True)),
+        ):
+            with self.subTest(description):
+                with override_settings(MAINTENANCE_MODE=True):
+                    write()
+                self.assertEqual(self.user.config_data, unchanged, "config_data was modified in memory")
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, unchanged, "config_data was written to the database")
 
 
 @override_settings(PLUGINS=["nautobot_version_control"])

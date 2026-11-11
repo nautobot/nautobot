@@ -525,6 +525,50 @@ properties:
     environment_variable: "NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL"
     type: "string"
     version_added: "2.0.0"
+  CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS:
+    additionalProperties:
+      items:
+        type: "string"
+      type: "array"
+    default: {}
+    description: >-
+      Many-to-many association models whose associated objects should not receive an automatic "update" change
+      record when an association is created or deleted. Webhooks, job hooks, and events for those association
+      changes are suppressed for the excluded objects as well.
+    details: |-
+      By default, creating or deleting a record of a many-to-many association model (such as a `VRFPrefixAssignment`)
+      records an "update" change against _both_ of the objects it associates, as described in
+      [Change Logging](../../platform-functionality/change-logging.md#many-to-many-association-changes).
+      See [Excluding Associations from Change Logging](../../platform-functionality/change-logging.md#excluding-associations-from-change-logging)
+      for the caveats of this setting.
+      When one side of an association may have thousands of related objects, such as a VRF assigned to thousands of
+      Prefixes and Devices, serializing that object for every association change can be very slow.
+
+      Each key is the `app_label.modelname` of an association model, and each value is a list of the names of its
+      foreign key fields whose related objects should be excluded. These are field names on the association model
+      itself (for example, `vrf` and `prefix` on `VRFPrefixAssignment`), not the names of the related models
+      (`ipam.vrf`, `VRF`, etc.). Only the sides that are explicitly listed are
+      excluded, so an empty list is equivalent to omitting the association model entirely. For example, to keep
+      recording VRF assignments against the VRF itself, but not against each assigned Prefix and Device, and to
+      stop recording Cloud Network to Prefix assignments against either side:
+
+      ```python
+      CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS = {
+          "ipam.vrfprefixassignment": ["prefix"],
+          "ipam.vrfdeviceassignment": ["device"],
+          "cloud.cloudnetworkprefixassignment": ["cloud_network", "prefix"],
+      }
+      ```
+
+      !!! warning
+          Excluded objects receive no change record for association changes, so no [webhooks](../../platform-functionality/webhook.md), [job hooks](../../platform-functionality/jobs/jobhook.md), or [events](../../platform-functionality/events.md) fire for them either.
+
+      When set via the `NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS` environment variable, the value must be a JSON
+      object, for example `{"ipam.vrfprefixassignment": ["prefix"]}`.
+    environment_variable: "NAUTOBOT_CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"
+    is_constance_config: true
+    type: "object"
+    version_added: "3.2.8"
   CHANGELOG_RETENTION:
     default: 90
     description: >-
@@ -1478,6 +1522,9 @@ properties:
       A list of app names for which Prometheus metrics should be disabled.
       (If provided as an environment variable, it should be a comma-separated string, for example
       `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
+    details: |-
+      This setting only has an effect when `METRICS_ENABLED` is `True`. When metrics are disabled, no App metrics
+      are registered regardless of this setting.
     environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
     items:
       type: "string"
@@ -1487,7 +1534,9 @@ properties:
     version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
-    description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
+    description: >-
+      Toggle the availability of Prometheus-compatible metrics at `/metrics`.
+      When `False`, App metric functions are neither registered nor evaluated.
     environment_variable: "NAUTOBOT_METRICS_ENABLED"
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
@@ -1750,6 +1799,24 @@ properties:
     items:
       type: "integer"
     type: "array"
+  PERSISTENT_CACHE_TIMEOUT:
+    default: null
+    description: >-
+      The number of seconds before Nautobot's persistent caches expire.
+      When unset (`None`), these caches never expire and are refreshed only when their underlying data changes.
+    details: |-
+      Nautobot caches some frequently used, rarely changed data indefinitely and clears those caches whenever the
+      underlying data changes. This includes the custom fields, computed fields, relationships, metadata types,
+      and data validation rules that apply to each model, the choices for each select-type custom field, the Git
+      repositories that provide each type of content, and the maximum depth of each tree model.
+
+      Setting this to a number of seconds makes those cache entries also expire on their own. This is a safety net
+      for the rare case where a request reads the data while another request is still committing a change to it,
+      which can leave stale data in the cache until the next change. Most deployments can leave this unset; a
+      lower value means stale data is corrected sooner, at the cost of more frequent database queries.
+    environment_variable: "NAUTOBOT_PERSISTENT_CACHE_TIMEOUT"
+    type: "integer"
+    version_added: "3.2.9"
   PLUGINS:
     default: []
     description: >-
@@ -1852,6 +1919,23 @@ properties:
       when acquiring the Redis lock.
     environment_variable: "NAUTOBOT_REDIS_LOCK_TIMEOUT"
     type: "integer"
+  REGEX_TIMEOUT:
+    default: 1.0
+    description: >-
+      Maximum number of seconds that a single evaluation of an operator-supplied regular expression
+      against user-supplied data may run before it is aborted.
+    details: |-
+      This bounds regular expressions that Nautobot did not author, such as a custom field's
+      `validation_regex` or a data validation rule, when they are evaluated against data submitted by a
+      user. Some regular expressions take exponentially longer to evaluate as the value being tested
+      grows, so without a bound a single request can consume a worker indefinitely.
+
+      When the limit is exceeded the value is rejected with a validation error and the expression is
+      logged at `ERROR` level. Raise this only if a legitimate expression is being cut short; a large
+      value re-opens the denial-of-service exposure that the limit exists to prevent.
+    environment_variable: "NAUTOBOT_REGEX_TIMEOUT"
+    type: "number"
+    version_added: "3.2.7"
   RELEASE_CHECK_TIMEOUT:
     default: 86400
     description: >-
@@ -2184,6 +2268,22 @@ properties:
     environment_variable: "NAUTOBOT_STRICT_FILTERING"
     type: "boolean"
     version_added: "1.4.0"
+  STRICT_SENSITIVE_FIELDS:
+    default: false
+    description: >-
+      If set to `True`, the ORM will refuse to return the value of any field listed in a model's
+      `sensitive_fields` declaration, such as `Token.key`, unless the caller opts in explicitly.
+    details: |-
+      Nautobot models may declare `sensitive_fields` to mark columns that hold credentials or comparable
+      secrets. When this setting is `True`, reading such a field raises `SensitiveFieldError` for values
+      loaded from the database, whether read as an attribute or projected through a query.
+
+      This setting does **not** affect user-authored Jinja2 templates (Export Templates, Computed Fields,
+      Custom Links, and so on). Those are always denied access to a sensitive field, including filtering
+      on one, regardless of this setting.
+    environment_variable: "NAUTOBOT_STRICT_SENSITIVE_FIELDS"
+    type: "boolean"
+    version_added: "3.2.5"
   SUPPORT_MESSAGE:
     default: ""
     description: "A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs."

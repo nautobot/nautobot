@@ -96,7 +96,7 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
     - For each legacy `Site` instance, a corresponding `Location` instance with the same attributes (`id`, `name`, `description`, `tenant`, `facility`, `asn`, `latitude`, `longitude`, etc.) will be created, and any preexisting `Locations` in your database will be updated to have the appropriate "site" `Locations` as their parents.
 
-    - Model instances that had a `site` field (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` corresponding to that `Site`. All other attributes on these models will remain unchanged.
+    - Model instances that had a `site` field (`CircuitTermination`, `Device`, `PowerPanel`, `RackGroup`, `Rack`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and _did not_ have a `location` attribute assigned will be updated to have their `location` point to the new `Location` corresponding to that `Site`. All other attributes on these models will remain unchanged.
 
     - Model instances that were previously associated to the `ContentType` for `Site` (`ComputedField`, `CustomField`, `CustomLink`, `ExportTemplate`, `ImageAttachment`, `JobHook`, `Note`, `Relationship`, `Status`, `Tag` and `Webhook`) will have their `ContentType` replaced with `Location`. All other attributes on these models will remain unchanged.
 
@@ -122,7 +122,7 @@ The `Site` and `Region` models have been removed in v2.0 and have been replaced 
 
         - If you have `Site` instances in your database without a `Region` assigned to them, one additional `Location` named **Global Region** of `LocationType` **Region** will be created and each `Location` of `LocationType` **Site** created from the legacy region-less `Site` instances will have the **Global Region** `Location` as their parent.
 
-    - Model instances that had a `site` attribute (`CircuitTermination`, `Device`, `Location`, `PowerPanel`, `Rack`, `RackGroup`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and *did not* have a `location` attribute assigned will be updated to have their `location` point to the new `Location` of `LocationType` **Site**. All other attributes on these models will remain unchanged.
+    - Model instances that had a `site` attribute (`CircuitTermination`, `Device`, `Location`, `PowerPanel`, `Rack`, `RackGroup`, `Prefix`, `VLANGroup`, `VLAN`, `Cluster`) assigned and _did not_ have a `location` attribute assigned will be updated to have their `location` point to the new `Location` of `LocationType` **Site**. All other attributes on these models will remain unchanged.
 
     - Model instances that were previously associated to the `ContentType` for `Site`  or `Region` (`ComputedField`, `CustomField`, `CustomLink`, `ExportTemplate`, `ImageAttachment`, `JobHook`, `Note`, `Relationship`, `Status`, `Tag` and `Webhook`) will have their `ContentType` replaced with `Location`. All other attributes on these models will remain unchanged.
 
@@ -154,7 +154,7 @@ The `region` and `site` fields are being removed in the `filter` data of `Dynami
 
 Check out the API and UI endpoints changes incurred by the changes stated above in the ["Upgrading from Nautobot v1.X"](../user-guide/administration/upgrading/from-v1/upgrading-from-nautobot-v1.md) guide.
 
-Check out the [Region and Site Related Data Model Migration Guide](../development/apps/migration/model-updates/dcim.md) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
+Check out the [Region and Site Related Data Model Migration Guide](../development/apps/migration/from-v1/model-updates/dcim.md) to learn how to migrate your Nautobot Apps and data models from `Site` and `Region` to `Location`.
 
 #### Corrected Filter Fields ([#2804](https://github.com/nautobot/nautobot/pull/2804))
 

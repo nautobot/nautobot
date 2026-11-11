@@ -316,12 +316,16 @@ class CeleryStrategy(JobCancelStrategy):
         return JobLiveness.RUNNING if found else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result, user) -> bool:
-        """Reap a dead Celery job: mark canceled without sending a signal.
+        """Reap a dead Celery job: mark canceled and send signal.
 
         Called when no worker is processing the task. Records cancel metadata
         and stamps a Celery-shaped `result` payload imitating what a worker
         would write on TaskCanceledError, so the JobResult looks the same as
         normally-canceled tasks for downstream consumers.
+
+        The task message may still be waiting in the broker queue, so a revoke
+        (without terminate) is also broadcast, to make any worker that later
+        receives it skip it.
         """
         logger.info("Reaped dead job %s by %s", job_result.pk, user)
         job_result.log(
@@ -331,6 +335,7 @@ class CeleryStrategy(JobCancelStrategy):
         )
 
         job_result = self._mark_canceled(job_result, user, JobCancelTypeChoices.TYPE_REAPED)
+        celery_app.control.revoke(str(job_result.pk))
 
         return True
 

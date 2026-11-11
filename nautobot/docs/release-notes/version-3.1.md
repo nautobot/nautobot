@@ -145,7 +145,6 @@ The Nautobot test method `assertQuerysetEqualAndNotEmpty()` has been deprecated 
 Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. Nautobot has been updated accordingly, but Apps and third-party dependencies may need to update to newer versions for compatibility with Django 5.2.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.1.8 (2026-07-17)
@@ -176,7 +175,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 - [#9144](https://github.com/nautobot/nautobot/issues/9144) - Fixed the CustomField `description` field no longer being rendered as Markdown on the Custom Field detail view.
 - [#9161](https://github.com/nautobot/nautobot/issues/9161) - Fixed the broken Operational Compliance documentation link in the Application Marketplace, which returned a 404 due to a trailing quotation mark in the URL.
-- [#9179](https://github.com/nautobot/nautobot/issues/9179) - Fixed dynamic group membership incorrectly returning no members when a filter specified multiple conjoined values (such as multiple `tags`), which should match objects having *all* of the given values.
+- [#9179](https://github.com/nautobot/nautobot/issues/9179) - Fixed dynamic group membership incorrectly returning no members when a filter specified multiple conjoined values (such as multiple `tags`), which should match objects having _all_ of the given values.
 - [#9250](https://github.com/nautobot/nautobot/issues/9250) - Fixed an N+1 query when listing Interfaces via the REST API.
 
 ### Dependencies in v3.1.8
@@ -279,7 +278,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 ### Fixed in v3.1.5
 
 - [#9016](https://github.com/nautobot/nautobot/issues/9016) - Fixed incorrect slug for `128GFC_QSFP28` - was "128gfc-sfp28" instead of "128gfc-qsfp28".
-- [#9043](https://github.com/nautobot/nautobot/issues/9043) - Disabled Poetry keyring configuration which caused clean startups of local development to fail. See documentation [here](https://python-poetry.org/docs/repositories/#configuring-credentials).
+- [#9043](https://github.com/nautobot/nautobot/issues/9043) - Disabled Poetry keyring configuration which caused clean startups of local development to fail. See [Poetry documentation](https://python-poetry.org/docs/repositories/#configuring-credentials).
 - [#9072](https://github.com/nautobot/nautobot/issues/9072) - Fixed the REST API incorrectly requiring the `protocol` field when creating or updating an Interface Redundancy Group.
 - [#9072](https://github.com/nautobot/nautobot/issues/9072) - Fixed a `NoReverseMatch` server error when viewing an Interface or Interface Redundancy Group detail page.
 - [#9102](https://github.com/nautobot/nautobot/issues/9102) - Added logic to prevent `import nautobot.apps.testing` from throwing an exception when Splinter or Selenium are not installed.

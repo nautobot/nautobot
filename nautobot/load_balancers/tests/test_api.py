@@ -3,6 +3,7 @@
 import datetime
 
 from django.utils.timezone import make_aware
+from rest_framework import status
 
 from nautobot.core.testing.api import APIViewTestCases
 from nautobot.load_balancers import choices, models
@@ -94,6 +95,58 @@ class VirtualServerAPITest(LoadBalancerModelsTestCaseMixin, APIViewTestCases.API
             "tenant": None,
             "health_check_monitor": cls.health_check_monitors[1].pk,
         }
+
+    def test_create_without_port_and_protocol(self):
+        """Validate that `port` and `protocol` are optional in the REST API, as they are in the UI."""
+        self.add_permissions("load_balancers.add_virtualserver", "ipam.view_ipaddress")
+        data = {"name": "VS without port or protocol", "vip": self.vips[-4].pk}
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["port"])
+        self.assertEqual(response.data["protocol"], "")
+
+    def test_create_duplicate_vip_port_protocol(self):
+        """Validate that the uniqueness of (vip, port, protocol) is still enforced by the REST API."""
+        self.add_permissions("load_balancers.add_virtualserver", "ipam.view_ipaddress")
+        existing = models.VirtualServer.objects.exclude(port__isnull=True).first()
+        data = {
+            "name": "Duplicate VS",
+            "vip": existing.vip.pk,
+            "port": existing.port,
+            "protocol": existing.protocol,
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_duplicate_vip_port_without_protocol(self):
+        """Validate that (vip, port) uniqueness is enforced when `protocol` is omitted from both requests."""
+        self.add_permissions("load_balancers.add_virtualserver", "ipam.view_ipaddress")
+        data = {"name": "VS without protocol", "vip": self.vips[-4].pk, "port": 8222}
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        data["name"] = "Duplicate VS without protocol"
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_partial_update_duplicate_vip_port_protocol(self):
+        """Validate that (vip, port, protocol) uniqueness is enforced on a partial update of `port` alone."""
+        self.add_permissions("load_balancers.change_virtualserver")
+        models.VirtualServer.objects.create(name="VS on port 8222", vip=self.vips[-4], port=8222)
+        virtual_server = models.VirtualServer.objects.create(name="VS on port 8223", vip=self.vips[-4], port=8223)
+        url = self._get_detail_url(virtual_server)
+
+        response = self.client.patch(url, {"port": 8222}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.patch(url, {"port": 8224}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["port"], 8224)
 
 
 # pylint: disable=too-many-ancestors, no-member

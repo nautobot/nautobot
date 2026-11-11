@@ -1,10 +1,10 @@
 from django.contrib.contenttypes.models import ContentType
 
-from nautobot.apps.models import CustomValidator
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.data_validation.models import RequiredValidationRule
 from nautobot.dcim.choices import DeviceUniquenessChoices
 from nautobot.dcim.models import Device
+from nautobot.extras.plugins import CustomValidator
 
 
 class DeviceUniquenessValidator(CustomValidator):

@@ -151,7 +151,7 @@ Most renamed filter fields in Nautobot 2.0 fall into the following general categ
 
 Below is a table documenting [enhanced filter field changes](../../../../../release-notes/version-2.0.md#enhanced-filter-fields-2804) in Nautobot 2.0. These enhancements mostly fall into the following general categories:
 
-1. Many filters are enhanced to permit filtering by UUID *or* by name.
+1. Many filters are enhanced to permit filtering by UUID _or_ by name.
 2. Filters that previously only supported a single filter value can now filter on multiple values.
 
 | Model       | Filter              | Enhancements                         |

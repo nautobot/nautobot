@@ -825,7 +825,10 @@ class JobViewSetBase(
     ModelViewSetMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Job.objects.all()
+    # The deprecated `task_queues` field reads `job_queues` for every Job. The serializer hides the `job_queues`
+    # field when `exclude_m2m` is absent or truthy, and `NautobotModelViewSet.get_queryset()` does not prefetch
+    # hidden fields, so we prefetch `job_queues` here.
+    queryset = Job.objects.prefetch_related("job_queues")
     serializer_class = serializers.JobSerializer
     filterset_class = filters.JobFilterSet
 
@@ -1003,7 +1006,7 @@ class JobViewSetBase(
 
         cleaned_data = None
         try:
-            cleaned_data = job_class.validate_data(data, files=files)
+            cleaned_data = job_class.validate_data(data, files=files, user=request.user)
             cleaned_data = job_class.prepare_job_kwargs(cleaned_data)
 
         except FormsValidationError as e:
@@ -1207,6 +1210,17 @@ class JobResultViewSet(
             "POST": ["%(app_label)s.view_jobresult"],
         }
 
+    class JobLogEntryPermission(TokenPermissions):
+        """
+        Enforce `view_joblogentry` permission (in addition to `view_jobresult`) on the /logs/ endpoint.
+        """
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "HEAD": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "OPTIONS": [],
+        }
+
     def restrict_queryset(self, request, *args, **kwargs):
         """
         Apply special permissions as queryset filter on the /cancel/ endpoint.
@@ -1219,10 +1233,13 @@ class JobResultViewSet(
         else:
             super().restrict_queryset(request, *args, **kwargs)
 
-    @action(detail=True)
+    @action(detail=True, permission_classes=[JobLogEntryPermission])
     def logs(self, request, pk=None):
-        job_result = self.get_object()
-        logs = job_result.job_log_entries.all()
+        # `get_object_or_404()` and not `self.get_object()` because object-level check of the latter resolves every entry in
+        # `perms_map` against the JobResult, so `extras.view_joblogentry` would raise ValueError (HTTP 500).
+        # `self.queryset` is already restricted to viewable JobResults by `restrict_queryset()`, so nothing is lost.
+        job_result = get_object_or_404(self.queryset, pk=pk)
+        logs = job_result.job_log_entries.restrict(request.user, "view")
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
@@ -1364,7 +1381,7 @@ class ScheduledJobViewSet(
         permission_classes=[ScheduledJobViewPermissions],
     )
     def dry_run(self, request, pk):
-        scheduled_job = get_object_or_404(ScheduledJob, pk=pk)
+        scheduled_job = get_object_or_404(ScheduledJob.objects.restrict(request.user, "view"), pk=pk)
         job_model = scheduled_job.job_model
         if job_model is None or not scheduled_job.runnable:
             raise MethodNotAllowed("This job cannot be dry-run at this time.")

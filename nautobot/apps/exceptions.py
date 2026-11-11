@@ -5,7 +5,9 @@ from nautobot.core.exceptions import (
     AbortTransaction,
     CeleryWorkerNotRunningException,
     FilterSetFieldNotFound,
+    SensitiveFieldError,
 )
+from nautobot.core.utils.regex import InvalidRegexError, RegexTimeoutError
 from nautobot.extras.secrets.exceptions import (
     SecretError,
     SecretParametersError,
@@ -23,10 +25,13 @@ __all__ = (
     "CeleryWorkerNotRunningException",
     "ConfigurationError",
     "FilterSetFieldNotFound",
+    "InvalidRegexError",
+    "RegexTimeoutError",
     "SecretError",
     "SecretParametersError",
     "SecretProviderError",
     "SecretValueNotFoundError",
+    "SensitiveFieldError",
     "SerializerNotFound",
     "ServiceUnavailable",
 )

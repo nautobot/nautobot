@@ -25,6 +25,7 @@ from django.utils import timezone
 import kubernetes.client
 from kubernetes.client.exceptions import ApiException
 
+from nautobot.core.forms import restrict_form_fields
 from nautobot.core.testing import (
     CelerySubprocessTestCase,
     create_job_result_and_run_job,
@@ -43,7 +44,7 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result, run_job
 from nautobot.extras.jobs_cancel import (
     CancelFactory,
     CeleryStrategy,
@@ -54,7 +55,8 @@ from nautobot.extras.jobs_cancel import (
 )
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
-from nautobot.users.models import ObjectPermission
+from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission, User
 
 
 class JobTest(TestCase):
@@ -607,12 +609,10 @@ class JobTransactionTest(TransactionTestCase):
         )
         self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
         instance = Job.objects.get(job_class_name=job_class_to_test)
         self.assertEqual(instance.description, job_description)
         self.assertEqual(instance.default_job_queue, default_job_queue)
@@ -651,12 +651,10 @@ class JobTransactionTest(TransactionTestCase):
         )
         self.assertJobResultStatus(job_result)
         self.assertEqual(Job.objects.filter(description=job_description).count(), queryset.count())
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warnings_errors = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warnings_errors.exists(), warnings_errors.values_list("message", flat=True))
 
         instance = Job.objects.get(job_class_name=job_class_to_test)
         self.assertEqual(instance.description, job_description)
@@ -819,7 +817,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 3, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
@@ -837,7 +835,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 3, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
@@ -855,7 +853,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 3, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
@@ -873,7 +871,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 3, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
@@ -891,7 +889,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 2, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
@@ -908,7 +906,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 2, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
@@ -925,7 +923,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 2, job_logs)
         self.assertIn("Running job (source version: unknown)", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
@@ -942,7 +940,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 2, job_console_logs)
         self.assertIn("Running job (source version: unknown)", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
@@ -1289,33 +1287,31 @@ class JobFileOutputTest(TransactionTestCase):
 
     databases = ("default", "job_logs")
 
-    @override_settings(
-        MEDIA_ROOT=tempfile.gettempdir(),
-    )
     def test_output_file_to_database(self):
         module = "file_output"
         name = "FileOutputJob"
         data = {"lines": 3}
-        job_result = create_job_result_and_run_job(module, name, **data)
+        with tempfile.TemporaryDirectory(dir=settings.MEDIA_ROOT) as tempdir, override_settings(MEDIA_ROOT=tempdir):
+            job_result = create_job_result_and_run_job(module, name, **data)
 
-        self.assertJobResultStatus(job_result)
-        # JobResult should have one attached file
-        self.assertEqual(1, job_result.files.count())
-        self.assertEqual(job_result.files.first().name, "output.txt")
-        self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
-        # File shouldn't exist on filesystem
-        self.assertFalse(Path(settings.MEDIA_ROOT, "files", "output.txt").exists())
-        self.assertFalse(Path(settings.MEDIA_ROOT, "files", f"{job_result.files.first().pk}-output.txt").exists())
-        # File should exist in DB
-        # `filename` value is weird, see https://github.com/victor-o-silva/db_file_storage/issues/22
-        models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
-
-        # Make sure cleanup is successful
-        job_result.delete()
-        with self.assertRaises(models.FileProxy.DoesNotExist):
-            models.FileProxy.objects.get(name="output.txt")
-        with self.assertRaises(models.FileAttachment.DoesNotExist):
+            self.assertJobResultStatus(job_result)
+            # JobResult should have one attached file
+            self.assertEqual(1, job_result.files.count())
+            self.assertEqual(job_result.files.first().name, "output.txt")
+            self.assertEqual(job_result.files.first().file.read().decode("utf-8"), "Hello World!\n" * 3)
+            # File shouldn't exist on filesystem
+            self.assertFalse(Path(settings.MEDIA_ROOT, "files", "output.txt").exists())
+            self.assertFalse(Path(settings.MEDIA_ROOT, "files", f"{job_result.files.first().pk}-output.txt").exists())
+            # File should exist in DB
+            # `filename` value is weird, see https://github.com/victor-o-silva/db_file_storage/issues/22
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
+
+            # Make sure cleanup is successful
+            job_result.delete()
+            with self.assertRaises(models.FileProxy.DoesNotExist):
+                models.FileProxy.objects.get(name="output.txt")
+            with self.assertRaises(models.FileAttachment.DoesNotExist):
+                models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
     # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
     # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
@@ -1514,6 +1510,96 @@ class JobButtonReceiverTest(TestCase):
             self.assertTrue(job_model.is_job_button_receiver)
 
 
+class JobObjectVarPermissionTest(TestCase):
+    """Object variables accept only objects that the user submitting the job may view."""
+
+    def setUp(self):
+        super().setUp()
+        self.job_class, _ = get_job_class_and_model("object_vars", "TestObjectVars")
+        self.visible_role = models.Role.objects.create(name="Visible Role")
+        self.hidden_role = models.Role.objects.create(name="Hidden Role")
+        self.add_permissions("extras.view_role", constraints={"name": "Visible Role"})
+        self.user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+
+    def test_viewable_objects_are_accepted(self):
+        for role in (self.visible_role.pk, {"name": "Visible Role"}):
+            with self.subTest(role=role):
+                data = self.job_class.validate_data({"role": role, "roles": [self.visible_role.pk]}, user=self.user)
+                self.assertEqual(data["role"], self.visible_role)
+                self.assertQuerySetEqual(data["roles"], [self.visible_role])
+
+    def test_unviewable_object_is_reported_as_nonexistent(self):
+        def error_for(role_pk):
+            with self.assertRaises(ValidationError) as context:
+                self.job_class.validate_data({"role": role_pk, "roles": [self.visible_role.pk]}, user=self.user)
+            return str(context.exception).replace(str(role_pk), "X")
+
+        self.assertEqual(error_for(self.hidden_role.pk), error_for(uuid.uuid4()))
+        with self.assertRaises(ValidationError):
+            self.job_class.validate_data(
+                {"role": {"name": "Hidden Role"}, "roles": [self.visible_role.pk]}, user=self.user
+            )
+
+    def test_unviewable_objects_are_refused(self):
+        with self.assertRaises(ValidationError):
+            self.job_class.validate_data(
+                {"role": self.visible_role.pk, "roles": [self.visible_role.pk, self.hidden_role.pk]}, user=self.user
+            )
+
+    def test_form_offers_only_viewable_objects(self):
+        """As the Job form is restricted by the views that render it."""
+        form = self.job_class.as_form()
+        restrict_form_fields(form, self.user)
+        test_roles = [self.visible_role.pk, self.hidden_role.pk]
+        for field_name in ("role", "roles"):
+            with self.subTest(field_name=field_name):
+                queryset = form.fields[field_name].queryset.filter(pk__in=test_roles)
+                self.assertQuerySetEqual(queryset, [self.visible_role])
+
+    def test_no_user_is_unrestricted(self):
+        """Without a user, as when a queued job runs, objects are resolved as they were validated on submission."""
+        data = self.job_class.deserialize_data({"role": self.hidden_role.pk, "roles": [self.hidden_role.pk]})
+        self.assertEqual(data["role"], self.hidden_role)
+
+    def test_unviewable_objects_are_reported_as_nonexistent(self):
+        def error_for(role_pk):
+            with self.assertRaises(ValidationError) as context:
+                self.job_class.deserialize_data(
+                    {"role": self.visible_role.pk, "roles": [self.visible_role.pk, role_pk]}, user=self.user
+                )
+            return str(context.exception).replace(str(role_pk), "X")
+
+        self.assertEqual(error_for(self.hidden_role.pk), error_for(uuid.uuid4()))
+
+    def test_repeated_and_differently_typed_pks(self):
+        """The same object, given more than once or as both a string and a UUID, is still only one object."""
+        data = self.job_class.deserialize_data(
+            {"role": self.visible_role.pk, "roles": [self.visible_role.pk, str(self.visible_role.pk)]}, user=self.user
+        )
+        self.assertQuerySetEqual(data["roles"], [self.visible_role])
+
+    def test_lookup_through_unviewable_related_object(self):
+        """An object given by its attributes may only be matched through related objects that the user may view."""
+        job_class, _ = get_job_class_and_model("object_var_required", "TestRequiredObjectVar")
+        location_type = LocationType.objects.create(name="Object Var Location Type")
+        tenant = Tenant.objects.create(name="Hidden Tenant", description="Hidden description")
+        location = Location.objects.create(
+            name="Object Var Location",
+            location_type=location_type,
+            status=models.Status.objects.get_for_model(Location).first(),
+            tenant=tenant,
+        )
+        self.add_permissions("dcim.view_location")
+        user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+        lookup = {"location": {"name": location.name, "tenant__description": "Hidden description"}}
+        with self.assertRaises(ValidationError):
+            job_class.deserialize_data(lookup, user=user)
+
+        self.add_permissions("tenancy.view_tenant")
+        user = User.objects.get(pk=self.user.pk)  # Discard the permission cache
+        self.assertEqual(job_class.deserialize_data(lookup, user=user)["location"], location)
+
+
 class JobButtonReceiverTransactionTest(TransactionTestCase):
     """
     Test job button receiver features that require a transaction test case.
@@ -1538,11 +1624,69 @@ class JobButtonReceiverTransactionTest(TransactionTestCase):
             "object_model_name": f"{content_type.app_label}.{content_type.model}",
         }
 
+    def add_job_button(self, name, model, enabled=True):
+        """Add a button for the job button receiver `name` to objects of `model`."""
+        _job_class, job_model = get_job_class_and_model("job_button_receiver", name)
+        job_button = models.JobButton.objects.create(name=f"{name} Button", text="Run", job=job_model, enabled=enabled)
+        job_button.content_types.add(ContentType.objects.get_for_model(model))
+
     def test_missing_receive_job_button_method(self):
         module = "job_button_receiver"
         name = "TestJobButtonReceiverFail"
+        self.add_job_button(name, Location)
         job_result = create_job_result_and_run_job(module, name, **self.data)
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+
+    def test_receive_job_button(self):
+        self.add_job_button("TestJobButtonReceiverSimple", Location)
+        job_result = create_job_result_and_run_job("job_button_receiver", "TestJobButtonReceiverSimple", **self.data)
+        self.assertJobResultStatus(job_result)
+
+    def test_object_of_a_type_no_button_applies_to(self):
+        """The object must be of a type that one of the job's buttons applies to, as its inputs may be crafted."""
+        self.add_job_button("TestJobButtonReceiverSimple", Device)
+        job_result = create_job_result_and_run_job("job_button_receiver", "TestJobButtonReceiverSimple", **self.data)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                log_level=LogLevelChoices.LOG_ERROR,
+                message="No enabled job button for this job applies to dcim.location objects",
+            ).exists()
+        )
+
+    def test_disabled_button_does_not_apply(self):
+        """A disabled button isn't offered in the UI, so it doesn't permit the job to act on objects of its type."""
+        self.add_job_button("TestJobButtonReceiverSimple", Location, enabled=False)
+        job_result = create_job_result_and_run_job("job_button_receiver", "TestJobButtonReceiverSimple", **self.data)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                log_level=LogLevelChoices.LOG_ERROR,
+                message="No enabled job button for this job applies to dcim.location objects",
+            ).exists()
+        )
+
+    def test_unviewable_object_is_reported_as_nonexistent(self):
+        """The object must be one the user running the job may view, and is otherwise reported as not found."""
+        self.add_job_button("TestJobButtonReceiverSimple", Location)
+        user = User.objects.create(username="job-button-user")
+
+        def error_for(object_pk):
+            job_result = create_job_result_and_run_job(
+                "job_button_receiver",
+                "TestJobButtonReceiverSimple",
+                username=user.username,
+                **{**self.data, "object_pk": object_pk},
+            )
+            self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+            error_log = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+            return error_log.message.replace(str(object_pk), "X")
+
+        nonexistent_error = error_for(uuid.uuid4())
+        self.assertEqual(error_for(self.location.pk), nonexistent_error)
+        self.assertEqual(error_for("not-a-uuid"), nonexistent_error)
 
 
 class JobHookReceiverTest(TestCase):
@@ -2140,6 +2284,58 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()
 
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_only_unfinished_job_results_are_run(self, mock_report_job_status, mock_executor_console_log):
+        """Command should run PENDING or STARTED job results and refuse job results that already finished."""
+        cases = [
+            {"status": JobResultStatusChoices.STATUS_PENDING, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_STARTED, "runs": True},
+            {"status": JobResultStatusChoices.STATUS_SUCCESS, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_FAILURE, "runs": False},
+            {"status": JobResultStatusChoices.STATUS_REVOKED, "runs": False},
+        ]
+        for case in cases:
+            with self.subTest(**case):
+                mock_executor_console_log.reset_mock()
+                self.job_result.status = case["status"]
+                self.job_result.save()
+
+                if case["runs"]:
+                    call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    mock_executor_console_log.return_value.execute.assert_called_once()
+                else:
+                    with self.assertRaises(CommandError) as err:
+                        call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+                    self.assertIn(f"invalid status {case['status']}", str(err.exception))
+                    mock_executor_console_log.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_retry_warning_is_logged_only_for_started_job_result(
+        self, mock_report_job_status, mock_executor_console_log
+    ):
+        """Command should log a retry warning when resuming a STARTED job result, and not for a PENDING one."""
+        for status, expected_warnings in (
+            (JobResultStatusChoices.STATUS_PENDING, 0),
+            (JobResultStatusChoices.STATUS_STARTED, 1),
+        ):
+            with self.subTest(status=status):
+                JobLogEntry.objects.filter(job_result=self.job_result).delete()
+                self.job_result.status = status
+                self.job_result.save()
+
+                call_command("runjob_with_job_result", str(self.job_result.pk), "--data", "{}")
+
+                self.assertEqual(
+                    JobLogEntry.objects.filter(
+                        job_result=self.job_result,
+                        log_level=LogLevelChoices.LOG_WARNING,
+                        grouping="initialization",
+                    ).count(),
+                    expected_warnings,
+                )
+
 
 class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
     def setUp(self):
@@ -2234,6 +2430,31 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
 
         self.job_result.refresh_from_db()
         self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_job_result_is_started_while_job_runs(self, mock_validate, mock_sync, mock_run_job):
+        """JobResult should be in STARTED status while the job runs, whether it was PENDING or already STARTED."""
+        eager_result = mock.MagicMock()
+        eager_result.failed.return_value = False
+        status_during_run = []
+
+        def record_status(*args, **kwargs):
+            status_during_run.append(JobResult.objects.get(pk=self.job_result.pk).status)
+            return eager_result
+
+        mock_run_job.apply.side_effect = record_status
+
+        for initial_status in (JobResultStatusChoices.STATUS_PENDING, JobResultStatusChoices.STATUS_STARTED):
+            with self.subTest(initial_status=initial_status):
+                status_during_run.clear()
+                self.job_result.status = initial_status
+                self.job_result.save()
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                self.assertEqual(status_during_run, [JobResultStatusChoices.STATUS_STARTED])
 
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
@@ -2635,12 +2856,17 @@ class CeleryStrategyTestCase(_JobCancelTestBase):
     #    no SIGKILL sent.
     # ------------------------------------------------------------------ #
 
-    def test_terminate_reaps_when_worker_not_alive(self):
+    @mock.patch("nautobot.extras.jobs_cancel.celery_app.control.revoke")
+    def test_terminate_reaps_when_worker_not_alive(self, mock_celery_revoke):
         for status in JobResultStatusChoices.UNREADY_STATES:
             with self.subTest(status=status):
+                mock_celery_revoke.reset_mock()
                 job_result = self._make_job_result(status)
                 with self.assertLogs("nautobot.extras.jobs_cancel", level="INFO") as log_cm:
                     result = self.strategy.cancel(job_result, self.user)
+
+                # The message may still be queued in the broker, so workers must be told to skip it, but not killed.
+                mock_celery_revoke.assert_called_once_with(str(job_result.pk))
 
                 self.assertTrue(
                     any("Reaped dead job" in msg for msg in log_cm.output),
@@ -2658,9 +2884,10 @@ class CeleryStrategyTestCase(_JobCancelTestBase):
                 self.assertEqual(job_result.canceled_by, self.user)
                 self.assertIsNotNone(job_result.date_canceled)
 
+    @mock.patch("nautobot.extras.jobs_cancel.celery_app.control.revoke")
     @mock.patch("nautobot.extras.jobs_cancel.CeleryStrategy.liveness")
-    def test_cancel_reap_swallows_job_already_terminal_race(self, mock_liveness):
-        """NOT_RUNNING -> perform_reap, but the row is terminal under the lock -> no-op, no reaped payload."""
+    def test_cancel_reap_swallows_job_already_terminal_race(self, mock_liveness, mock_celery_cancel):
+        """NOT_RUNNING -> perform_reap, but the row is terminal under the lock -> no-op, no reaped payload, no revoke."""
         mock_liveness.return_value = JobLiveness.NOT_RUNNING
         for status in JobResultStatusChoices.UNREADY_STATES:
             with self.subTest(status=status):
@@ -2673,6 +2900,7 @@ class CeleryStrategyTestCase(_JobCancelTestBase):
                 self.assertEqual(result["job_result"], job_result)
                 self.assertIsNone(result["error"])
                 self.assertFalse(result["canceled"])
+                mock_celery_cancel.assert_not_called()
 
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
@@ -2684,6 +2912,25 @@ class CeleryStrategyTestCase(_JobCancelTestBase):
                     any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
                     f"Expected an info log about no action taken, got: {log_cm.output}",
                 )
+
+    def test_worker_skips_job_canceled_before_it_started(self):
+        """A worker that never got the revoke broadcast must still not run a job canceled while queued."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_PENDING)
+        JobResult.objects.filter(pk=job_result.pk).update(
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            date_canceled=timezone.now(),
+        )
+
+        run_job.apply(args=[self.job_model.class_path], task_id=str(job_result.pk))
+
+        job_result.refresh_from_db()
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_REVOKED)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result, message="Job was canceled before it started, skipping execution"
+            ).exists()
+        )
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, grouping="initialization").exists())
 
     @mock.patch("nautobot.extras.jobs_cancel.CeleryStrategy.liveness")
     def test_cancel_abandon_swallows_job_already_terminal_race(self, mock_liveness):

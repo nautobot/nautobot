@@ -16,7 +16,7 @@ Once a user enables request profiling, all subsequent HTTP requests made by that
 
 - While this feature may be visible within the profile configuration, you will only be able to toggle on/off, once the global configuration option `ALLOW_REQUEST_PROFILING` has been enabled (described further on).
 
-- *Warning!* Enabling request profiling on a user will impact the overall performance of Nautobot greatly! It is recommended to disable request profiling for the user when not actively being used.
+- **Warning!** Enabling request profiling on a user will impact the overall performance of Nautobot greatly! It is recommended to disable request profiling for the user when not actively being used.
 
 ## Silk UI
 
