@@ -229,7 +229,7 @@ def _validate_persisted_relation_field(archived_model, archived_model_field, liv
 
 def _find_archived_model_drift(archived_model, live_model):
     """
-    What has drifted on one archived model.
+    Return the identified drift concerns for one archived model compared with its live model.
 
     Returns:
         (list[str]): One message per difference found, empty when the two models match.
