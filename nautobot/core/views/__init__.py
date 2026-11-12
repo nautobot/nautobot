@@ -83,7 +83,7 @@ from nautobot.core.views.utils import (
     METRICS_CACHE_KEY,
 )
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.models import FileProxy, GraphQLQuery, Job, Status
 from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import StatusTable
@@ -568,6 +568,11 @@ class LiveSearchView(AccessMixin, View):
                 table_class = None
 
             if filterset and table_class:
+                def row_url(record):
+                    if isinstance(record, Job):
+                        return reverse("extras:job_run", kwargs={"pk": record.pk})
+                    return record.get_absolute_url()
+
                 filtered_queryset = filterset(request.GET).qs
                 restricted_queryset = (
                     filtered_queryset.restrict(request.user, "view")
@@ -585,7 +590,7 @@ class LiveSearchView(AccessMixin, View):
                         # Event handlers and attributes below are defined in order to imitate anchor link behavior.
                         "role": "link",
                         "tabindex": 0,
-                        "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
+                        "onclick": lambda record: f'window.location.href = "{row_url(record)}";',
                         "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
                     },
                 )
