@@ -624,20 +624,20 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
 # --------------------------------------------------------------------------------------------------
 # Testing
 # --------------------------------------------------------------------------------------------------
-# Each live model beside the model it is archived to. Resolved from the archived models' names rather than
-# written out here, so that this module cannot disagree with what the comparison resolves. A model that
-# fails to resolve is caught by
-# `ArchiveSchemaDriftTestCase.test_every_archived_model_resolves_its_live_model_from_its_name`.
-ARCHIVED_FROM = {live_model: archived_model for archived_model, live_model in get_archived_model_and_live_model_pairs()}
-ARCHIVED_MODELS = tuple(ARCHIVED_FROM.values())
-
-
 class ArchivedLogModelTestCase(TestCase):
     """How an archived record behaves when compared against its live counterpart."""
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.archived_from = {
+            live_model: archived_model for archived_model, live_model in get_archived_model_and_live_model_pairs()
+        }
+        cls.archived_models = tuple(cls.archived_from.values())
+
     def test_unresolved_relations_return_none(self):
         """Reaching for a live relation by name gets None, where the live record would follow the relation."""
-        for live, archived in ARCHIVED_FROM.items():
+        for live, archived in self.archived_from.items():
             instance = archived()
             # Forward relations, including generic foreign keys, which `_meta.fields` omits. Content types are
             # resolved from their ids on the archived model instead, and relations to archived models are real.
@@ -646,7 +646,7 @@ class ArchivedLogModelTestCase(TestCase):
                 for field in (*live._meta.fields, *live._meta.private_fields)
                 if field.many_to_one
                 and field.related_model is not ContentType
-                and field.related_model not in ARCHIVED_FROM
+                and field.related_model not in self.archived_from
             ]
             for live_field in relations:
                 with self.subTest(model=archived.__name__, field=live_field.name):
@@ -696,7 +696,7 @@ class ArchivedLogModelTestCase(TestCase):
 
     def test_get_absolute_url_is_none_without_a_route(self):
         """With no route registered for an archived model, a URL lookup gets None rather than raising."""
-        for archived in ARCHIVED_MODELS:
+        for archived in self.archived_models:
             instance = archived(id=uuid.uuid4())
             with self.subTest(model=archived.__name__):
                 self.assertIsNone(instance.get_absolute_url())
@@ -704,7 +704,7 @@ class ArchivedLogModelTestCase(TestCase):
 
     def test_archived_models_offer_only_the_view_permission(self):
         """Rotation writes archived records and nothing else does, so there is no add, change or delete."""
-        for archived in ARCHIVED_MODELS:
+        for archived in self.archived_models:
             with self.subTest(model=archived.__name__):
                 self.assertEqual(archived._meta.default_permissions, ("view",))
 
@@ -716,13 +716,13 @@ class ArchivedLogModelTestCase(TestCase):
         Each such reference is a plain identifier column instead. Only concrete forward relations matter here;
         the reverse `GenericRelation` descriptors inherited from `BaseModel` add no column and no constraint.
         """
-        for archived in ARCHIVED_MODELS:
+        for archived in self.archived_models:
             with self.subTest(model=archived.__name__):
                 related_models = {f.related_model for f in archived._meta.fields if f.is_relation}
-                self.assertLessEqual(related_models, set(ARCHIVED_MODELS))
+                self.assertLessEqual(related_models, set(self.archived_models))
 
     def test_archived_models_are_excluded_from_global_search(self):
         """Archived log models are excluded from global search, like the live models they archive."""
-        for archived in ARCHIVED_MODELS:
+        for archived in self.archived_models:
             with self.subTest(model=archived.__name__):
                 self.assertIn(archived._meta.model_name, GLOBAL_SEARCH_EXCLUDE_LIST)
