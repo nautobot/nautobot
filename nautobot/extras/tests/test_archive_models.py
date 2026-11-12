@@ -203,8 +203,8 @@ def _validate_persisted_relation_field(archived_model, archived_model_field, liv
 
     archived_model_for_live_model_field_relation = get_archived_model_from_live_model(live_model_field.related_model)
 
-    is_archived_model_field_a_relation = archived_model_field.is_relation is True
-    if is_archived_model_field_a_relation is False:
+    # Is the archived model's field a relational reference?
+    if not archived_model_field.is_relation:
         drift_messages.append(
             f"`{archived_model._meta.label}.{archived_model_field.name}` is a plain field but it must be a "
             f"relation to `{archived_model_for_live_model_field_relation._meta.label}`, because "
@@ -271,8 +271,8 @@ def _find_archived_model_drift(archived_model, live_model):
         # Checks
         # --------------------
         # First check - does the field even exist
-        does_archive_model_have_live_model_field = archived_model_field is not None
-        if does_archive_model_have_live_model_field is False:
+        # Does the archive model have the same field as the live model?
+        if archived_model_field is None:
             new_drift_message = (
                 f"`{archived_model._meta.label}` is missing the field "
                 f"`{live_model._meta.label}.{live_model_field.name}`"
