@@ -1,7 +1,5 @@
 /* eslint import/order: ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'ignore' }] */
 
-import '../scss/nautobot.scss';
-
 import * as bootstrap from 'bootstrap';
 window.bootstrap = bootstrap;
 

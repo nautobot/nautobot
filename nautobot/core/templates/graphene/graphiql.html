@@ -82,7 +82,10 @@ add "&raw" to the end of the URL within a browser.
         </style>
         <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
         <link rel="stylesheet"
-              href="{% versioned_static 'dist/css/graphql-libraries.css' %}"
+              href="{% versioned_static 'dist/css/npm/graphiql.css' %}"
+              onerror="nb.media.handleFailure(this)">
+        <link rel="stylesheet"
+              href="{% versioned_static 'dist/css/npm/monaco-editor.css' %}"
               onerror="nb.media.handleFailure(this)">
         {% include 'inc/javascript.html' %}
         <script type="module" src="{% versioned_static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
