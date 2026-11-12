@@ -375,7 +375,7 @@ def find_archive_schema_drift(archived_model_pairs=None):
 
 
 def format_drift_check_data(drift):
-    """Render drift findings one per line, so an assertion failure names each one."""
+    """Format the drift messages one per line, so that an assertion failure message lists each one."""
     return "\n".join(
         f"  - {archived_model._meta.label}: {message}"
         for archived_model, _live_model, messages in drift
