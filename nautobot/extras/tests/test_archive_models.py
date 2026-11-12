@@ -13,8 +13,9 @@ no migration error and no failure anywhere else, and every record rotated afterw
 from unittest import mock
 import uuid
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
-from django.db import models
+from django.db import connection, models
 from django.test import SimpleTestCase
 from django.utils import timezone
 
@@ -30,22 +31,345 @@ from nautobot.extras.models import (
     JobResult,
     ObjectChange,
 )
-from nautobot.extras.models.archive import (
-    _find_archived_model_drift,
-    ARCHIVED_MODEL_NAME_PREFIX,
-    find_archive_schema_drift,
-    get_all_archived_models,
-    get_archived_model_and_live_model_pairs,
-    get_live_model_from_archived_model,
-    get_live_model_name_from_archived_model,
-)
+from nautobot.extras.models.archive import ArchivedLogModel
 
-# Each live model beside the model it is archived to. Resolved from the archived models' names rather than
-# written out here, so that this module cannot disagree with what the comparison resolves. A model that
-# fails to resolve is caught by
-# `ArchiveSchemaDriftTestCase.test_every_archived_model_resolves_its_live_model_from_its_name`.
-ARCHIVED_FROM = {live_model: archived_model for archived_model, live_model in get_archived_model_and_live_model_pairs()}
-ARCHIVED_MODELS = tuple(ARCHIVED_FROM.values())
+# --------------------------------------------------------------------------------------------------
+# Schema Drift Test Helpers
+# --------------------------------------------------------------------------------------------------
+# An archived model has to stay field-compatible with the live model it archives. Nothing in Django
+# enforces that. The two are separate models with separate migrations, so a field added to `ObjectChange`
+# and not to `ArchivedObjectChange` needs to produce a loud failure.
+#
+# An archived model is named with a prefix of `Archived<LiveModel>`, there should
+# be no deviation from this.
+ARCHIVED_MODEL_NAME_PREFIX = "Archived"
+
+
+def get_all_archived_models():
+    """
+    Every concrete archived log model.
+
+    Returns:
+        (list[type]): The subclasses of `ArchivedLogModel`.
+    """
+    return [model for model in apps.get_models() if issubclass(model, ArchivedLogModel)]
+
+
+def get_live_model_name_from_archived_model(archived_model):
+    """
+    The name of the live model an archived model is derived from.
+
+    Args:
+        archived_model (type): The archived model to read the name of.
+
+    Returns:
+        (str | None): The live model's name, or None where the archived model is not named for one.
+    """
+    if not archived_model.__name__.startswith(ARCHIVED_MODEL_NAME_PREFIX):
+        return None
+    else:
+        return archived_model.__name__.removeprefix(ARCHIVED_MODEL_NAME_PREFIX) or None
+
+
+def get_live_model_from_archived_model(archived_model):
+    """
+    Retrieves the live model that an archived model is derived from.
+
+    Args:
+        archived_model (type): The archived model to resolve the live model for.
+
+    Returns:
+        (type | None): The live model, or None where the archived model is not named for one or names
+            one that is not registered.
+    """
+    live_model_name = get_live_model_name_from_archived_model(archived_model)
+    if live_model_name is None:
+        return None
+    try:
+        return apps.get_model(archived_model._meta.app_label, live_model_name)
+    except LookupError:
+        return None
+
+
+def get_archived_model_from_live_model(live_model):
+    """
+    Retrieves the archived model derived from a live model.
+
+    Args:
+        live_model (type): The live model to resolve the archived model for.
+
+    Returns:
+        (type | None): The archived model, or None where no model named `Archived<LiveModel>` is
+            registered in the live model's app.
+    """
+    try:
+        return apps.get_model(live_model._meta.app_label, f"{ARCHIVED_MODEL_NAME_PREFIX}{live_model.__name__}")
+    except LookupError:
+        return None
+
+
+def get_archived_model_and_live_model_pairs():
+    """
+    Each archived model beside the live model it archives, resolved from the archived model's name.
+
+    Returns:
+        (list[tuple[type, type]]): Each archived model paired with the live model it archives.
+
+    Raises:
+        (LookupError): An archived model is not named for a live model, or names one that is not registered.
+    """
+    archived_model_and_live_models = []
+    for archived_model in get_all_archived_models():
+        expected_live_model_name = get_live_model_name_from_archived_model(archived_model)
+        live_model = get_live_model_from_archived_model(archived_model)
+        if live_model is None:
+            raise LookupError(
+                f"{archived_model._meta.label} does not resolve to a registered model named "
+                f"{expected_live_model_name}. There is nothing to compare it against"
+            )
+        archived_model_and_live_models.append((archived_model, live_model))
+
+    return archived_model_and_live_models
+
+
+def _validate_plain_field(archived_model, archived_model_field, live_model, live_model_field):
+    """
+    Validates a plain field of an archived model and a live model.
+
+    A plain field has no relationship.
+    """
+    drift_messages = []
+
+    do_both_field_types_match = type(archived_model_field) is type(live_model_field)
+    if do_both_field_types_match is False:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` is a "
+            f"`{type(archived_model_field).__name__}` but `{live_model._meta.label}.{live_model_field.name}` "
+            f"is a `{type(live_model_field).__name__}`"
+        )
+
+    # length only matters if they're the same type
+    if do_both_field_types_match is True and archived_model_field.max_length != live_model_field.max_length:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` has a max_length of `{archived_model_field.max_length}`"
+            f" and does not match the `{live_model._meta.label}.{live_model_field.name}` max_length of `{live_model_field.max_length}`."
+        )
+
+    return drift_messages
+
+
+def _validate_dropped_relation_field(archived_model, archived_model_field, live_model, live_model_field):
+    """
+    Validates a dropped relation field of an archived model and a live model.
+
+    A dropped relation points at a model that is not archived, so the archived model holds it as a plain
+    identifier column rather than as a relation.
+    """
+    drift_messages = []
+
+    is_archived_model_field_still_a_relation = archived_model_field.is_relation is True
+    if is_archived_model_field_still_a_relation is True:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` is a relation to "
+            f"`{archived_model_field.related_model._meta.label}` but it must be a plain identifier column, "
+            f"because `{live_model._meta.label}.{live_model_field.name}` points at "
+            f"`{live_model_field.related_model._meta.label}` which is not archived."
+        )
+        return drift_messages
+
+    archived_model_field_column_type = archived_model_field.db_type(connection)
+    live_model_field_referent_column_type = live_model_field.target_field.rel_db_type(connection)
+    do_both_column_types_match = archived_model_field_column_type == live_model_field_referent_column_type
+    if do_both_column_types_match is False:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` is a "
+            f"`{archived_model_field_column_type}` column but it must be a "
+            f"`{live_model_field_referent_column_type}` column to hold a "
+            f"`{live_model_field.related_model._meta.label}` primary key."
+        )
+
+    return drift_messages
+
+
+def _validate_persisted_relation_field(archived_model, archived_model_field, live_model, live_model_field):
+    """
+    Validates a persisted relation field of an archived model and a live model.
+
+    A persisted relation points at a model that is archived, so the archived model keeps it as a relation,
+    pointed at that archived model rather than at the live one.
+    """
+    drift_messages = []
+
+    archived_model_for_live_model_field_relation = get_archived_model_from_live_model(live_model_field.related_model)
+
+    is_archived_model_field_a_relation = archived_model_field.is_relation is True
+    if is_archived_model_field_a_relation is False:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` is a plain field but it must be a "
+            f"relation to `{archived_model_for_live_model_field_relation._meta.label}`, because "
+            f"`{live_model._meta.label}.{live_model_field.name}` points at "
+            f"`{live_model_field.related_model._meta.label}` which is archived."
+        )
+        return drift_messages
+
+    does_archived_model_field_point_at_the_archived_model = (
+        archived_model_field.related_model is archived_model_for_live_model_field_relation
+    )
+    if does_archived_model_field_point_at_the_archived_model is False:
+        drift_messages.append(
+            f"`{archived_model._meta.label}.{archived_model_field.name}` points at "
+            f"`{archived_model_field.related_model._meta.label}` but it must point at "
+            f"`{archived_model_for_live_model_field_relation._meta.label}`, the archived model for "
+            f"`{live_model_field.related_model._meta.label}`."
+        )
+
+    return drift_messages
+
+
+def _find_archived_model_drift(archived_model, live_model):
+    """
+    What has drifted on one archived model.
+
+    Returns:
+        (list[str]): One message per difference found, empty when the two models match.
+    """
+    archived_fields = {field.name: field for field in archived_model._meta.fields}
+    live_fields = {field.name: field for field in live_model._meta.fields}
+
+    drift_messages = []
+
+    for live_model_field in live_model._meta.fields:
+        # --------------------
+        # Live Model Classification
+        # --------------------
+        is_live_model_field_a_foreign_relationship = live_model_field.is_relation is True
+        is_live_model_field_a_plain_field = is_live_model_field_a_foreign_relationship is False
+
+        # --------------------
+        # Archived Model Classification
+        # --------------------
+        archived_model_relational_field_reference = (
+            get_archived_model_from_live_model(live_model_field.related_model)
+            if is_live_model_field_a_foreign_relationship is True
+            else None
+        )
+        is_archived_model_relational_field_dropped = (
+            is_live_model_field_a_foreign_relationship is True and archived_model_relational_field_reference is None
+        )
+        is_archived_model_relational_field_kept = (
+            is_live_model_field_a_foreign_relationship is True and archived_model_relational_field_reference is not None
+        )
+        expected_archived_model_field_name = (
+            f"{live_model_field.name}_id"
+            if is_archived_model_relational_field_dropped is True
+            else live_model_field.name
+        )
+        archived_model_field = archived_fields.get(expected_archived_model_field_name)
+
+        # --------------------
+        # Checks
+        # --------------------
+        # First check - does the field even exist
+        does_archive_model_have_live_model_field = archived_model_field is not None
+        if does_archive_model_have_live_model_field is False:
+            new_drift_message = (
+                f"`{archived_model._meta.label}` is missing the field "
+                f"`{live_model._meta.label}.{live_model_field.name}`"
+            )
+            drift_messages.append(new_drift_message)
+            # If there's no matching attribute, there's no point in continuing further checks
+            continue
+
+        # Second check - does nullability settings match
+        does_archive_model_field_nullability_match_live_model_field_nullability = (
+            archived_model_field.null == live_model_field.null
+        )
+        if does_archive_model_field_nullability_match_live_model_field_nullability is False:
+            drift_messages.append(
+                f"`{archived_model._meta.label}.{archived_model_field.name}` has nullability set to `null={archived_model_field.null}`."
+                f" This differs with `{live_model._meta.label}.{live_model_field.name}` which has nullability set to `null={live_model_field.null}`."
+            )
+
+        # Third check - is it a plain field? If so what are the possible issues?
+        if is_live_model_field_a_plain_field is True:
+            plain_field_drift_messages = _validate_plain_field(
+                archived_model, archived_model_field, live_model, live_model_field
+            )
+            drift_messages.extend(plain_field_drift_messages)
+
+        # Fourth check - is it a relation the archived model dropped? If so what are the possible issues?
+        if is_archived_model_relational_field_dropped is True:
+            dropped_relation_field_drift_messages = _validate_dropped_relation_field(
+                archived_model, archived_model_field, live_model, live_model_field
+            )
+            drift_messages.extend(dropped_relation_field_drift_messages)
+
+        # Fifth check - is it a relation the archived model persisted? If so what are the possible issues?
+        if is_archived_model_relational_field_kept is True:
+            kept_relation_field_drift_messages = _validate_persisted_relation_field(
+                archived_model, archived_model_field, live_model, live_model_field
+            )
+            drift_messages.extend(kept_relation_field_drift_messages)
+
+    # Sixth check - does the archived model hold a column that no live model field feeds?
+    for archived_model_field in archived_model._meta.fields:
+        does_live_model_have_a_field_of_the_same_name = archived_model_field.name in live_fields
+        is_archived_model_field_declared_as_archive_only = (
+            archived_model_field.name in archived_model.archived_only_field_names
+        )
+        live_model_field_the_relation_was_dropped_from = live_fields.get(archived_model_field.name.removesuffix("_id"))
+        is_archived_model_field_a_dropped_relation_column = (
+            live_model_field_the_relation_was_dropped_from is not None
+            and live_model_field_the_relation_was_dropped_from.is_relation is True
+        )
+
+        if (
+            does_live_model_have_a_field_of_the_same_name is False
+            and is_archived_model_field_declared_as_archive_only is False
+            and is_archived_model_field_a_dropped_relation_column is False
+        ):
+            drift_messages.append(
+                f"`{archived_model._meta.label}.{archived_model_field.name}` has no counterpart on "
+                f"`{live_model._meta.label}` and is not in `archived_only_field_names`."
+            )
+
+    # Seventh check - does the live model hold a many to many field, which cannot be archived at all?
+    for live_model_many_to_many_field in live_model._meta.many_to_many:
+        drift_messages.append(
+            f"`{archived_model._meta.label}` cannot hold "
+            f"`{live_model._meta.label}.{live_model_many_to_many_field.name}` because it is a many-to-many "
+            f"field, so its values are lost when a record is archived."
+        )
+
+    return drift_messages
+
+
+def find_archive_schema_drift(archived_model_pairs=None):
+    """
+    Compare each archived model against the live model it archives.
+
+    Args:
+        archived_model_pairs (list[tuple[type, type]] | None): Each archived model paired with the live
+            model it archives.
+
+    Returns:
+        (list[tuple[type, type, list[str]]]): Each archived model that has drifted, with the live model it
+            archives and what has drifted on it. Empty when each archived model matches the live model it
+            archives.
+
+    Raises:
+        (LookupError): An archived model is not named for a live model, or names one that is not registered.
+    """
+    if archived_model_pairs is None:
+        archived_model_pairs = get_archived_model_and_live_model_pairs()
+
+    archived_model_and_drifts = []
+    for archived_model, live_model in archived_model_pairs:
+        drift = _find_archived_model_drift(archived_model, live_model)
+        if drift:
+            archived_model_and_drifts.append((archived_model, live_model, drift))
+
+    return archived_model_and_drifts
 
 
 def format_drift_check_data(drift):
@@ -93,102 +417,9 @@ def stub_model(label, fields, many_to_many=(), archived_only_field_names=()):
     )
 
 
-class ArchivedLogModelTestCase(TestCase):
-    """How an archived record behaves when compared against its live counterpart."""
-
-    def test_unresolved_relations_return_none(self):
-        """Reaching for a live relation by name gets None, where the live record would follow the relation."""
-        for live, archived in ARCHIVED_FROM.items():
-            instance = archived()
-            # Forward relations, including generic foreign keys, which `_meta.fields` omits. Content types are
-            # resolved from their ids on the archived model instead, and relations to archived models are real.
-            relations = [
-                field
-                for field in (*live._meta.fields, *live._meta.private_fields)
-                if field.many_to_one
-                and field.related_model is not ContentType
-                and field.related_model not in ARCHIVED_FROM
-            ]
-            for live_field in relations:
-                with self.subTest(model=archived.__name__, field=live_field.name):
-                    self.assertIsNone(getattr(instance, live_field.name))
-
-    def test_content_types_resolve_from_their_ids(self):
-        device_ct = ContentType.objects.get_for_model(Device)
-        location_ct = ContentType.objects.get_for_model(Location)
-        record = ArchivedObjectChange(
-            changed_object_type_id=device_ct.pk,
-            related_object_type_id=location_ct.pk,
-            object_repr="device 1",
-            action=ObjectChangeActionChoices.ACTION_UPDATE,
-            user_name="admin",
-        )
-        self.assertEqual(record.changed_object_type, device_ct)
-        self.assertEqual(record.related_object_type, location_ct)
-        self.assertEqual(str(record), f"{device_ct} device 1 updated by admin")
-
-    def test_get_related_changes_honors_object_permissions(self):
-        device_ct = ContentType.objects.get_for_model(Device)
-        changed_object_id = uuid.uuid4()
-        records = [
-            ArchivedObjectChange.objects.create(
-                time=timezone.now(),
-                request_id=uuid.uuid4(),
-                action=action,
-                changed_object_type_id=device_ct.pk,
-                changed_object_id=changed_object_id,
-                change_context=ObjectChangeEventContextChoices.CONTEXT_WEB,
-                object_repr="device 1",
-                object_data={},
-                user_name="admin",
-            )
-            for action in (
-                ObjectChangeActionChoices.ACTION_CREATE,
-                ObjectChangeActionChoices.ACTION_UPDATE,
-                ObjectChangeActionChoices.ACTION_DELETE,
-            )
-        ]
-        self.add_permissions(
-            "extras.view_archivedobjectchange", constraints={"action": ObjectChangeActionChoices.ACTION_UPDATE}
-        )
-
-        self.assertQuerySetEqual(records[0].get_related_changes(), records[1:], ordered=False)
-        self.assertQuerySetEqual(records[0].get_related_changes(user=self.user), [records[1]])
-
-    def test_get_absolute_url_is_none_without_a_route(self):
-        """With no route registered for an archived model, a URL lookup gets None rather than raising."""
-        for archived in ARCHIVED_MODELS:
-            instance = archived(id=uuid.uuid4())
-            with self.subTest(model=archived.__name__):
-                self.assertIsNone(instance.get_absolute_url())
-                self.assertIsNone(instance.get_absolute_url(api=True))
-
-    def test_archived_models_offer_only_the_view_permission(self):
-        """Rotation writes archived records and nothing else does, so there is no add, change or delete."""
-        for archived in ARCHIVED_MODELS:
-            with self.subTest(model=archived.__name__):
-                self.assertEqual(archived._meta.default_permissions, ("view",))
-
-    def test_archived_models_only_have_foreign_keys_to_archived_models(self):
-        """
-        A relation to any other model would become a cross-database constraint if the archive tables move to a
-        separate database.
-
-        Each such reference is a plain identifier column instead. Only concrete forward relations matter here;
-        the reverse `GenericRelation` descriptors inherited from `BaseModel` add no column and no constraint.
-        """
-        for archived in ARCHIVED_MODELS:
-            with self.subTest(model=archived.__name__):
-                related_models = {f.related_model for f in archived._meta.fields if f.is_relation}
-                self.assertLessEqual(related_models, set(ARCHIVED_MODELS))
-
-    def test_archived_models_are_excluded_from_global_search(self):
-        """Archived log models are excluded from global search, like the live models they archive."""
-        for archived in ARCHIVED_MODELS:
-            with self.subTest(model=archived.__name__):
-                self.assertIn(archived._meta.model_name, GLOBAL_SEARCH_EXCLUDE_LIST)
-
-
+# --------------------------------------------------------------------------------------------------
+# Schema Drift Testing
+# --------------------------------------------------------------------------------------------------
 class ArchiveSchemaDriftTestCase(SimpleTestCase):
     """
     The comparison between each archived model and the live model it archives.
@@ -267,13 +498,14 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
         )
 
     def test_an_archived_model_not_named_for_a_live_model_raises(self):
-        with mock.patch("nautobot.extras.models.archive.ARCHIVED_MODEL_NAME_PREFIX", "Retained"):
+        with mock.patch("nautobot.extras.tests.test_archive_models.ARCHIVED_MODEL_NAME_PREFIX", "Retained"):
             with self.assertRaises(LookupError):
                 find_archive_schema_drift()
 
     def test_an_archived_model_whose_live_model_does_not_exist_raises(self):
         with mock.patch(
-            "nautobot.extras.models.archive.get_live_model_name_from_archived_model", return_value="NoSuchModel"
+            "nautobot.extras.tests.test_archive_models.get_live_model_name_from_archived_model",
+            return_value="NoSuchModel",
         ):
             with self.assertRaises(LookupError):
                 find_archive_schema_drift()
@@ -382,3 +614,110 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
             "`extras.ArchivedJobResult`, the archived model for `extras.JobResult`.",
             messages,
         )
+
+
+# --------------------------------------------------------------------------------------------------
+# Testing
+# --------------------------------------------------------------------------------------------------
+# Each live model beside the model it is archived to. Resolved from the archived models' names rather than
+# written out here, so that this module cannot disagree with what the comparison resolves. A model that
+# fails to resolve is caught by
+# `ArchiveSchemaDriftTestCase.test_every_archived_model_resolves_its_live_model_from_its_name`.
+ARCHIVED_FROM = {live_model: archived_model for archived_model, live_model in get_archived_model_and_live_model_pairs()}
+ARCHIVED_MODELS = tuple(ARCHIVED_FROM.values())
+
+
+class ArchivedLogModelTestCase(TestCase):
+    """How an archived record behaves when compared against its live counterpart."""
+
+    def test_unresolved_relations_return_none(self):
+        """Reaching for a live relation by name gets None, where the live record would follow the relation."""
+        for live, archived in ARCHIVED_FROM.items():
+            instance = archived()
+            # Forward relations, including generic foreign keys, which `_meta.fields` omits. Content types are
+            # resolved from their ids on the archived model instead, and relations to archived models are real.
+            relations = [
+                field
+                for field in (*live._meta.fields, *live._meta.private_fields)
+                if field.many_to_one
+                and field.related_model is not ContentType
+                and field.related_model not in ARCHIVED_FROM
+            ]
+            for live_field in relations:
+                with self.subTest(model=archived.__name__, field=live_field.name):
+                    self.assertIsNone(getattr(instance, live_field.name))
+
+    def test_content_types_resolve_from_their_ids(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        location_ct = ContentType.objects.get_for_model(Location)
+        record = ArchivedObjectChange(
+            changed_object_type_id=device_ct.pk,
+            related_object_type_id=location_ct.pk,
+            object_repr="device 1",
+            action=ObjectChangeActionChoices.ACTION_UPDATE,
+            user_name="admin",
+        )
+        self.assertEqual(record.changed_object_type, device_ct)
+        self.assertEqual(record.related_object_type, location_ct)
+        self.assertEqual(str(record), f"{device_ct} device 1 updated by admin")
+
+    def test_get_related_changes_honors_object_permissions(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        changed_object_id = uuid.uuid4()
+        records = [
+            ArchivedObjectChange.objects.create(
+                time=timezone.now(),
+                request_id=uuid.uuid4(),
+                action=action,
+                changed_object_type_id=device_ct.pk,
+                changed_object_id=changed_object_id,
+                change_context=ObjectChangeEventContextChoices.CONTEXT_WEB,
+                object_repr="device 1",
+                object_data={},
+                user_name="admin",
+            )
+            for action in (
+                ObjectChangeActionChoices.ACTION_CREATE,
+                ObjectChangeActionChoices.ACTION_UPDATE,
+                ObjectChangeActionChoices.ACTION_DELETE,
+            )
+        ]
+        self.add_permissions(
+            "extras.view_archivedobjectchange", constraints={"action": ObjectChangeActionChoices.ACTION_UPDATE}
+        )
+
+        self.assertQuerySetEqual(records[0].get_related_changes(), records[1:], ordered=False)
+        self.assertQuerySetEqual(records[0].get_related_changes(user=self.user), [records[1]])
+
+    def test_get_absolute_url_is_none_without_a_route(self):
+        """With no route registered for an archived model, a URL lookup gets None rather than raising."""
+        for archived in ARCHIVED_MODELS:
+            instance = archived(id=uuid.uuid4())
+            with self.subTest(model=archived.__name__):
+                self.assertIsNone(instance.get_absolute_url())
+                self.assertIsNone(instance.get_absolute_url(api=True))
+
+    def test_archived_models_offer_only_the_view_permission(self):
+        """Rotation writes archived records and nothing else does, so there is no add, change or delete."""
+        for archived in ARCHIVED_MODELS:
+            with self.subTest(model=archived.__name__):
+                self.assertEqual(archived._meta.default_permissions, ("view",))
+
+    def test_archived_models_only_have_foreign_keys_to_archived_models(self):
+        """
+        A relation to any other model would become a cross-database constraint if the archive tables move to a
+        separate database.
+
+        Each such reference is a plain identifier column instead. Only concrete forward relations matter here;
+        the reverse `GenericRelation` descriptors inherited from `BaseModel` add no column and no constraint.
+        """
+        for archived in ARCHIVED_MODELS:
+            with self.subTest(model=archived.__name__):
+                related_models = {f.related_model for f in archived._meta.fields if f.is_relation}
+                self.assertLessEqual(related_models, set(ARCHIVED_MODELS))
+
+    def test_archived_models_are_excluded_from_global_search(self):
+        """Archived log models are excluded from global search, like the live models they archive."""
+        for archived in ARCHIVED_MODELS:
+            with self.subTest(model=archived.__name__):
+                self.assertIn(archived._meta.model_name, GLOBAL_SEARCH_EXCLUDE_LIST)
