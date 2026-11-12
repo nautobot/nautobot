@@ -334,7 +334,8 @@ def _find_archived_model_drift(archived_model, live_model):
                 f"`{live_model._meta.label}` and is not in `archived_only_field_names`."
             )
 
-    # Seventh check - does the live model hold a many to many field, which cannot be archived at all?
+    # Seventh check - does the live model have a many-to-many field? An archived model cannot store
+    # many-to-many values, so every such field is reported.
     for live_model_many_to_many_field in live_model._meta.many_to_many:
         drift_messages.append(
             f"`{archived_model._meta.label}` cannot hold "
