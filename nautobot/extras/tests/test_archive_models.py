@@ -312,7 +312,7 @@ def _find_archived_model_drift(archived_model, live_model):
             )
             drift_messages.extend(kept_relation_field_drift_messages)
 
-    # Sixth check - does the archived model hold a column that no live model field feeds?
+    # Sixth check - does the archived model have a field with no matching live model field? Fields listed
     for archived_model_field in archived_model._meta.fields:
         does_live_model_have_a_field_of_the_same_name = archived_model_field.name in live_fields
         is_archived_model_field_declared_as_archive_only = (
