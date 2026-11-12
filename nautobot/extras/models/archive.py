@@ -65,10 +65,6 @@ class ArchivedLogModel(BaseModel):
     archival workflows, and to support idempotency.
     """
 
-    # This tuple tracks the field names on this model that have no live model counterpart. Each one is a
-    # deliberate denormalization rather than drift. Anything not named here is reported as drift.
-    archived_only_field_names = ()
-
     is_metadata_associable_model = False
     is_data_compliance_model = False
     is_version_controlled = False
@@ -260,8 +256,6 @@ class ArchivedObjectChange(ArchivedLogModel):
 
 class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     """Archived copy of a `JobResult`."""
-
-    archived_only_field_names = ("user_name",)
 
     # Indexed like the `JobResult.job_model_id`, for listing a job's archived results.
     job_model_id = models.UUIDField(blank=True, null=True, db_index=True)

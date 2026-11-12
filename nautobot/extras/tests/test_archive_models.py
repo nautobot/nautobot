@@ -315,23 +315,24 @@ def _find_archived_model_drift(archived_model, live_model):
     # Sixth check - does the archived model have a field with no matching live model field? Fields listed
     for archived_model_field in archived_model._meta.fields:
         does_live_model_have_a_field_of_the_same_name = archived_model_field.name in live_fields
-        is_archived_model_field_declared_as_archive_only = (
-            archived_model_field.name in archived_model.archived_only_field_names
-        )
         live_model_field_the_relation_was_dropped_from = live_fields.get(archived_model_field.name.removesuffix("_id"))
         is_archived_model_field_a_dropped_relation_column = (
             live_model_field_the_relation_was_dropped_from is not None
             and live_model_field_the_relation_was_dropped_from.is_relation is True
         )
 
+        is_archived_model_field_required = (
+            archived_model_field.null is False and archived_model_field.has_default() is False
+        )
+
         if (
-            does_live_model_have_a_field_of_the_same_name is False
-            and is_archived_model_field_declared_as_archive_only is False
+            is_archived_model_field_required is True
+            and does_live_model_have_a_field_of_the_same_name is False
             and is_archived_model_field_a_dropped_relation_column is False
         ):
             drift_messages.append(
-                f"`{archived_model._meta.label}.{archived_model_field.name}` has no counterpart on "
-                f"`{live_model._meta.label}` and is not in `archived_only_field_names`."
+                f"`{archived_model._meta.label}.{archived_model_field.name}` is required but nothing on "
+                f"`{live_model._meta.label}` fills it, so archiving a record will fail."
             )
 
     # Seventh check - does the live model have a many-to-many field? An archived model cannot store
@@ -399,6 +400,9 @@ class StubRelation:
         self.related_model = related_model
         self.null = null
 
+    def has_default(self):
+        return False
+
 
 class StubMeta:
     def __init__(self, label, fields, many_to_many=()):
@@ -407,14 +411,13 @@ class StubMeta:
         self.many_to_many = many_to_many
 
 
-def stub_model(label, fields, many_to_many=(), archived_only_field_names=()):
+def stub_model(label, fields, many_to_many=()):
     """A stand-in model exposing only what the drift comparison reads."""
     return type(
         label.rpartition(".")[2],
         (),
         {
             "_meta": StubMeta(label, fields, many_to_many),
-            "archived_only_field_names": archived_only_field_names,
         },
     )
 
@@ -481,22 +484,9 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
         self.assertEqual(len(drift_check_data), 1)
         _archived_model, _live_model, messages = drift_check_data[0]
         self.assertIn(
-            "`extras.ArchivedJobResult.worker` has no counterpart on `extras.JobLogEntry` and is not in "
-            "`archived_only_field_names`.",
+            "`extras.ArchivedJobResult.name` is required but nothing on `extras.JobLogEntry` fills it, "
+            "so archiving a record will fail.",
             messages,
-        )
-
-    def test_a_declared_denormalization_is_not_reported(self):
-        """
-        `ArchivedJobResult.user_name` has no live counterpart on purpose, and says so.
-
-        The live model reads the username through its `user` foreign key, which can't be followed from an
-        archived record, so rotation copies it. Declared in `archived_only_field_names`, it is not drift.
-        """
-        self.assertIn("user_name", ArchivedJobResult.archived_only_field_names)
-        self.assertNotIn(
-            ArchivedJobResult,
-            [archived_model for archived_model, _live_model, _messages in find_archive_schema_drift()],
         )
 
     def test_an_archived_model_not_named_for_a_live_model_raises(self):
@@ -581,10 +571,23 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
         self.assertEqual(
             _find_archived_model_drift(archived_model, live_model),
             [
-                "`extras.ArchivedWidget.extra` has no counterpart on `extras.Widget` and is not in "
-                "`archived_only_field_names`."
+                "`extras.ArchivedWidget.extra` is required but nothing on `extras.Widget` fills it, "
+                "so archiving a record will fail."
             ],
         )
+
+    def test_an_optional_column_only_on_the_archived_model_is_not_reported(self):
+        """A field dropped from the live model keeps its archived history; rotation just leaves it empty."""
+        live_model = stub_model("extras.Widget", [])
+        archived_model = stub_model(
+            "extras.ArchivedWidget",
+            [
+                stub_field(models.JSONField(null=True), "deprecated_nullable"),
+                stub_field(models.CharField(max_length=10, default=""), "deprecated_defaulted"),
+            ],
+        )
+
+        self.assertEqual(_find_archived_model_drift(archived_model, live_model), [])
 
     def test_a_dropped_relation_column_of_the_wrong_type_is_reported(self):
         """`Job` uses a UUID primary key, so an integer column cannot hold the reference."""
