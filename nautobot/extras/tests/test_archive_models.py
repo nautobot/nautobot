@@ -499,7 +499,9 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
 
     def test_an_archived_model_not_named_for_a_live_model_raises(self):
         with mock.patch("nautobot.extras.tests.test_archive_models.ARCHIVED_MODEL_NAME_PREFIX", "Retained"):
-            with self.assertRaises(LookupError):
+            with self.assertRaisesRegex(
+                LookupError, r"does not resolve to a registered model named None\. There is nothing to compare it"
+            ):
                 find_archive_schema_drift()
 
     def test_an_archived_model_whose_live_model_does_not_exist_raises(self):
@@ -507,7 +509,10 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
             "nautobot.extras.tests.test_archive_models.get_live_model_name_from_archived_model",
             return_value="NoSuchModel",
         ):
-            with self.assertRaises(LookupError):
+            with self.assertRaisesRegex(
+                LookupError,
+                r"does not resolve to a registered model named NoSuchModel\. There is nothing to compare it",
+            ):
                 find_archive_schema_drift()
 
     def test_a_field_missing_from_the_archived_model_is_reported(self):
