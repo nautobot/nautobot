@@ -1,19 +1,15 @@
-import * as GraphiQLPluginExplorer from '@graphiql/plugin-explorer';
+import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
-import * as graphqlWs from 'graphql-ws';
 import React from 'react';
-import ReactDOM from 'react-dom';
-import { fetch } from 'whatwg-fetch';
+import ReactDOM from 'react-dom/client';
+import 'graphiql/setup-workers/webpack';
 
-import 'graphiql/graphiql.css';
-import '@graphiql/plugin-explorer/dist/style.css';
+import 'graphiql/style.css';
+import '@graphiql/plugin-explorer/style.css';
 
-GraphiQL.createFetcher = createGraphiQLFetcher;
-
-window.fetch = fetch;
-window.graphqlWs = graphqlWs;
 window.GraphiQL = GraphiQL;
-window.GraphiQLPluginExplorer = GraphiQLPluginExplorer;
+window.createGraphiQLFetcher = createGraphiQLFetcher;
+window.explorerPlugin = explorerPlugin;
 window.React = React;
 window.ReactDOM = ReactDOM;

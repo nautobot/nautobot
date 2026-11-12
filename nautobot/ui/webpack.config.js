@@ -4,6 +4,8 @@ import path from 'node:path';
 import autoprefixer from 'autoprefixer';
 import CopyPlugin from 'copy-webpack-plugin';
 import miniCssExtractPlugin from 'mini-css-extract-plugin'
+import MinimizerPlugin from 'minimizer-webpack-plugin';
+import webpack from 'webpack';
 
 const __dirname = import.meta.dirname;
 
@@ -40,6 +42,11 @@ export default [
             new miniCssExtractPlugin(
                 {
                     filename: 'css/[name].css'
+                }
+            ),
+            new webpack.optimize.LimitChunkCountPlugin(
+                {
+                    maxChunks: 2,
                 }
             )
         ],
@@ -81,6 +88,7 @@ export default [
     {
         mode: 'production',
         devtool: 'source-map',
+        target: 'universal',
         entry: {
             "nautobot-graphiql": path.resolve('src', 'js', 'nautobot-graphiql.js')
         },
@@ -89,9 +97,20 @@ export default [
             path: path.resolve(__dirname, '..', 'project-static', 'dist')
         },
         optimization: {
+            runtimeChunk: 'single',
             splitChunks: {
                 chunks: 'all',
-                name: 'graphql-libraries'
+                minSize: 0,
+                maxSize: 100000000,
+                cacheGroups: {
+                    vendor: {
+                        test: /[\\/]node_modules[\\/]/,
+                        name(module) {
+                            const packageName = module.identifier().match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+                            return `npm/${packageName.replace('@', '')}`;
+                        }
+                    }
+                }
             }
         },
         plugins: [
@@ -99,7 +118,7 @@ export default [
                 {
                     filename: 'css/[name].css'
                 }
-            )
+            ),
         ],
         module: {
             rules: [

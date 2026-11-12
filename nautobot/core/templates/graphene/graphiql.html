@@ -82,10 +82,10 @@ add "&raw" to the end of the URL within a browser.
         </style>
         <!-- As Nautobot may be run without internet access, we source these files locally rather than from an online CDN -->
         <link rel="stylesheet"
-              href="{% static 'dist/css/graphql-libraries.css' %}"
+              href="{% versioned_static 'dist/css/graphql-libraries.css' %}"
               onerror="nb.media.handleFailure(this)">
-        <script src="{% static 'dist/js/graphql-libraries.js' %}" onerror="nb.media.handleFailure(this)"></script>
-        <script src="{% static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
+        {% include 'inc/javascript.html' %}
+        <script type="module" src="{% versioned_static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
     </head>
     <body>
         <!-- Nautobot page contents -->
@@ -94,6 +94,9 @@ add "&raw" to the end of the URL within a browser.
         <header id="header">
             <div class="banner-alert-area">
                 {% include 'inc/header_banners.html' %}
+                {% block header_messages %}
+                    {% include 'inc/header_messages.html' %}
+                {% endblock header_messages %}
             </div>
             <div class="container-fluid mb-12 mt-16">
                 <div class="row">
@@ -109,7 +112,6 @@ add "&raw" to the end of the URL within a browser.
             </div>
             {% block header %}{% endblock header %}
         </header>
-        {% include 'inc/javascript.html' %}
         <main class="container-fluid wrapper" id="main-content" tabindex="-1">
             <!-- GraphiQL page contents -->
             <div id="editor"></div>
@@ -118,49 +120,190 @@ add "&raw" to the end of the URL within a browser.
         {% csrf_token %}
         <script type="application/javascript">
             window.GRAPHENE_SETTINGS = {
-                {% if subscription_path %}
-                    subscriptionPath: "{{subscription_path}}",
-                {% endif %}
                 graphiqlHeaderEditorEnabled: {{ graphiql_header_editor_enabled|yesno:"true,false" }},
                 graphiqlShouldPersistHeaders: {{ graphiql_should_persist_headers|yesno:"true,false" }},
                 graphiqlInputValueDeprecation: {{ graphiql_input_value_deprecation|yesno:"true,false" }},
             };
         </script>
-        <script src="{% static 'graphene_django/graphiql.js' %}"></script>
         <script>
-            {% if perms.extras.view_graphqlquery %}
-                document.addEventListener('DOMContentLoaded', function() {
-                    queries_tab = `
-                        <div>
-                            <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-                                <img alt="" class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
-                                <span class="visually-hidden">Saved queries</span>
-                            </button>
-                            <ul class="dropdown-menu" id="graphql-queries-menu">
-                                <li class="dropdown-header">Saved Queries</li>
-                                {% for query in saved_graphiql_queries %}
-                                    <li class="hstack gap-4">
-                                         {% if request.GET.id|slugify == query.id|slugify %}
-                                             <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
-                                                 <strong>{{ query.name }}</strong>
-                                             </a>
-                                             <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
-                                         {% else %}
-                                             <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
-                                         {% endif %}
-                                    </li>
-                                {% endfor %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <button class="dropdown-item" onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</button>
-                                </li>
-                            </ul>
-                        </div>
-                    `;
-                    $(".graphiql-toolbar").append(queries_tab);
-                }, false);
-            {% endif %}
+            initGraphiQL = function (
+                document,
 
+                GRAPHENE_SETTINGS,
+                GraphiQL,
+                React,
+                ReactDOM,
+                createGraphiQLFetcher,
+                explorerPlugin,
+                history,
+                location,
+            ) {
+
+              // Collect the URL parameters
+                var parameters = {};
+                location.hash
+                    .substr(1)
+                    .split("&")
+                    .forEach(function (entry) {
+                        var eq = entry.indexOf("=");
+                        if (eq >= 0) {
+                            parameters[decodeURIComponent(entry.slice(0, eq))] = decodeURIComponent(
+                                entry.slice(eq + 1),
+                            );
+                        }
+                    });
+              // Produce a Location fragment string from a parameter object.
+                function locationQuery(params) {
+                    return (
+                        "#" +
+                        Object.keys(params)
+                            .map(function (key) {
+                                return (
+                                    encodeURIComponent(key) + "=" + encodeURIComponent(params[key])
+                                );
+                            })
+                            .join("&")
+                    );
+                }
+              // Derive a fetch URL from the current URL, sans the GraphQL parameters.
+                var graphqlParamNames = {
+                    query: true,
+                    variables: true,
+                    operationName: true,
+                };
+                var otherParams = {};
+                for (var k in parameters) {
+                    if (parameters.hasOwnProperty(k) && graphqlParamNames[k] !== true) {
+                        otherParams[k] = parameters[k];
+                    }
+                }
+
+                var fetchURL = locationQuery(otherParams);
+
+              // Derive the subscription URL. If the SUBSCRIPTION_URL setting is specified, uses that value. Otherwise
+              // assumes the current window location with an appropriate websocket protocol.
+                function trueLambda() { return true; };
+
+                var headers = {};
+                var cookies = ("; " + document.cookie).split("; csrftoken=");
+                if (cookies.length == 2) {
+                    csrftoken = cookies.pop().split(";").shift();
+                } else {
+                    csrftoken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+                }
+                if (csrftoken) {
+                    headers['X-CSRFToken'] = csrftoken
+                }
+
+                var graphQLFetcher = createGraphiQLFetcher({
+                    url: fetchURL,
+                    headers: headers
+                })
+
+              // When the query and variables string is edited, update the URL bar so
+              // that it can be easily shared.
+                function onEditQuery(newQuery) {
+                    parameters.query = newQuery;
+                    updateURL();
+                }
+                function onEditVariables(newVariables) {
+                    parameters.variables = newVariables;
+                    updateURL();
+                }
+                function onEditOperationName(newOperationName) {
+                    parameters.operationName = newOperationName;
+                    updateURL();
+                }
+                function updateURL() {
+                    history.replaceState(null, null, locationQuery(parameters));
+                }
+
+                function GraphiQLWithExplorer() {
+                    var [query, setQuery] = React.useState(parameters.query);
+
+                    function handleQuery(query) {
+                        setQuery(query);
+                        onEditQuery(query);
+                    }
+
+                    var options = {
+                        fetcher: graphQLFetcher,
+                        plugins: [explorerPlugin()],
+                        defaultEditorToolsVisibility: true,
+                        onEditQuery: handleQuery,
+                        onEditVariables: onEditVariables,
+                        onEditOperationName: onEditOperationName,
+                        isHeadersEditorEnabled: GRAPHENE_SETTINGS.graphiqlHeaderEditorEnabled,
+                        shouldPersistHeaders: GRAPHENE_SETTINGS.graphiqlShouldPersistHeaders,
+                        inputValueDeprecation: GRAPHENE_SETTINGS.graphiqlInputValueDeprecation,
+                        initialQuery: query,
+                    };
+                    if (parameters.variables) {
+                        options.variables = parameters.variables;
+                    }
+                    if (parameters.operation_name) {
+                        options.operationName = parameters.operation_name;
+                    }
+
+                    queries_tab = `{% if perms.extras.view_graphqlquery %}
+                        <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                            <img alt="" class="graphiql-toolbar-icon" src="{% versioned_static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                            <span class="visually-hidden">Saved queries</span>
+                        </button>
+                        <ul class="dropdown-menu" id="graphql-queries-menu">
+                            <li class="dropdown-header">Saved Queries</li>
+                            {% for query in saved_graphiql_queries %}
+                                <li class="hstack gap-4">
+                                     {% if request.GET.id|slugify == query.id|slugify %}
+                                         <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
+                                             <strong>{{ query.name }}</strong>
+                                         </a>
+                                         <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
+                                     {% else %}
+                                         <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
+                                     {% endif %}
+                                </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item" onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</button>
+                            </li>
+                        </ul>
+                    {% endif %}`;
+
+                    return React.createElement(
+                        GraphiQL,
+                        options,
+                        React.createElement(
+                            GraphiQL.Toolbar,
+                            null,
+                            [
+                                ...React.Children.toArray(React.createElement(GraphiQL.Toolbar)),
+                                React.createElement('div', {dangerouslySetInnerHTML: {__html: queries_tab }})
+                            ]
+                        )
+                    );
+                }
+
+              // Render <GraphiQL /> into the body.
+                ReactDOM.createRoot(document.getElementById("editor")).render(React.createElement(GraphiQLWithExplorer));
+            }
+            document.addEventListener('DOMContentLoaded', () => {
+                initGraphiQL(
+                    document,
+
+                    window.GRAPHENE_SETTINGS,
+                    window.GraphiQL,
+                    window.React,
+                    window.ReactDOM,
+                    window.createGraphiQLFetcher,
+                    window.explorerPlugin,
+                    window.history,
+                    window.location,
+                );
+            });
+        </script>
+        <script>
             function reload(id, query, variables) {
                 if (variables == null){
                     variables = '{}';
