@@ -27,6 +27,7 @@ from nautobot.extras.models import (
     ArchivedJobLogEntry,
     ArchivedJobResult,
     ArchivedObjectChange,
+    Job,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -584,19 +585,21 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
             ],
         )
 
-    def test_a_demoted_column_of_the_wrong_type_is_reported(self):
+    def test_a_dropped_relation_column_of_the_wrong_type_is_reported(self):
         """`Job` uses a UUID primary key, so an integer column cannot hold the reference."""
         archived_model = stub_model("extras.ArchivedWidget", [stub_field(models.IntegerField(), "job_model_id")])
 
         messages = _find_archived_model_drift(archived_model, JobResult)
 
+        archived_model_field_column_type = models.IntegerField().db_type(connection)
+        job_primary_key_column_type = Job._meta.pk.rel_db_type(connection)
         self.assertIn(
-            "`extras.ArchivedWidget.job_model_id` is a `integer` column but it must be a `uuid` column "
-            "to hold a `extras.Job` primary key.",
+            f"`extras.ArchivedWidget.job_model_id` is a `{archived_model_field_column_type}` column but it "
+            f"must be a `{job_primary_key_column_type}` column to hold a `extras.Job` primary key.",
             messages,
         )
 
-    def test_a_demoted_column_that_is_still_a_relation_is_reported(self):
+    def test_a_dropped_relation_column_that_is_still_a_relation_is_reported(self):
         archived_model = stub_model("extras.ArchivedWidget", [StubRelation("job_model_id", ArchivedObjectChange)])
 
         messages = _find_archived_model_drift(archived_model, JobResult)
