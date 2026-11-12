@@ -1,11 +1,10 @@
 """Shared bulk edit and bulk delete tests for any model's list view.
 
-The Playwright port of the Selenium `BulkOperationsTestCases.BulkOperationsTestCase` in
-`nautobot.core.testing.integration`, with the same 14 tests in the same order. A subclass
-names the model through the same class attributes and creates its records in
+A subclass names the model through class attributes and creates its records in
 `setup_items`:
 
     class DeviceBulkOperationsTestCase(bulk_operations.BulkOperationsTestCase):
+        page_class = DevicesPage
         model_base_viewname = "dcim:device"
         model_edit_data = {"serial": "Test serial"}
         model_filter_by = {"location": "{prefix}-location-2"}
@@ -13,12 +12,12 @@ names the model through the same class attributes and creates its records in
         def setup_items(self, create_object, status_for, prefix):
             ...
 
-Import the module rather than the class. pytest collects every `*TestCase` class in a
-test module's namespace, and this one has no records to work on.
+Import the module, not the class. pytest collects every `*TestCase` class in a test
+module's namespace, and this class has no `setup_items` of its own, so its tests would
+run and fail.
 
-The Selenium tests empty the model's table before creating their records. These run
-against a shared instance, so every list view they open is scoped to this test's records
-by searching for a unique prefix (`?q=<prefix>`) that every record's name carries.
+The tests run against a shared instance, so every list view they open is searched for a
+unique prefix (`?q=<prefix>`) that is in every record's name.
 """
 
 import pytest
@@ -28,11 +27,17 @@ from nautobot.playwright.job_result_page import JobResultPage
 from nautobot.playwright.list_page import ListPage
 
 
+# restore_page_size: the cross-page tests save a page size of 1 to the user's config.
+# require_celery_worker: twelve tests start a job, which runs only on a Celery worker.
+@pytest.mark.usefixtures("restore_page_size", "require_celery_worker")
 class BulkOperationsTestCase:
     """Bulk edit and bulk delete of one, all, filtered, and cross-page selections."""
 
-    # The model's base view name, e.g. "dcim:device". The list view and the REST endpoint
-    # are derived from it: /dcim/devices/ and /api/dcim/devices/.
+    # The model's list page object, e.g. DevicesPage. Its LIST_PATH is the list view, and the
+    # same path under /api/ is the REST endpoint.
+    page_class: type[ListPage]
+    # The model's base view name, e.g. "dcim:device". The model name in it gives the plural
+    # that the list view's messages print.
     model_base_viewname: str
     # Text fields to set on the bulk edit form, and the REST filter that finds the edited records.
     model_edit_data: dict
@@ -40,12 +45,12 @@ class BulkOperationsTestCase:
     # "{prefix}" in a value is replaced with the prefix setup_items was given.
     model_filter_by: dict
     # How many records setup_items creates in all, and how many of them model_filter_by selects.
-    # Any record that already matched the prefix is added to "all". There should be none.
     model_expected_counts = {
         "all": 5,
         "filtered": 2,
     }
-    # The plural when it is not the model name plus "s", e.g. "ip addresses".
+    # The plural that the list view's messages print, when it is not the model name plus "s",
+    # e.g. "IP addresses".
     override_model_plural = None
 
     def setup_items(self, create_object, status_for, prefix):
@@ -62,37 +67,27 @@ class BulkOperationsTestCase:
     @property
     def list_path(self) -> str:
         """The list view's path, e.g. /dcim/devices/."""
-        app_label = self.model_base_viewname.split(":")[0]
-        return f"/{app_label}/{self.model_plural.replace(' ', '-')}/"
+        return self.page_class.LIST_PATH
 
     @pytest.fixture(autouse=True)
-    def _setup(self, auth_page, base_url, create_object, status_for, api_count, restore_page_size):  # pylint: disable=unused-argument
-        """Create this test's records, compute the expected counts, and open the list view on them.
-
-        restore_page_size is requested for every test because the cross-page tests save a
-        page size of 1 to the user's config.
-        """
+    def _setup(self, auth_page, base_url, create_object, status_for, api_count):
+        """Create this test's records, check their counts, and open the list view on them."""
         self.prefix = unique_name()
         self.endpoint = self.list_path.lstrip("/")
         self.filter_by = {field: value.format(prefix=self.prefix) for field, value in self.model_filter_by.items()}
         self.api_count = api_count
 
-        existing = api_count(self.endpoint, q=self.prefix)
         self.setup_items(create_object, status_for, self.prefix)
-        # The filter cannot be counted before setup_items creates the records it names. Those
-        # names carry the prefix, so no record that existed before can match the filter.
-        self.expected_counts = {
-            "all": existing + self.model_expected_counts["all"],
-            "filtered": self.model_expected_counts["filtered"],
-        }
+        self.expected_counts = dict(self.model_expected_counts)
         for scope, filters in (("all", {}), ("filtered", self.filter_by)):
             actual = api_count(self.endpoint, q=self.prefix, **filters)
-            assert actual == self.expected_counts[scope], (
-                f"setup_items left {actual} {scope} records matching {self.prefix!r}, "
-                f"expected {self.expected_counts[scope]}. Check model_expected_counts."
-            )
+            if actual != self.expected_counts[scope]:
+                pytest.fail(
+                    f"setup_items left {actual} {scope} records matching {self.prefix!r}, "
+                    f"expected {self.expected_counts[scope]}. Check model_expected_counts."
+                )
 
-        self.list_page = ListPage(auth_page, base_url, list_path=self.list_path)
+        self.list_page = self.page_class(auth_page, base_url)
         self.job_result_page = JobResultPage(auth_page, base_url)
         self.go_to_model_list_page()
 
@@ -101,7 +96,11 @@ class BulkOperationsTestCase:
         self.list_page.navigate(q=self.prefix, **params)
 
     def apply_filter(self):
-        """Pick each model_filter_by option in the filter drawer and apply them."""
+        """Pick each model_filter_by option in the filter drawer and apply them.
+
+        The drawer copies `per_page` from the current URL into the filtered list's URL, so the
+        filtered list keeps the page size that the test opened the list with.
+        """
         self.list_page.open_filter_drawer()
         for field, value in self.filter_by.items():
             self.list_page.pick_filter_value(field, value, exact=False)
@@ -110,7 +109,7 @@ class BulkOperationsTestCase:
     def edit_and_apply(self):
         """Fill in model_edit_data on the bulk edit form, submit it, and wait for the job to complete."""
         for field_name, field_value in self.model_edit_data.items():
-            self.list_page.fill_bulk_edit_field(field_name, field_value)
+            self.list_page.fill_input(field_name, field_value)
         self.list_page.apply_bulk_edit()
         self.job_result_page.expect_job_description("Bulk edit objects.")
         self.job_result_page.expect_status("Completed")
@@ -122,9 +121,9 @@ class BulkOperationsTestCase:
         self.job_result_page.expect_status("Completed")
 
     def assert_edited_count(self, expected):
-        """Assert that *expected* of this test's records now hold model_edit_data."""
+        """Assert that *expected* of this test's records now have the values in model_edit_data."""
         actual = self.api_count(self.endpoint, q=self.prefix, **self.model_edit_data)
-        assert actual == expected, f"{actual} {self.model_plural} hold {self.model_edit_data}, expected {expected}"
+        assert actual == expected, f"{actual} {self.model_plural} have {self.model_edit_data}, expected {expected}"
 
     # -------------------------------------------------------------------------
     # Bulk edit
@@ -217,7 +216,7 @@ class BulkOperationsTestCase:
     # Bulk delete
     # -------------------------------------------------------------------------
     # Each test checks the count on the confirmation page before it confirms, so a
-    # selection that reached past this test's records stops there.
+    # selection that includes records outside this test's own stops before deleting them.
 
     def test_bulk_delete_require_selection(self):
         """Delete Selected with nothing selected stays on the list view and says nothing was selected."""
@@ -305,6 +304,8 @@ class BulkOperationsTestCase:
 
         self.confirm_delete()
 
+        # The `per_page=1` request above saved a page size of 1 to the user's config, so a
+        # list opened without `per_page` would show one record. Ask for 50 to see them all.
         self.go_to_model_list_page(per_page=50)
         self.list_page.expect_row_count(self.expected_counts["all"] - self.expected_counts["filtered"])
 

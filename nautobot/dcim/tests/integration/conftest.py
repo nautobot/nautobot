@@ -12,6 +12,18 @@ Fixtures here decide which objects a DCIM test starts from.
 
 import pytest
 
+from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
+
+
+@pytest.fixture
+def device_bulk_edit_form(auth_page, base_url, created_device):
+    """The bulk edit form for `created_device`, opened from the device list filtered by its device type."""
+    devices = DevicesPage(auth_page, base_url)
+    devices.navigate(device_type=created_device["device_type"]["id"])
+    devices.select_row(created_device["device"]["name"])
+    devices.click_edit_selected()
+    return devices
+
 
 @pytest.fixture
 def created_pdu(create_object, created_device):

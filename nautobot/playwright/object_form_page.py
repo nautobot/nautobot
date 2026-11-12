@@ -30,10 +30,6 @@ class ObjectFormPage(BasePage):
         self._goto(self.ADD_PATH)
         expect(self.page.locator(self._SUBMIT_BUTTON)).to_be_attached()
 
-    def fill_input(self, field_name, value):
-        """Type *value* into the text input named *field_name*."""
-        self.page.locator(f"input[name='{field_name}']").fill(value)
-
     def pick_related(self, field_name, record, search=None):
         """Pick the API *record* in the Select2 field *field_name* by its `display` text.
 

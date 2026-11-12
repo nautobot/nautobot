@@ -26,7 +26,8 @@ class JobResultPage(DetailPage):
     def expect_status(self, status, timeout=60_000):
         """Assert that the job reaches *status* (e.g. "Completed") within *timeout* ms.
 
-        The summary panel polls every 3 seconds while the job is unfinished, so the
-        badge updates in place without a reload.
+        The job waits for a Celery worker, and the summary panel refreshes every 3 seconds
+        until the job finishes, so the badge can take several refreshes to change. The
+        suite default of 5 seconds is shorter than one slow job on the CI runner.
         """
         expect(self.page.locator(self._STATUS)).to_have_text(status, timeout=timeout)

@@ -78,14 +78,8 @@ class ListPage(BasePage):
     # Every overview fragment request, for routing and response waits.
     _OVERVIEW_REQUEST = re.compile(r"/overview/")
 
-    def __init__(self, page, base_url, list_path=None):
-        """Fail fast on a subclass that forgot to set `LIST_PATH`.
-
-        Pass *list_path* to drive a list view that has no page object of its own, as the
-        shared bulk operations tests do.
-        """
-        if list_path:
-            self.LIST_PATH = list_path
+    def __init__(self, page, base_url):
+        """Fail fast on a subclass that forgot to set `LIST_PATH`."""
         if not self.LIST_PATH:
             raise ValueError(f"{type(self).__name__} must set LIST_PATH (e.g. '/dcim/locations/').")
         super().__init__(page, base_url)
@@ -200,7 +194,7 @@ class ListPage(BasePage):
 
     @property
     def _delete_selected(self):
-        """Selector for Delete Selected, an item in the dropdown next to Edit Selected. Delete All shares its name."""
+        """Selector for Delete Selected, an item in the dropdown next to Edit Selected. Delete All has the same name, so the selector is scoped to the dropdown menu."""
         return f".dropdown-menu button[name='_delete'][formaction^='{self.LIST_PATH}delete/']"
 
     def expect_on_list(self):
@@ -267,17 +261,17 @@ class ListPage(BasePage):
         """IDs of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
         return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
 
-    def fill_bulk_edit_field(self, name, value):
-        """Type *value* into the bulk edit form's text input named *name*."""
-        self.page.locator(f"form input[name='{name}']").fill(value)
+    def _bulk_edit_dropdown(self, name):
+        """Locator for the Select2 widget that renders the bulk edit form's dropdown field *name*."""
+        return self.page.locator(f"select#id_{name} + span.select2-container")
 
-    def expect_bulk_edit_dropdown_visible(self, name, visible=True):
-        """Assert (auto-retrying) that the Select2 widget standing in for the dropdown field *name* is shown or hidden."""
-        widget = self.page.locator(f"select#id_{name} + span.select2-container")
-        if visible:
-            expect(widget).to_be_visible()
-        else:
-            expect(widget).to_be_hidden()
+    def expect_bulk_edit_dropdown(self, name):
+        """Assert (auto-retrying) that the Select2 widget for the dropdown field *name* is shown."""
+        expect(self._bulk_edit_dropdown(name)).to_be_visible()
+
+    def expect_no_bulk_edit_dropdown(self, name):
+        """Assert (auto-retrying) that the Select2 widget for the dropdown field *name* is hidden."""
+        expect(self._bulk_edit_dropdown(name)).to_be_hidden()
 
     def expect_bulk_edit_dropdown_unset(self, name):
         """Assert (auto-retrying) that the dropdown field *name* shows its "—" placeholder, which renders only while nothing is selected."""

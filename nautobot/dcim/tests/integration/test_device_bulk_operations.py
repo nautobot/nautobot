@@ -2,19 +2,21 @@
 
 from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
 
-# Imported as a module: a BulkOperationsTestCase in this namespace would be collected and run on its own.
+# The module is imported, not the class. If BulkOperationsTestCase were in this module's namespace,
+# pytest would collect it and run its tests without a setup_items.
 from nautobot.playwright import bulk_operations
 
 
 class DeviceBulkOperationsTestCase(bulk_operations.BulkOperationsTestCase):
     """Device bulk edit and bulk delete, through the shared bulk operations tests."""
 
+    page_class = DevicesPage
     model_base_viewname = "dcim:device"
     model_edit_data = {"serial": "Test serial"}
     model_filter_by = {"location": "{prefix}-location-2"}
 
     def setup_items(self, create_object, status_for, prefix):
-        """Five devices: three in one location, and the two that model_filter_by selects in another."""
+        """Create five devices: three in one location, and two in the location that model_filter_by selects."""
         location_type = create_object(
             "dcim/location-types/", name=f"{prefix}-location-type", content_types=["dcim.device"]
         )
@@ -43,30 +45,17 @@ class DeviceBulkOperationsTestCase(bulk_operations.BulkOperationsTestCase):
             )
 
 
-def open_bulk_edit_form(page, base_url, created_device):
-    """Select *created_device* on the device list, filtered by its device type, and open the bulk edit form."""
-    devices = DevicesPage(page, base_url)
-    devices.navigate(device_type=created_device["device_type"]["id"])
-    devices.select_row(created_device["device"]["name"])
-    devices.click_edit_selected()
-    return devices
-
-
 class DeviceBulkUrlParamTestCase:
     """The bulk edit form, opened from a device list filtered by device type."""
 
-    def test_param_fills_device_type(self, auth_page, base_url, created_device):
+    def test_param_fills_device_type(self, device_bulk_edit_form, created_device):
         """The bulk edit form leaves Device Type unset, even though the list it came from is filtered by device type.
 
-        The method name is the Selenium test's, and says the opposite of what it asserts.
-        The device_type parameter does reach the bulk edit form, which the URL check
-        proves. The form must not fill it in, or applying the form would set every
-        selected device to that type.
+        The device_type parameter is in the form's URL. If the form filled the field from
+        it, applying the form would set every selected device to that type.
         """
-        devices = open_bulk_edit_form(auth_page, base_url, created_device)
-
-        devices.expect_url_contains(f"device_type={created_device['device_type']['id']}")
-        devices.expect_bulk_edit_dropdown_unset("device_type")
+        device_bulk_edit_form.expect_url_contains(f"device_type={created_device['device_type']['id']}")
+        device_bulk_edit_form.expect_bulk_edit_dropdown_unset("device_type")
 
 
 class DeviceBulkEditNullifyTestCase:
@@ -75,12 +64,11 @@ class DeviceBulkEditNullifyTestCase:
     Regression test for https://github.com/nautobot/nautobot/issues/8981.
     """
 
-    def test_set_null_hides_dropdown_field(self, auth_page, base_url, created_device):
+    def test_set_null_hides_dropdown_field(self, device_bulk_edit_form):
         """Checking a dropdown field's Set null box hides its Select2 widget."""
-        devices = open_bulk_edit_form(auth_page, base_url, created_device)
         # Platform is a nullable dropdown, shown as a Select2 widget.
-        devices.expect_bulk_edit_dropdown_visible("platform")
+        device_bulk_edit_form.expect_bulk_edit_dropdown("platform")
 
-        devices.set_null("platform")
+        device_bulk_edit_form.set_null("platform")
 
-        devices.expect_bulk_edit_dropdown_visible("platform", visible=False)
+        device_bulk_edit_form.expect_no_bulk_edit_dropdown("platform")

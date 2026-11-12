@@ -110,6 +110,10 @@ class BasePage:
         """Assert (auto-retrying) that a visible flash message contains *text*."""
         expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_be_visible()
 
+    def fill_input(self, field_name, value):
+        """Type *value* into the text input named *field_name*."""
+        self.page.locator(f"input[name='{field_name}']").fill(value)
+
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""
         self.page.go_back()
