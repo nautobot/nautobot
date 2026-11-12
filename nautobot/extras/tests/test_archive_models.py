@@ -41,8 +41,8 @@ from nautobot.extras.models.archive import ArchivedLogModel
 # enforces that. The two are separate models with separate migrations, so a field added to `ObjectChange`
 # and not to `ArchivedObjectChange` needs to produce a loud failure.
 #
-# An archived model is named with a prefix of `Archived<LiveModel>`, there should
-# be no deviation from this.
+# An archived model is named with a prefix of `Archived<LiveModelName>`, there should be no deviation
+# from this.
 ARCHIVED_MODEL_NAME_PREFIX = "Archived"
 
 
