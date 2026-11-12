@@ -384,7 +384,7 @@ def format_drift_check_data(drift):
 
 
 def stub_field(field, name):
-    """A real Django field instance carrying the name a model would have given it."""
+    """Set `name` on a real Django field instance, as a model class would, and return the field."""
     field.name = name
     return field
 
