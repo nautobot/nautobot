@@ -39,12 +39,7 @@ export default [
                         to: path.resolve(__dirname, '..', 'project-static', 'dist', 'css'),
                     },
                 ],
-            }),
-            new webpack.optimize.LimitChunkCountPlugin(
-                {
-                    maxChunks: 2,
-                }
-            )
+            })
         ],
         module: {
             rules: [
