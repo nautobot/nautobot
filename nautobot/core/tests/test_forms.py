@@ -658,6 +658,30 @@ class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
                 field.clean(value)
 
 
+class MultipleContentTypeFieldTest(testing.TestCase):
+    def test_clean_choices_as_strings(self):
+        field = forms.MultipleContentTypeField(choices_as_strings=True, required=False)
+
+        for value, expected in (
+            (["dcim.device"], ["dcim.device"]),
+            (["dcim.device", "dcim.rack"], ["dcim.device", "dcim.rack"]),
+            ([], []),
+            (None, []),
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(field.clean(value), expected)
+
+        for value in (["dcim.nonexistent"], ["dcim.device", "not-a-content-type"], "dcim.device"):
+            with self.subTest(value=value), self.assertRaises(django_forms.ValidationError):
+                field.clean(value)
+
+    def test_clean_choices_as_strings_required(self):
+        field = forms.MultipleContentTypeField(choices_as_strings=True, required=True)
+
+        with self.assertRaises(django_forms.ValidationError):
+            field.clean([])
+
+
 class WidgetsTest(testing.TestCase):
     def test_api_select_add_query_param_with_utf8(self):
         widget = forms.APISelect()

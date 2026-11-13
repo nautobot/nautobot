@@ -4,6 +4,7 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import filtering
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.models import Location
+from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.models import Tag
 
 
@@ -56,6 +57,15 @@ class FilteringUtilsTestCase(TestCase):
             result,
             {"tags": ["tag1", "tag2"]},
         )
+
+    def test_build_filter_dict_content_types_stores_app_label_model_strings(self):
+        """The Role filter form declares a model field for `content_types`, but the filterset yields strings."""
+        result = filtering.build_filter_dict_from_filterset(
+            RoleFilterSet,
+            {"content_types": ["dcim.device"]},
+        )
+
+        self.assertEqual(result, {"content_types": ["dcim.device"]})
 
     def test_build_filter_dict_drops_empty_values(self):
         result = filtering.build_filter_dict_from_filterset(

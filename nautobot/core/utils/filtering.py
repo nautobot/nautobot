@@ -258,21 +258,22 @@ def build_filter_dict_from_filterset(
     allowed_fields = filter_fields or filterset_form.fields.keys()
 
     for field_name in allowed_fields:
-        field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
+        value_field = filterset_form.fields[field_name]
+        declared_field = declared_form.declared_fields.get(field_name)
+        # The value comes from the filterset form, so its field decides whether the value is a model instance.
+        key_field = declared_field if isinstance(declared_field, forms.ModelChoiceField) else value_field
         field_value = filterset_form.cleaned_data[field_name]
 
-        # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
-        # and literal FilterSet fields (ex: MultiValueCharFilter).
-        if isinstance(field, forms.ModelMultipleChoiceField):
+        if isinstance(value_field, forms.ModelMultipleChoiceField):
             if not field_value:
                 continue
-            field_to_query = field.to_field_name or "pk"
+            field_to_query = key_field.to_field_name or "pk"
             new_value = [getattr(item, field_to_query) for item in field_value]
 
-        elif isinstance(field, forms.ModelChoiceField):
+        elif isinstance(value_field, forms.ModelChoiceField):
             if not field_value:
                 continue
-            field_to_query = field.to_field_name or "pk"
+            field_to_query = key_field.to_field_name or "pk"
             if isinstance(field_value, list):
                 new_value = [getattr(item, field_to_query) for item in field_value]
             else:

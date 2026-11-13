@@ -218,6 +218,7 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
     Optionally can restrict the available ContentTypes to those supporting a particular feature only.
     Optionally can pass the selection through as a list of `{app_label}.{model}` strings instead of PK values.
+    In that case the cleaned value is the validated list of strings rather than a `ContentType` queryset.
     """
 
     STATIC_CHOICES = True
@@ -228,7 +229,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         Args:
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
-            choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
+            choices_as_strings (bool): If True, render and clean the selection as a list of `"{app_label}.{model}"`
+                strings.
         """
         from nautobot.extras import utils as extras_utils
 
@@ -248,8 +250,35 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         super().__init__(*args, **kwargs)
 
+        self.choices_as_strings = choices_as_strings
         if choices_as_strings:
             self.choices = self._string_choices_from_queryset
+
+    def clean(self, value):
+        """Validate the selection and return the cleaned value."""
+        # Strings are the format `ContentTypeMultipleChoiceFilter` accepts and stored filters (e.g. Dynamic Group
+        # filters) contain, so returning them lets this field's output feed a filterset directly.
+        if self.choices_as_strings:
+            return self._clean_as_strings(value)
+        return super().clean(value)
+
+    def _clean_as_strings(self, value):
+        """Validate `value` against the `{app_label}.{model}` choices and return it as a list of those strings."""
+        if not value:
+            if self.required:
+                raise ValidationError(self.error_messages["required"], code="required")
+            return []
+        if not isinstance(value, (list, tuple)):
+            raise ValidationError(self.error_messages["invalid_list"], code="invalid_list")
+
+        valid_choices = {choice for choice, _ in self._string_choices_from_queryset()}
+        for choice in value:
+            if choice not in valid_choices:
+                raise ValidationError(
+                    self.error_messages["invalid_choice"], code="invalid_choice", params={"value": choice}
+                )
+        self.run_validators(value)
+        return list(value)
 
     def _string_choices_from_queryset(self):
         """Overload choices to return `{app_label}.{model}` instead of PKs."""
