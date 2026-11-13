@@ -173,6 +173,7 @@ add "&raw" to the end of the URL within a browser.
 
                 var headers = {};
                 var cookies = ("; " + document.cookie).split("; csrftoken=");
+                var csrftoken;
                 if (cookies.length == 2) {
                     csrftoken = cookies.pop().split(";").shift();
                 } else {
@@ -251,7 +252,7 @@ add "&raw" to the end of the URL within a browser.
                     }
 
                     // Add Nautobot saved-queries button and dropdown menu
-                    queries_tab = `{% if perms.extras.view_graphqlquery %}
+                    const queries_tab = `{% if perms.extras.view_graphqlquery %}
                         <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                             <img alt="" class="graphiql-toolbar-icon" src="{% versioned_static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
                             <span class="visually-hidden">Saved queries</span>
