@@ -10,41 +10,6 @@ import re
 from playwright.sync_api import expect, Page
 
 
-def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
-    """Type-and-pick in an API-backed Select2 field, addressed by field *name*.
-
-    Filter fields and create/edit form fields use the `nautobot-select2-api` pattern.
-    The widget renders a `<span class="select2-container">` next to the hidden
-    `<select>`. Options load via AJAX from the REST API, so `select_option()` cannot see
-    them; the reliable gesture is click the container, type into the open dropdown's
-    search field, then click the matching result.
-
-    Args:
-        page (Page): The Playwright page.
-        field_name (str): The `name` attribute of the underlying `<select>`.
-        search (str): Text typed into the dropdown's search box to narrow the options.
-        pick_text (str): Visible text of the option to click; first option if None.
-        exact (bool): Exact text match for *pick_text*. Pass False for fields whose
-            options render an ancestry path (e.g. locations: "Parent → Child"), where
-            an exact match on the bare name would never hit.
-    """
-    page.locator(f"select[name='{field_name}'] + span.select2-container").first.click()
-    # Scope to the open dropdown: list views keep every filter field's Select2 search
-    # input in the DOM simultaneously, so an unscoped .first picks the wrong field.
-    search_input = page.locator(".select2-container--open .select2-search__field").first
-    search_input.wait_for(state="visible", timeout=8_000)
-    search_input.fill(search)
-    if pick_text is not None:
-        # Wait for the target text itself, not just any option: AJAX-backed results
-        # flicker (Searching → empty → populated) and a generic wait can resolve
-        # during the empty window.
-        option = page.locator(".select2-dropdown").get_by_text(pick_text, exact=exact).first
-    else:
-        option = page.locator(".select2-results__option:not(:has-text('Searching'))").first
-    option.wait_for(state="visible", timeout=10_000)
-    option.click()
-
-
 class BasePage:
     """Shared low-level behavior for all page objects."""
 
@@ -66,6 +31,10 @@ class BasePage:
     _HEADER = "#header"
     # The one modal every page includes; the favorite form is loaded into it over HTMX.
     _GENERIC_MODAL = "#nautobot-generic-modal"
+    # Options and the "No results found" message in the open Select2 dropdown. The message
+    # `li` also has the option class, so count options by their text.
+    _OPEN_DROPDOWN_OPTIONS = ".select2-container--open .select2-results__option"
+    _OPEN_DROPDOWN_MESSAGE = ".select2-container--open .select2-results__message"
     # The footer renders the theme button only for a logged-in user.
     _THEME_MODAL_BUTTON = "#btn-theme-modal"
     _THEME_MODAL = "#theme_modal"
@@ -134,6 +103,58 @@ class BasePage:
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()
         self.wait_for_load()
+
+    # -------------------------------------------------------------------------
+    # Select2 fields
+    # -------------------------------------------------------------------------
+
+    def select2_filter_search(self, field_name, search=""):
+        """Click the Select2 field named *field_name* and type *search* into its search box.
+
+        The dropdown stays open, so the caller can then assert on its options or click one of them.
+        """
+        self.page.locator(f"select[name='{field_name}'] + span.select2-container").first.click()
+        # Scope to the open dropdown: list views keep every filter field's Select2 search
+        # input in the DOM simultaneously, so an unscoped .first picks the wrong field.
+        search_input = self.page.locator(".select2-container--open .select2-search__field").first
+        search_input.wait_for(state="visible", timeout=8_000)
+        search_input.fill(search)
+
+    def expect_filter_option_count(self, text, count):
+        """Assert (auto-retrying) that the open dropdown has exactly *count* options containing *text*."""
+        expect(self.page.locator(self._OPEN_DROPDOWN_OPTIONS).filter(has_text=text)).to_have_count(count)
+
+    def expect_no_filter_options(self):
+        """Assert (auto-retrying) that the open dropdown shows "No results found"."""
+        expect(self.page.locator(self._OPEN_DROPDOWN_MESSAGE)).to_have_text("No results found")
+
+    def select2_filter_pick(self, field_name, search="", pick_text=None, exact=True):
+        """Type-and-pick in an API-backed Select2 field, addressed by field *name*.
+
+        Filter fields and create/edit form fields use the `nautobot-select2-api` pattern.
+        The widget renders a `<span class="select2-container">` next to the hidden
+        `<select>`. Options load via AJAX from the REST API, so `select_option()` cannot see
+        them; the reliable gesture is click the container, type into the open dropdown's
+        search field, then click the matching result.
+
+        Args:
+            field_name (str): The `name` attribute of the underlying `<select>`.
+            search (str): Text typed into the dropdown's search box to narrow the options.
+            pick_text (str): Visible text of the option to click; first option if None.
+            exact (bool): Exact text match for *pick_text*. Pass False for fields whose
+                options render an ancestry path (e.g. locations: "Parent → Child"), where
+                an exact match on the bare name would never hit.
+        """
+        self.select2_filter_search(field_name, search)
+        if pick_text is not None:
+            # Wait for the target text itself, not just any option: AJAX-backed results
+            # flicker (Searching → empty → populated) and a generic wait can resolve
+            # during the empty window.
+            option = self.page.locator(".select2-dropdown").get_by_text(pick_text, exact=exact).first
+        else:
+            option = self.page.locator(".select2-results__option:not(:has-text('Searching'))").first
+        option.wait_for(state="visible", timeout=10_000)
+        option.click()
 
     # -------------------------------------------------------------------------
     # Favorites

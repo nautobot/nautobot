@@ -1,0 +1,1 @@
+Changed `select2_filter_pick` in `nautobot.playwright.base_page` from a module-level function to a `BasePage` method.
