@@ -1,0 +1,2 @@
+Fixed an error when saving a Custom Field scope filter that filters by content type.
+Fixed Dynamic Group filters rejecting content type selections for models such as Role and Status.

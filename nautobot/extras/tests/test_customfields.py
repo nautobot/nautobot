@@ -41,7 +41,7 @@ from nautobot.extras.customfields import (
     provision_field,
     update_custom_field_choice_data,
 )
-from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Role, Status
 from nautobot.extras.signals import handle_cf_removed_obj_types
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
@@ -629,6 +629,25 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.set_scope_filter({"parent": [location_a, location_b]})
 
         self.assertEqual(cf.scope_filter, {"parent": ["Location A", "Location B"]})
+
+    def test_set_scope_filter_content_types_scopes_field_to_matching_roles(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        rack_ct = ContentType.objects.get_for_model(Rack)
+        device_role = Role.objects.create(name="Scope Filter Device Role")
+        device_role.content_types.set([device_ct])
+        rack_role = Role.objects.create(name="Scope Filter Rack Role")
+        rack_role.content_types.set([rack_ct])
+
+        cf = CustomField(label="Role Scoped CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([ContentType.objects.get_for_model(Role)])
+
+        cf.set_scope_filter({"content_types": ["dcim.device"]})
+        cf.validated_save()
+
+        self.assertEqual(cf.scope_filter, {"content_types": ["dcim.device"]})
+        self.assertTrue(cf.should_render(device_role))
+        self.assertFalse(cf.should_render(rack_role))
 
     def test_set_scope_filter_overrides_previous_value(self):
         obj_type = ContentType.objects.get_for_model(Location)

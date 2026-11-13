@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Rack,
     RearPort,
 )
 from nautobot.extras.choices import (
@@ -1222,6 +1223,27 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         this_dg.set_filter({"example_app_prefix_tenant_name": [a_tenant]})
         this_dg.validated_save()
+
+    def test_group_filter_by_content_types(self):
+        """A content-type filter submitted through the group's filter form is stored as `app_label.model` strings."""
+        device_role = Role.objects.create(name="DG Content Type Device Role")
+        device_role.content_types.set([self.device_ct])
+        rack_role = Role.objects.create(name="DG Content Type Rack Role")
+        rack_role.content_types.set([ContentType.objects.get_for_model(Rack)])
+
+        dg = DynamicGroup(name="Device Roles", content_type=ContentType.objects.get_for_model(Role), filter={})
+        dg.validated_save()
+
+        filter_form = dg.generate_filter_form()(data={"filter-content_types": ["dcim.device"]})
+        self.assertTrue(filter_form.is_valid(), filter_form.errors)
+
+        dg.set_filter(filter_form.cleaned_data)
+        dg.validated_save()
+        dg.update_cached_members()
+
+        self.assertEqual(dg.filter, {"content_types": ["dcim.device"]})
+        self.assertIn(device_role, dg.members)
+        self.assertNotIn(rack_role, dg.members)
 
     def test_unapplied_tags_can_be_added_to_dynamic_group_filters(self):
         """

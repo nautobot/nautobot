@@ -658,6 +658,40 @@ class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
                 field.clean(value)
 
 
+class MultipleContentTypeFieldTest(testing.TestCase):
+    def test_clean_choices_as_strings_returns_content_types(self):
+        field = forms.MultipleContentTypeField(choices_as_strings=True, required=False)
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+        rack_ct = ContentType.objects.get_for_model(dcim_models.Rack)
+
+        for value, expected in (
+            (["dcim.device"], [device_ct]),
+            (["dcim.device", "dcim.rack"], [device_ct, rack_ct]),
+            ([device_ct], [device_ct]),
+            ([], []),
+            (None, []),
+        ):
+            with self.subTest(value=value):
+                self.assertQuerySetEqual(field.clean(value), expected, ordered=False)
+
+        for value in (["dcim.nonexistent"], ["dcim.device", "not-a-content-type"], "dcim.device"):
+            with self.subTest(value=value), self.assertRaises(django_forms.ValidationError):
+                field.clean(value)
+
+    def test_clean_choices_as_strings_required(self):
+        field = forms.MultipleContentTypeField(choices_as_strings=True, required=True)
+
+        with self.assertRaises(django_forms.ValidationError):
+            field.clean([])
+
+    def test_prepare_value_choices_as_strings_renders_app_label_model(self):
+        field = forms.MultipleContentTypeField(choices_as_strings=True, required=False)
+        device_ct = ContentType.objects.get_for_model(dcim_models.Device)
+
+        self.assertEqual(field.prepare_value([device_ct]), ["dcim.device"])
+        self.assertEqual(field.prepare_value(["dcim.device"]), ["dcim.device"])
+
+
 class WidgetsTest(testing.TestCase):
     def test_api_select_add_query_param_with_utf8(self):
         widget = forms.APISelect()
