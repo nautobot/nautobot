@@ -102,11 +102,11 @@ class Migration(migrations.Migration):
                 ("user_name", models.CharField(db_index=True, editable=False, max_length=150)),
                 ("request_id", models.UUIDField(db_index=True, editable=False)),
                 ("action", models.CharField(max_length=50)),
-                ("changed_object_type_id", models.PositiveIntegerField(blank=True, null=True)),
+                ("changed_object_type_id", models.IntegerField(blank=True, null=True)),
                 ("changed_object_id", models.UUIDField()),
                 ("change_context", models.CharField(editable=False, max_length=50)),
                 ("change_context_detail", models.CharField(blank=True, editable=False, max_length=400)),
-                ("related_object_type_id", models.PositiveIntegerField(blank=True, null=True)),
+                ("related_object_type_id", models.IntegerField(blank=True, null=True)),
                 ("related_object_id", models.UUIDField(blank=True, null=True)),
                 ("object_repr", models.CharField(editable=False, max_length=200)),
                 (
