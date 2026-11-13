@@ -65,7 +65,12 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     def render_time_limit_default(self, default_value, system_default_value, override=True):
         """
         Render a time limit value, falling back to the system default if needed.
+
+        `default_value` is the string "unknown" when render_override_value() cannot read it from the Job class.
         """
+        if not isinstance(default_value, (int, float)):
+            return self._render_overridden_text("unknown") if override else "unknown"
+
         message = "{} seconds" if default_value > 0 else "{} seconds (system default)"
         value = default_value if default_value > 0 else system_default_value
         if not override:
@@ -111,7 +116,7 @@ class JobKeyValueOverrideValueTablePanel(KeyValueTablePanel):
             return ""
 
         if not obj.installed:
-            return self._render_overridden_text("default is unknown (not currently installed)")
+            return self._render_overridden_text("unknown (not currently installed)")
 
         try:
             default_value = getattr(obj.job_class, key)

@@ -419,7 +419,7 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
 # IP address ranges
 #
 class IPAddressRangeViewSet(NautobotModelViewSet):
-    queryset = IPAddressRange.objects.all()
+    queryset = IPAddressRange.objects.select_related("parent__namespace")
     serializer_class = serializers.IPAddressRangeSerializer
     filterset_class = filters.IPAddressRangeFilterSet
 

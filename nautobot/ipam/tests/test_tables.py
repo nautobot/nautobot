@@ -1,11 +1,12 @@
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.models.querysets import count_related
 from nautobot.core.testing import AssertNoRepeatedQueries, TestCase
 from nautobot.dcim.models import Device, DeviceType, Interface, Manufacturer
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix
-from nautobot.ipam.tables import IPAddressTable, PrefixTable
+from nautobot.ipam.models import IPAddress, IPAddressRange, Namespace, Prefix
+from nautobot.ipam.tables import IPAddressRangeTable, IPAddressTable, PrefixTable
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -187,3 +188,18 @@ class IPAddressTableTestCase(TestCase):
             for row in table.rows:
                 for column_name in nested_columns:
                     row.get_cell(column_name)  # pylint: disable=no-member  # BoundRow has get_cell
+
+
+class NamespaceColumnExportTestCase(TestCase):
+    """The Namespace column of an IP address or range table exports as the serializer's own `namespace` field."""
+
+    def test_namespace_column_maps_to_namespace_field(self):
+        for table_class, model, column_name in (
+            (IPAddressTable, IPAddress, "parent__namespace"),
+            (IPAddressRangeTable, IPAddressRange, "namespace"),
+        ):
+            with self.subTest(table=table_class.__name__):
+                table = table_class(model.objects.all())
+                table.columns.show(column_name)
+                mapping = table.serializer_paths_by_visible_column(get_serializer_for_model(model))
+                self.assertEqual(mapping[column_name], "namespace")

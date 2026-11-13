@@ -38,7 +38,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace
-from nautobot.users.models import ObjectPermission, User
+from nautobot.users.models import ObjectPermission, Token, User
 
 
 class ExportObjectListTest(TransactionTestCase):
@@ -112,6 +112,33 @@ class ExportObjectListTest(TransactionTestCase):
         csv_data = csv_bytes.decode("utf-8")
         self.assertIn(str(instance1.pk), csv_data)
         self.assertNotIn(str(instance2.pk), csv_data)
+
+    def test_tokens_are_never_imported_or_exported(self):
+        """Neither Job handles Tokens, even for a superuser, as the Tokens' keys would be written to a file."""
+        superuser = User.objects.create_user(username="token-superuser", is_superuser=True)
+        Token.objects.create(user=superuser)
+        for action, job_class_name, kwargs in (
+            ("export", "ExportObjectList", {}),
+            ("import", "ImportObjects", {"csv_data": "description\nImported Token"}),
+        ):
+            with self.subTest(job_class_name=job_class_name):
+                job_result = create_job_result_and_run_job(
+                    "nautobot.core.jobs",
+                    job_class_name,
+                    username=superuser.username,
+                    content_type=ContentType.objects.get_for_model(Token).pk,
+                    **kwargs,
+                )
+                self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        log_level=LogLevelChoices.LOG_ERROR,
+                        message=f"users.token objects do not support {action}",
+                    ).exists()
+                )
+                self.assertFalse(job_result.files.exists())
+        self.assertFalse(Token.objects.filter(description="Imported Token").exists())
 
     def test_export_all_to_csv(self):
         """By default, job should export all instances to CSV."""
@@ -430,12 +457,10 @@ class BulkEditTestCase(TransactionTestCase):
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
         self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), expected_count)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warning_or_error_logs = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warning_or_error_logs.exists(), list(warning_or_error_logs.values_list("message", flat=True)))
 
     def test_bulk_edit_objects_without_permission(self):
         statuses = [Status.objects.create(name=f"Sample Status {x}") for x in range(3)]
@@ -930,12 +955,10 @@ class BulkDeleteTestCase(TransactionTestCase):
     def _common_no_error_test_assertion(self, model, job_result, **filter_params):
         self.assertJobResultStatus(job_result)
         self.assertEqual(model.objects.filter(**filter_params).count(), 0)
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING).exists()
+        warning_or_error_logs = JobLogEntry.objects.filter(
+            job_result=job_result, log_level__in=[LogLevelChoices.LOG_WARNING, LogLevelChoices.LOG_ERROR]
         )
-        self.assertFalse(
-            JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR).exists()
-        )
+        self.assertFalse(warning_or_error_logs.exists(), list(warning_or_error_logs.values_list("message", flat=True)))
 
     def test_bulk_delete_objects_without_permission(self):
         statuses_to_delete = [str(status) for status in Status.objects.all().values_list("pk", flat=True)[:2]]
