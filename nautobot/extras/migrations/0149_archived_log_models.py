@@ -11,7 +11,7 @@ import nautobot.core.celery.encoders
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0147_jobconsoleentry_job_result_timestamp_idx"),
+        ("extras", "0148_jobconsoleentry_job_result_timestamp_idx"),
     ]
 
     operations = [
@@ -111,7 +111,12 @@ class Migration(migrations.Migration):
                 ("object_repr", models.CharField(editable=False, max_length=200)),
                 (
                     "object_data",
-                    models.JSONField(editable=False, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                    models.JSONField(
+                        blank=True,
+                        editable=False,
+                        encoder=django.core.serializers.json.DjangoJSONEncoder,
+                        null=True,
+                    ),
                 ),
                 (
                     "object_data_v2",

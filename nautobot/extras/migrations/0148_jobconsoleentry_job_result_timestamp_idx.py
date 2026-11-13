@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0146_jobhook_conditions_webhook_conditions"),
+        ("extras", "0147_changelog_optional_legacy_snapshot"),
     ]
 
     operations = [
