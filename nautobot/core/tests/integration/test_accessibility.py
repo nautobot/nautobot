@@ -31,6 +31,7 @@ UI_LIST_PATHS = {"/users/tokens/": "/users/api-tokens/"}
 # A model added without a list view goes here, so that a view whose path changed cannot be skipped by mistake.
 NO_UI_LIST_VIEW = (
     "/cloud/cloud-network-prefix-assignments/",
+    "/cloud/cloud-service-ip-address-assignments/",
     "/cloud/cloud-service-network-assignments/",
     "/dcim/cables-to-cable-terminations/",
     "/dcim/connected-device/",

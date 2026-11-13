@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
+from nautobot.cloud.models import CloudService
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.factory import DeviceFactory
@@ -182,6 +183,14 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             with self.assertRaises(ValidationError):
                 endpoint.clean()
 
+        with self.subTest("Test cloud_service conflicts with source_interface"):
+            source_int = Interface.objects.filter(device__isnull=False).first()
+            endpoint = models.VPNTunnelEndpoint(
+                source_interface=source_int, device=source_int.device, cloud_service=CloudService.objects.first()
+            )
+            with self.assertRaises(ValidationError):
+                endpoint.clean()
+
         with self.subTest("Test source_interface and tunnel_interface are assigned to the same device"):
             source_int = Interface.objects.filter(device__isnull=False).first()
             tunnel_int = Interface(
@@ -218,9 +227,23 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
 
         with self.subTest("Test name is fqdn"):
             endpoint = (
-                models.VPNTunnelEndpoint.objects.filter(source_fqdn__isnull=False).exclude(source_fqdn="").first()
+                models.VPNTunnelEndpoint.objects.filter(source_fqdn__isnull=False, cloud_service__isnull=True)
+                .exclude(source_fqdn="")
+                .first()
             )
             self.assertEqual(endpoint.source_fqdn, endpoint.name)
+
+        with self.subTest("Test name contains cloud service name and IP address"):
+            cloud_service = CloudService.objects.first()
+            ip = IPAddress.objects.first()
+            endpoint = models.VPNTunnelEndpoint(cloud_service=cloud_service, source_ipaddress=ip)
+            endpoint.validated_save()
+            self.assertEqual(endpoint.name, f"{cloud_service.name} ({ip.address})")
+
+        with self.subTest("Test name contains cloud service name and fqdn"):
+            endpoint = models.VPNTunnelEndpoint(cloud_service=cloud_service, source_fqdn="vpn.example.com")
+            endpoint.validated_save()
+            self.assertEqual(endpoint.name, f"{cloud_service.name} (vpn.example.com)")
 
     def test_save(self):
         """Test save adds dynamic fields."""

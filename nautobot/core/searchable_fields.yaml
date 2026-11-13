@@ -46,6 +46,12 @@ cloud:
     - provider__name
     name: Cloud Account
   - fields:
+    - cloud_resource_type__name
+    - description
+    - id
+    - name
+    name: Cloud Account Group
+  - fields:
     - cloud_account__description
     - cloud_account__name
     - cloud_resource_type__description
@@ -55,12 +61,21 @@ cloud:
     - name
     - parent__description
     - parent__name
+    - provider_resource_id
     name: Cloud Network
   - fields:
     - cloud_network__description
     - cloud_network__name
     - id
     name: Cloud Network Prefix Assignment
+  - fields:
+    - cloud_account__name
+    - cloud_resource_type__name
+    - description
+    - id
+    - name
+    - provider_resource_id
+    name: Cloud Resource Group
   - fields:
     - description
     - id
@@ -77,7 +92,13 @@ cloud:
     - description
     - id
     - name
+    - provider_resource_id
     name: Cloud Service
+  - fields:
+    - cloud_service__description
+    - cloud_service__name
+    - id
+    name: Cloud Service IP Address Assignment
   - fields:
     - cloud_network__cloud_account__description
     - cloud_network__cloud_account__name
@@ -809,6 +830,7 @@ load_balancers:
     name: Load Balancer Pool Member Certificate Profile Assignment
   - fields:
     - device__name
+    - dns_name
     - id
     - load_balancer_pool__name
     - name
@@ -924,6 +946,7 @@ vpn:
     - vpn_profile__name
     name: VPN Tunnel
   - fields:
+    - cloud_service__name
     - device__name
     - id
     - source_fqdn

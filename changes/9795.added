@@ -1,0 +1,10 @@
+Added the `CloudAccountGroup` model, a tree of organisation containers above cloud accounts, such as AWS organizational units, Azure management groups and GCP folders.
+Added the `CloudResourceGroup` model, a container of cloud networks and cloud services inside a cloud account, such as an Azure resource group.
+Added a `provider_resource_id` field to `CloudResourceGroup`, `CloudNetwork` and `CloudService` for the identifier assigned by the cloud provider.
+Added an optional `location` field to `CloudResourceGroup`, `CloudNetwork` and `CloudService`.
+Added `status` and `tenant` fields to `CloudAccount`, and `status`, `role` and `tenant` fields to `CloudNetwork` and `CloudService`.
+Added an `ip_addresses` many-to-many field to `CloudService`, through the new `CloudServiceIPAddressAssignment` model.
+Added an optional `cloud_service` field to `VPNTunnelEndpoint` for the cloud VPN gateway an endpoint belongs to.
+Added a `dns_name` field to `VirtualServer`.
+Added cloud network and cloud service counts to the location stats panel.
+Added virtual server and VPN tunnel endpoint panels to the cloud service detail view.

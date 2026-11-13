@@ -7,14 +7,26 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
+from nautobot.tenancy.tables import TenantColumn
 
-from .models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
+from .models import CloudAccount, CloudAccountGroup, CloudNetwork, CloudResourceGroup, CloudResourceType, CloudService
+
+TREE_LINK = """
+{% load helpers %}
+{% if not table.hide_hierarchy_ui %}
+{% tree_hierarchy_ui_representation record.tree_depth|as_range table.hide_hierarchy_ui %}
+{% endif %}
+<a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
+"""
 
 
-class CloudAccountTable(BaseTable):
+class CloudAccountTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     provider = tables.Column(linkify=True)
+    cloud_account_group = tables.Column(linkify=True)
+    tenant = TenantColumn()
     secrets_group = tables.Column(linkify=True)
     tags = TagColumn(url_name="cloud:cloudaccount_list")
     actions = ButtonsColumn(CloudAccount)
@@ -27,6 +39,9 @@ class CloudAccountTable(BaseTable):
             "account_number",
             "description",
             "provider",
+            "cloud_account_group",
+            "status",
+            "tenant",
             "secrets_group",
             "tags",
             "actions",
@@ -36,25 +51,109 @@ class CloudAccountTable(BaseTable):
             "name",
             "account_number",
             "provider",
+            "cloud_account_group",
+            "status",
             "actions",
         )
 
 
-class CloudNetworkTable(BaseTable):
+class CloudAccountGroupTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
+    cloud_resource_type = tables.Column(linkify=True)
+    cloud_account_count = LinkedCountColumn(
+        viewname="cloud:cloudaccount_list",
+        url_params={"cloud_account_group": "pk"},
+        verbose_name="Cloud Accounts",
+    )
+    tags = TagColumn(url_name="cloud:cloudaccountgroup_list")
+    actions = ButtonsColumn(CloudAccountGroup)
+
+    class Meta(BaseTable.Meta):
+        model = CloudAccountGroup
+        fields = (
+            "pk",
+            "name",
+            "cloud_resource_type",
+            "cloud_account_count",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "cloud_resource_type",
+            "cloud_account_count",
+            "description",
+            "actions",
+        )
+
+
+class CloudResourceGroupTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    cloud_account = tables.Column(linkify=True)
+    cloud_resource_type = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    cloud_network_count = LinkedCountColumn(
+        viewname="cloud:cloudnetwork_list",
+        url_params={"cloud_resource_group": "pk"},
+        verbose_name="Cloud Networks",
+    )
+    cloud_service_count = LinkedCountColumn(
+        viewname="cloud:cloudservice_list",
+        url_params={"cloud_resource_group": "pk"},
+        verbose_name="Cloud Services",
+    )
+    tags = TagColumn(url_name="cloud:cloudresourcegroup_list")
+    actions = ButtonsColumn(CloudResourceGroup)
+
+    class Meta(BaseTable.Meta):
+        model = CloudResourceGroup
+        fields = (
+            "pk",
+            "name",
+            "provider_resource_id",
+            "cloud_account",
+            "cloud_resource_type",
+            "location",
+            "cloud_network_count",
+            "cloud_service_count",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "cloud_account",
+            "cloud_resource_type",
+            "location",
+            "cloud_network_count",
+            "cloud_service_count",
+            "actions",
+        )
+
+
+class CloudNetworkTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     cloud_resource_type = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
+    cloud_resource_group = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    tenant = TenantColumn()
     actions = ButtonsColumn(CloudNetwork)
     assigned_prefix_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
-        url_params={"cloud_networks": "name"},
+        url_params={"cloud_networks": "pk"},
         verbose_name="Assigned Prefixes",
     )
     circuit_count = LinkedCountColumn(
         viewname="circuits:circuit_list",
-        url_params={"cloud_network": "name"},
+        url_params={"cloud_network": "pk"},
         lookup="circuit_terminations__circuit",
         verbose_name="Circuits",
         reverse_lookup="circuit_terminations__cloud_network",
@@ -63,7 +162,7 @@ class CloudNetworkTable(BaseTable):
     )
     cloud_service_count = LinkedCountColumn(
         viewname="cloud:cloudservice_list",
-        url_params={"cloud_networks": "name"},
+        url_params={"cloud_networks": "pk"},
         verbose_name="Cloud Services",
     )
     tags = TagColumn(url_name="cloud:cloudnetwork_list")
@@ -74,9 +173,15 @@ class CloudNetworkTable(BaseTable):
             "pk",
             "name",
             "description",
+            "provider_resource_id",
             "cloud_resource_type",
             "cloud_account",
+            "cloud_resource_group",
             "parent",
+            "location",
+            "status",
+            "role",
+            "tenant",
             "cloud_service_count",
             "assigned_prefix_count",
             "circuit_count",
@@ -89,6 +194,9 @@ class CloudNetworkTable(BaseTable):
             "description",
             "cloud_resource_type",
             "cloud_account",
+            "cloud_resource_group",
+            "location",
+            "status",
             "cloud_service_count",
             "assigned_prefix_count",
             "circuit_count",
@@ -126,15 +234,23 @@ class CloudResourceTypeTable(BaseTable):
         )
 
 
-class CloudServiceTable(BaseTable):
+class CloudServiceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     cloud_account = tables.Column(linkify=True)
+    cloud_resource_group = tables.Column(linkify=True)
     cloud_resource_type = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    tenant = TenantColumn()
     cloud_network_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list",
-        url_params={"cloud_services": "name"},
+        url_params={"cloud_services": "pk"},
         verbose_name="Cloud Networks",
+    )
+    ip_address_count = LinkedCountColumn(
+        viewname="ipam:ipaddress_list",
+        url_params={"cloud_services": "pk"},
+        verbose_name="IP Addresses",
     )
     tags = TagColumn(url_name="cloud:cloudservice_list")
     actions = ButtonsColumn(CloudService)
@@ -144,9 +260,16 @@ class CloudServiceTable(BaseTable):
         fields = (
             "pk",
             "name",
+            "provider_resource_id",
             "cloud_resource_type",
             "cloud_account",
+            "cloud_resource_group",
+            "location",
+            "status",
+            "role",
+            "tenant",
             "cloud_network_count",
+            "ip_address_count",
             "tags",
             "actions",
         )
@@ -155,6 +278,10 @@ class CloudServiceTable(BaseTable):
             "name",
             "cloud_resource_type",
             "cloud_account",
+            "cloud_resource_group",
+            "location",
+            "status",
             "cloud_network_count",
+            "ip_address_count",
             "actions",
         )

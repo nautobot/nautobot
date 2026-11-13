@@ -413,6 +413,7 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                     "source_interface",
                     "source_ipaddress",
                     "source_fqdn",
+                    "cloud_service",
                     "tunnel_interface",
                     "role",
                     "tenant",

@@ -2718,7 +2718,8 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_primary_ip_queries_do_not_grow_with_device_count(self):
         """Rendering the default primary IP column must not add queries per device."""
         self.add_permissions("dcim.view_device")
-        namespace = self.ipaddresses[0].parent.namespace
+        # A dedicated namespace keeps the IPv6 prefix and addresses clear of the generated test data.
+        namespace = Namespace.objects.create(name="Primary IP Query Test Namespace")
         Prefix.objects.create(prefix="2001:db8::/64", namespace=namespace, status=self.prefix_status)
         for index, (device, ipaddress) in enumerate(zip(self.devices, self.ipaddresses), start=1):
             interface = Interface.objects.create(

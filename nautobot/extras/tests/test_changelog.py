@@ -1071,8 +1071,9 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assert_single_update_change(location, change_id)
 
     def test_tags_remain_unlogged(self):
-        location_tag = Tag.objects.get_for_model(Location).first()
         location = self.locations[0]
+        # A tag the location doesn't already have, so that setting it is a change.
+        location_tag = Tag.objects.get_for_model(Location).exclude(pk__in=location.tags.all()).first()
 
         change_id = uuid.uuid4()
         with context_managers.web_request_context(self.user, change_id=change_id):

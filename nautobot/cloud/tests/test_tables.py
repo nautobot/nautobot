@@ -20,7 +20,10 @@ class CloudNetworkTableTestCase(TestCase):
 
         def _make_network(name):
             return CloudNetwork.objects.create(
-                name=name, cloud_resource_type=cloud_resource_type, cloud_account=cloud_account
+                name=name,
+                cloud_resource_type=cloud_resource_type,
+                cloud_account=cloud_account,
+                status=Status.objects.get_for_model(CloudNetwork).first(),
             )
 
         cls.network_single = _make_network("CloudNetworkTable Network Single")
@@ -103,6 +106,7 @@ class CloudNetworkTableTestCase(TestCase):
                 name=f"CloudNetworkTable Network Extra {i}",
                 cloud_resource_type=self.network_single.cloud_resource_type,
                 cloud_account=self.network_single.cloud_account,
+                status=self.network_single.status,
             )
             circuit = Circuit.objects.create(
                 cid=f"CloudNetworkTable Extra Circuit {i}",

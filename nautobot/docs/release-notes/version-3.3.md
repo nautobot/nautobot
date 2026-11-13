@@ -14,6 +14,16 @@ TODO
 
 TODO
 
+#### Cloud Model Enhancements
+
+The [cloud data models](../user-guide/core-data-model/cloud/cloud.md) have been extended to describe cloud environments in more detail:
+
+- New [Cloud Account Group](../user-guide/core-data-model/cloud/cloudaccountgroup.md) model, a tree of organization containers above cloud accounts, such as Azure management groups, AWS organizational units or GCP folders.
+- New [Cloud Resource Group](../user-guide/core-data-model/cloud/cloudresourcegroup.md) model, for containers of resources inside a cloud account, such as Azure resource groups. Cloud networks and cloud services can be assigned to one.
+- New `provider_resource_id` and `location` fields on cloud resource groups, cloud networks and cloud services. The provider resource ID records the identifier assigned by the provider, such as an Azure resource ID, an AWS ARN or a GCP resource name.
+- New `status` and `tenant` fields on cloud accounts, and new `status`, `role` and `tenant` fields on cloud networks and cloud services.
+- IP addresses can be assigned to cloud services, and VPN tunnel endpoints can be attached to a cloud service that represents a cloud VPN gateway.
+
 ### Changed
 
 TODO
@@ -27,6 +37,16 @@ The object export/import functionality has been enhanced in several ways:
 - CSV export/import now includes a metadata header row, and includes support for a wider range of many-to-many fields.
 
 For more details, refer to the [import and export documentation](../user-guide/feature-guides/import-and-export.md).
+
+#### Cloud Model Changes
+
+The [cloud model enhancements](#cloud-model-enhancements) include the following changes to existing behavior:
+
+- Names of cloud accounts, cloud networks and cloud services are no longer globally unique. Cloud account names are unique per provider, cloud network names are unique within their cloud account, cloud resource group and parent cloud network, and cloud service names are unique within their cloud account and cloud resource group. As a result, the natural keys of these models now include the fields that scope the name, for example the provider of a cloud account. Integrations that look up these objects by natural key or composite key may need to be updated.
+- Cloud accounts, cloud networks and cloud services now require a `status`. The default statuses are "Planned", "Active" and "Decommissioning", and existing objects are set to "Active" when upgrading. REST API clients that create these objects must now provide a status.
+- The cloud resource type of a cloud network, or of a cloud service with a cloud account, must now have the same provider as that cloud account. A child cloud network must belong to the same cloud account as its parent.
+- The `vip` of a [virtual server](../user-guide/core-data-model/load-balancers/virtualserver.md) is now optional when the virtual server is attached to a cloud service, since cloud load balancers are typically reached through a DNS name and their IP addresses are managed by the provider. A VIP is still required in every other case. The DNS name of a virtual server can be recorded in the new `dns_name` field.
+- The name of a [VPN tunnel endpoint](../user-guide/core-data-model/vpn/vpntunnelendpoint.md) attached to a cloud service includes the name of the cloud service, followed by the source IP address or source FQDN of the endpoint. Endpoints that are not attached to a cloud service keep their existing names.
 
 ### Dependencies
 

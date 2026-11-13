@@ -2736,7 +2736,16 @@ class DynamicGroupTestCase(
         }
 
     def _get_queryset(self):
-        return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
+        # Device groups only: the members-tab assertions look for each member's primary key, and the member tables
+        # of some other content types (component templates, for example) don't render it.
+        return (
+            super()
+            ._get_queryset()
+            .filter(  # TODO
+                group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+                content_type=ContentType.objects.get_for_model(Device),
+            )
+        )
 
     def _add_group_permissions(self, instance):
         self.add_permissions(

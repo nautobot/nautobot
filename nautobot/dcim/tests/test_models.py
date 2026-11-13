@@ -3488,7 +3488,7 @@ class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_save_tolerates_stale_instance(self):
         """If the underlying row has been deleted out from under a stale in-memory instance, `save()` still succeeds."""
-        ct = CableType.objects.create(name="Stale", a_connectors=1, b_connectors=2, total_lanes=2)
+        ct = CableType.objects.create(name="Stale cable type", a_connectors=1, b_connectors=2, total_lanes=2)
         # Delete the row directly via the queryset, leaving `ct` in-memory with `_state.adding=False`
         # (so `present_in_database` still returns True) but no matching DB row.
         CableType.objects.filter(pk=ct.pk).delete()

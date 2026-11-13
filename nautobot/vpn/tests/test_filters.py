@@ -2,6 +2,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 
+from nautobot.cloud.models import CloudService
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress
@@ -158,6 +159,8 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("source_interface", "source_interface__name"),
         ("source_ipaddress", "source_ipaddress__id"),
         ("source_fqdn",),
+        ("cloud_service", "cloud_service__id"),
+        ("cloud_service", "cloud_service__name"),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__id"),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__name"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__id"),
@@ -186,6 +189,11 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
                 endpoint.source_interface.add_ip_addresses(ip)
                 endpoint.source_ipaddress = ip
                 endpoint.save()
+        # Endpoints of cloud VPN gateways have no device or source interface
+        endpoints_without_interface = models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=True)[:3]
+        for endpoint, cloud_service in zip(endpoints_without_interface, CloudService.objects.all()[:3]):
+            endpoint.cloud_service = cloud_service
+            endpoint.save()
 
     def test_source_ipaddress(self):
         endpoints = models.VPNTunnelEndpoint.objects.filter(source_ipaddress__isnull=False)

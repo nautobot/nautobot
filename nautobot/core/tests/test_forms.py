@@ -645,11 +645,14 @@ class MultiMatchModelMultipleChoiceFieldTest(testing.TestCase):
         expected_output = [vlan_groups[0].pk, vlan_groups[1].pk]
         self.assertQuerySetEqual(qs, values=expected_output, transform=lambda x: x.pk)
 
+        # Generated VLAN group names are single nouns, and MySQL compares names case-insensitively,
+        # so the invalid name must not be a plain word such as "test".
+        invalid_name = "nonexistent-vlan-group"
         invalid_values = [
             "",
-            [["test"]],
-            ["test"],
-            [vlan_groups[0].pk, "test"],
+            [[invalid_name]],
+            [invalid_name],
+            [vlan_groups[0].pk, invalid_name],
             [None],
             vlan_groups[0].pk,
         ]

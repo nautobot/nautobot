@@ -14,6 +14,18 @@ class CloudAccountViewSet(NautobotModelViewSet):
     filterset_class = filters.CloudAccountFilterSet
 
 
+class CloudAccountGroupViewSet(NautobotModelViewSet):
+    queryset = models.CloudAccountGroup.objects.all()
+    serializer_class = serializers.CloudAccountGroupSerializer
+    filterset_class = filters.CloudAccountGroupFilterSet
+
+
+class CloudResourceGroupViewSet(NautobotModelViewSet):
+    queryset = models.CloudResourceGroup.objects.all()
+    serializer_class = serializers.CloudResourceGroupSerializer
+    filterset_class = filters.CloudResourceGroupFilterSet
+
+
 class CloudResourceTypeViewSet(NautobotModelViewSet):
     queryset = models.CloudResourceType.objects.all()
     serializer_class = serializers.CloudResourceTypeSerializer
@@ -42,3 +54,9 @@ class CloudServiceNetworkAssignmentViewSet(ModelViewSet):
     queryset = models.CloudServiceNetworkAssignment.objects.all()
     serializer_class = serializers.CloudServiceNetworkAssignmentSerializer
     filterset_class = filters.CloudServiceNetworkAssignmentFilterSet
+
+
+class CloudServiceIPAddressAssignmentViewSet(ModelViewSet):
+    queryset = models.CloudServiceIPAddressAssignment.objects.all()
+    serializer_class = serializers.CloudServiceIPAddressAssignmentSerializer
+    filterset_class = filters.CloudServiceIPAddressAssignmentFilterSet
