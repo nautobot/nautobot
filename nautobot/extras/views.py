@@ -35,6 +35,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from nautobot.cloud.models import CloudNetwork, CloudService
+from nautobot.cloud.tables import CloudNetworkTable, CloudServiceTable
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
@@ -5040,6 +5042,18 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 vpn_tunnel_endpoint_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vpn_tunnel_endpoint_table)
                 context["vpn_tunnel_endpoint_table"] = vpn_tunnel_endpoint_table
+            if ContentType.objects.get_for_model(CloudNetwork) in context["content_types"]:
+                cloud_networks = instance.cloud_networks.restrict(request.user, "view")
+                cloud_network_table = CloudNetworkTable(cloud_networks)
+                cloud_network_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(cloud_network_table)
+                context["cloud_network_table"] = cloud_network_table
+            if ContentType.objects.get_for_model(CloudService) in context["content_types"]:
+                cloud_services = instance.cloud_services.restrict(request.user, "view")
+                cloud_service_table = CloudServiceTable(cloud_services)
+                cloud_service_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(cloud_service_table)
+                context["cloud_service_table"] = cloud_service_table
         return context
 
 
