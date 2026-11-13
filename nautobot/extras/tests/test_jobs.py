@@ -3197,6 +3197,9 @@ class K8sStrategyTestCase(_JobCancelTestBase):
 
         self.assertTrue(self.strategy._delete_k8s_job(job_result))
         mock_batch_api.delete_namespaced_job.assert_called_once()
+        self.assertEqual(
+            mock_batch_api.delete_namespaced_job.call_args.kwargs["_headers"], {"Content-Type": "application/json"}
+        )
 
     @mock.patch("nautobot.extras.jobs_cancel.kubernetes.client.BatchV1Api")
     @mock.patch("nautobot.extras.jobs_cancel.build_kubernetes_api_client")

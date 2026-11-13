@@ -49,6 +49,7 @@ from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    KUBERNETES_JSON_HEADERS,
 )
 from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
@@ -911,7 +912,9 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         with build_kubernetes_api_client() as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
-            api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+            api_instance.create_namespaced_job(
+                body=pod_manifest, namespace=pod_namespace, _headers=dict(KUBERNETES_JSON_HEADERS)
+            )
 
     transaction.on_commit(create_kubernetes_job)
     return job_result
