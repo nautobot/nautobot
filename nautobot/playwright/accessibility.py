@@ -41,9 +41,7 @@ AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
 
 # `color-contrast` is a WCAG 1.4.3 AA rule and the theme currently fails it in several places. Fixing it means retuning
 # palette tokens, which is a product decision that has been deferred, so the rule is off rather than left failing.
-# `target-size` (WCAG 2.5.8 AA) fails on the header's Search help link, which is one pixel short under Linux font
-# rendering, and on the tag links in list cells. Off until NAUTOBOT-1667 is fixed.
-AXE_DISABLED_RULES = ("color-contrast", "target-size")
+AXE_DISABLED_RULES = ("color-contrast",)
 
 # The first few offenders per rule are enough to act on.
 MAX_NODES_PER_VIOLATION = 5

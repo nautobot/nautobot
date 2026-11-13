@@ -17,6 +17,7 @@ from django.core.exceptions import (
 )
 from django.db import DatabaseError, transaction
 from django.db.models import Prefetch, Q
+from django.db.models.constants import LOOKUP_SEP
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
@@ -395,7 +396,7 @@ class ExportObjectList(Job):
         if field_path.startswith("cf_"):
             # Custom fields sort via a JSON-field lookup rather than a field of the model.
             return True
-        for segment in field_path.split("__"):
+        for segment in field_path.split(LOOKUP_SEP):
             if model is None:
                 return False  # a previous segment was not a relation, so there is nothing left to traverse
             if segment == "pk":
@@ -434,16 +435,21 @@ class ExportObjectList(Job):
         covers every match field (otherwise a re-import couldn't resolve the key): a related match field is
         covered by selecting it whole, or by selecting every lookup of the related model's natural key.
         """
-        match_fields = import_utils.natural_key_match_fields(model, get_serializer_for_model(model))
+        serializer_class = get_serializer_for_model(model)
+        match_fields = import_utils.natural_key_match_fields(model, serializer_class)
         if match_fields is None:
             return None
         if export_field_paths is not None:
+            query_paths = getattr(serializer_class.Meta, "related_field_query_paths", {})
             for match_field in match_fields:
                 if match_field in export_field_paths:
                     continue
+                related_model = model
                 try:
-                    related_model = model._meta.get_field(match_field).related_model
-                except FieldDoesNotExist:
+                    for part in query_paths.get(match_field, match_field).split(LOOKUP_SEP):
+                        related_model = related_model._meta.get_field(part).related_model
+                except (AttributeError, FieldDoesNotExist):
+                    # The match field isn't a model field, or its query path passes through a non-relation field
                     return None
                 related_lookups = natural_key_lookups_for(related_model)
                 if related_lookups is None:
@@ -539,7 +545,7 @@ class ExportObjectList(Job):
         # field selects that field alongside the pk, and so may repeat a pk.
         pks = list(dict.fromkeys(queryset.values_list("pk", flat=True)))
 
-        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
+        selected_heads = {path.split(LOOKUP_SEP, 1)[0] for path in export_field_paths} if export_field_paths else None
 
         # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
         # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
@@ -550,6 +556,11 @@ class ExportObjectList(Job):
             for field in model._meta.fields
             if field.is_relation and (selected_heads is None or field.name in selected_heads)
         ]
+        fk_field_names.extend(
+            query_path
+            for name, query_path in getattr(serializer_class.Meta, "related_field_query_paths", {}).items()
+            if selected_heads is None or name in selected_heads
+        )
         if fk_field_names:
             queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
 

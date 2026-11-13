@@ -1,0 +1,1 @@
+Ported the theme modal tests from Selenium to Playwright and added theme modal helpers to the shared `BasePage`.
