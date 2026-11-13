@@ -129,6 +129,9 @@ __all__ = (
     "ApprovalWorkflowStageDefinitionFilterSet",
     "ApprovalWorkflowStageFilterSet",
     "ApprovalWorkflowStageResponseFilterSet",
+    "ArchivedJobLogEntryFilterSet",
+    "ArchivedJobResultFilterSet",
+    "ArchivedObjectChangeFilterSet",
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContactFilterSet",
@@ -680,10 +683,9 @@ class ArchivedJobLogEntryFilterSet(BaseFilterSet):
         model = ArchivedJobLogEntry
         fields = [
             "id",
-            "absolute_url",
             "created",
             "grouping",
-            "job_result_id",
+            "job_result",
             "log_level",
             "log_object",
             "message",
@@ -691,20 +693,37 @@ class ArchivedJobLogEntryFilterSet(BaseFilterSet):
 
 
 class ArchivedJobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
-    q = SearchFilter(filter_predicates={"name": "icontains"})
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "user_name": "icontains",
+        }
+    )
 
+    job_model = MultiValueUUIDFilter(
+        field_name="job_model_id",
+        label="Job model (ID)",
+    )
     status = MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    has_job_console_entries = RelatedMembershipBooleanFilter(
+        field_name="job_console_entries",
+        label="Has Job Console Entries",
+    )
+    cancel_type = MultipleChoiceFilter(
+        choices=JobCancelTypeChoices.CHOICES,
+    )
 
     class Meta:
         model = ArchivedJobResult
         fields = [
             "id",
+            "canceled_by_user_name",
             "date_created",
             "date_started",
             "date_done",
             "date_canceled",
             "name",
-            "status",
+            "user_name",
         ]
 
 

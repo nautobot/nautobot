@@ -90,7 +90,7 @@ APPROVAL_WORKFLOW_OBJECT = """
 ARCHIVEDJOBRESULT_BUTTONS = """
 {% if perms.extras.view_archivedjoblogentry %}
     <li>
-        <a href="{% url 'extras-api:archivedjoblogentry-list' %}?job_result_id={{ record.pk }}&format=csv" class="dropdown-item text-success">
+        <a href="{% url 'extras-api:archivedjoblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
             <span class="mdi mdi-database-export" aria-hidden="true"></span>
             Export Logs
         </a>

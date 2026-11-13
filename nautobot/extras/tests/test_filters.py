@@ -46,6 +46,9 @@ from nautobot.extras.filters import (
     ApprovalWorkflowStageDefinitionFilterSet,
     ApprovalWorkflowStageFilterSet,
     ApprovalWorkflowStageResponseFilterSet,
+    ArchivedJobLogEntryFilterSet,
+    ArchivedJobResultFilterSet,
+    ArchivedObjectChangeFilterSet,
     ComputedFieldFilterSet,
     ConfigContextFilterSet,
     ContactAssociationFilterSet,
@@ -91,6 +94,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     Contact,
@@ -549,6 +555,51 @@ class ApprovalWorkflowStageResponseFilterTestCase(ApprovalWorkflowTestMixin, Fil
         ("user",),
         ("comments",),
         ("state",),
+    )
+
+
+class ArchivedJobLogEntryTestCase(FilterTestCases.FilterTestCase):
+    queryset = ArchivedJobLogEntry.objects.all()
+    filterset = ArchivedJobLogEntryFilterSet
+    generic_filter_tests = (
+        ("grouping",),
+        ("job_result", "job_result__id"),
+        ("log_level",),
+        ("log_object",),
+        ("message",),
+    )
+
+
+class ArchivedJobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ArchivedJobResult.objects.all()
+    filterset = ArchivedJobResultFilterSet
+    generic_filter_tests = (
+        ("cancel_type",),
+        ("canceled_by_user_name",),
+        ("date_canceled",),
+        ("date_created",),
+        ("date_started",),
+        ("date_done",),
+        ("job_model", "job_model_id"),
+        ("name",),
+        ("status",),
+        ("user_name",),
+    )
+
+
+class ArchivedObjectChangeTestCase(FilterTestCases.FilterTestCase):
+    queryset = ArchivedObjectChange.objects.all()
+    filterset = ArchivedObjectChangeFilterSet
+    generic_filter_tests = (
+        ("action",),
+        ("change_context",),
+        ("change_context_detail",),
+        ("changed_object_type_id",),
+        ("changed_object_id",),
+        ("object_repr",),
+        ("request_id",),
+        ("time",),
+        ("user_name",),
     )
 
 
@@ -1456,6 +1507,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobResult.objects.all()
     filterset = JobResultFilterSet
     generic_filter_tests = (
+        ("canceled_by",),
+        ("date_canceled",),
         ("date_created",),
         ("date_started",),
         ("date_done",),
@@ -1464,6 +1517,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("job_model_id", "job_model__id"),
         ("name",),
         ("status",),
+        ("user",),
     )
 
     @classmethod
@@ -1703,7 +1757,9 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
     filterset = JobLogEntryFilterSet
     generic_filter_tests = (
         ("grouping",),
+        ("job_result", "job_result__id"),
         ("log_level",),
+        ("log_object",),
         ("message",),
     )
 
@@ -1861,6 +1917,10 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
     queryset = ObjectChange.objects.all()
     filterset = ObjectChangeFilterSet
     generic_filter_tests = (
+        ("action",),
+        ("object_repr",),
+        ("request_id",),
+        ("time",),
         ("user", "user__id"),
         ("user", "user__username"),
         ("user_id", "user__id"),

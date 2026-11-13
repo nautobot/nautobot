@@ -2,15 +2,4 @@
 {% load helpers %}
 {% load static %}
 
-{% block title %}
-    Job Result:
-    {% if result.job_model is not None %}
-        {{ result.job_model }}
-    {% elif associated_record %}
-        {{ associated_record }}
-    {% elif job %}
-        {{ job }}
-    {% else %}
-        {{ result.name }}
-    {% endif %}
-{% endblock %}
+{% block title %}Job Result: {{ result.name }}{% endblock %}

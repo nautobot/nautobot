@@ -1,24 +1,6 @@
 {% load helpers %}
 
-{% if job_is_pending and not has_logs %}
-    <div class="text-center p-3 text-secondary">
-        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-        Loading logs…
-    </div>
-{% else %}
-    {{ table_html }}
-{% endif %}
-
-{% if job_is_pending %}
-    <div
-        id="log-table-poller"
-        class="d-none"
-        hx-get="{{ log_table_url }}"
-        hx-trigger="every 3s"
-        hx-target="#log-table-wrapper"
-        hx-swap="innerHTML"
-    ></div>
-{% endif %}
+{{ table_html }}
 
 <script>
     (function() {

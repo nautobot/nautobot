@@ -994,7 +994,7 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 icon="mdi-database-export",
                 required_permissions=["extras.view_archivedjoblogentry"],
                 link_name=lambda ctx: (
-                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result_id={ctx['object'].pk}&format=csv"
+                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
                 ),
             ),
             JobResultButton(
@@ -1081,14 +1081,9 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action in ["retrieve", "job_console_entries", "modal"]:
-            job_class = None
-            if instance and instance.job_model:
-                job_class = instance.job_model.job_class
+        if self.action in ["retrieve", "job_console_entries"]:
             context.update(
                 {
-                    "job": job_class,
-                    "associated_record": None,
                     "result": instance,
                     "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
                 }
