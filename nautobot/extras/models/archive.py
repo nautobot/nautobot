@@ -109,7 +109,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
     # Not indexed on its own, as it's already the first element in index `extras_aoc_changed_obj_idx`.
-    changed_object_type_id = models.PositiveIntegerField(blank=True, null=True)
+    changed_object_type_id = models.IntegerField(blank=True, null=True)
     # Not indexed on its own, as it's covered by the composite index `extras_aoc_changed_obj_idx`.
     changed_object_id = models.UUIDField()
     # Not indexed on its own: it has only a handful of distinct values, so an index would rarely help.
@@ -120,7 +120,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     )
     change_context_detail = models.CharField(max_length=CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, blank=True, editable=False)
     # Not indexed on its own, as it's covered by the composite index `extras_aoc_related_obj_idx`.
-    related_object_type_id = models.PositiveIntegerField(blank=True, null=True)
+    related_object_type_id = models.IntegerField(blank=True, null=True)
     related_object_id = models.UUIDField(blank=True, null=True)
     object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
