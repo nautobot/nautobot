@@ -55,7 +55,8 @@ class EmbeddedModal:
     def open_search(self, verbose_name_plural):
         """Click "Search *verbose_name_plural*" on the parent form and wait for the first results to load.
 
-        A search submitted while the first request is still running can be overwritten by that request's response.
+        Without this wait, `search()` can return on the first-load response, because both responses come from the
+        same list URL.
         """
         self._open(f"Search {verbose_name_plural}")
         expect(self.root.locator(self._RESULTS_TABLE)).to_be_attached()
@@ -105,7 +106,8 @@ class EmbeddedModal:
         expect(self.root.locator(f"select[name='{name}'] option:checked")).to_have_text(list(labels))
 
     def expect_not_prefilled(self, name):
-        """Assert (auto-retrying) that the modal select *name* has no option selected."""
+        """Assert (auto-retrying) that the modal select *name* exists and has no option selected."""
+        expect(self.root.locator(f"select[name='{name}']")).to_have_count(1)
         expect(self.root.locator(f"select[name='{name}'] option:checked")).to_have_count(0)
 
     # -------------------------------------------------------------------------
