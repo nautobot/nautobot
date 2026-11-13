@@ -34,7 +34,7 @@ from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, SavedView, Status
+from nautobot.extras.models import FileProxy, Job, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -586,6 +586,36 @@ class LiveSearchViewTestCase(TestCase):
             '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More...</a>',
             html=True,
         )
+
+    def test_live_search_job_row_links_to_run(self):
+        """The Job row and its play link should lead to the same Run/Schedule page."""
+        self.add_permissions("extras.view_job", "extras.run_job")
+        job = Job.objects.get(name="Export Object List")
+        Job.objects.filter(pk=job.pk).update(enabled=True, installed=True)
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("extras:job_list")[1:]}, query={"q": job.name}),
+            headers={"HX-Request": "true"},
+        )
+        run_url = reverse("extras:job_run", kwargs={"pk": job.pk})
+        self.assertContains(response, f'href="{run_url}"')
+        self.assertContains(response, f'onclick="window.location.href = &quot;{run_url}&quot;;"')
+
+    def test_live_search_disables_unrunnable_job_rows(self):
+        """Neither the name link nor the row can open a Job the user cannot run."""
+        self.add_permissions("extras.view_job")
+        job = Job.objects.get(name="Export Object List")
+        search_url = reverse("live_search", kwargs={"path": reverse("extras:job_list")[1:]}, query={"q": job.name})
+        run_url = reverse("extras:job_run", kwargs={"pk": job.pk})
+
+        for enabled in (True, False):
+            with self.subTest(enabled=enabled):
+                Job.objects.filter(pk=job.pk).update(enabled=enabled, installed=True)
+                if not enabled:
+                    self.add_permissions("extras.run_job")
+                response = self.client.get(search_url, headers={"HX-Request": "true"})
+                self.assertContains(response, job.name)
+                self.assertContains(response, 'aria-disabled="true"')
+                self.assertNotContains(response, run_url)
 
     def test_live_search_empty(self):
         """GET with ?q with no matches response is empty."""
