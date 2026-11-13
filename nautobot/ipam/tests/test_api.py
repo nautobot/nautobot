@@ -2185,7 +2185,8 @@ class VLANGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vlan_group = VLANGroup.objects.create(name="Test", range="5-10,15-20")
+        # Not a single word: generated VLAN group names are single nouns, and MySQL compares names case-insensitively.
+        cls.vlan_group = VLANGroup.objects.create(name="VLAN Group Range Test", range="5-10,15-20")
         cls.default_status = Status.objects.first()
         VLAN.objects.create(name="vlan_5", vid=5, status=cls.default_status, vlan_group=cls.vlan_group)
         VLAN.objects.create(name="vlan_10", vid=10, status=cls.default_status, vlan_group=cls.vlan_group)
