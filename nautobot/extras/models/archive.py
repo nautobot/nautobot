@@ -391,6 +391,26 @@ class ArchivedJobResult(ArchivedLogModel, CustomFieldModel):
     def __str__(self):
         return f"{self.name} created at {self.date_created} ({self.status})"
 
+    @property
+    def duration(self):
+        if not self.date_done or not self.date_started:
+            return None
+
+        duration = self.date_done - self.date_started
+        minutes, seconds = divmod(duration.total_seconds(), 60)
+
+        return f"{int(minutes)} minutes, {seconds:.2f} seconds"
+
+    @property
+    def queue(self):
+        if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
+            return self.celery_kwargs.get("queue")
+        return None
+
+    @property
+    def console_log(self):
+        return self.celery_kwargs.get("nautobot_job_console_log", False)
+
 
 class ArchivedJobLogEntry(ArchivedLogModel):
     """Archived copy of a `JobLogEntry`."""

@@ -144,6 +144,9 @@ from .models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobConsoleEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -185,6 +188,82 @@ from .models import (
 from .registry import registry
 
 logger = logging.getLogger(__name__)
+
+
+def render_jobresult_status(status):
+    """
+    Render a Bootstrap-style label for a JobResult (or ArchivedJobResult) status.
+
+    Args:
+        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "FAILURE": ("bg-danger", "Failed"),
+        "REVOKED": ("bg-danger", "Revoked"),
+        "IGNORED": ("bg-danger", "Ignored"),
+        "REJECTED": ("bg-danger", "Rejected"),
+        "PENDING": ("bg-body-secondary border", "Pending"),
+        "STARTED": ("bg-warning", "Running"),
+        "SUCCESS": ("bg-success", "Completed"),
+        "RECEIVED": ("bg-warning", "Received"),
+        "RETRY": ("bg-warning", "Retry"),
+    }
+
+    css_class, text = mapping.get(status, ("bg-body-secondary border", f"{status} (unrecognized)"))
+    return format_html(
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
+def render_jobresult_cancel_type(cancel_type):
+    """
+    Render a Bootstrap-style label for a JobCancelType.
+
+    Args:
+        cancel_type (str): The job result cancel type (e.g., "terminated", "reaped", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "terminated": ("bg-danger", "Terminated"),
+        "reaped": ("bg-warning", "Reaped"),
+        "abandoned": ("bg-body-secondary border", "Abandoned"),
+    }
+
+    css_class, text = mapping.get(cancel_type, ("bg-body-secondary border", f"{cancel_type} (unrecognized)"))
+    return format_html(
+        '<span id="cancel-type-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)  # pylint: disable=not-callable
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
+class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
+    def should_render(self, context):
+        return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
+
 
 #
 # Approval Workflows
@@ -859,6 +938,337 @@ class ObjectApprovalWorkflowView(generic.GenericView):
                 **common_detail_view_context(request, obj),
             },
         )
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobConsoleEntriesTab(object_detail.DistinctViewTab):
+    def should_render(self, context):
+        if not super().should_render(context):
+            return False
+
+        if context.get("console_log_from_run", False):
+            return True
+
+        return ArchivedJobConsoleEntry.objects.filter(job_result_id=get_obj_from_context(context).id).exists()
+
+
+class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ArchivedJobResultFilterSet
+    filterset_form_class = forms.ArchivedJobResultFilterForm
+    queryset = ArchivedJobResult.objects.all()
+    serializer_class = serializers.ArchivedJobResultSerializer
+    table_class = tables.ArchivedJobResultTable
+    action_buttons = ()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Summary of Results",
+                weight=100,
+                fields=[
+                    "name",
+                    "status",
+                    "date_created",
+                    "date_started",
+                    "user_name",
+                    "result",
+                ],
+                value_transforms={"status": [render_jobresult_status]},
+            ),
+            object_detail.Panel(
+                weight=200,
+                section=object_detail.SectionChoices.FULL_WIDTH,
+                body_content_template_path="extras/inc/archivedjoblogentry_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        ),
+        extra_buttons=[
+            JobResultButton(
+                weight=120,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_archivedjoblogentry"],
+                link_name=lambda ctx: (
+                    reverse("extras-api:archivedjoblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_archivedjobconsoleentry"],
+                render_on_tab_id=["job_console_entries"],
+                link_name=lambda ctx: reverse(
+                    "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
+                ),
+            ),
+        ],
+        extra_tabs=[
+            ArchivedJobConsoleEntriesTab(
+                weight=object_detail.Tab.WEIGHT_ADVANCED_TAB + 50,
+                url_name="extras:archivedjobresult_job_console_entries",
+                tab_id="job_console_entries",
+                label="Console Log",
+                layout=object_detail.LayoutChoices.ONE_OVER_TWO,
+                panels=[],
+                required_permissions=["extras.view_archivedjobconsoleentry"],
+            )
+        ],
+    )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(tab for tab in object_detail_content.tabs if tab.label == "Advanced")
+    advanced_tab.panels = (
+        *advanced_tab.panels,
+        object_detail.ObjectTextPanel(
+            label="Job Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=300,
+            object_field="task_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Positional Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=400,
+            object_field="task_args",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Celery Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=500,
+            object_field="celery_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        JobResultCancelPanel(
+            label="Cancel Details",
+            section=SectionChoices.RIGHT_HALF,
+            weight=100,
+            fields=[
+                "date_canceled",
+                "canceled_by_user_name",
+                "cancel_type",
+            ],
+            value_transforms={
+                "cancel_type": [render_jobresult_cancel_type],
+            },
+        ),
+        object_detail.ObjectFieldsPanel(
+            label="Worker",
+            section=SectionChoices.RIGHT_HALF,
+            weight=200,
+            fields=[
+                "worker",
+                "task_name",
+                "meta",
+            ],
+        ),
+        object_detail.ObjectTextPanel(
+            label="Traceback",
+            section=SectionChoices.RIGHT_HALF,
+            weight=300,
+            object_field="traceback",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+        ),
+    )
+
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action in ["retrieve", "job_console_entries"]:
+            context.update(
+                {
+                    "result": instance,
+                    "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
+                }
+            )
+
+        return context
+
+    @action(
+        detail=True,
+        url_path="log-table",
+        url_name="log-table",  # "log_table" would be more correct, but we're matching JobResultUIViewSet.log_table.
+        custom_view_base_action="view",
+    )
+    def log_table(self, request, pk=None):
+        """Return a rendered ArchivedJobLogEntry table for an ArchivedJobResult."""
+        instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
+
+        filter_q = request.GET.get("q")
+        if filter_q:
+            queryset = instance.job_log_entries.restrict(request.user, "view").filter(
+                Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
+            )
+        else:
+            queryset = instance.job_log_entries.restrict(request.user, "view")
+
+        log_table = tables.ArchivedJobLogEntryTable(data=queryset, user=request.user)
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(log_table)
+
+        if request.headers.get("HX-Request"):
+            job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
+
+            context = {
+                "job_result": instance,
+                "job_is_pending": job_is_pending,
+                "has_logs": queryset.exists(),
+                "table_html": log_table.as_html(request),
+                "log_table_url": request.get_full_path(),
+            }
+            response = render(request, "extras/inc/archivedjobresult_log_table_partial.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
+
+        response = HttpResponse(log_table.as_html(request))
+        patch_vary_headers(response, ["HX-Request"])
+        return response
+
+    @action(
+        detail=True,
+        url_path="job-console-entries",
+        url_name="job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_archivedjobconsoleentry"],
+    )
+    def job_console_entries(self, request, pk=None):
+        """
+        Display the ArchivedJobConsoleEntry records for a given ArchivedJobResult.
+
+        Unlike JobResultUIViewSet.job_console_entries this doesn't support real-time streaming,
+        since an ArchivedJobResult is already completed, by definition.
+        """
+        job_result = self.get_object()
+
+        # Handle HTMX polling for new log entries
+        entries = ArchivedJobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        context = self.get_extra_context(request, job_result)
+        context.update(
+            {
+                "object": job_result,
+                "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
+                "verbose_name_plural": job_result._meta.verbose_name_plural,
+                "list_url": "extras:archivedjobresult_list",
+                "entries": entries,
+                "breadcrumbs": self.get_breadcrumbs(),
+                "view_action": "detail",
+            }
+        )
+        response = render(request, "extras/archivedjobresult_retrieve_console_log.html", context)
+
+        return response
+
+    @action(
+        detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_archivedjobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for an ArchivedJobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = ArchivedJobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = localtime(entry.timestamp).strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+
+class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ArchivedObjectChangeFilterSet
+    filterset_form_class = forms.ArchivedObjectChangeFilterForm
+    queryset = ArchivedObjectChange.objects.all()
+    serializer_class = serializers.ArchivedObjectChangeSerializer
+    table_class = tables.ArchivedObjectChangeTable
+    action_buttons = ("export",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                label="Change",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=(
+                    "time",
+                    "user_name",
+                    "action",
+                    "changed_object_type",
+                    "object_repr",
+                    "request_id",
+                    "change_context",
+                    "change_context_detail",
+                ),
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="object_data",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data v2",
+                section=SectionChoices.LEFT_HALF,
+                weight=250,
+                object_field="object_data_v2",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
+            ),
+            # TODO: difference panel
+            object_detail.ObjectsTablePanel(
+                table_title="Related Changes",
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="related_changes_table",
+                enable_related_link=False,
+                footer_content_template_path=None,
+            ),
+        )
+    )
+
+    def get_extra_context(self, request, instance):
+        """The other retained changes to the same object, which is what Related Changes lists."""
+        context = super().get_extra_context(request, instance)
+
+        if self.action == "retrieve":
+            related_changes = instance.get_related_changes(user=request.user)
+            related_changes_table = tables.ArchivedObjectChangeTable(data=related_changes, orderable=False)
+            RequestConfig(
+                request, {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            ).configure(related_changes_table)
+
+            context.update(
+                {
+                    # TODO: add diffs and next/previous links
+                    "related_changes_table": related_changes_table,
+                    "related_changes_count": related_changes.count(),
+                }
+            )
+
+        return context
 
 
 #
@@ -3726,60 +4136,6 @@ def render_jobresult_files(files_manager):
     return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
 
 
-def render_jobresult_status(status):
-    """
-    Render a Bootstrap-style label for a JobResult status.
-
-    Args:
-        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
-
-    Returns:
-        str: Safe HTML string for a styled label with a fixed ID so tests work.
-    """
-    mapping = {
-        "FAILURE": ("bg-danger", "Failed"),
-        "REVOKED": ("bg-danger", "Revoked"),
-        "IGNORED": ("bg-danger", "Ignored"),
-        "REJECTED": ("bg-danger", "Rejected"),
-        "PENDING": ("bg-body-secondary border", "Pending"),
-        "STARTED": ("bg-warning", "Running"),
-        "SUCCESS": ("bg-success", "Completed"),
-        "RECEIVED": ("bg-warning", "Received"),
-        "RETRY": ("bg-warning", "Retry"),
-    }
-
-    css_class, text = mapping.get(status, ("bg-body-secondary border", f"{status} (unrecognized)"))
-    return format_html(
-        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
-        css_class,
-        text,
-    )
-
-
-def render_jobresult_cancel_type(cancel_type):
-    """
-    Render a Bootstrap-style label for a JobCancelType.
-
-    Args:
-        cancel_type (str): The job result cancel type (e.g., "terminated", "reaped", etc.).
-
-    Returns:
-        str: Safe HTML string for a styled label with a fixed ID so tests work.
-    """
-    mapping = {
-        "terminated": ("bg-danger", "Terminated"),
-        "reaped": ("bg-warning", "Reaped"),
-        "abandoned": ("bg-body-secondary border", "Abandoned"),
-    }
-
-    css_class, text = mapping.get(cancel_type, ("bg-body-secondary border", f"{cancel_type} (unrecognized)"))
-    return format_html(
-        '<span id="cancel-type-label"><span class="badge {}">{}</span></span>',
-        css_class,
-        text,
-    )
-
-
 class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Render a placeholder for certain fields if the job hasn't yet completed."""
@@ -3790,22 +4146,6 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
         if key == "result" and value is None:
             return helpers.placeholder(value)  # instead of an explicitly rendered `null`
         return super().render_value(key, value, context)
-
-
-class JobResultButton(object_detail.Button):
-    """Custom Button that supports callable link_name and hides invalid buttons."""
-
-    def get_link(self, context):
-        """Resolve the link for this button."""
-        if callable(self.link_name):
-            return self.link_name(context)  # pylint: disable=not-callable
-        return None
-
-    def render(self, context):
-        """Render only if a valid link exists."""
-        if not self.get_link(context):
-            return ""  # Hide button if no link is resolvable
-        return super().render(context)
 
 
 class JobRunButton(JobResultButton):
@@ -3845,11 +4185,6 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
             return True
 
         return False
-
-
-class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
-    def should_render(self, context):
-        return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
 
 class JobResultUIViewSet(

@@ -32,6 +32,9 @@ from .models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -82,6 +85,29 @@ APPROVAL_WORKFLOW_OBJECT = """
 {% else %}
     {{ record.object_under_review }}
 {% endif %}
+"""
+
+ARCHIVEDJOBRESULT_BUTTONS = """
+{% if perms.extras.view_archivedjoblogentry %}
+    <li>
+        <a href="{% url 'extras-api:archivedjoblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_archivedjobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:archivedjobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
+{% endif %}
+"""
+
+ARCHIVEDOBJECTCHANGE_REQUEST_ID = """
+<a href="{% url 'extras:archivedobjectchange_list' %}?request_id={{ value }}">{{ value }}</a>
 """
 
 ASSIGNED_OBJECT = """
@@ -1341,7 +1367,7 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     duration = tables.Column(orderable=False)
-    actions = ButtonsColumn(JobResult, buttons=("none",), prepend_template=JOB_RESULT_BUTTONS)
+    actions = ButtonsColumn(JobResult, buttons=("detail",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
     queue_name = tables.Column(accessor="queue", verbose_name="Queue Name", order_by=("celery_kwargs__queue",))
     cancel_type = tables.TemplateColumn(
@@ -1665,6 +1691,73 @@ class ObjectChangeTable(BaseTable):
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
             logger.warning(error_message)
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryTable(JobLogEntryTable):
+    pk = None
+
+    class Meta(JobLogEntryTable.Meta):
+        model = ArchivedJobLogEntry
+
+
+class ArchivedJobResultTable(JobResultTable):
+    pk = None
+    canceled_by = None
+    job_model = None
+    scheduled_job = None
+    user = None
+    actions = ButtonsColumn(ArchivedJobResult, buttons=("detail",), prepend_template=ARCHIVEDJOBRESULT_BUTTONS)
+
+    class Meta(JobResultTable.Meta):
+        model = ArchivedJobResult
+        fields = (
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "duration",
+            "user_name",
+            "status",
+            "summary",
+            "console_log",
+            "queue_name",
+            "actions",
+        )
+        default_columns = (
+            "date_created",
+            "name",
+            "user_name",
+            "status",
+            "summary",
+            "actions",
+        )
+
+
+class ArchivedObjectChangeTable(BaseTable):
+    time = tables.DateTimeColumn(linkify=True, short=True)
+    action = ChoiceFieldColumn()
+    # Not orderable because it isn't a real FK, so it would order by `content_type_id` instead of by ContentType order.
+    changed_object_type = tables.Column(verbose_name="Type", orderable=False)
+    # TODO: plain text for now. Linking is added in CONCRETE-3.
+    object_repr = tables.Column(verbose_name="Object")
+    request_id = tables.TemplateColumn(template_code=ARCHIVEDOBJECTCHANGE_REQUEST_ID, verbose_name="Request ID")
+
+    class Meta(BaseTable.Meta):
+        model = ArchivedObjectChange
+        fields = (
+            "time",
+            "user_name",
+            "action",
+            "changed_object_type",
+            "object_repr",
+            "request_id",
+        )
 
 
 #

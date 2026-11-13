@@ -47,6 +47,7 @@ NO_UI_LIST_VIEW = (
     "/dcim/power-outlet-templates/",
     "/dcim/power-port-templates/",
     "/dcim/rear-port-templates/",
+    "/extras/archived-job-logs/",
     "/extras/condition-presets/",
     "/extras/contact-associations/",
     "/extras/content-types/",

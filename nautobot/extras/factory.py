@@ -22,6 +22,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
+    JobCancelTypeChoices,
     JobConsoleEntryOutputTypeChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -119,6 +120,14 @@ def random_time_during(job_result):
 # The following derive a job result's remaining fields from its status, job model and user. They are shared by
 # `JobResultFactory` and `ArchivedJobResultFactory`, which both declare `job_model` and `user` (as parameters, on the
 # latter) to support them.
+
+
+def _job_result_cancel_type(obj):
+    """Return randomized `cancel_type` for a canceled job result, or "" otherwise."""
+    if obj.status != JobResultStatusChoices.STATUS_REVOKED:
+        return ""
+    choice_tuple = faker.Faker().random_element(JobCancelTypeChoices.CHOICES)
+    return choice_tuple[0]
 
 
 def _job_result_result(obj):
@@ -262,6 +271,13 @@ class ArchivedJobLogEntryFactory(BaseModelFactory):
     absolute_url = factory.Maybe("has_absolute_url", factory.Faker("uri_path"), "")
 
 
+def _archived_job_result_date_canceled(obj):
+    """Return randomized `date_canceled` for a canceled job result, or None otherwise."""
+    if obj.status != JobResultStatusChoices.STATUS_REVOKED:
+        return None
+    return obj.date_done
+
+
 class ArchivedJobResultFactory(BaseModelFactory):
     """ArchivedJobResult model factory.
 
@@ -293,6 +309,7 @@ class ArchivedJobResultFactory(BaseModelFactory):
     status = factory.Iterator(
         [
             JobResultStatusChoices.STATUS_FAILURE,
+            JobResultStatusChoices.STATUS_REVOKED,
             JobResultStatusChoices.STATUS_SUCCESS,
         ],
     )
@@ -302,6 +319,9 @@ class ArchivedJobResultFactory(BaseModelFactory):
     result = factory.LazyAttribute(_job_result_result)
     traceback = factory.LazyAttribute(_job_result_traceback)
     celery_kwargs = factory.LazyAttribute(_job_result_celery_kwargs)
+    cancel_type = factory.LazyAttribute(_job_result_cancel_type)
+    date_canceled = factory.LazyAttribute(_archived_job_result_date_canceled)
+    canceled_by_user_name = factory.Faker("name")  # no actual User ForeignKey, though we *could* pick from user names
 
 
 class ArchivedObjectChangeFactory(BaseModelFactory):
@@ -526,6 +546,7 @@ class JobResultFactory(BaseModelFactory):
     status = factory.Iterator(
         [
             JobResultStatusChoices.STATUS_FAILURE,
+            JobResultStatusChoices.STATUS_REVOKED,
             JobResultStatusChoices.STATUS_SUCCESS,
         ],
     )
@@ -536,6 +557,18 @@ class JobResultFactory(BaseModelFactory):
     result = factory.LazyAttribute(_job_result_result)
     traceback = factory.LazyAttribute(_job_result_traceback)
     celery_kwargs = factory.LazyAttribute(_job_result_celery_kwargs)
+    cancel_type = factory.LazyAttribute(_job_result_cancel_type)
+
+    @factory.post_generation
+    def canceled_info(self, created, extracted, **kwargs):
+        if not created:
+            return
+        if extracted:
+            return
+        if self.status != JobResultStatusChoices.STATUS_REVOKED:
+            return
+        self.canceled_by = factory.random.randgen.choice(get_user_model().objects.all())
+        self.canceled_by_user_name = self.canceled_by.username
 
     @factory.post_generation
     def dates(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
@@ -545,6 +578,8 @@ class JobResultFactory(BaseModelFactory):
             return
         timestamps = sorted(random_datetime(LIVE_HISTORY_START, LIVE_HISTORY_END) for _ in range(3))
         self.date_created, self.date_started, self.date_done = timestamps
+        if self.status == JobResultStatusChoices.STATUS_REVOKED:
+            self.date_canceled = self.date_done
 
 
 class MetadataChoiceFactory(BaseModelFactory):
