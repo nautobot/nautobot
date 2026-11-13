@@ -465,6 +465,7 @@ extras:
   - fields:
     - id
     - name
+    - user_name
     name: Archived Job Result
   - fields:
     - id
