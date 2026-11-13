@@ -1,1 +1,0 @@
-Fix VMinterface details page showing information about untagged Vlans in a panel to low privileged user without Vlan view permission.
