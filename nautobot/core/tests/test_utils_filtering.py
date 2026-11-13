@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
@@ -63,6 +64,15 @@ class FilteringUtilsTestCase(TestCase):
         result = filtering.build_filter_dict_from_filterset(
             RoleFilterSet,
             {"content_types": ["dcim.device"]},
+        )
+
+        self.assertEqual(result, {"content_types": ["dcim.device"]})
+
+    def test_build_filter_dict_content_type_instances_stores_app_label_model_strings(self):
+        """The Role filter form cleans `content_types` to ContentType objects, which the filterset cannot take."""
+        result = filtering.build_filter_dict_from_filterset(
+            RoleFilterSet,
+            {"content_types": ContentType.objects.filter(app_label="dcim", model="device")},
         )
 
         self.assertEqual(result, {"content_types": ["dcim.device"]})

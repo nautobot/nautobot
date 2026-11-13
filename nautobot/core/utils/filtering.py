@@ -234,15 +234,29 @@ def build_filter_dict_from_filterset(
     *,
     logs_prefix: object | None = None,
 ) -> dict[str, Any]:
+    # Get the declared form for any overloaded form field definitions.
+    declared_form = get_form_for_model(filterset_class._meta.model, form_prefix="Filter")
+
+    # A model-backed FilterForm field (e.g. `MultipleContentTypeField`) cleans to model instances, but a filter whose
+    # form field takes plain values (e.g. `ContentTypeMultipleChoiceFilter`) cannot clean those, so give it the values
+    # that the FilterForm field renders instead.
+    plain_values = {}
+    for name, value in form_data.items():
+        declared_field = declared_form.declared_fields.get(name)
+        base_filter = filterset_class.base_filters.get(name)
+        if (
+            isinstance(declared_field, forms.ModelChoiceField)
+            and base_filter is not None
+            and not issubclass(base_filter.field_class, forms.ModelChoiceField)
+        ):
+            plain_values[name] = declared_field.prepare_value(value)
+
     # Populate the filterset from the incoming `form_data`. The filterset's internal form is
     # used for validation, will be used by us to extract cleaned data for final processing.
-    filterset = filterset_class(form_data)
+    filterset = filterset_class({**form_data, **plain_values} if plain_values else form_data)
 
     # Use the auto-generated filterset form perform creation of the filter dictionary.
     filterset_form = filterset.form
-
-    # Get the declared form for any overloaded form field definitions.
-    declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
 
     # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
     # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
