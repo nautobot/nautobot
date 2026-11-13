@@ -161,6 +161,9 @@ LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNING
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
 MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 
+# Setting this to True makes the database health check run `SELECT 1` instead of writing a test row.
+DATABASE_HEALTH_CHECK_READ_ONLY = is_truthy(os.getenv("NAUTOBOT_DATABASE_HEALTH_CHECK_READ_ONLY", "False"))
+
 # Maximum number of objects that the UI and API will retrieve in a single request. Default is 1000
 if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE"] != "":
     MAX_PAGE_SIZE = int(os.environ["NAUTOBOT_MAX_PAGE_SIZE"])

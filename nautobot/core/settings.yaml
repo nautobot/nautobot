@@ -688,6 +688,23 @@ properties:
       "Django documentation for `CSRF_TRUSTED_ORIGINS`": "https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins"
       "Django documentation for CSRF protection": "https://docs.djangoproject.com/en/stable/ref/csrf/#how-it-works"
     type: "array"
+  DATABASE_HEALTH_CHECK_READ_ONLY:
+    default: false
+    description: >-
+      Setting this to `True` makes the database health check run a read-only `SELECT 1` query instead of
+      creating, updating and deleting a test row.
+    details: |-
+      By default, the database health check used by `/health/` and `nautobot-server health_check` writes to the
+      database on every run. When health checks run often, for example as Kubernetes liveness or readiness probes,
+      those writes add load to the database. Enabling this setting replaces them with a single `SELECT 1` round trip,
+      which confirms that the database is reachable and answering queries but no longer confirms that it accepts writes.
+
+      The read-only check is always used when [`MAINTENANCE_MODE`](#maintenance_mode) is `True`, regardless of this
+      setting. Unlike `MAINTENANCE_MODE`, this setting changes nothing else about Nautobot's behavior.
+    environment_variable: "NAUTOBOT_DATABASE_HEALTH_CHECK_READ_ONLY"
+    see_also:
+      "Nautobot Health Checks": "../guides/health-checks.md"
+    type: "boolean"
   DATABASE_ROUTERS:
     default: []
     description: >-
