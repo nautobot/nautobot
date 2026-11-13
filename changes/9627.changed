@@ -1,1 +1,0 @@
-Changed `nautobot.playwright.object_form_page.ObjectFormPage.fill_input` to fill a textarea as well as a text input with the given name.

@@ -35,7 +35,35 @@ For more details, refer to the [import and export documentation](../user-guide/f
 As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
+
 <!-- towncrier release notes start -->
+
+## v3.3.0a1 (2026-11-13)
+
+### Added in v3.3.0a1
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Added `click_add` to `nautobot.playwright.list_page.ListPage`.
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Added `expect_heading`, `expect_on_add_form`, `expect_input_value` and `expect_field_error` to `nautobot.playwright.object_form_page.ObjectFormPage`.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added an optional `within` argument to `nautobot.playwright.base_page.BasePage.panel`, which limits the panel search to the given locator.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added `expect_relationship_peer` and `expect_no_relationship_peer` to `nautobot.playwright.detail_page.DetailPage`, which check a detail view's Relationships panel.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added `nautobot.playwright.object_form_page.ObjectFormPage.submit_and_return_pk`, which submits an add form and returns the new object's pk from the detail view it redirects to.
+- [#9752](https://github.com/nautobot/nautobot/issues/9752) - Added the `CHANGELOG_LEGACY_OBJECT_DATA` setting, which controls whether new change records store `object_data`, the snapshot format used before Nautobot 1.3.
+- [#9776](https://github.com/nautobot/nautobot/issues/9776) - Added a location filter to the cable connection form that restricts the available terminations to the selected location.
+
+### Changed in v3.3.0a1
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Changed `nautobot.playwright.object_form_page.ObjectFormPage.fill_input` to fill a textarea as well as a text input with the given name.
+
+### Fixed in v3.3.0a1
+
+- [#9799](https://github.com/nautobot/nautobot/issues/9799) - Fixed an issue in which the login page would self-reload every 15 seconds.
+- [#9805](https://github.com/nautobot/nautobot/issues/9805) - Fixed Kubernetes Job execution and cancellation failing with HTTP 415 when `urllib3-future` is installed, due to the `kubernetes` 37.x client no longer sending a `Content-Type` header.
+
+### Housekeeping in v3.3.0a1
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Replaced the Config Context Schema Selenium tests with Playwright tests.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Replaced the Selenium relationship tests with a Playwright `RelationshipsTestCase`.
+- [#9745](https://github.com/nautobot/nautobot/issues/9745) - Ported the theme modal tests from Selenium to Playwright and added theme modal helpers to the shared `BasePage`.
 
 ## v3.3.0a1 (2026-11-09)
 

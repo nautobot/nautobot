@@ -1,1 +1,0 @@
-Fixed Kubernetes Job execution and cancellation failing with HTTP 415 when `urllib3-future` is installed, due to the `kubernetes` 37.x client no longer sending a `Content-Type` header.
