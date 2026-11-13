@@ -17,8 +17,9 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
 )
+from nautobot.extras.constants import KUBERNETES_JSON_HEADERS
 from nautobot.extras.models import Job, JobResult
-from nautobot.extras.utils import build_kubernetes_api_client, KUBERNETES_JSON_HEADERS
+from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
 
 logger = logging.getLogger(__name__)

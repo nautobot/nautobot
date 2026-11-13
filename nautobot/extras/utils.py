@@ -49,6 +49,7 @@ from nautobot.extras.constants import (
     EXTRAS_FEATURES,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    KUBERNETES_JSON_HEADERS,
 )
 from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
@@ -57,10 +58,6 @@ if TYPE_CHECKING:
     from nautobot.extras.models import JobQueue
 
 logger = logging.getLogger(__name__)
-
-# kubernetes>=37 omits Content-Type on create/delete calls that carry a body. When urllib3-future
-# replaces urllib3 (e.g. via niquests), it defaults that header to text/plain and the API server returns 415.
-KUBERNETES_JSON_HEADERS = {"Content-Type": "application/json"}
 
 
 def get_base_template(base_template: Optional[str], model: type[Model]) -> str:

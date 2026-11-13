@@ -1,6 +1,11 @@
 # Webhook content types
 HTTP_CONTENT_TYPE_JSON = "application/json"
 
+# kubernetes>=37 omits Content-Type on create/delete calls that carry a body, and ignores `_content_type` for them.
+# When urllib3-future replaces urllib3 (e.g. via niquests), it defaults that header to text/plain and the API server
+# returns 415. Pass a copy via `_headers=dict(KUBERNETES_JSON_HEADERS)`: the client writes into the dict it is given.
+KUBERNETES_JSON_HEADERS = {"Content-Type": HTTP_CONTENT_TYPE_JSON}
+
 # Registerable extras features
 EXTRAS_FEATURES = [
     "cable_terminations",
