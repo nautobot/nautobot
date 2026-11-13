@@ -1,0 +1,1 @@
+Added the `DATABASE_HEALTH_CHECK_READ_ONLY` setting to run a read-only `SELECT 1` database health check without enabling maintenance mode.

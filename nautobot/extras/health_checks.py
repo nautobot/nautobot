@@ -47,7 +47,11 @@ class NautobotHealthCheckBackend(BaseHealthCheckBackend):
 
 
 class DatabaseBackend(NautobotHealthCheckBackend):
-    """Check database connectivity, test read/write if available."""
+    """Check database connectivity, and test write access unless configured for a read-only check.
+
+    A read-only check (`SELECT 1`) runs when `MAINTENANCE_MODE` or `DATABASE_HEALTH_CHECK_READ_ONLY` is set.
+    Otherwise a test row is created, updated and deleted.
+    """
 
     metric = Gauge(
         "health_check_database_info",
@@ -58,9 +62,12 @@ class DatabaseBackend(NautobotHealthCheckBackend):
     def check_status(self):
         """Check the database connection is available."""
         try:
-            if settings.MAINTENANCE_MODE:
-                # Check DB for read access only
-                connection.ensure_connection()
+            if settings.MAINTENANCE_MODE or settings.DATABASE_HEALTH_CHECK_READ_ONLY:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1")
+                    row = cursor.fetchone()
+                if row != (1,):
+                    self.add_error(ServiceReturnedUnexpectedResult("Unexpected result from database"))
             else:
                 # Check DB for read/write access
                 obj = HealthCheckTestModel.objects.create(title="test")
