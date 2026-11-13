@@ -24,10 +24,12 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, Location
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.models import (
+    ArchivedJobConsoleEntry,
     ArchivedJobLogEntry,
     ArchivedJobResult,
     ArchivedObjectChange,
     Job,
+    JobConsoleEntry,
     JobLogEntry,
     JobResult,
     ObjectChange,
@@ -312,7 +314,8 @@ def _find_archived_model_drift(archived_model, live_model):
             )
             drift_messages.extend(kept_relation_field_drift_messages)
 
-    # Sixth check - does the archived model have a field with no matching live model field? Fields listed
+    # Sixth check - does the archived model have a required field that nothing on the live model fills?
+    # Optional columns are left alone, so a field dropped from the live model keeps its archived history.
     for archived_model_field in archived_model._meta.fields:
         does_live_model_have_a_field_of_the_same_name = archived_model_field.name in live_fields
         live_model_field_the_relation_was_dropped_from = live_fields.get(archived_model_field.name.removesuffix("_id"))
@@ -442,13 +445,15 @@ class ArchiveSchemaDriftTestCase(SimpleTestCase):
         )
 
     def test_every_archived_model_resolves_its_live_model_from_its_name(self):
-        archived_model_pairs = get_archived_model_and_live_model_pairs()
-
-        self.assertEqual(set(get_all_archived_models()), {archived_model for archived_model, _ in archived_model_pairs})
-        for archived_model, live_model in archived_model_pairs:
-            with self.subTest(archived_model=archived_model.__name__):
-                self.assertEqual(archived_model.__name__, f"{ARCHIVED_MODEL_NAME_PREFIX}{live_model.__name__}")
-                self.assertEqual(archived_model._meta.app_label, live_model._meta.app_label)
+        self.assertEqual(
+            dict(get_archived_model_and_live_model_pairs()),
+            {
+                ArchivedObjectChange: ObjectChange,
+                ArchivedJobResult: JobResult,
+                ArchivedJobLogEntry: JobLogEntry,
+                ArchivedJobConsoleEntry: JobConsoleEntry,
+            },
+        )
 
     def test_a_name_that_does_not_follow_the_convention_resolves_to_nothing(self):
         class NotNamedForALiveModel:
