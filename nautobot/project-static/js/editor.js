@@ -25,6 +25,13 @@
  *      data-value="key: value"
  *      data-options='{"readOnly": false}'>
  * </div>
+ *
+ * Containers present at page load are initialized automatically. Containers added later
+ * (for example in a modal or an AJAX-loaded tab) must be initialized explicitly:
+ *
+ *   const editor = await window.nb.editor.create(host);
+ *   ...
+ *   window.nb.editor.dispose(host);
  */
 ;(function(window, document, undefined) {
   'use strict';
@@ -32,6 +39,9 @@
   const MONACO_BASE = window.nautobot_static_url + 'monaco-editor-0.52.2';
 
   class Editor {
+      // Editor instances keyed by host element, so that a host can be disposed or re-initialized later
+      static _instances = new WeakMap();
+
       // Base configuration for all editor instances
       static BASE_COMMON = {
           automaticLayout: true,
@@ -77,7 +87,16 @@
       /** Creates a new Editor instance, ensuring Monaco is loaded before initialization. */
       static async create(host) {
           await Editor.loadMonaco();
-          return new Editor(host);
+          // Re-initializing a host replaces its existing editor instead of stacking a second one
+          Editor.disposeHost(host);
+          const instance = new Editor(host);
+          Editor._instances.set(host, instance);
+          return instance;
+      }
+
+      /** Disposes the Editor instance attached to the given host element, if there is one. */
+      static disposeHost(host) {
+          Editor._instances.get(host)?.dispose();
       }
 
       /** Initializes shared Monaco Editor environment, ensuring only one initialization occurs. */
@@ -260,8 +279,13 @@
           this._contentListeners?.forEach(listener => listener.dispose());
           this._contentListeners = null;
 
-          // Dispose models safely
+          // Cleanup editor; it must be disposed before its models, or Monaco reports an error
           const model = this._editor.getModel();
+          this._editor.dispose();
+          this._resizeObserver?.disconnect();
+          Editor._instances.delete(this._host);
+
+          // Dispose models safely
           if (this._config.isDiff) {
               model?.original?.dispose();
               model?.modified?.dispose();
@@ -269,24 +293,34 @@
               model?.dispose();
           }
 
-          // Cleanup editor
-          this._editor.dispose();
-          this._resizeObserver?.disconnect();
-
           // Clear references
           [this._editor, this._resizeObserver, this._host, this._config] = [];
       }
   }
 
-  // Initialize editors with error handling
+  /**
+   * Initializes an editor in the given `.nb-editor-container` element, loading Monaco first if needed.
+   * Resolves with the Editor instance, or with null (and an error message in the host) on failure.
+   */
+  async function createEditor(host) {
+      try {
+          return await Editor.create(host);
+      } catch (error) {
+          host.textContent = 'Editor initialization failed';
+          console.error('Monaco error:', error);
+          return null;
+      }
+  }
+
+  // Public API, for content that is inserted into the page after it has loaded
+  window.nb ??= {};
+  window.nb.editor = {
+      create: createEditor,
+      dispose: (host) => Editor.disposeHost(host),
+  };
+
+  // Initialize the editors that are present at page load
   document.addEventListener('DOMContentLoaded', () => {
-      const containers = Array.from(document.querySelectorAll('.nb-editor-container'));
-      Promise.allSettled(containers.map(host => Editor.create(host)))
-          .then(results => results.forEach((result, i) => {
-              if (result.status === 'rejected') {
-                  containers[i].textContent = 'Editor initialization failed';
-                  console.error('Monaco error:', result.reason);
-              }
-          }));
+      document.querySelectorAll('.nb-editor-container').forEach((host) => createEditor(host));
   });
 })(window, document);
