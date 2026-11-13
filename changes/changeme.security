@@ -1,0 +1,1 @@
+Added validation that rejects a Saved View whose `config` is not a JSON object or whose `pagination_count` is not a positive integer, which previously caused a server error on any list view the Saved View was applied to.

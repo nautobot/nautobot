@@ -4288,6 +4288,17 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_create_rejects_invalid_config(self):
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for config in [{"pagination_count": {"a": 1}}, {"pagination_count": "abc"}, [1, 2]]:
+            with self.subTest(config=config):
+                data = {"name": "Invalid Saved View", "view": "dcim:location_list", "config": config}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 400)
+                self.assertIn("config", response.data)
+        self.assertFalse(SavedView.objects.filter(name="Invalid Saved View").exists())
+
     def _other_user_saved_view(self, **kwargs):
         """
         Create a SavedView owned by some other user.

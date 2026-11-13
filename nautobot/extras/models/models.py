@@ -921,6 +921,14 @@ class SavedView(BaseModel, ChangeLoggedModel):
         if self.is_global_default:
             self.is_shared = True
 
+        if not isinstance(self.config, dict):
+            raise ValidationError({"config": "Saved view configuration must be a JSON object."})
+        if "pagination_count" in self.config:
+            pagination_count = self.config["pagination_count"]
+            # Reject bools explicitly since `True`/`False` are `int` instances in Python.
+            if isinstance(pagination_count, bool) or not isinstance(pagination_count, int) or pagination_count < 1:
+                raise ValidationError({"config": "`pagination_count` must be a positive integer."})
+
     clean.alters_data = True
 
     def save(self, *args, **kwargs):

@@ -3228,6 +3228,30 @@ class SavedViewTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.location_global_sv.is_shared, True)
         self.assertEqual(self.ipaddress_global_sv.is_shared, True)
 
+    def test_clean_accepts_valid_pagination_count(self):
+        self.sv.config = {"pagination_count": 50}
+        self.sv.full_clean()
+
+    def test_clean_rejects_invalid_config(self):
+        invalid_configs = [
+            {"pagination_count": {"a": 1}},
+            {"pagination_count": [1, 2]},
+            {"pagination_count": "50"},
+            {"pagination_count": None},
+            {"pagination_count": 0},
+            {"pagination_count": -5},
+            {"pagination_count": 1.5},
+            {"pagination_count": True},
+            [1, 2],
+            "string",
+        ]
+        for config in invalid_configs:
+            with self.subTest(config=config):
+                self.sv.config = config
+                with self.assertRaises(ValidationError) as cm:
+                    self.sv.full_clean()
+                self.assertIn("config", cm.exception.message_dict)
+
 
 @override_settings(TIME_ZONE="UTC")
 class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
