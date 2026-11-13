@@ -25,14 +25,16 @@
     htmx.config.disableInheritance = true;
     htmx.config.historyRestoreAsHxRequest = false;
     htmx.config.refreshOnHistoryMiss = true;
-    document.addEventListener('DOMContentLoaded', () => {
-        window.nb.favorites.initializeFavorites(
-            '{% url "user:navbar_favorites_add" %}',
-            '{% url "user:navbar_favorites_delete" %}',
-            '{{ settings.BRANDING_TITLE|escapejs }}',
-        );
-        window.nb.messages.watchMessages('{% url "messages" %}');
-    });
+    {% if request.user.is_authenticated %}
+        document.addEventListener('DOMContentLoaded', () => {
+            window.nb.favorites.initializeFavorites(
+                '{% url "user:navbar_favorites_add" %}',
+                '{% url "user:navbar_favorites_delete" %}',
+                '{{ settings.BRANDING_TITLE|escapejs }}',
+            );
+            window.nb.messages.watchMessages('{% url "messages" %}');
+        });
+    {% endif %}
 </script>
 {% if settings.BRANDING_FILEPATHS.javascript %}
     <script src="{% custom_branding_or_static 'javascript' %}"></script>
