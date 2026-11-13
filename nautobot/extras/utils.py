@@ -58,6 +58,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# kubernetes>=37 omits Content-Type on create/delete calls that carry a body. When urllib3-future
+# replaces urllib3 (e.g. via niquests), it defaults that header to text/plain and the API server returns 415.
+KUBERNETES_JSON_HEADERS = {"Content-Type": "application/json"}
+
 
 def get_base_template(base_template: Optional[str], model: type[Model]) -> str:
     """
@@ -911,7 +915,9 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         with build_kubernetes_api_client() as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
-            api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+            api_instance.create_namespaced_job(
+                body=pod_manifest, namespace=pod_namespace, _headers=dict(KUBERNETES_JSON_HEADERS)
+            )
 
     transaction.on_commit(create_kubernetes_job)
     return job_result
