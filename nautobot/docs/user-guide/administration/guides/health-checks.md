@@ -19,6 +19,8 @@ An HTTP `GET` request to `<server>/health/` should return an HTTP `200 OK` respo
 - and the server can write to an appropriate location on the filesystem
 - and the server is not too busy handling other requests to respond to this request.
 
+By default the database check creates, updates and deletes a test row. When [`DATABASE_HEALTH_CHECK_READ_ONLY`](../configuration/settings.md#database_health_check_read_only) or [`MAINTENANCE_MODE`](../configuration/settings.md#maintenance_mode) is `True`, it runs a read-only `SELECT 1` query instead.
+
 Similarly, but not identically, the CLI command `nautobot-server health_check` should run and return an exit code of `0` (success) so long as:
 
 - the command can connect to the database
