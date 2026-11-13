@@ -1,1 +1,0 @@
-Added the `CHANGELOG_LEGACY_OBJECT_DATA` setting, which controls whether new change records store `object_data`, the snapshot format used before Nautobot 1.3.
