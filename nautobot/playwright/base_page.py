@@ -6,19 +6,8 @@ test files, so a markup change is a one-file fix; test bodies read as user inten
 """
 
 import re
-import warnings
 
 from playwright.sync_api import expect, Page
-
-
-def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
-    """Deprecated. Call the `BasePage.select2_filter_pick` method instead."""
-    warnings.warn(
-        "nautobot.playwright.base_page.select2_filter_pick() is deprecated. Call the BasePage method instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    BasePage(page, "").select2_filter_pick(field_name, search=search, pick_text=pick_text, exact=exact)
 
 
 class BasePage:
@@ -42,6 +31,10 @@ class BasePage:
     _HEADER = "#header"
     # The one modal every page includes; the favorite form is loaded into it over HTMX.
     _GENERIC_MODAL = "#nautobot-generic-modal"
+    # Options and the "No results found" message in the open Select2 dropdown. The message
+    # `li` also has the option class, so count options by their text.
+    _OPEN_DROPDOWN_OPTIONS = ".select2-container--open .select2-results__option"
+    _OPEN_DROPDOWN_MESSAGE = ".select2-container--open .select2-results__message"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -107,7 +100,7 @@ class BasePage:
     # -------------------------------------------------------------------------
 
     def select2_filter_search(self, field_name, search=""):
-        """Click the Select2 filter field named *field_name* and type *search* into its search box.
+        """Click the Select2 field named *field_name* and type *search* into its search box.
 
         The dropdown stays open, so the caller can then assert on its options or click one of them.
         """
@@ -117,6 +110,14 @@ class BasePage:
         search_input = self.page.locator(".select2-container--open .select2-search__field").first
         search_input.wait_for(state="visible", timeout=8_000)
         search_input.fill(search)
+
+    def expect_filter_option_count(self, text, count):
+        """Assert (auto-retrying) that the open dropdown has exactly *count* options containing *text*."""
+        expect(self.page.locator(self._OPEN_DROPDOWN_OPTIONS).filter(has_text=text)).to_have_count(count)
+
+    def expect_no_filter_options(self):
+        """Assert (auto-retrying) that the open dropdown shows "No results found"."""
+        expect(self.page.locator(self._OPEN_DROPDOWN_MESSAGE)).to_have_text("No results found")
 
     def select2_filter_pick(self, field_name, search="", pick_text=None, exact=True):
         """Type-and-pick in an API-backed Select2 field, addressed by field *name*.

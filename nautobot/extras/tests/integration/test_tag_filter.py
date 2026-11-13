@@ -21,7 +21,7 @@ class TagFilterTestCase:
         providers.navigate()
         providers.open_filter_drawer()
 
-        providers.search_filter_options("tags", prefix)
+        providers.select2_filter_search("tags", prefix)
 
         providers.expect_filter_option_count(prefix, SELECT2_PAGE_SIZE)
         providers.expect_filter_option_count(tags[-1]["name"], 0)
@@ -34,7 +34,7 @@ class TagFilterTestCase:
         locations.navigate()
         locations.open_filter_drawer()
 
-        locations.search_filter_options("tags", prefix)
+        locations.select2_filter_search("tags", prefix)
 
         locations.expect_no_filter_options()
         locations.expect_filter_option_count(prefix, 0)
