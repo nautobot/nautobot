@@ -12,10 +12,6 @@ A subclass names the model through class attributes and creates its records in
         def setup_items(self, create_object, status_for, prefix):
             ...
 
-Import the module, not the class. pytest collects every `*TestCase` class in a test
-module's namespace, and this class has no `setup_items` of its own, so its tests would
-run and fail.
-
 The tests run against a shared instance, so every list view they open is searched for a
 unique prefix (`?q=<prefix>`) that is in every record's name.
 """
@@ -30,8 +26,16 @@ from nautobot.playwright.list_page import ListPage
 # restore_page_size: the cross-page tests save a page size of 1 to the user's config.
 # require_celery_worker: twelve tests start a job, which runs only on a Celery worker.
 @pytest.mark.usefixtures("restore_page_size", "require_celery_worker")
+@pytest.mark.behavioral
 class BulkOperationsTestCase:
     """Bulk edit and bulk delete of one, all, filtered, and cross-page selections."""
+
+    # pytest does not collect a class whose __test__ is False. Each subclass sets it back to True.
+    __test__ = False
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.__test__ = True
 
     # The model's list page object, e.g. DevicesPage. Its LIST_PATH is the list view, and the
     # same path under /api/ is the REST endpoint.

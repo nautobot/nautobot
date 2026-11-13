@@ -1,9 +1,8 @@
 """Device bulk edit and bulk delete."""
 
-from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
+import pytest
 
-# The module is imported, not the class. If BulkOperationsTestCase were in this module's namespace,
-# pytest would collect it and run its tests without a setup_items.
+from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
 from nautobot.playwright import bulk_operations
 
 
@@ -48,6 +47,7 @@ class DeviceBulkOperationsTestCase(bulk_operations.BulkOperationsTestCase):
 class DeviceBulkUrlParamTestCase:
     """The bulk edit form, opened from a device list filtered by device type."""
 
+    @pytest.mark.behavioral
     def test_param_fills_device_type(self, device_bulk_edit_form, created_device):
         """The bulk edit form leaves Device Type unset, even though the list it came from is filtered by device type.
 

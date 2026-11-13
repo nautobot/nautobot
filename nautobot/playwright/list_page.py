@@ -275,7 +275,7 @@ class ListPage(BasePage):
 
     def expect_bulk_edit_dropdown_unset(self, name):
         """Assert (auto-retrying) that the dropdown field *name* shows its "—" placeholder, which renders only while nothing is selected."""
-        expect(self.page.locator(f"#select2-id_{name}-container .select2-selection__placeholder")).to_have_text("—")
+        expect(self._bulk_edit_dropdown(name).locator(".select2-selection__placeholder")).to_have_text("—")
 
     def set_null(self, name):
         """Check the Set null box of the bulk edit form's field *name*."""
