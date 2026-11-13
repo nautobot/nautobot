@@ -428,7 +428,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def test_detail_view_includes_untagged_and_tagged_vlans_in_vlan_table(self):
         """
         Cover both branches of VMInterfaceUIViewSet.get_extra_context:
-          - `if instance.untagged_vlan is not None:` body
+          - `if instance.untagged_vlan_id is not None:` body
           - `for vlan in instance.tagged_vlans.restrict(...)...:` body
         """
         interface = VMInterface.objects.filter(virtual_machine__name="Virtual Machine 1").first()
@@ -448,6 +448,26 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, untagged.name)
         self.assertBodyContains(response, tagged.name)
+
+    def test_detail_view_vlan_table_restricts_untagged_vlan(self):
+        """The untagged VLAN is omitted from the VLAN table when the user lacks view permission on it."""
+        interface = VMInterface.objects.filter(virtual_machine__name="Virtual Machine 1").first()
+        location_vlans = VLAN.objects.filter(location__name="Location 1")
+        untagged = location_vlans.get(name="VLAN1")
+        tagged = location_vlans.get(name="VLAN101")
+
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.untagged_vlan = untagged
+        interface.save()
+        interface.tagged_vlans.set([tagged])
+
+        self.add_permissions("virtualization.view_vminterface")
+        self.add_permissions("ipam.view_vlan", constraints={"pk": str(tagged.pk)})
+
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        vlan_table_pks = [row.record.pk for row in response.context["vlan_table"].rows]
+        self.assertEqual(vlan_table_pks, [tagged.pk])
 
     def test_bulk_create_propagates_multiselect_extras(self):
         """Multi-select "extras" set on the bulk-create form persist on every created component.
