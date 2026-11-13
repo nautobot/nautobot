@@ -84,9 +84,6 @@ add "&raw" to the end of the URL within a browser.
         <link rel="stylesheet"
               href="{% versioned_static 'dist/css/npm/graphiql.css' %}"
               onerror="nb.media.handleFailure(this)">
-        <link rel="stylesheet"
-              href="{% versioned_static 'dist/css/npm/monaco-editor.css' %}"
-              onerror="nb.media.handleFailure(this)">
         {% include 'inc/javascript.html' %}
         <script type="module" src="{% versioned_static 'dist/js/nautobot-graphiql.js' %}" onerror="nb.media.handleFailure(this)"></script>
     </head>
@@ -119,32 +116,21 @@ add "&raw" to the end of the URL within a browser.
             <!-- GraphiQL page contents -->
             <div id="editor"></div>
         </main>
+        {% include 'inc/generic_modal.html' %}
         {% include 'inc/footer.html' %}
         {% csrf_token %}
         <script type="application/javascript">
-            window.GRAPHENE_SETTINGS = {
+            const GRAPHENE_SETTINGS = {
                 graphiqlHeaderEditorEnabled: {{ graphiql_header_editor_enabled|yesno:"true,false" }},
                 graphiqlShouldPersistHeaders: {{ graphiql_should_persist_headers|yesno:"true,false" }},
                 graphiqlInputValueDeprecation: {{ graphiql_input_value_deprecation|yesno:"true,false" }},
             };
-        </script>
-        <script>
-            initGraphiQL = function (
-                document,
+            document.addEventListener('DOMContentLoaded', () => {
+                // Based roughly on graphene_django/graphiql.js but updated for GraphiQL v5.x
 
-                GRAPHENE_SETTINGS,
-                GraphiQL,
-                React,
-                ReactDOM,
-                createGraphiQLFetcher,
-                explorerPlugin,
-                history,
-                location,
-            ) {
-
-              // Collect the URL parameters
+                // Collect the URL parameters
                 var parameters = {};
-                location.hash
+                window.location.hash
                     .substr(1)
                     .split("&")
                     .forEach(function (entry) {
@@ -155,7 +141,8 @@ add "&raw" to the end of the URL within a browser.
                             );
                         }
                     });
-              // Produce a Location fragment string from a parameter object.
+
+                // Produce a Location fragment string from a parameter object.
                 function locationQuery(params) {
                     return (
                         "#" +
@@ -168,7 +155,8 @@ add "&raw" to the end of the URL within a browser.
                             .join("&")
                     );
                 }
-              // Derive a fetch URL from the current URL, sans the GraphQL parameters.
+
+                // Derive a fetch URL from the current URL, sans the GraphQL parameters.
                 var graphqlParamNames = {
                     query: true,
                     variables: true,
@@ -183,10 +171,6 @@ add "&raw" to the end of the URL within a browser.
 
                 var fetchURL = locationQuery(otherParams);
 
-              // Derive the subscription URL. If the SUBSCRIPTION_URL setting is specified, uses that value. Otherwise
-              // assumes the current window location with an appropriate websocket protocol.
-                function trueLambda() { return true; };
-
                 var headers = {};
                 var cookies = ("; " + document.cookie).split("; csrftoken=");
                 if (cookies.length == 2) {
@@ -198,13 +182,13 @@ add "&raw" to the end of the URL within a browser.
                     headers['X-CSRFToken'] = csrftoken
                 }
 
-                var graphQLFetcher = createGraphiQLFetcher({
+                var graphQLFetcher = window.graphiql.createGraphiQLFetcher({
                     url: fetchURL,
                     headers: headers
                 })
 
-              // When the query and variables string is edited, update the URL bar so
-              // that it can be easily shared.
+                // When the query and variables string is edited, update the URL bar so
+                // that it can be easily shared.
                 function onEditQuery(newQuery) {
                     parameters.query = newQuery;
                     updateURL();
@@ -221,8 +205,25 @@ add "&raw" to the end of the URL within a browser.
                     history.replaceState(null, null, locationQuery(parameters));
                 }
 
+                function SetThemeContent() {
+                    const { setTheme } = window.graphiql.useGraphiQLActions();
+
+                    function handleThemeChange(theme) {
+                        setTheme(theme);
+                    }
+
+                    window.graphiql.React.useEffect(() => {
+                        window.graphiql.setTheme = handleThemeChange;
+                        return () => {
+                            delete window.graphiql.setTheme;
+                        }
+                    }, []);
+
+                    return window.graphiql.React.createElement("span");
+                }
+
                 function GraphiQLWithExplorer() {
-                    var [query, setQuery] = React.useState(parameters.query);
+                    var [query, setQuery] = window.graphiql.React.useState(parameters.query);
 
                     function handleQuery(query) {
                         setQuery(query);
@@ -231,7 +232,8 @@ add "&raw" to the end of the URL within a browser.
 
                     var options = {
                         fetcher: graphQLFetcher,
-                        plugins: [explorerPlugin()],
+                        forcedTheme: document.documentElement.getAttribute('data-bs-theme'),
+                        plugins: [window.graphiql.explorerPlugin()],
                         defaultEditorToolsVisibility: true,
                         onEditQuery: handleQuery,
                         onEditVariables: onEditVariables,
@@ -242,12 +244,13 @@ add "&raw" to the end of the URL within a browser.
                         initialQuery: query,
                     };
                     if (parameters.variables) {
-                        options.variables = parameters.variables;
+                        options.initialVariables = parameters.variables;
                     }
                     if (parameters.operation_name) {
                         options.operationName = parameters.operation_name;
                     }
 
+                    // Add Nautobot saved-queries button and dropdown menu
                     queries_tab = `{% if perms.extras.view_graphqlquery %}
                         <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                             <img alt="" class="graphiql-toolbar-icon" src="{% versioned_static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
@@ -274,39 +277,30 @@ add "&raw" to the end of the URL within a browser.
                         </ul>
                     {% endif %}`;
 
-                    return React.createElement(
-                        GraphiQL,
-                        options,
-                        React.createElement(
-                            GraphiQL.Toolbar,
-                            null,
-                            [
-                                ...React.Children.toArray(React.createElement(GraphiQL.Toolbar)),
-                                React.createElement('div', {dangerouslySetInnerHTML: {__html: queries_tab }})
-                            ]
+                    return window.graphiql.React.createElement(
+                        window.graphiql.GraphiQLProvider,
+                        { fetcher: graphQLFetcher },
+                        window.graphiql.React.createElement(
+                            window.graphiql.GraphiQL,
+                            options,
+                            window.graphiql.React.createElement(
+                                window.graphiql.GraphiQL.Toolbar,
+                                null,
+                                [
+                                    ...window.graphiql.React.Children.toArray(window.graphiql.React.createElement(window.graphiql.GraphiQL.Toolbar)),
+                                    window.graphiql.React.createElement('div', {dangerouslySetInnerHTML: {__html: queries_tab }}),
+                                    window.graphiql.React.createElement(SetThemeContent),
+                                ]
+                            )
                         )
                     );
                 }
 
-              // Render <GraphiQL /> into the body.
-                ReactDOM.createRoot(document.getElementById("editor")).render(React.createElement(GraphiQLWithExplorer));
-            }
-            document.addEventListener('DOMContentLoaded', () => {
-                initGraphiQL(
-                    document,
-
-                    window.GRAPHENE_SETTINGS,
-                    window.GraphiQL,
-                    window.React,
-                    window.ReactDOM,
-                    window.createGraphiQLFetcher,
-                    window.explorerPlugin,
-                    window.history,
-                    window.location,
-                );
+                // Render <GraphiQLProvider /> into the body.
+                const root = window.graphiql.ReactDOM.createRoot(document.getElementById("editor"));
+                root.render(window.graphiql.React.createElement(GraphiQLWithExplorer));
             });
-        </script>
-        <script>
+
             function reload(id, query, variables) {
                 if (variables == null){
                     variables = '{}';
@@ -320,10 +314,10 @@ add "&raw" to the end of the URL within a browser.
             }
 
             function getHashParams() {
-      // Retrieve fragments (# params) from URL
-      // All fragments are converted into a JSON object
-      // To modify the GraphiQL termial, hash fragments in the URL need to be set,
-      // this then adds text to the query, vairable and output text boxes in the UI.
+                // Retrieve fragments (# params) from URL
+                // All fragments are converted into a JSON object
+                // To modify the GraphiQL terminal, hash fragments in the URL need to be set,
+                // this then adds text to the query, vairable and output text boxes in the UI.
                 var hashParams = {};
                 var matches,
                     re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
@@ -340,16 +334,13 @@ add "&raw" to the end of the URL within a browser.
             function save() {
                 var url = new URL(window.location.href);
                 var id = url.searchParams.get("id");
-                var result_window = $(".result-window").find(".CodeMirror-code");
+                const modal = $("#nautobot-generic-modal");
                 if (!id) {
-                    var html = `
-<pre class="CodeMirror-code">
-  <span role="presentation" style="padding-right: 0.1px">
-    <span class="cm-def">Unable to find query ID.</span>
-  </span>
-</pre>
-        `;
-                    result_window.html(html);
+                    // TODO: in 3.3, replace this with a toast
+                    modal.find(".modal-title").text("Error");
+                    var html = `<div class="text-start">Unable to find query ID.</div>`;
+                    modal.find(".modal-body").html(html);
+                    modal.modal("show");
                     return
                 };
 
@@ -363,20 +354,22 @@ add "&raw" to the end of the URL within a browser.
                     dataType: "json",
                     data: graphql_data,
                     success: function(data) {
-                        data = JSON.stringify(data, undefined, 2).split("\n");
-                        var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">Success:</span></span></pre>`;
-                        for(var i = 0;i < data.length;i++){
-                            html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-property">${data[i]}</span></span></pre>`;
-                        };
-                        result_window.html(html);
+                        // TODO: in 3.3, replace this with a toast
+                        data = JSON.stringify(data, undefined, 2);
+                        modal.find(".modal-title").text("Success");
+                        var html = `<pre class="text-start"><code class="language-json">${data}</code></pre>`;
+                        modal.find(".modal-body").html(html);
+                        hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
+                        modal.modal("show");
                     },
                     error: function(error) {
-                        error = JSON.stringify(error, undefined, 2).split("\n");
-                        var html = `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">Failure:</span></span></pre>`;
-                        for(var i = 0;i < error.length;i++){
-                            html += `<pre class="CodeMirror-code"><span role="presentation" style="padding-right: 0.1px"><span class="cm-def">${error[i]}</span></span></pre>`;
-                        };
-                        result_window.html(html);
+                        // TODO: in 3.3, replace this with a toast
+                        error = JSON.stringify(error, undefined, 2);
+                        modal.find(".modal-title").text("Failure");
+                        var html = `<pre class="text-start"><code class="language-json">${error}</code></pre>`;
+                        modal.find(".modal-body").html(html);
+                        hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
+                        modal.modal("show");
                     }
                 });
             }

@@ -84,6 +84,12 @@ const handleEchartsThemeChange = (theme) => {
   });
 };
 
+const handleGraphiQLThemeChange = (theme) => {
+  if (window.graphiql?.setTheme) {
+    window.graphiql.setTheme(theme);
+  }
+};
+
 /**
  * Set Nautobot theme.
  * @param {('dark'|'light'|'system'|null)} theme - Nautobot theme to be set. If `null`, determine theme based on existing user choice or system preference.
@@ -114,6 +120,7 @@ const setTheme = (theme = null) => {
 
   handleSyntaxHighlighterThemeChange(determined_theme);
   handleEchartsThemeChange(determined_theme);
+  handleGraphiQLThemeChange(determined_theme);
 
   if (determined_theme === THEME_DARK) {
     [...document.getElementsByTagName('object')].forEach((object) => {
