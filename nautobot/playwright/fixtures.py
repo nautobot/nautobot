@@ -282,6 +282,20 @@ def restore_page_size(api):
             pytest.fail(f"PATCH /api/users/config/ returned {response.status}: {response.text()}")
 
 
+@pytest.fixture(scope="session")
+def require_celery_worker(api):
+    """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.
+
+    Without a worker, a job such as Refresh Members or a bulk edit is queued but never runs,
+    and the test would otherwise fail only after its poll times out.
+    """
+    response = api.get("/api/status/")
+    if not response.ok:
+        pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
+    if not response.json()["celery-workers-running"]:
+        pytest.fail("No Celery worker is running, so jobs started from the UI would never run.")
+
+
 @pytest.fixture
 def created_manufacturer(create_object):
     """A manufacturer owned by this test."""

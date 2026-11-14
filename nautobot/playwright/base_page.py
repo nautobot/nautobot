@@ -52,6 +52,8 @@ class BasePage:
     # hx-indicator target) while a fragment request is in flight; it is the only
     # in-page loading indicator core renders.
     _LOADING_INDICATOR = ".htmx-request"
+    # A text field renders as an input or, for longer text such as JSON, a textarea.
+    _TEXT_FIELD = "input[name='{field_name}'], textarea[name='{field_name}']"
     # One per panel header. A panel's own label renders uppercased ("MANAGEMENT"), a table's title does not.
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
@@ -118,6 +120,10 @@ class BasePage:
     def expect_flash_message(self, text):
         """Assert (auto-retrying) that a visible flash message contains *text*."""
         expect(self.page.locator(self._FLASH_MESSAGES).filter(has_text=text)).to_be_visible()
+
+    def fill_input(self, field_name, value):
+        """Type *value* into the text input or textarea named *field_name*."""
+        self.page.locator(self._TEXT_FIELD.format(field_name=field_name)).fill(value)
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""

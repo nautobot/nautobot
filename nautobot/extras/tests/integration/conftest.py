@@ -192,20 +192,6 @@ def created_static_group(create_object):
     )
 
 
-@pytest.fixture(scope="session")
-def require_celery_worker(api):
-    """Fail the test up front unless a Celery worker is running to execute the jobs it starts from the UI.
-
-    Without a worker, a job such as Refresh Members is queued but never runs, and the test
-    would otherwise fail only after its poll times out.
-    """
-    response = api.get("/api/status/")
-    if not response.ok:
-        pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
-    if not response.json()["celery-workers-running"]:
-        pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
-
-
 # The schema that created_schema_validation_tree assigns to its child objects, and the context data
 # that each child contains. The API validates the data against the assigned schema on every write,
 # so a child whose data fails validation cannot be created directly. Instead, tests make the

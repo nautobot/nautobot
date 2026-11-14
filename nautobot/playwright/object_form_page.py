@@ -19,8 +19,6 @@ class ObjectFormPage(BasePage):
     ADD_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/add/"
 
     _HEADING = "#page-title"
-    # A text field renders as an input or, for longer text such as JSON, a textarea.
-    _TEXT_FIELD = "input[name='{field_name}'], textarea[name='{field_name}']"
     # The add form has a Create button and the edit form has an Update button.
     _SUBMIT_BUTTON = "button[name='_create'], button[name='_update']"
     # render_field.html wraps each field in a container that gets the has-error class when the field is invalid,
@@ -45,10 +43,6 @@ class ObjectFormPage(BasePage):
     def expect_heading(self, text):
         """Assert (auto-retrying) that the page heading is *text*."""
         expect(self.page.locator(self._HEADING)).to_have_text(text)
-
-    def fill_input(self, field_name, value):
-        """Type *value* into the text input or textarea named *field_name*."""
-        self.page.locator(self._TEXT_FIELD.format(field_name=field_name)).fill(value)
 
     def pick_related(self, field_name, record, search=None):
         """Pick the API *record* in the Select2 field *field_name* by its `display` text.
