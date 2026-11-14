@@ -14,7 +14,9 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import override_settings, tag
+from django.test import override_settings, SimpleTestCase, tag
+from kombu.utils.url import url_to_parts
+import redis.connection
 import redis.exceptions
 
 from nautobot.circuits import models as circuits_models
@@ -712,6 +714,64 @@ class IsTruthyTest(TestCase):
         self.assertFalse(settings_funcs.is_truthy("n"))
         self.assertFalse(settings_funcs.is_truthy(0))
         self.assertFalse(settings_funcs.is_truthy("0"))
+
+
+class ParseRedisConnectionTest(SimpleTestCase):
+    """Tests for `parse_redis_connection()`."""
+
+    def _parse(self, redis_database=0, **env):
+        """Call parse_redis_connection() with only the given NAUTOBOT_REDIS_* environment variables set."""
+        clean_env = {key: value for key, value in os.environ.items() if not key.startswith("NAUTOBOT_REDIS_")}
+        clean_env.update(env)
+        with mock.patch.dict(os.environ, clean_env, clear=True):
+            return settings_funcs.parse_redis_connection(redis_database=redis_database)
+
+    def test_defaults(self):
+        self.assertEqual(self._parse(), "redis://localhost:6379/0")
+
+    def test_ssl_and_unix_schemes(self):
+        self.assertEqual(self._parse(1, NAUTOBOT_REDIS_SSL="true"), "rediss://localhost:6379/1")
+        self.assertEqual(
+            self._parse(2, NAUTOBOT_REDIS_SCHEME="unix", NAUTOBOT_REDIS_HOST="/run/redis.sock"),
+            "unix:///run/redis.sock?db=2",
+        )
+
+    def test_credentials(self):
+        password = "secret"  # noqa: S105  # hardcoded-password-string
+        self.assertEqual(
+            self._parse(NAUTOBOT_REDIS_USERNAME="user", NAUTOBOT_REDIS_PASSWORD=password),
+            "redis://user:secret@localhost:6379/0",
+        )
+        self.assertEqual(self._parse(NAUTOBOT_REDIS_PASSWORD=password), "redis://:secret@localhost:6379/0")
+
+    def test_credentials_with_special_characters(self):
+        """Usernames and passwords containing URL-reserved characters must be percent-encoded."""
+        username = "us@r:name"
+        password = "decinables#prewad/?@:%"  # noqa: S105  # hardcoded-password-string
+        for scheme, host in (("redis", "localhost"), ("rediss", "localhost"), ("unix", "/run/redis.sock")):
+            with self.subTest(scheme=scheme):
+                url = self._parse(
+                    3,
+                    NAUTOBOT_REDIS_SCHEME=scheme,
+                    NAUTOBOT_REDIS_HOST=host,
+                    NAUTOBOT_REDIS_USERNAME=username,
+                    NAUTOBOT_REDIS_PASSWORD=password,
+                )
+                # The URL must round-trip through the parsers used by the Redis client (django-redis) and Celery
+                parsed = redis.connection.parse_url(url)
+                self.assertEqual(parsed["username"], username)
+                self.assertEqual(parsed["password"], password)
+                self.assertEqual(parsed["db"], 3)
+                if scheme == "unix":
+                    self.assertEqual(parsed["path"], host)
+                else:
+                    self.assertEqual(parsed["host"], host)
+                    self.assertEqual(parsed["port"], 6379)
+                    parts = url_to_parts(url)
+                    self.assertEqual(parts.username, username)
+                    self.assertEqual(parts.password, password)
+                    self.assertEqual(parts.hostname, host)
+                    self.assertEqual(parts.port, 6379)
 
 
 class WarnDeprecatedAtCallerTest(TestCase):
