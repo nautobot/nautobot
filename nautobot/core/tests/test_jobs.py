@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -20,8 +21,8 @@ import yaml
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.cleanup import CleanupTypes
-from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.jobs.cleanup import CleanupTypes, LogsCleanup
+from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import (
     Device,
@@ -791,6 +792,18 @@ class ImportObjectsTestCase(TransactionTestCase):
             csv_data=associations_csv,
         )
         self.assertJobResultStatus(associations_job_result)
+
+
+class LogsCleanupTimeLimitsTestCase(TestCase):
+    """
+    Test the LogsCleanup system job's default time limits.
+    """
+
+    def test_time_limits_exceed_celery_defaults(self):
+        """A cleanup can delete a large number of records, so the job should not be limited to the Celery defaults."""
+        self.assertGreater(LogsCleanup.soft_time_limit, settings.CELERY_TASK_SOFT_TIME_LIMIT)
+        self.assertGreater(LogsCleanup.time_limit, settings.CELERY_TASK_TIME_LIMIT)
+        self.assertGreater(LogsCleanup.time_limit, LogsCleanup.soft_time_limit)
 
 
 class LogsCleanupTestCase(TransactionTestCase):
