@@ -1,0 +1,1 @@
+Fixed issue where a Device Type component would not work on YAML import.
