@@ -1,0 +1,1 @@
+Added a `batch_size` to the `bulk_create()` calls in `Device.create_components()` and `Module.create_components()`.
