@@ -16,6 +16,7 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries, disable_warnings
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
+from nautobot.dcim.api import serializers
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     DeviceUniquenessChoices,
@@ -3707,7 +3708,10 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
 
     def test_installed_module(self):
         """Test that the reverse side of `Module.parent_module_bay` is included as a read-only field."""
-        self.add_permissions("dcim.view_modulebay", "dcim.change_modulebay", "dcim.view_module")
+        # Installing a module is done from the Module side
+        self.assertTrue(serializers.ModuleBaySerializer().fields["installed_module"].read_only)
+
+        self.add_permissions("dcim.view_modulebay", "dcim.view_module")
         occupied_module_bay = ModuleBay.objects.filter(installed_module__isnull=False).first()
         empty_module_bay = ModuleBay.objects.filter(installed_module__isnull=True).first()
 
@@ -3715,19 +3719,14 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
             with self.subTest(depth=depth):
                 response = self.client.get(self._get_detail_url(occupied_module_bay), {"depth": depth}, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
-                self.assertEqual(
-                    response.json()["installed_module"]["id"], str(occupied_module_bay.installed_module.pk)
-                )
+                installed_module = response.json()["installed_module"]
+                self.assertEqual(installed_module["id"], str(occupied_module_bay.installed_module.pk))
+                # Like other related objects, the module is only rendered in full with a nonzero `?depth`
+                self.assertEqual("module_type" in installed_module, depth > 0)
 
                 response = self.client.get(self._get_detail_url(empty_module_bay), {"depth": depth}, **self.header)
                 self.assertHttpStatus(response, status.HTTP_200_OK)
                 self.assertIsNone(response.json()["installed_module"])
-
-        # Installing a module is done from the Module side, so writes to installed_module are ignored
-        data = {"installed_module": occupied_module_bay.installed_module.pk}
-        response = self.client.patch(self._get_detail_url(empty_module_bay), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-        self.assertFalse(Module.objects.filter(parent_module_bay=empty_module_bay).exists())
 
 
 class CableTypeTest(APIViewTestCases.APIViewTestCase):
