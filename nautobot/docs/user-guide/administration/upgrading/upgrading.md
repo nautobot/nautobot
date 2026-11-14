@@ -149,7 +149,7 @@ This command performs the following actions:
 * Collects all static files to be served by the HTTP service
 * Deletes stale content types from the database
 * Deletes all expired user sessions from the database
-* Clears all cached data to prevent conflicts with the new release
+* Clears all cached data to prevent conflicts with the new release (with Redis, this requires the [`FLUSHDB` permission](../configuration/redis.md#redis-user-permissions))
 
 ## Restart the Nautobot Services
 
