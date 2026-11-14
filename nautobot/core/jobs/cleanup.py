@@ -48,6 +48,9 @@ class LogsCleanup(Job):
         name = "Logs Cleanup"
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
+        # Deleting a large backlog of records can take much longer than the default Celery time limits
+        soft_time_limit = 3600
+        time_limit = 4000
 
     def recursive_delete_with_cascade(self, queryset, deletion_summary):
         """

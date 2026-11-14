@@ -1,0 +1,1 @@
+Increased the default time limits of the Logs Cleanup system job so that cleaning up a large number of records is not cut off by the Celery default time limits.
