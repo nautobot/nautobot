@@ -23,6 +23,22 @@ In the event you need to use a customized `django-redis` client, the following s
 * [`CLIENT_CLASS`](https://github.com/jazzband/django-redis?tab=readme-ov-file#pluggable-clients)
 * [`CUSTOM_HEALTH_CHECK_CLASS`](../guides/health-checks.md#redis)
 
+### Redis User Permissions
+
++++ 3.0.10
+
+[`nautobot-server post_upgrade`](../tools/nautobot-server.md#post_upgrade) clears the cache, which `django-redis` does by running the Redis [`FLUSHDB`](https://redis.io/docs/latest/commands/flushdb/) command against the caching database. This deletes every key in that database, which is another reason to keep the caching and task databases separate as described above.
+
+If you restrict the Redis user that Nautobot connects as with an [ACL](https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/), make sure that it is allowed to run `FLUSHDB`. `FLUSHDB` is in the `@dangerous` command category, so an ACL that includes `-@dangerous` needs to add `+flushdb` back, for example:
+
+```no-highlight
+user nautobot on >password ~* &* +@all -@dangerous +flushdb
+```
+
+Otherwise `post_upgrade` fails with `redis.exceptions.NoPermissionError: this user has no permissions to run the 'flushdb' command or its subcommand`.
+
+Alternatively, you can skip clearing the cache with `nautobot-server post_upgrade --no-clear-cache`, but data cached by the previous version of Nautobot may then cause errors after the upgrade.
+
 ## Task Queuing with Celery
 
 Out of the box you do not need to make any changes to utilize task queueing with Celery and Redis. The default settings are sufficient for most installations.

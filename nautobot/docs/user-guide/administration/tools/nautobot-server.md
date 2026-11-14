@@ -561,7 +561,7 @@ This will run the following management commands with default settings, in order:
     Removed the `--build_ui` flag.
 
 +++ 3.0.10
-    Added `clear_cache` to this command's default behavior.
+    Added `clear_cache` to this command's default behavior. When Redis is used for caching, this requires the Redis user to be allowed to run the `FLUSHDB` command; see [Redis User Permissions](../configuration/redis.md#redis-user-permissions).
 
 `--no-clear-cache`
 Do not automatically clear the cache.

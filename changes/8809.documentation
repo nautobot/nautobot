@@ -1,0 +1,1 @@
+Documented that `nautobot-server post_upgrade` requires the Redis user to be allowed to run the `FLUSHDB` command.
