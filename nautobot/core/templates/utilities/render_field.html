@@ -71,7 +71,7 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                                 type="button"
                                 {% if field.field.disabled %}disabled=""{% endif %}
                             >
-                                <span class="mdi mdi-plus-thick"></span>
+                                <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
                                 <span class="visually-hidden">Add a new {{ verbose_name }}</span>
                             </button>
                         </span>
@@ -91,7 +91,7 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                                 type="button"
                                 {% if field.field.disabled %}disabled=""{% endif %}
                             >
-                                <span class="mdi mdi-filter"></span>
+                                <span class="mdi mdi-filter" aria-hidden="true"></span>
                                 <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
                             </button>
                         </span>
