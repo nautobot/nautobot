@@ -217,7 +217,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
     Field for choosing any number of `ContentType` objects.
 
     Optionally can restrict the available ContentTypes to those supporting a particular feature only.
-    Optionally can pass the selection through as a list of `{app_label}.{model}` strings instead of PK values.
+    Optionally can render and accept the selection as `{app_label}.{model}` strings instead of PK values.
+    The cleaned value is a `ContentType` queryset either way.
     """
 
     STATIC_CHOICES = True
@@ -228,7 +229,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         Args:
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
-            choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
+            choices_as_strings (bool): If True, render and accept the selection as a list of `"{app_label}.{model}"`
+                strings.
         """
         from nautobot.extras import utils as extras_utils
 
@@ -248,8 +250,44 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         super().__init__(*args, **kwargs)
 
+        self.choices_as_strings = choices_as_strings
         if choices_as_strings:
             self.choices = self._string_choices_from_queryset
+
+    def clean(self, value):
+        """Validate the selection and return the selected `ContentType` objects."""
+        if self.choices_as_strings:
+            return self._clean_as_strings(value)
+        return super().clean(value)
+
+    def _clean_as_strings(self, value):
+        """Same outcome as `ModelMultipleChoiceField.clean()`, but looks up `{app_label}.{model}` values, not PKs."""
+        value = self.prepare_value(value)
+        if not value:
+            if self.required:
+                raise ValidationError(self.error_messages["required"], code="required")
+            return self.queryset.none()
+        if not isinstance(value, (list, tuple)):
+            raise ValidationError(self.error_messages["invalid_list"], code="invalid_list")
+
+        pks_by_label = {f"{ct.app_label}.{ct.model}": ct.pk for ct in self.queryset}
+        for label in value:
+            if label not in pks_by_label:
+                raise ValidationError(
+                    self.error_messages["invalid_choice"], code="invalid_choice", params={"value": label}
+                )
+        self.run_validators(value)
+        return self.queryset.filter(pk__in=[pks_by_label[label] for label in value])
+
+    def prepare_value(self, value):
+        """Render `ContentType` objects as `{app_label}.{model}` strings when `choices_as_strings` is set."""
+        if not self.choices_as_strings:
+            return super().prepare_value(value)
+        if isinstance(value, ContentType):
+            return f"{value.app_label}.{value.model}"
+        if hasattr(value, "__iter__") and not isinstance(value, str):
+            return [self.prepare_value(item) for item in value]
+        return value
 
     def _string_choices_from_queryset(self):
         """Overload choices to return `{app_label}.{model}` instead of PKs."""
