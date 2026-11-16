@@ -1717,6 +1717,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         self.enabled = False
         self.save()
 
+    on_workflow_initiated.alters_data = True
+
     def on_workflow_approved(self, approval_workflow):
         """When approved, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
@@ -1726,6 +1728,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+    on_workflow_approved.alters_data = True
 
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
@@ -1737,6 +1741,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
+    on_workflow_denied.alters_data = True
+
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
@@ -1746,6 +1752,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.canceled", payload=publish_event_payload)
+
+    on_workflow_canceled.alters_data = True
 
     def get_approval_template(self):
         """
