@@ -162,8 +162,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // When modal is being closed, bootstrap automatically restore the focus on the element that was triggering the modal
   // As a result, after modal close tooltip was triggered as well
   document.addEventListener('hidden.bs.modal', () => {
-    document.querySelectorAll('[data-bs-toggle="tooltip"] > a').forEach((el) => {
+    document.querySelectorAll('[data-bs-toggle="tooltip"] > a, [data-bs-toggle="tooltip"] > button').forEach((el) => {
       el.blur();
+    });
+  });
+
+  // Hide any shown tooltip when a modal opens (e.g. from the embedded-action "+" / search buttons).
+  // Bootstrap never receives the `mouseleave` that would hide it, because the modal covers the trigger element first.
+  document.addEventListener('show.bs.modal', () => {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+      bootstrap.Tooltip.getInstance(el)?.hide();
     });
   });
 });
