@@ -1861,13 +1861,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
             raise ValueError("task_queue and job_queue are mutually exclusive")
-        if job_queue is not None and task_queue is None:
-            task_queue = job_queue.name
-        elif task_queue is not None and job_queue is None:
-            job_queue = JobQueue.objects.get(name=task_queue)
-        else:  # both None
-            job_queue = job_model.default_job_queue
-            task_queue = job_queue.name
+        if job_queue is None:
+            job_queue = JobQueue.objects.get(name=task_queue) if task_queue is not None else job_model.default_job_queue
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
             start_time = timezone.localtime()
@@ -1889,10 +1884,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         celery_kwargs = {
             "nautobot_job_profile": profile,
-            "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
-            "nautobot_job_queue_type": job_queue.queue_type,  # need a migration to set this field
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

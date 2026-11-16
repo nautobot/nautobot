@@ -3920,6 +3920,36 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         # Verify the task was never dispatched.
         scheduler.send_task.assert_not_called()
 
+    def test_apply_async_dispatches_to_renamed_job_queue(self):
+        """A JobQueue renamed after the schedule was created is used by name when the schedule fires."""
+        from nautobot.core.celery.schedulers import NautobotDatabaseScheduler
+
+        job_queue = JobQueue.objects.create(name="original-queue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        scheduled_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="Renamed Queue Job",
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            job_queue=job_queue,
+            job_kwargs={},
+        )
+        self.assertNotIn("queue", scheduled_job.celery_kwargs)
+        self.assertNotIn("nautobot_job_queue_type", scheduled_job.celery_kwargs)
+        entry = NautobotScheduleEntry(model=scheduled_job)
+
+        job_queue.name = "renamed-queue"
+        job_queue.validated_save()
+
+        scheduler = mock.MagicMock(spec=NautobotDatabaseScheduler)
+        scheduler.app = mock.MagicMock()
+        mock_task = scheduler.app.tasks.get.return_value
+        NautobotDatabaseScheduler.apply_async(scheduler, entry, advance=False)
+
+        self.assertEqual(mock_task.apply_async.call_args.kwargs["queue"], "renamed-queue")
+        job_result = JobResult.objects.get(scheduled_job=scheduled_job)
+        self.assertEqual(job_result.celery_kwargs["queue"], "renamed-queue")
+
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
     # def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):
