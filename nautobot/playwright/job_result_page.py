@@ -1,7 +1,7 @@
 """Shared page object for the Job Result detail view (/extras/job-results/<pk>/).
 
-Bulk edit and bulk delete in every app redirect here, so it is shared rather than
-kept with the extras tests.
+Bulk edit and bulk delete in every app redirect to this view, so this page object is in the
+shared package instead of with the extras tests.
 """
 
 from playwright.sync_api import expect
@@ -20,7 +20,7 @@ class JobResultPage(DetailPage):
     _STATUS = "#pending-result-label"
 
     def expect_job_description(self, description):
-        """Assert (auto-retrying) that the summary panel gives the job's description as *description*."""
+        """Assert (auto-retrying) that the summary panel shows *description* as the Job Description."""
         self.expect_panel_field(self._SUMMARY_PANEL, "Job Description", description)
 
     def expect_status(self, status, timeout=60_000):
@@ -28,6 +28,6 @@ class JobResultPage(DetailPage):
 
         The job waits for a Celery worker, and the summary panel refreshes every 3 seconds
         until the job finishes, so the badge can take several refreshes to change. The
-        suite default of 5 seconds is shorter than one slow job on the CI runner.
+        suite default of 5 seconds is shorter than a slow job can take on the CI runner.
         """
         expect(self.page.locator(self._STATUS)).to_have_text(status, timeout=timeout)

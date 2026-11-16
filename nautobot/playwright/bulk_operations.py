@@ -1,6 +1,6 @@
 """Shared bulk edit and bulk delete tests for any model's list view.
 
-A subclass names the model through class attributes and creates its records in
+A subclass specifies the model in class attributes and creates its records in
 `setup_items`:
 
     class DeviceBulkOperationsTestCase(bulk_operations.BulkOperationsTestCase):
@@ -30,7 +30,7 @@ from nautobot.playwright.list_page import ListPage
 class BulkOperationsTestCase:
     """Bulk edit and bulk delete of one, all, filtered, and cross-page selections."""
 
-    # pytest does not collect a class whose __test__ is False. Each subclass sets it back to True.
+    # pytest does not collect a class whose __test__ is False. __init_subclass__ sets it back to True on each subclass.
     __test__ = False
 
     def __init_subclass__(cls, **kwargs):
@@ -40,12 +40,14 @@ class BulkOperationsTestCase:
     # The model's list page object, e.g. DevicesPage. Its LIST_PATH is the list view, and the
     # same path under /api/ is the REST endpoint.
     page_class: type[ListPage]
-    # The model's base view name, e.g. "dcim:device". The model name in it gives the plural
-    # that the list view's messages print.
+    # The model's base view name, e.g. "dcim:device". model_plural adds "s" to the model name in it
+    # to build the plural that the list view's messages show.
     model_base_viewname: str
-    # Text fields to set on the bulk edit form, and the REST filter that finds the edited records.
+    # Text fields and values to set on the bulk edit form. assert_edited_count also passes them to
+    # the REST API as a filter, to count the records that the bulk edit changed.
     model_edit_data: dict
     # Filter drawer fields and the option to pick in each, which select the "filtered" records.
+    # _setup also passes each field and value to the REST API as a filter, so both must accept the value.
     # "{prefix}" in a value is replaced with the prefix setup_items was given.
     model_filter_by: dict
     # How many records setup_items creates in all, and how many of them model_filter_by selects.
@@ -58,7 +60,7 @@ class BulkOperationsTestCase:
     override_model_plural = None
 
     def setup_items(self, create_object, status_for, prefix):
-        """Create the records under test, each with *prefix* in a name the list view's search matches."""
+        """Create the records under test, each with *prefix* in a name that the list view's search matches."""
         raise NotImplementedError
 
     @property
@@ -75,7 +77,12 @@ class BulkOperationsTestCase:
 
     @pytest.fixture(autouse=True)
     def _setup(self, auth_page, base_url, create_object, status_for, api_count):
-        """Create this test's records, check their counts, and open the list view on them."""
+        """Create this test's records, check their counts, and open the list view searched for them.
+
+        The list view must show all of this test's records. `expect_row_count(0)` after a delete
+        also passes when the row selector matches no rows at all, so this check proves that the
+        selector matches rows.
+        """
         self.prefix = unique_name()
         self.endpoint = self.list_path.lstrip("/")
         self.filter_by = {field: value.format(prefix=self.prefix) for field, value in self.model_filter_by.items()}
@@ -94,9 +101,10 @@ class BulkOperationsTestCase:
         self.list_page = self.page_class(auth_page, base_url)
         self.job_result_page = JobResultPage(auth_page, base_url)
         self.go_to_model_list_page()
+        self.list_page.expect_row_count(self.expected_counts["all"])
 
     def go_to_model_list_page(self, **params):
-        """Open the list view on this test's records."""
+        """Open the list view searched for this test's prefix, so that it shows only this test's records."""
         self.list_page.navigate(q=self.prefix, **params)
 
     def apply_filter(self):
@@ -219,8 +227,8 @@ class BulkOperationsTestCase:
     # -------------------------------------------------------------------------
     # Bulk delete
     # -------------------------------------------------------------------------
-    # Each test checks the count on the confirmation page before it confirms, so a
-    # selection that includes records outside this test's own stops before deleting them.
+    # Each test checks the count on the confirmation page before it confirms. If the selection
+    # includes records that this test did not create, the test fails before it deletes them.
 
     def test_bulk_delete_require_selection(self):
         """Delete Selected with nothing selected stays on the list view and says nothing was selected."""

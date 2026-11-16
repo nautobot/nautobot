@@ -200,7 +200,7 @@ class ListPage(BasePage):
 
     @property
     def _delete_selected(self):
-        """Selector for Delete Selected, an item in the dropdown next to Edit Selected. Delete All has the same name, so the selector is scoped to the dropdown menu."""
+        """Selector for Delete Selected, an item in the dropdown next to Edit Selected. The Delete All button has the same `name` attribute, so the selector matches only buttons inside the dropdown menu."""
         return f".dropdown-menu button[name='_delete'][formaction^='{self.LIST_PATH}delete/']"
 
     def expect_on_list(self):
@@ -288,7 +288,7 @@ class ListPage(BasePage):
         self.page.locator(f"#id_{name}_nullify").check()
 
     def apply_bulk_edit(self) -> str:
-        """Submit the form and return the job result ID once the redirect commits."""
+        """Submit the form and return the job result ID as soon as the browser starts loading the job result page."""
         self.page.locator(self._BULK_EDIT_APPLY).click()
         return self._wait_for_job_result("Apply")
 
@@ -302,19 +302,19 @@ class ListPage(BasePage):
         self._click_and_wait_for_navigation(self._DELETE_ALL)
 
     def expect_bulk_delete_count(self, count):
-        """Assert (auto-retrying) that the confirmation page's warning and its button both state *count* objects."""
+        """Assert (auto-retrying) that the confirmation page's warning and its confirm button both show *count* as the number of objects to delete."""
         expect(self.page.locator(self._BULK_DELETE_WARNING)).to_contain_text(
             f"The following operation will delete {count} "
         )
         expect(self.page.locator(self._BULK_DELETE_CONFIRM)).to_contain_text(f"Delete these {count} ")
 
     def confirm_bulk_delete(self) -> str:
-        """Confirm the deletion and return the job result ID once the redirect commits."""
+        """Confirm the deletion and return the job result ID as soon as the browser starts loading the job result page."""
         self.page.locator(self._BULK_DELETE_CONFIRM).click()
         return self._wait_for_job_result("Confirm")
 
     def _wait_for_job_result(self, button) -> str:
-        """Wait for the redirect to a job result that *button* started, and return its ID."""
+        """Wait until clicking *button* redirects the browser to a job result page, and return the job result's ID."""
         try:
             self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
         except PlaywrightTimeoutError:
