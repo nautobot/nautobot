@@ -2507,7 +2507,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 label="Run/Schedule",
                 icon="mdi-play",
                 color=ButtonActionColorChoices.RUN,
-                required_permissions=["extras.job_run"],
+                required_permissions=["extras.run_job"],
             ),
         ],
     )
