@@ -33,7 +33,7 @@ class BasePage:
     _GENERIC_MODAL = "#nautobot-generic-modal"
     # Options and the "No results found" message in the open Select2 dropdown. The message
     # `li` also has the option class, so count options by their text.
-    _OPEN_DROPDOWN_OPTIONS = ".select2-container--open .select2-results__option"
+    _OPEN_DROPDOWN_OPTIONS = ".select2-container--open .select2-results__option:not([role='group'])"
     _OPEN_DROPDOWN_MESSAGE = ".select2-container--open .select2-results__message"
     # The footer renders the theme button only for a logged-in user.
     _THEME_MODAL_BUTTON = "#btn-theme-modal"
