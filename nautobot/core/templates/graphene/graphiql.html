@@ -118,78 +118,44 @@ add "&raw" to the end of the URL within a browser.
         </main>
         {% include 'inc/generic_modal.html' %}
         {% include 'inc/footer.html' %}
-        {% csrf_token %}
         <script type="application/javascript">
             const GRAPHENE_SETTINGS = {
                 graphiqlHeaderEditorEnabled: {{ graphiql_header_editor_enabled|yesno:"true,false" }},
                 graphiqlShouldPersistHeaders: {{ graphiql_should_persist_headers|yesno:"true,false" }},
                 graphiqlInputValueDeprecation: {{ graphiql_input_value_deprecation|yesno:"true,false" }},
             };
-            document.addEventListener('DOMContentLoaded', () => {
+
+            // Convert location hash to a JSON object (used to populate query/variables from a URL)
+            function getHashParams() {
+                return Object.fromEntries(new URLSearchParams(window.location.hash.substr(1)));
+            }
+
+            // Convert a parameters object back to a URL location hash
+            function locationQuery(params) {
+                return "#" + new URLSearchParams(params);
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
                 // Based roughly on graphene_django/graphiql.js but updated for GraphiQL v5.x
 
-                // Collect the URL parameters
-                var parameters = {};
-                window.location.hash
-                    .substr(1)
-                    .split("&")
-                    .forEach(function (entry) {
-                        var eq = entry.indexOf("=");
-                        if (eq >= 0) {
-                            parameters[decodeURIComponent(entry.slice(0, eq))] = decodeURIComponent(
-                                entry.slice(eq + 1),
-                            );
-                        }
-                    });
+                // Collect the initial Graphql parameters (query, variables, operationName), if any, from the URL hash
+                var parameters = getHashParams();
 
-                // Produce a Location fragment string from a parameter object.
-                function locationQuery(params) {
-                    return (
-                        "#" +
-                        Object.keys(params)
-                            .map(function (key) {
-                                return (
-                                    encodeURIComponent(key) + "=" + encodeURIComponent(params[key])
-                                );
-                            })
-                            .join("&")
-                    );
-                }
-
-                // Derive a fetch URL from the current URL, sans the GraphQL parameters.
-                var graphqlParamNames = {
-                    query: true,
-                    variables: true,
-                    operationName: true,
+                // Derive a fetch URL from the current URL hash, sans the GraphQL parameters.
+                const { query, variables, operationName, ...otherParams } = parameters;
+                const fetchURL = locationQuery(otherParams);
+                const headers = {
+                    "X-CSRFToken": nautobot_csrf_token  // nautobot_csrf_token populatd by inc/javascript.html
                 };
-                var otherParams = {};
-                for (var k in parameters) {
-                    if (parameters.hasOwnProperty(k) && graphqlParamNames[k] !== true) {
-                        otherParams[k] = parameters[k];
-                    }
-                }
-
-                var fetchURL = locationQuery(otherParams);
-
-                var headers = {};
-                var cookies = ("; " + document.cookie).split("; csrftoken=");
-                var csrftoken;
-                if (cookies.length == 2) {
-                    csrftoken = cookies.pop().split(";").shift();
-                } else {
-                    csrftoken = document.querySelector("[name=csrfmiddlewaretoken]").value;
-                }
-                if (csrftoken) {
-                    headers['X-CSRFToken'] = csrftoken
-                }
-
-                var graphQLFetcher = window.graphiql.createGraphiQLFetcher({
+                const graphQLFetcher = window.graphiql.createGraphiQLFetcher({
                     url: fetchURL,
                     headers: headers
                 })
 
-                // When the query and variables string is edited, update the URL bar so
-                // that it can be easily shared.
+                // Callbacks to update the browser URL whenever the query params change, for ease of URL sharing
+                function updateURL() {
+                    history.replaceState(null, null, locationQuery(parameters));
+                }
                 function onEditQuery(newQuery) {
                     parameters.query = newQuery;
                     updateURL();
@@ -202,53 +168,40 @@ add "&raw" to the end of the URL within a browser.
                     parameters.operationName = newOperationName;
                     updateURL();
                 }
-                function updateURL() {
-                    history.replaceState(null, null, locationQuery(parameters));
-                }
 
                 function SetThemeContent() {
                     const { setTheme } = window.graphiql.useGraphiQLActions();
 
-                    function handleThemeChange(theme) {
-                        setTheme(theme);
-                    }
-
                     window.graphiql.React.useEffect(() => {
-                        window.graphiql.setTheme = handleThemeChange;
+                        window.graphiql.setTheme = setTheme;
                         return () => {
                             delete window.graphiql.setTheme;
                         }
                     }, []);
-
-                    return window.graphiql.React.createElement("span");
                 }
 
                 function GraphiQLWithExplorer() {
-                    var [query, setQuery] = window.graphiql.React.useState(parameters.query);
-
-                    function handleQuery(query) {
-                        setQuery(query);
-                        onEditQuery(query);
-                    }
-
                     var options = {
                         fetcher: graphQLFetcher,
+                        // Theme is managed by Nautobot - not by GraphiQL's own settings modal
                         forcedTheme: document.documentElement.getAttribute('data-bs-theme'),
                         plugins: [window.graphiql.explorerPlugin()],
                         defaultEditorToolsVisibility: true,
-                        onEditQuery: handleQuery,
+                        onEditQuery: onEditQuery,
                         onEditVariables: onEditVariables,
                         onEditOperationName: onEditOperationName,
                         isHeadersEditorEnabled: GRAPHENE_SETTINGS.graphiqlHeaderEditorEnabled,
                         shouldPersistHeaders: GRAPHENE_SETTINGS.graphiqlShouldPersistHeaders,
                         inputValueDeprecation: GRAPHENE_SETTINGS.graphiqlInputValueDeprecation,
-                        initialQuery: query,
                     };
+                    if (parameters.query) {
+                        options.initialQuery = parameters.query;
+                    }
                     if (parameters.variables) {
                         options.initialVariables = parameters.variables;
                     }
-                    if (parameters.operation_name) {
-                        options.operationName = parameters.operation_name;
+                    if (parameters.operationName) {
+                        options.operationName = parameters.operationName;
                     }
 
                     // Add Nautobot saved-queries button and dropdown menu
@@ -265,7 +218,7 @@ add "&raw" to the end of the URL within a browser.
                                          <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">
                                              <strong>{{ query.name }}</strong>
                                          </a>
-                                         <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="save()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
+                                         <a class="btn btn-sm btn-warning flex-shrink-0 me-12" onclick="saveChanges()"><span class="mdi mdi-content-save-edit me-4 ms-0"></span>Save Changes</a>
                                      {% else %}
                                          <a class="dropdown-item" href="#" onclick="reload('{{ query.id }}', '{{ query.query|urlencode }}', '{{ query.variables|render_json:False|urlencode }}')">{{ query.name }}</a>
                                      {% endif %}
@@ -273,7 +226,7 @@ add "&raw" to the end of the URL within a browser.
                             {% endfor %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <button class="dropdown-item" onclick="populate_model()" data-bs-toggle="modal" data-bs-target="#GraphQLQueries_form" title="Query Form">Save Current Query As...</button>
+                                <button class="dropdown-item" onclick="populateModal()" data-bs-toggle="modal" data-bs-target="#GraphQLQuery_form">Save Current Query As...</button>
                             </li>
                         </ul>
                     {% endif %}`;
@@ -302,6 +255,8 @@ add "&raw" to the end of the URL within a browser.
                 root.render(window.graphiql.React.createElement(GraphiQLWithExplorer));
             });
 
+            // Select a given saved query and refresh the page to render it
+            // Note that here `query` and `variables` are expected to be URL-encoded strings!
             function reload(id, query, variables) {
                 if (variables == null){
                     variables = '{}';
@@ -314,30 +269,13 @@ add "&raw" to the end of the URL within a browser.
                 location.search = search.toString();
             }
 
-            function getHashParams() {
-                // Retrieve fragments (# params) from URL
-                // All fragments are converted into a JSON object
-                // To modify the GraphiQL terminal, hash fragments in the URL need to be set,
-                // this then adds text to the query, vairable and output text boxes in the UI.
-                var hashParams = {};
-                var matches,
-                    re_match_plus = /\+/g,  // Regex for replacing addition symbol with a space
-                re_match_query_param_and_value = /([^&;=]+)=?([^&;]*)/g,
-                decode_and_replace_plus_with_space = function (s) { return decodeURIComponent(s.replace(re_match_plus, " ")); },
-                query_text = window.location.hash.substring(1);
-
-                while (matches = re_match_query_param_and_value.exec(query_text))
-                    hashParams[decode_and_replace_plus_with_space(matches[1])] = decode_and_replace_plus_with_space(matches[2]);
-
-                return hashParams;
-            }
-
-            function save() {
-                var url = new URL(window.location.href);
-                var id = url.searchParams.get("id");
+            // Save changes to the active GraphQLQuery
+            async function saveChanges() {
+                const url = new URL(window.location.href);
+                const id = url.searchParams.get("id");
                 const modal = $("#nautobot-generic-modal");
                 if (!id) {
-                    // TODO: in 3.3, replace this with a toast
+                    // TODO: in 3.3, replace this modal with a toast
                     modal.find(".modal-title").text("Error");
                     var html = `<div class="text-start">Unable to find query ID.</div>`;
                     modal.find(".modal-body").html(html);
@@ -345,43 +283,45 @@ add "&raw" to the end of the URL within a browser.
                     return
                 };
 
-                var graphql_data = JSON.stringify({"query": getHashParams().query});
+                const graphql_data = JSON.stringify({"query": getHashParams().query});
 
-                $.ajax({
-                    url: `{% url 'extras-api:graphqlquery-list' %}${id}/`,
-                    method: "PATCH",
-                    headers: {"X-CSRFTOKEN": "{{ csrf_token }}"},
-                    contentType: "application/json",
-                    dataType: "json",
-                    data: graphql_data,
-                    success: function(data) {
-                        // TODO: in 3.3, replace this with a toast
-                        data = JSON.stringify(data, undefined, 2);
-                        modal.find(".modal-title").text("Success");
-                        var html = `<pre class="text-start"><code class="language-json">${data}</code></pre>`;
-                        modal.find(".modal-body").html(html);
-                        hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
-                        modal.modal("show");
-                    },
-                    error: function(error) {
-                        // TODO: in 3.3, replace this with a toast
-                        error = JSON.stringify(error, undefined, 2);
-                        modal.find(".modal-title").text("Failure");
-                        var html = `<pre class="text-start"><code class="language-json">${error}</code></pre>`;
-                        modal.find(".modal-body").html(html);
-                        hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
-                        modal.modal("show");
-                    }
-                });
-            }
+                try {
+                    const response = await fetch(`{% url 'extras-api:graphqlquery-list' %}${id}/`, {
+                        method: "PATCH",
+                        headers: {
+                            "X-CSRFTOKEN": "{{ csrf_token }}",
+                            "Content-Type": "application/json",
+                        },
+                        body: graphql_data
+                    });
 
-            function populate_model() {
+                    // TODO: in 3.3, replace this modal with a toast
+                    var data = await response.json();
+                    data = JSON.stringify(data, undefined, 2);
+                    modal.find(".modal-title").text("Success");
+                    var html = `<pre class="text-start"><code class="language-json">${data}</code></pre>`;
+                    modal.find(".modal-body").html(html);
+                    hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
+                    modal.modal("show");
+                } catch (error) {
+                    // TODO: in 3.3, replace this modal with a toast
+                    error = JSON.stringify(error, undefined, 2);
+                    modal.find(".modal-title").text("Failure");
+                    var html = `<pre class="text-start"><code class="language-json">${error}</code></pre>`;
+                    modal.find(".modal-body").html(html);
+                    hljs.highlightElement(document.querySelector("#nautobot-generic-modal .modal-body code"));
+                    modal.modal("show");
+                }
+            };
+
+            // Populate `query` textarea in the "Save" modal form
+            function populateModal() {
                 query = getHashParams().query;
                 model_query = $("#id_query");
                 model_query.val(query);
             }
 
         </script>
-        {% modal_form_as_dialog form editing=editing form_name="GraphQLQueries" obj=obj obj_type="GraphQLQueries" %}
+        {% modal_form_as_dialog form editing=editing form_name="GraphQLQuery" obj=obj obj_type="GraphQLQuery" %}
     </body>
 </html>
