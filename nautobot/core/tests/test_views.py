@@ -852,6 +852,17 @@ class MessagesViewTestCase(TestCase):
         self.assertEqual(redirect.path, reverse("login"))
         self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("messages")])
 
+    def test_signed_out_pages_do_not_watch_for_messages(self):
+        """The login page does not poll for messages, which would only redirect it back to the login view."""
+        self.client.logout()
+        response = self.client.get(reverse("login"))
+        self.assertNotContains(response, "watchMessages")
+
+    def test_signed_in_pages_watch_for_messages(self):
+        """A page rendered for an authenticated user starts polling for new messages."""
+        response = self.client.get(reverse("home"))
+        self.assertContains(response, f"window.nb.messages.watchMessages('{reverse('messages')}');")
+
     def build_request(self):
         request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
         # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.

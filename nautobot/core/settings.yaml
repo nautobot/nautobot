@@ -525,6 +525,17 @@ properties:
     environment_variable: "NAUTOBOT_CELERY_WORKER_REDIRECT_STDOUTS_LEVEL"
     type: "string"
     version_added: "2.0.0"
+  CHANGELOG_LEGACY_OBJECT_DATA:
+    default: true
+    description: >-
+      When `False`, new change records do not store `object_data`, the snapshot format used before Nautobot 1.3.
+      `object_data_v2` has superseded it, and the default will change to `False` in Nautobot 4.0. Turning this off saves
+      space in the change log database, but the API and UI will not show `object_data` for records written while it is
+      off. Most deployments should set this to `False`.
+    environment_variable: "NAUTOBOT_CHANGELOG_LEGACY_OBJECT_DATA"
+    is_constance_config: true
+    type: "boolean"
+    version_added: "3.3.0"
   CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS:
     additionalProperties:
       items:
