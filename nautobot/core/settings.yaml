@@ -705,6 +705,7 @@ properties:
     see_also:
       "Nautobot Health Checks": "../guides/health-checks.md"
     type: "boolean"
+    version_added: "2.4.47"
   DATABASE_ROUTERS:
     default: []
     description: >-
