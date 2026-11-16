@@ -253,7 +253,7 @@ def build_filter_dict_from_filterset(
 
     # Populate the filterset from the incoming `form_data`. The filterset's internal form is
     # used for validation, will be used by us to extract cleaned data for final processing.
-    filterset = filterset_class({**form_data, **plain_values} if plain_values else form_data)
+    filterset = filterset_class({**form_data, **plain_values})
 
     # Use the auto-generated filterset form perform creation of the filter dictionary.
     filterset_form = filterset.form
