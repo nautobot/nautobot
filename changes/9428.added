@@ -1,1 +1,0 @@
-Added a summary of recent successful run durations to the Job run form and job modal, showing the median and, for jobs whose runtime varies, the longest recent run.

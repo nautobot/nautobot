@@ -334,6 +334,7 @@ class ArchivedObjectChangeFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_changed_object = NautobotBoolIterator(chance_of_getting_true=91)
         has_change_context_detail = NautobotBoolIterator()
+        has_object_data = NautobotBoolIterator(chance_of_getting_true=80)
         has_related_object_type = NautobotBoolIterator(chance_of_getting_true=11)
         has_related_object = NautobotBoolIterator()  # conditional on has_related_object_type
         shares_request = NautobotBoolIterator(chance_of_getting_true=25)
@@ -362,7 +363,7 @@ class ArchivedObjectChangeFactory(BaseModelFactory):
     related_object_type_id = factory.LazyAttribute(
         lambda obj: obj.related_object_type.pk if obj.related_object_type else None
     )
-    object_data = factory.Faker("pydict")
+    object_data = factory.Maybe("has_object_data", factory.Faker("pydict"), None)
     object_data_v2 = factory.Faker("pydict")
     user_name = factory.LazyAttribute(_object_change_user_name)
     changed_object_id = factory.LazyAttribute(_object_change_changed_object_id)
@@ -755,6 +756,7 @@ class ObjectChangeFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_changed_object = NautobotBoolIterator(chance_of_getting_true=91)
         has_change_context_detail = NautobotBoolIterator()
+        has_object_data = NautobotBoolIterator(chance_of_getting_true=50)
         has_related_object_type = NautobotBoolIterator(chance_of_getting_true=11)
         has_related_object = NautobotBoolIterator()  # conditional on has_related_object_type
         shares_request = NautobotBoolIterator(chance_of_getting_true=25)
@@ -783,7 +785,7 @@ class ObjectChangeFactory(BaseModelFactory):
         random_instance(change_logged_models_queryset, allow_null=False),
         None,
     )
-    object_data = factory.Faker("pydict")
+    object_data = factory.Maybe("has_object_data", factory.Faker("pydict"), None)
     object_data_v2 = factory.Faker("pydict")
     user_name = factory.LazyAttribute(_object_change_user_name)
     changed_object_id = factory.LazyAttribute(_object_change_changed_object_id)

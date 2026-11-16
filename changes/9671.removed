@@ -1,1 +1,0 @@
-Removed `SeleniumTestCase.assertNoAccessibilityViolations()`. Playwright tests call `nautobot.playwright.accessibility.assert_no_accessibility_violations()` instead.

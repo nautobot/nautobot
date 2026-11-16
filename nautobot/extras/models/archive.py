@@ -123,7 +123,7 @@ class ArchivedObjectChange(ArchivedLogModel):
     related_object_type_id = models.IntegerField(blank=True, null=True)
     related_object_id = models.UUIDField(blank=True, null=True)
     object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
-    object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
+    object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False, null=True, blank=True)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
 
     user = unresolved_relation("user")

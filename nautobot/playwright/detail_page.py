@@ -16,7 +16,7 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Navigation, heading, Edit button, tab and deferred-component helpers for detail views."""
+    """Navigation, heading, Edit button, tab, Relationships panel and deferred-component helpers for detail views."""
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
     VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device". The Edit button reads "Edit <this>".
@@ -86,6 +86,30 @@ class DetailPage(BasePage):
         pane = self._tab_pane(tab_id)
         expect(pane).to_have_count(1)
         expect(pane).not_to_contain_text(text)
+
+    # -------------------------------------------------------------------------
+    # Relationships panel
+    # -------------------------------------------------------------------------
+
+    _RELATIONSHIPS_PANEL = "Relationships"
+
+    def _relationship_rows_showing(self, tab_id, side_label, peer_name):
+        """Locator for the rows of the Relationships panel in tab *tab_id* whose text contains both *side_label* and *peer_name*.
+
+        Every relationship on the object is a row in the same panel, so the panel's
+        presence alone does not show that one association is in it.
+        """
+        panel = self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id))
+        return panel.locator("tr").filter(has_text=side_label).filter(has_text=peer_name)
+
+    def expect_relationship_peer(self, tab_id, side_label, peer_name):
+        """Assert (auto-retrying) that exactly one Relationships row on tab *tab_id* shows *side_label* and *peer_name*, and that it is visible."""
+        expect(self._relationship_rows_showing(tab_id, side_label, peer_name)).to_be_visible()
+
+    def expect_no_relationship_peer(self, tab_id, side_label, peer_name):
+        """Assert (auto-retrying) that the tab *tab_id* exists and no Relationships row in it shows *side_label* and *peer_name*."""
+        expect(self._tab_pane(tab_id)).to_have_count(1)
+        expect(self._relationship_rows_showing(tab_id, side_label, peer_name)).to_have_count(0)
 
     # -------------------------------------------------------------------------
     # Deferred components

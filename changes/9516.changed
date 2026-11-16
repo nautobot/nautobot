@@ -1,3 +1,0 @@
-Changed `ComplexityCostRateLimitingMiddleware` to persist rate limit budget in Redis
-
-Renamed `NAUTOBOT_RATE_LIMITING_LIMIT` to `NAUTOBOT_RATE_LIMITING_REST_BUDGET`

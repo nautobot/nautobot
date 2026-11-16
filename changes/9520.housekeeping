@@ -1,1 +1,0 @@
-Replaced the Device detail Selenium tests with Playwright tests and added a shared `DetailPage` page object for detail views.

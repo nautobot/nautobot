@@ -6,17 +6,26 @@
 {% with conns=form.get_connection_fields %}
     {% if conns %}
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header">
                 <strong>Connections</strong>
-                <button type="button" id="cable-swap-sides" class="btn btn-secondary btn-sm" title="Swap A and B side termination values">
-                    <span aria-hidden="true" class="mdi mdi-swap-horizontal me-4"></span>Swap A / B
-                </button>
+            </div>
+            <div class="card-body border-bottom"
+                 hx-preserve="true"
+                 id="cable-location-field"
+            >
+                {% render_field form.termination_location %}
             </div>
             <table class="table mb-0">
                 <thead>
                     <tr>
                         <th class="w-50">Side A</th>
-                        <th class="w-50">Side B</th>
+                        {# Without the aria-label, the button's text becomes part of this header's accessible name. #}
+                        <th aria-label="Side B" class="w-50">
+                            Side B
+                            <button type="button" id="cable-swap-sides" class="btn btn-secondary btn-sm float-end my-n2" title="Swap A and B side termination values">
+                                <span aria-hidden="true" class="mdi mdi-swap-horizontal me-4"></span>Swap A / B
+                            </button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
