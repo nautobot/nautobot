@@ -472,13 +472,8 @@ class ArchivedObjectChangeFilterForm(BootstrapMixin, forms.Form):
         required=False,
         widget=StaticSelect2(),
     )
-    changed_object_type_id = DynamicModelMultipleChoiceField(
-        queryset=ContentType.objects.all(),
-        required=False,
-        label="Object Type",
-        widget=APISelectMultiple(
-            api_url="/api/extras/content-types/",
-        ),
+    changed_object_type = MultipleContentTypeField(
+        label="Object Type", queryset=ChangeLoggedModelsQuery().as_queryset(), choices_as_strings=True, required=False
     )
     change_context = forms.MultipleChoiceField(
         required=False, label="Change Context", choices=ObjectChangeEventContextChoices, widget=StaticSelect2Multiple()

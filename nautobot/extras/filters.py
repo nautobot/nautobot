@@ -12,6 +12,7 @@ from timezone_field import TimeZoneField
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.filters import (
+    AutoDistinctFilterMixin,
     BaseFilterSet,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
@@ -727,12 +728,27 @@ class ArchivedJobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         ]
 
 
+class ArchivedContentTypeMultipleChoiceFilter(AutoDistinctFilterMixin, django_filters.MultipleChoiceFilter):
+    """
+    Filter a content_type_id field or similar (an IntegerField, not a ForeignKey) by "app_label.model" strings.
+    """
+
+    def get_filter_predicate(self, v):
+        app_label, model = v.lower().strip().split(".")
+        return {self.field_name: ContentType.objects.get_by_natural_key(app_label, model).pk}
+
+
 class ArchivedObjectChangeFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "user_name": "icontains",
             "object_repr": "icontains",
         },
+    )
+    changed_object_type = ArchivedContentTypeMultipleChoiceFilter(
+        label="Object Type",
+        field_name="changed_object_type_id",
+        choices=ChangeLoggedModelsQuery().get_choices,
     )
     change_context = MultipleChoiceFilter(label="Change Context", choices=ObjectChangeEventContextChoices)
     change_context_detail = MultiValueCharFilter(label="Change Context Detail")
