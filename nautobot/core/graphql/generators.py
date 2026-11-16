@@ -2,9 +2,11 @@
 
 import logging
 
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import ObjectDoesNotExist
 import graphene
 import graphene_django_optimizer as gql_optimizer
+from graphene_django_optimizer.query import QueryOptimizer
 from graphql import GraphQLError
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
@@ -24,6 +26,46 @@ RESOLVER_PREFIX = "resolve_"
 
 
 LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
+
+
+class NautobotQueryOptimizer(QueryOptimizer):
+    """`QueryOptimizer` that prefetches generic relations without a query per related object."""
+
+    def _optimize_field_by_name(self, store, model, selection, field_def):
+        """Optimize a selected field, keeping the columns that a `GenericRelation` prefetch needs.
+
+        For a nested one-to-many or many-to-many field, the base class prefetches the related objects with `only()`
+        limited to the columns that the GraphQL query selects. For a reverse foreign key (`ManyToOneRel`) it also adds
+        the foreign key column, which Django needs to match each prefetched object to its parent. It does not do the
+        same for a `GenericRelation` (such as `associated_contacts` or `associated_data_compliance`), whose objects
+        Django matches to their parents by the `object_id` and `content_type` fields. With those fields deferred,
+        Django loads each of them with a separate query for every prefetched object: an N+1 that grows with the
+        number of related objects.
+
+        This override handles `GenericRelation` fields the same way as the base class handles one-to-many fields, but
+        adds both fields to `only()`. It delegates every other field to the base class. It overrides a private method
+        of `graphene_django_optimizer`, so check it when upgrading that library.
+        """
+        name = self._get_name_from_resolver(field_def.resolve)
+        model_field = self._get_model_field_from_name(model, name) if name else None
+        if not isinstance(model_field, GenericRelation):
+            return super()._optimize_field_by_name(store, model, selection, field_def)
+
+        field_store = self._optimize_gql_selections(self._get_type(field_def), selection)
+        field_store.only(model_field.object_id_field_name)
+        field_store.only(model_field.content_type_field_name)
+        store.prefetch_related(name, field_store, model_field.related_model.objects.all())
+        return True
+
+
+def optimize_query(queryset, info, **options):
+    """Optimize `queryset` for the fields selected in `info`; a drop-in for `graphene_django_optimizer.query()`."""
+    # TODO: This is a workaround for a bug in graphene-django-optimizer.
+    # If/When a graphene-django-optimizer release includes https://github.com/tfoxy/graphene-django-optimizer/pull/103,
+    # use the line below instead and remove `NautobotQueryOptimizer` above.
+    # return gql_optimizer.query(queryset, info, **options)
+
+    return NautobotQueryOptimizer(info, **options).optimize(queryset)
 
 
 def _graphql_selection_requests_field(info, field_name):
@@ -264,7 +306,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
             query_params[f"{side}_id"] = self.pk
 
             try:
-                queryset_ids = gql_optimizer.query(
+                queryset_ids = optimize_query(
                     RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True),
                     info,
                 )
@@ -277,7 +319,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
             # Get objects that are peers for this relationship, regardless of side
             try:
                 queryset_ids = list(
-                    gql_optimizer.query(
+                    optimize_query(
                         RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
                             "destination_id", flat=True
                         ),
@@ -285,7 +327,7 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
                     )
                 )
                 queryset_ids += list(
-                    gql_optimizer.query(
+                    optimize_query(
                         RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
                             "source_id", flat=True
                         ),
@@ -312,12 +354,12 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
             peer_queryset = peer_queryset.restrict(info.context.user, "view")
 
         if relationship.has_many(peer_side):
-            return gql_optimizer.query(peer_queryset, info)
+            return optimize_query(peer_queryset, info)
 
         # Also apparently a graphene_django_optimizer bug - in the same query case as described above, here we may see:
         # AttributeError: object has no attribute "only"
         try:
-            return gql_optimizer.query(peer_queryset.first(), info)
+            return optimize_query(peer_queryset.first(), info)
         except AttributeError:
             logger.debug("Caught AttributeError in graphene_django_optimizer, falling back to un-optimized query")
             return peer_queryset.first()
@@ -408,7 +450,7 @@ def generate_single_item_resolver(schema_type, resolver_name):
             if hasattr(queryset, "restrict"):
                 queryset = queryset.restrict(info.context.user, "view")
             queryset = optimize_config_context(queryset, info)
-            return gql_optimizer.query(queryset.filter(pk=obj_id), info).first()
+            return optimize_query(queryset.filter(pk=obj_id), info).first()
         return None
 
     single_resolver.__name__ = resolver_name
@@ -472,7 +514,7 @@ def generate_list_resolver(schema_type, resolver_name):
         if limit:
             qs = qs[:limit]
 
-        return gql_optimizer.query(qs, info)
+        return optimize_query(qs, info)
 
     list_resolver.__name__ = resolver_name
     return list_resolver

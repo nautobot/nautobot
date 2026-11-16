@@ -1,0 +1,1 @@
+Fixed GraphQL queries for nested generic relations, such as `associated_contacts`, `associated_data_compliance`, and `associated_object_metadata`, performing two additional database queries for every related object.
