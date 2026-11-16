@@ -13,6 +13,7 @@ from django.urls import reverse
 from django_filters.filterset import FilterSet
 from netaddr import IPNetwork
 
+from nautobot.circuits import models as circuits_models
 from nautobot.core import filters, forms, testing
 from nautobot.core.utils import requests
 from nautobot.core.utils.filtering import get_filterset_parameter_form_field
@@ -20,6 +21,7 @@ from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models a
 from nautobot.dcim.tests import test_views
 from nautobot.extras import filters as extras_filters, models as extras_models
 from nautobot.ipam import forms as ipam_forms, models as ipam_models
+from nautobot.tenancy import models as tenancy_models
 
 
 class ExpandIPAddress(testing.TestCase):
@@ -436,6 +438,41 @@ class DynamicModelChoiceFieldTest(testing.TestCase):
         address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
         self.assertEqual(self.field.prepare_value(address), address.pk)
         self.assertEqual(self.field_with_to_field_name.prepare_value(address), address.address)
+
+    def test_dropdown_sorted_by_name_by_default(self):
+        """Models whose default ordering groups by a parent object are sorted by name in dropdowns."""
+        for model in (
+            tenancy_models.Tenant,
+            dcim_models.PowerPanel,
+            circuits_models.ProviderNetwork,
+            extras_models.Job,
+            extras_models.DynamicGroup,
+        ):
+            for field_class in (forms.DynamicModelChoiceField, forms.DynamicModelMultipleChoiceField):
+                with self.subTest(model=model.__name__, field_class=field_class.__name__):
+                    field = field_class(queryset=model.objects.all())
+                    self.assertEqual(field.widget.attrs.get("data-query-param-sort"), '["name"]')
+
+    def test_dropdown_keeps_model_ordering(self):
+        """Models without a name, already ordered by name, or with deliberate ordering keep their own ordering."""
+        for model in (
+            ipam_models.IPAddress,  # no name field
+            extras_models.Status,  # already ordered by name
+            extras_models.Role,  # ordered by user-defined weight
+            dcim_models.Location,  # tree model
+            dcim_models.Device,  # natural ordering on name
+            dcim_models.Interface,  # natural ordering on name
+        ):
+            with self.subTest(model=model.__name__):
+                field = forms.DynamicModelChoiceField(queryset=model.objects.all())
+                self.assertNotIn("data-query-param-sort", field.widget.attrs)
+
+    def test_dropdown_explicit_sort_overrides_default(self):
+        """An explicit sort in query_params takes precedence over the default name sort."""
+        field = forms.DynamicModelChoiceField(
+            queryset=tenancy_models.Tenant.objects.all(), query_params={"sort": "-name"}
+        )
+        self.assertEqual(field.widget.attrs.get("data-query-param-sort"), '["-name"]')
 
 
 class DynamicModelMultipleChoiceFieldTest(testing.TestCase):
