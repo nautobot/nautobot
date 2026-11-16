@@ -204,3 +204,64 @@ def require_celery_worker(api):
         pytest.fail(f"GET /api/status/ returned {response.status}: {response.text()[:200]}")
     if not response.json()["celery-workers-running"]:
         pytest.fail("No Celery worker is running, so the Refresh Members job would never run.")
+
+
+# The schema that created_schema_validation_tree assigns to its child objects, and the context data
+# that each child contains. The API validates the data against the assigned schema on every write,
+# so a child whose data fails validation cannot be created directly. Instead, tests make the
+# children fail by changing the schema after the children exist.
+VALID_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}, "c": {"type": "integer"}},
+}
+VALID_DATA = {"a": 123, "b": 456, "c": 777}
+
+
+@pytest.fixture
+def update_object(api):
+    """Return a function that sends *fields* in a PATCH to object *pk* at *endpoint* and returns the updated record."""
+
+    def _update(endpoint, pk, **fields):
+        response = api.patch(f"/api/{endpoint}{pk}/", data=fields)
+        if not response.ok:
+            pytest.fail(f"PATCH /api/{endpoint}{pk}/ returned {response.status}: {response.text()}")
+        return response.json()
+
+    return _update
+
+
+@pytest.fixture
+def created_schema_validation_tree(create_object, update_object, status_for, created_device):
+    """Create a config context schema and assign it to one valid config context, device and virtual machine.
+
+    These are the three kinds of object that the schema's Validation tab reports on. Each one
+    has VALID_DATA as its context data. The config context is scoped to the device's location,
+    so its data does not apply to every device in the instance.
+    """
+    unique = unique_name()
+    schema = create_object("extras/config-context-schemas/", name=f"{unique}-schema", data_schema=VALID_SCHEMA)
+    config_context = create_object(
+        "extras/config-contexts/",
+        name=f"{unique}-context",
+        data=VALID_DATA,
+        config_context_schema=schema["id"],
+        locations=[created_device["location"]["id"]],
+    )
+    device = update_object(
+        "dcim/devices/",
+        created_device["device"]["id"],
+        local_config_context_data=VALID_DATA,
+        local_config_context_schema=schema["id"],
+    )
+    cluster_type = create_object("virtualization/cluster-types/", name=f"{unique}-cluster-type")
+    cluster = create_object("virtualization/clusters/", name=f"{unique}-cluster", cluster_type=cluster_type["id"])
+    virtual_machine = create_object(
+        "virtualization/virtual-machines/",
+        name=f"{unique}-vm",
+        cluster=cluster["id"],
+        status=status_for("virtualization.virtualmachine")["id"],
+        local_config_context_data=VALID_DATA,
+        local_config_context_schema=schema["id"],
+    )
+    return {"schema": schema, "config_context": config_context, "device": device, "virtual_machine": virtual_machine}
