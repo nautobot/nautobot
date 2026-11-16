@@ -92,6 +92,8 @@ class ApprovableModelMixin(models.Model):
 
         return approval_workflow
 
+    begin_approval_workflow.alters_data = True
+
     def on_workflow_initiated(self, approval_workflow):
         """Called when an approval workflow is initiated."""
         raise NotImplementedError("Subclasses must implement `on_workflow_initiated`.")
