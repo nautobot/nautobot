@@ -32,6 +32,7 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
 )
+from nautobot.extras.models.change_logging import ObjectChangeSnapshotsMixin
 from nautobot.extras.models.customfields import CustomFieldModel
 
 
@@ -98,7 +99,7 @@ class ArchivedLogModel(BaseModel):
         default_permissions = ("view",)
 
 
-class ArchivedObjectChange(ArchivedLogModel):
+class ArchivedObjectChange(ObjectChangeSnapshotsMixin, ArchivedLogModel):
     """An ObjectChange model that has been Archived."""
 
     time = models.DateTimeField(editable=False, db_index=True)
@@ -183,33 +184,12 @@ class ArchivedObjectChange(ArchivedLogModel):
 
         return new_archived_object_change
 
-    def get_related_changes(self, user=None, permission="view"):
-        """
-        Retrieve other ArchivedObjectChanges that have the same `changed_object` as this record.
-
-        Equivalent to `ObjectChange.get_related_changes`.
-
-        Args:
-            user (User | None): If given, restrict the results to those this user holds `permission` for.
-                When None, no restriction is applied and every matching record is returned.
-            permission (str): The permission action to restrict by, such as `"view"`. Ignored unless
-                `user` is given.
-
-        Returns:
-            (QuerySet): ArchivedChangeObjects sharing this record's `changed_object_type_id` and
-                `changed_object_id`, excluding this record.
-        """
-        related_changes = (
-            type(self)
-            .objects.filter(
-                changed_object_type_id=self.changed_object_type_id,
-                changed_object_id=self.changed_object_id,
-            )
-            .exclude(pk=self.pk)
-        )
-        if user is not None:
-            return related_changes.restrict(user, permission)
-        return related_changes
+    def get_related_changes_queryset(self):
+        """Retrieve other ArchivedObjectChanges that have the same `changed_object`, excluding this record.."""
+        return ArchivedObjectChange.objects.filter(
+            changed_object_type_id=self.changed_object_type_id,
+            changed_object_id=self.changed_object_id,
+        ).exclude(pk=self.pk)
 
     @property
     def changed_object_type(self):
@@ -245,10 +225,6 @@ class ArchivedObjectChange(ArchivedLogModel):
             return ContentType.objects.get_for_id(type_id)
         except ContentType.DoesNotExist:
             return None
-
-    def get_action_class(self):
-        """CSS class for rendering an `action` badge in the UI, same as `ObjectChange.get_action_class`."""
-        return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
 
     def __str__(self):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"

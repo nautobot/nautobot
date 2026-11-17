@@ -1,6 +1,6 @@
 <div class="btn-group btn-group-sm float-end" role="group">
     {% if prev_change %}
-        <a href="{% url 'extras:objectchange' pk=prev_change.pk %}" class="btn btn-secondary">
+        <a href="{{ prev_change.get_absolute_url }}" class="btn btn-secondary">
             <span class="mdi mdi-chevron-left" aria-hidden="true"></span> Previous
         </a>
     {% else %}
@@ -9,7 +9,7 @@
         </a>
     {% endif %}
     {% if next_change %}
-        <a href="{% url 'extras:objectchange' pk=next_change.pk %}" class="btn btn-secondary">
+        <a href="{{ next_change.get_absolute_url }}" class="btn btn-secondary">
             Next <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
         </a>
     {% else %}

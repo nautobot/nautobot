@@ -1196,17 +1196,34 @@ class ArchivedJobResultUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         return response
 
 
-class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
-    filterset_class = filters.ArchivedObjectChangeFilterSet
-    filterset_form_class = forms.ArchivedObjectChangeFilterForm
-    queryset = ArchivedObjectChange.objects.all()
-    serializer_class = serializers.ArchivedObjectChangeSerializer
-    table_class = tables.ArchivedObjectChangeTable
-    action_buttons = ("export",)
+class ObjectChangeDetailViewMixin(ObjectDetailViewMixin):
+    """
+    Shared base mixin for ArchivedObjectChange and ObjectChange detail views.
+    """
+
+    class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        """Render `object_repr` as the `changed_object` if no `changed_object` is identifiable."""
+
+        def render_value(self, key, value, context):
+            if key == "changed_object":
+                if value and getattr(value, "get_absolute_url", None):
+                    return helpers.hyperlinked_object(value)
+                else:
+                    obj = get_obj_from_context(context, self.context_object_key)
+                    return helpers.placeholder(obj.object_repr)
+            return super().render_value(key, value, context)
+
+    class SnapshotPanel(object_detail.ObjectTextPanel):
+        """Don't show snapshot panel if null, as `object_data` or `object_data_v2` can be"""
+
+        def should_render(self, context):
+            return (
+                super().should_render(context) and getattr(get_obj_from_context(context), self.object_field) is not None
+            )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            ChangeObjectFieldsPanel(
                 label="Change",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -1215,13 +1232,13 @@ class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                     "user_name",
                     "action",
                     "changed_object_type",
-                    "object_repr",
+                    "changed_object",
                     "request_id",
                     "change_context",
                     "change_context_detail",
                 ),
             ),
-            object_detail.ObjectTextPanel(
+            SnapshotPanel(
                 label="Object Data",
                 section=SectionChoices.LEFT_HALF,
                 weight=200,
@@ -1229,7 +1246,7 @@ class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
                 collapsed=True,
             ),
-            object_detail.ObjectTextPanel(
+            SnapshotPanel(
                 label="Object Data v2",
                 section=SectionChoices.LEFT_HALF,
                 weight=250,
@@ -1237,38 +1254,67 @@ class ArchivedObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
                 collapsed=True,
             ),
-            # TODO: difference panel
+            object_detail.TextPanel(
+                label="Difference",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_placeholder=False,
+                body_content_template_path="extras/inc/objectchange_diff_panel.html",
+                header_extra_content_template_path="extras/inc/objectchange_diff_header.html",
+            ),
             object_detail.ObjectsTablePanel(
                 table_title="Related Changes",
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="related_changes_table",
-                enable_related_link=False,
+                header_extra_content_template_path="extras/inc/related_changes_header.html",
                 footer_content_template_path=None,
             ),
         )
     )
 
     def get_extra_context(self, request, instance):
-        """The other retained changes to the same object, which is what Related Changes lists."""
+        """
+        Adds snapshot diff and related changes table for the object change detail view.
+        """
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
-            related_changes = instance.get_related_changes(user=request.user)
-            related_changes_table = tables.ArchivedObjectChangeTable(data=related_changes, orderable=False)
-            RequestConfig(
-                request, {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
-            ).configure(related_changes_table)
+            # `related_changes` here is NOT `instance.get_related_changes()`, despite the similar names.
+            # `related_changes` == others with the same `request_id`, regardless of `changed_object`.
+            # `instance.get_related_changes()` == others with the same `changed_object`, regardless of `request_id`.
+            related_changes = (
+                self.queryset.restrict(request.user, "view")
+                .filter(request_id=instance.request_id)
+                .exclude(pk=instance.pk)
+            )
+            related_changes_table = self.table_class(data=related_changes, orderable=False)
+            paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+            RequestConfig(request, paginate).configure(related_changes_table)
+
+            snapshots = instance.get_snapshots()
 
             context.update(
                 {
-                    # TODO: add diffs and next/previous links
+                    "diff_added": snapshots["differences"]["added"],
+                    "diff_removed": snapshots["differences"]["removed"],
+                    "next_change": instance.get_next_change(request.user),
+                    "prev_change": instance.get_prev_change(request.user),
                     "related_changes_table": related_changes_table,
                     "related_changes_count": related_changes.count(),
                 }
             )
 
         return context
+
+
+class ArchivedObjectChangeUIViewSet(ObjectChangeDetailViewMixin, ObjectListViewMixin):
+    filterset_class = filters.ArchivedObjectChangeFilterSet
+    filterset_form_class = forms.ArchivedObjectChangeFilterForm
+    queryset = ArchivedObjectChange.objects.all()
+    serializer_class = serializers.ArchivedObjectChangeSerializer
+    table_class = tables.ArchivedObjectChangeTable
+    action_buttons = ("export",)
 
 
 #
@@ -4678,83 +4724,13 @@ class JobButtonUIViewSet(NautobotUIViewSet):
 #
 # Change logging
 #
-class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
+class ObjectChangeUIViewSet(ObjectChangeDetailViewMixin, ObjectListViewMixin):
     filterset_class = filters.ObjectChangeFilterSet
     filterset_form_class = forms.ObjectChangeFilterForm
     queryset = ObjectChange.objects.all()
     serializer_class = serializers.ObjectChangeSerializer
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
-
-    class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def render_value(self, key, value, context):
-            if key == "changed_object":
-                if value and getattr(value, "get_absolute_url", None):
-                    return helpers.hyperlinked_object(value)
-                else:
-                    obj = get_obj_from_context(context, self.context_object_key)
-                    return helpers.placeholder(obj.object_repr)
-            return super().render_value(key, value, context)
-
-    class SnapshotPanel(object_detail.ObjectTextPanel):
-        """Don't show snapshot panel if null, as `object_data` or `object_data_v2` can be"""
-
-        def should_render(self, context):
-            return (
-                super().should_render(context) and getattr(get_obj_from_context(context), self.object_field) is not None
-            )
-
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=(
-            ChangeObjectFieldsPanel(
-                label="Change",
-                section=SectionChoices.LEFT_HALF,
-                weight=100,
-                fields=(
-                    "time",
-                    "user_name",
-                    "action",
-                    "changed_object_type",
-                    "changed_object",
-                    "request_id",
-                    "change_context",
-                    "change_context_detail",
-                ),
-            ),
-            SnapshotPanel(
-                label="Object Data",
-                section=SectionChoices.LEFT_HALF,
-                weight=200,
-                object_field="object_data",
-                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
-                collapsed=True,
-            ),
-            SnapshotPanel(
-                label="Object Data v2",
-                section=SectionChoices.LEFT_HALF,
-                weight=250,
-                object_field="object_data_v2",
-                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
-                collapsed=True,
-            ),
-            object_detail.TextPanel(
-                label="Difference",
-                section=SectionChoices.RIGHT_HALF,
-                weight=100,
-                render_placeholder=False,
-                body_content_template_path="extras/inc/objectchange_diff_panel.html",
-                header_extra_content_template_path="extras/inc/objectchange_diff_header.html",
-            ),
-            object_detail.ObjectsTablePanel(
-                table_title="Related Changes",
-                section=SectionChoices.FULL_WIDTH,
-                weight=300,
-                context_table_key="related_changes_table",
-                header_extra_content_template_path="extras/inc/related_changes_header.html",
-                footer_content_template_path=None,
-            ),
-        )
-    )
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
@@ -4774,38 +4750,6 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
             request.GET._mutable = False
 
         return super().get(request=request, *args, **kwargs)
-
-    def get_extra_context(self, request, instance):
-        """
-        Adds snapshot diff and related changes table for the object change detail view.
-        """
-        context = super().get_extra_context(request, instance)
-
-        if self.action == "retrieve":
-            related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
-            related_changes_table = tables.ObjectChangeTable(
-                data=related_changes,
-                orderable=False,
-            )
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(related_changes_table)
-            snapshots = instance.get_snapshots()
-
-            context.update(
-                {
-                    "diff_added": snapshots["differences"]["added"],
-                    "diff_removed": snapshots["differences"]["removed"],
-                    "next_change": instance.get_next_change(request.user),
-                    "prev_change": instance.get_prev_change(request.user),
-                    "related_changes_table": related_changes_table,
-                    "related_changes_count": related_changes.count(),
-                }
-            )
-
-        return context
 
 
 class ObjectChangeLogView(generic.GenericView):
