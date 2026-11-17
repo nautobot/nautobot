@@ -46,18 +46,17 @@ ARCHIVAL_ORDER = (
 ARCHIVAL_DISPLAY_ORDER = tuple(sorted(ARCHIVAL_ORDER))
 
 
-def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size, max_timestamp=None):
+def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
     """
     A generator to navigate through a query set based on a specific timestamped field with an arbitrarily
     determined batch size.
 
-    `before_threshold` means a timestamp older than `max_timestamp`, or every record when it is None.
+    Assumes that caller provides a pre-filtered query set.
 
     Args:
         queryset (QuerySet): The records to slice.
         timestamp_field_name (str): Name of a field the records will be filtered, ordered and paged by.
         batch_size (int): Records per batch, and rows read per slice.
-        max_timestamp (datetime): Only records older than this are read, or None to read them all.
 
     Returns:
         (generator): Yields lists of up to `batch_size` records per batch.
@@ -66,10 +65,6 @@ def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size
     # This allows resuming iteration with the next slice at the correct point instead of needing to grab all
     # records at the same timestamp.
     ordered_queryset = queryset.order_by(timestamp_field_name, "pk")
-
-    if max_timestamp is not None:
-        older_than_threshold = {f"{timestamp_field_name}__lt": max_timestamp}
-        ordered_queryset = ordered_queryset.filter(**older_than_threshold)
 
     current_record_batch = list(ordered_queryset[:batch_size])
 
@@ -252,9 +247,7 @@ class ArchiveOldRecords(Job):
         total_archived_object_change_count = 0
         current_batch = 0
 
-        for object_change_batch in _iterate_records_before_threshold(
-            object_changes_to_archive, "time", batch_size, threshold_timestamp
-        ):
+        for object_change_batch in _iterate_records_by_timestamp(object_changes_to_archive, "time", batch_size):
             try:
                 current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
@@ -421,9 +414,7 @@ class ArchiveOldRecords(Job):
         }
         current_batch = 0
 
-        for job_result_batch in _iterate_records_before_threshold(
-            job_results_to_archive, "date_done", batch_size, threshold_timestamp
-        ):
+        for job_result_batch in _iterate_records_by_timestamp(job_results_to_archive, "date_done", batch_size):
             try:
                 current_batch_counts = self._process_archive_job_result_batch(job_result_batch, batch_size)
             except Exception as exception:
@@ -564,7 +555,7 @@ class ArchiveOldRecords(Job):
 
         archived_job_log_entry_count = 0
 
-        for job_log_entry_chunk in _iterate_records_before_threshold(job_log_entries, "created", batch_size):
+        for job_log_entry_chunk in _iterate_records_by_timestamp(job_log_entries, "created", batch_size):
             with transaction.atomic():
                 ArchivedJobLogEntry.objects.bulk_create(
                     [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
@@ -613,7 +604,7 @@ class ArchiveOldRecords(Job):
 
         archived_job_console_entry_count = 0
 
-        for job_console_entry_chunk in _iterate_records_before_threshold(job_console_entries, "timestamp", batch_size):
+        for job_console_entry_chunk in _iterate_records_by_timestamp(job_console_entries, "timestamp", batch_size):
             with transaction.atomic():
                 ArchivedJobConsoleEntry.objects.bulk_create(
                     [

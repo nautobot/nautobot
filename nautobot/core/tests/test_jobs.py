@@ -20,7 +20,7 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.archive import _iterate_records_before_threshold, ArchiveOldRecords
+from nautobot.core.jobs.archive import _iterate_records_by_timestamp, ArchiveOldRecords
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -1673,7 +1673,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         yielded_pks = []
         for batch_number, record_batch in enumerate(
-            _iterate_records_before_threshold(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
+            _iterate_records_by_timestamp(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
         ):
             self.assertLess(batch_number, maximum_batch_count)
             yielded_pks.extend(record.pk for record in record_batch)
@@ -1705,7 +1705,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         batch_sizes = []
         yielded_pks = []
         for batch_number, record_batch in enumerate(
-            _iterate_records_before_threshold(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
+            _iterate_records_by_timestamp(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
         ):
             self.assertLess(batch_number, maximum_batch_count)
             batch_sizes.append(len(record_batch))
@@ -1724,9 +1724,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         records = []
         for batch_number, record_batch in enumerate(
-            _iterate_records_before_threshold(
-                ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE, threshold_timestamp
-            )
+            _iterate_records_by_timestamp(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
         ):
             self.assertLess(batch_number, maximum_batch_count)
             records.extend(record_batch)
