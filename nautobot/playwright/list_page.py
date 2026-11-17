@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
 
-from nautobot.playwright.base_page import BasePage, select2_filter_pick
+from nautobot.playwright.base_page import BasePage
 
 
 class ListPage(BasePage):
@@ -357,7 +357,7 @@ class ListPage(BasePage):
         Pass `exact=False` for fields whose options render an ancestry path
         (e.g. location fields: "Parent → Child").
         """
-        select2_filter_pick(self.page, field_name, search=value, pick_text=value, exact=exact)
+        self.select2_filter_pick(field_name, search=value, pick_text=value, exact=exact)
 
     def apply_filters(self):
         """Submit the drawer's basic-tab filter form and wait for the filtered reload."""

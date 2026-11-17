@@ -10,7 +10,7 @@ import re
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import BasePage, select2_filter_pick
+from nautobot.playwright.base_page import BasePage
 
 
 class ObjectFormPage(BasePage):
@@ -55,7 +55,7 @@ class ObjectFormPage(BasePage):
 
         Pass *search* when the API search does not match the `display` text.
         """
-        select2_filter_pick(self.page, field_name, search=search or record["display"], pick_text=record["display"])
+        self.select2_filter_pick(field_name, search=search or record["display"], pick_text=record["display"])
 
     def pick_choice(self, field_name, text):
         """Pick the option whose label is *text* in the Select2 field *field_name*, whose options are fixed choices, not API records."""
