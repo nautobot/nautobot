@@ -192,6 +192,24 @@ def created_static_group(create_object):
     )
 
 
+# One more tag than fits on the first page of the Tags filter dropdown.
+PROVIDER_TAG_COUNT = 51
+
+
+@pytest.fixture
+def created_provider_tags(create_object):
+    """Create `PROVIDER_TAG_COUNT` tags that apply only to providers. The tags are deleted after the test.
+
+    Tags are named `<prefix> 01`, `<prefix> 02`, and so on. Returns the `prefix` and the created `tags`.
+    """
+    prefix = unique_name()
+    tags = [
+        create_object("extras/tags/", name=f"{prefix} {index:02d}", content_types=["circuits.provider"])
+        for index in range(1, PROVIDER_TAG_COUNT + 1)
+    ]
+    return {"prefix": prefix, "tags": tags}
+
+
 # The schema that created_schema_validation_tree assigns to its child objects, and the context data
 # that each child contains. The API validates the data against the assigned schema on every write,
 # so a child whose data fails validation cannot be created directly. Instead, tests make the
