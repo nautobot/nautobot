@@ -24,6 +24,11 @@ class DetailPage(BasePage):
     # The span inside the h1. Reading the h1 appends the copy button's label to the name.
     _HEADING = "#page-title #copy_title"
     _EDIT_BUTTON = "#edit-button"
+    # The Delete button is always the last entry of the dropdown next to the Edit button (or of the Actions
+    # dropdown, when the view has no Edit button). It opens a confirmation page whose submit button is `_confirm`.
+    _ACTIONS_DROPDOWN = "#actions-dropdown"
+    _DELETE_BUTTON = "#delete-button"
+    _CONFIRM_DELETE_BUTTON = "button[name='_confirm']"
     # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0,
     # which Playwright still counts as visible, so assert the count.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
@@ -63,6 +68,15 @@ class DetailPage(BasePage):
     def click_edit(self):
         """Click this model's Edit button and wait for the edit form to load."""
         self._click_and_wait_for_navigation(self._EDIT_BUTTON)
+
+    def delete(self):
+        """Delete the object: open the actions dropdown, click Delete, then Confirm, and wait for the redirect.
+
+        Nautobot redirects to the model's list view after a delete.
+        """
+        self.page.locator(self._ACTIONS_DROPDOWN).click()
+        self._click_and_wait_for_navigation(self._DELETE_BUTTON)
+        self._click_and_wait_for_navigation(self._CONFIRM_DELETE_BUTTON)
 
     # -------------------------------------------------------------------------
     # Tabs

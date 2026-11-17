@@ -57,6 +57,10 @@ class ObjectFormPage(BasePage):
         """
         select2_filter_pick(self.page, field_name, search=search or record["display"], pick_text=record["display"])
 
+    def pick_choice(self, field_name, text):
+        """Pick the option reading *text* in the Select2 field *field_name*, whose options are fixed choices, not API records."""
+        select2_filter_pick(self.page, field_name, search=text, pick_text=text)
+
     def submit(self):
         """Click Create or Update and wait for the next page to load.
 

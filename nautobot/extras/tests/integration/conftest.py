@@ -85,6 +85,33 @@ def webhook_name(api):
 
 
 @pytest.fixture
+def create_device_custom_field(create_object):
+    """Callable creating a Device custom field of *field_type*, deleted after the test.
+
+    Each value in *choices* becomes a choice of the field, in the order given. Other keyword
+    arguments are sent as fields of the custom field, e.g. `advanced_ui=True`. Returns the
+    custom field's API record.
+    """
+
+    def _create(field_type, choices=(), **fields):
+        unique = unique_name()
+        custom_field = create_object(
+            "extras/custom-fields/",
+            label=unique,
+            # The key must be a valid identifier, so the name's dashes become underscores.
+            key=unique.replace("-", "_").lower(),
+            type=field_type,
+            content_types=["dcim.device"],
+            **fields,
+        )
+        for value in choices:
+            create_object("extras/custom-field-choices/", custom_field=custom_field["id"], value=value)
+        return custom_field
+
+    return _create
+
+
+@pytest.fixture
 def created_note(create_object, created_location):
     """A note on `created_location`."""
     return create_object(
