@@ -81,7 +81,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
 )
-from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.paginator import coerce_paginate_count, EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,
@@ -3243,8 +3243,11 @@ class SavedViewUIViewSet(
                 return redirect(reverse(view_name))
         pagination_count = param_dict.get("per_page", None)
         if not pagination_count:
-            if derived_instance and derived_instance.config.get("pagination_count", None):
-                pagination_count = derived_instance.config["pagination_count"]
+            derived_count = None
+            if derived_instance and isinstance(derived_instance.config, dict):
+                derived_count = coerce_paginate_count(derived_instance.config.get("pagination_count", None))
+            if derived_count is not None:
+                pagination_count = derived_count
             else:
                 pagination_count = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
         sv.config["pagination_count"] = int(pagination_count)

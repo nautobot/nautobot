@@ -12,7 +12,9 @@ class EnhancedPaginator(Paginator):
             per_page = int(per_page)
             if per_page < 1:
                 per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
-        except ValueError:
+        except (TypeError, ValueError, OverflowError):
+            # TypeError covers non-scalar values (dict, list, None) and OverflowError covers infinite floats,
+            # either of which might come from a malformed SavedView config or user preference.
             per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
         max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
@@ -44,6 +46,22 @@ class EnhancedPage(Page):
         return page_list
 
 
+def coerce_paginate_count(value):
+    """
+    Return `value` as a positive integer page size, or None if it isn't a valid one.
+
+    Page sizes may come from stored data (such as a SavedView's `config`) that predates validation or was written
+    directly to the database, so this must never raise. Booleans are rejected even though they are `int` instances.
+    """
+    if isinstance(value, bool):
+        return None
+    try:
+        value = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return value if value > 0 else None
+
+
 def get_paginate_count(request, saved_view=None, save_user_config=True):
     """
     Determine the length of a page, using the following in order:
@@ -62,9 +80,10 @@ def get_paginate_count(request, saved_view=None, save_user_config=True):
         except ValueError:
             pass
 
-    if saved_view is not None:
-        per_page = saved_view.config.get("pagination_count", None)
-        if per_page:
+    if saved_view is not None and isinstance(saved_view.config, dict):
+        # Ignore a missing or malformed value rather than letting it break the list view for everyone.
+        per_page = coerce_paginate_count(saved_view.config.get("pagination_count", None))
+        if per_page is not None:
             return per_page
 
     if request.user.is_authenticated:

@@ -63,6 +63,47 @@ class PaginatorTestCase(testing.TestCase):
         paginator.get_paginate_count(request, save_user_config=False)
         self.assertIsNone(self.user.get_config("pagination.per_page"))
 
+    @override_settings(PAGINATE_COUNT=50)
+    def test_get_paginate_count_saved_view(self):
+        """Use a valid saved view `pagination_count`, but fall back to the default for a malformed one."""
+        saved_view = extras_models.SavedView(owner=self.user, name="Saved View", view="dcim:location_list")
+        saved_view.config = {"pagination_count": 25}
+        self.assertEqual(paginator.get_paginate_count(self.request, saved_view=saved_view), 25)
+        for config in [
+            {"pagination_count": {"a": 1}},
+            {"pagination_count": [1, 2]},
+            {"pagination_count": "abc"},
+            {"pagination_count": 0},
+            {"pagination_count": True},
+            [1, 2],
+        ]:
+            with self.subTest(config=config):
+                saved_view.config = config
+                self.assertEqual(paginator.get_paginate_count(self.request, saved_view=saved_view), 50)
+
+    @override_settings(PAGINATE_COUNT=50, MAX_PAGE_SIZE=1000)
+    def test_enhanced_paginator_invalid_per_page(self):
+        """Fall back to `PAGINATE_COUNT` for a non-integer `per_page` instead of raising."""
+        for per_page in [{"a": 1}, [1, 2], "abc", None]:
+            with self.subTest(per_page=per_page):
+                self.assertEqual(paginator.EnhancedPaginator([], per_page).per_page, 50)
+
+    def test_list_view_with_malformed_saved_view_pagination_count(self):
+        """A stored SavedView with a malformed `pagination_count` does not break the list view."""
+        self.add_permissions("dcim.view_location", "circuits.view_provider")
+        self.client.force_login(self.user)
+        # `objects.create()` skips `clean()`, simulating malformed data already in the database.
+        for view_name in ["dcim:location_list", "circuits:provider_list"]:
+            saved_view = extras_models.SavedView.objects.create(
+                owner=self.user, name="Malformed", view=view_name, config={"pagination_count": {"a": 1}}
+            )
+            with self.subTest(view=view_name):
+                url = reverse(view_name)
+                response = self.client.get(url, {"saved_view": saved_view.pk})
+                self.assertHttpStatus(response, 200)
+                response = self.client.get(url, {"saved_view": saved_view.pk}, headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+
     @override_settings(MAX_PAGE_SIZE=10)
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):

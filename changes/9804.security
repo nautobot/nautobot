@@ -1,1 +1,1 @@
-Added validation that rejects a Saved View whose `config` is not a JSON object or whose `pagination_count` is not a positive integer, which previously caused a server error on any list view the Saved View was applied to.
+Fixed a Saved View with a non-integer `pagination_count` or a non-object `config` causing a server error on list views it was applied to, and added validation that rejects such configuration when a Saved View is created or edited.
