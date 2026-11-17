@@ -1681,19 +1681,57 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(len(yielded_pks), len(object_changes))
         self.assertEqual(set(yielded_pks), {object_change.pk for object_change in object_changes})
 
+    def test_a_shared_timestamp_split_across_batches_yields_each_record_exactly_once(self):
+        shared_timestamp_record_count = 7
+        older_object_change = self.make_object_change(age_in_days=120)
+        shared_timestamp_object_changes = [
+            self.make_object_change(age_in_days=90) for _ in range(shared_timestamp_record_count)
+        ]
+        newer_object_change = self.make_object_change(age_in_days=60)
+
+        shared_timestamp = timezone.now() - timedelta(days=90)
+        ObjectChange.objects.filter(
+            pk__in=[object_change.pk for object_change in shared_timestamp_object_changes]
+        ).update(time=shared_timestamp)
+
+        expected_pks = [
+            older_object_change.pk,
+            *[object_change.pk for object_change in shared_timestamp_object_changes],
+            newer_object_change.pk,
+        ]
+        self.assertGreater(shared_timestamp_record_count, SMALL_ARCHIVE_BATCH_SIZE)
+        maximum_batch_count = len(expected_pks) + 1
+
+        batch_sizes = []
+        yielded_pks = []
+        for batch_number, record_batch in enumerate(
+            _iterate_records_before_threshold(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
+        ):
+            self.assertLess(batch_number, maximum_batch_count)
+            batch_sizes.append(len(record_batch))
+            yielded_pks.extend(record.pk for record in record_batch)
+
+        self.assertEqual(sorted(yielded_pks), sorted(expected_pks))
+        self.assertEqual(batch_sizes, [SMALL_ARCHIVE_BATCH_SIZE] * 4 + [1])
+
     def test_records_at_or_after_the_threshold_are_not_returned(self):
         for age_in_days in (120, 90, 60, 10, 5):
             self.make_object_change(age_in_days=age_in_days)
         threshold_timestamp = timezone.now() - timedelta(days=ARCHIVE_AGE_THRESHOLD_IN_DAYS)
 
-        record_batches = list(
+        expected_record_count = 3
+        maximum_batch_count = expected_record_count + 1
+
+        records = []
+        for batch_number, record_batch in enumerate(
             _iterate_records_before_threshold(
                 ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE, threshold_timestamp
             )
-        )
-        records = [record for record_batch in record_batches for record in record_batch]
+        ):
+            self.assertLess(batch_number, maximum_batch_count)
+            records.extend(record_batch)
 
-        self.assertEqual(len(records), 3)
+        self.assertEqual(len(records), expected_record_count)
         self.assertTrue(all(record.time < threshold_timestamp for record in records))
 
     def test_rerunning_overwrites_rather_than_duplicating(self):
