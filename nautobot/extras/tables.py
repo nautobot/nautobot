@@ -1745,7 +1745,7 @@ class ArchivedChangedObjectColumn(tables.Column):
     Render `object_repr`, linked to the object derived from `changed_object_type_id` and `changed_object_id`, if found.
     """
 
-    def render(self, record, table):
+    def render(self, record, table):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         url = table.changed_object_urls.get((record.changed_object_type_id, record.changed_object_id))
         if url:
             return format_html('<a href="{}">{}</a>', url, record.object_repr)
