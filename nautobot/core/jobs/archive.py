@@ -60,7 +60,7 @@ def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size
         threshold_timestamp (datetime): Only records older than this are read, or None to read them all.
 
     Returns:
-        (generator): Yields a list of records per batch, the last of which is short unless they divide evenly.
+        (generator): Yields lists of up to `batch_size` records per batch.
     """
     # PK is necessary for when a slice is made where there are multiple elements that have the same timestamp.
     # This allows resuming iteration with the next slice at the correct point instead of needing to grab all
