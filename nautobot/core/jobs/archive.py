@@ -71,8 +71,7 @@ def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size
         older_than_threshold = {f"{timestamp_field_name}__lt": threshold_timestamp}
         ordered_queryset = ordered_queryset.filter(**older_than_threshold)
 
-    first_batch_of_records = ordered_queryset[:batch_size]
-    current_record_batch = list(first_batch_of_records)
+    current_record_batch = list(ordered_queryset[:batch_size])
 
     while current_record_batch:
         last_record_in_batch = current_record_batch[-1]
