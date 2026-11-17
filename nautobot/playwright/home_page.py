@@ -11,15 +11,12 @@ presence with counts rather than visibility, unless the test is about collapsing
 """
 
 import re
+from urllib.parse import urlparse
 
 from playwright.sync_api import expect
 
 from nautobot.playwright.base_page import BasePage
-
-
-def _exact(text):
-    """Regex that matches *text* as the whole of an element's text, ignoring surrounding whitespace."""
-    return re.compile(rf"^\s*{re.escape(text)}\s*$")
+from nautobot.playwright.helpers import exact_text
 
 
 class HomePage(BasePage):
@@ -73,7 +70,7 @@ class HomePage(BasePage):
 
     def item_link(self, panel_name, item_name):
         """Locator for the link named exactly *item_name* in the panel *panel_name*."""
-        return self.panel(panel_name).locator(f"{self._ITEM} a").filter(has_text=_exact(item_name))
+        return self.panel(panel_name).locator(f"{self._ITEM} a").filter(has_text=exact_text(item_name))
 
     def expect_item(self, panel_name, item_name, href=None):
         """Assert (auto-retrying) that panel *panel_name* has exactly one *item_name* link, pointing at *href* if given."""
@@ -86,22 +83,21 @@ class HomePage(BasePage):
         """Assert (auto-retrying) that panel *panel_name* has no *item_name* link."""
         expect(self.item_link(panel_name, item_name)).to_have_count(0)
 
-    def item_count(self, panel_name, item_name):
-        """Return the count badge of the top-level item *item_name* in panel *panel_name*, as an int.
+    def item_badge(self, panel_name, item_name):
+        """Locator for the count badge of the top-level item *item_name* in panel *panel_name*.
 
-        The badge uses a thousands separator ("1,210"), which is removed before parsing. Fails, rather than
-        returning a number, when the badge is a padlock, which the page shows when the user has only some of the
-        item's permissions.
-        A grouped item's members ("Connections" > "Cables") each have their own badge, which this does not read.
+        A grouped item's members ("Connections" > "Cables") each have their own badge, which this does not find.
         """
-        link = self.item_link(panel_name, item_name)
-        expect(link).to_have_count(1)
-        badge = link.locator(self._ENCLOSING_ITEM).locator(self._ITEM_BADGE)
-        expect(badge).to_have_count(1)
-        text = (badge.text_content() or "").strip()
-        digits = text.replace(",", "")
-        assert digits.isdigit(), f"The {item_name!r} counter in panel {panel_name!r} is not a number: {text!r}"
-        return int(digits)
+        return self.item_link(panel_name, item_name).locator(self._ENCLOSING_ITEM).locator(self._ITEM_BADGE)
+
+    def expect_item_count(self, panel_name, item_name, expected):
+        """Assert (auto-retrying) that the badge of item *item_name* in panel *panel_name* shows the int *expected*.
+
+        The template formats the count with `intcomma`, so 1210 is shown as "1,210". The assertion fails
+        when the badge is a padlock, which the page shows when the user has only some of the item's permissions.
+        """
+        expect(self.item_link(panel_name, item_name)).to_have_count(1)
+        expect(self.item_badge(panel_name, item_name)).to_have_text(f"{expected:,}")
 
     # -------------------------------------------------------------------------
     # Collapsing
@@ -114,7 +110,7 @@ class HomePage(BasePage):
         finishes would render the old state, so this waits for the response and fails if it is an error.
         """
         with self.page.expect_response(
-            lambda response: response.request.method == "PATCH" and response.url.endswith(self._USER_CONFIG_API)
+            lambda response: response.request.method == "PATCH" and urlparse(response.url).path == self._USER_CONFIG_API
         ) as save:
             self.panel(panel_name).locator(self._PANEL_TOGGLE).click()
         response = save.value

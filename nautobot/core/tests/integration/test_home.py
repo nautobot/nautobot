@@ -48,15 +48,11 @@ class HomeTestCase:
         """Each item's counter equals the REST API count for the admin, who can view every object."""
         home = HomePage(auth_page, base_url)
         home.navigate()
+        home.expect_loaded()
 
-        mismatches = {}
         for panel_name, items in LAYOUT.items():
             for item_name, item in items.items():
-                shown = home.item_count(panel_name, item_name)
-                expected = api_count(item["path"].lstrip("/"))
-                if shown != expected:
-                    mismatches[f"{panel_name} > {item_name}"] = f"page shows {shown}, API counts {expected}"
-        assert not mismatches, f"Home page counters disagree with the API: {mismatches}"
+                home.expect_item_count(panel_name, item_name, api_count(item["path"].lstrip("/")))
 
     @pytest.mark.behavioral
     # storage_state=None starts the browser context without the admin's saved login, so the test can log in as its own user.
@@ -89,6 +85,7 @@ class HomeTestCase:
         """
         home = HomePage(auth_page, base_url)
         home.navigate()
+        home.expect_loaded()
         home.expect_panel_expanded("Organization")
         home.expect_panel_expanded("Circuits")
 
@@ -96,5 +93,6 @@ class HomeTestCase:
         home.expect_panel_collapsed("Circuits")
 
         home.navigate()
+        home.expect_loaded()
         home.expect_panel_expanded("Organization")
         home.expect_panel_collapsed("Circuits")
