@@ -4778,6 +4778,31 @@ class ScheduledJobTest(
         self.assertHttpStatus(dry_run("Hidden Scheduled Job"), status.HTTP_404_NOT_FOUND)
         self.assertHttpStatus(dry_run("Visible Scheduled Job"), status.HTTP_200_OK)
 
+    def test_dry_run_uses_current_job_queue_name(self):
+        """Dry-run uses the scheduled job's JobQueue, not a stale queue name stored in `celery_kwargs`."""
+        job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        job_model.enabled = True
+        job_model.validated_save()
+        job_queue = JobQueue.objects.create(name="renamed-queue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        scheduled_job = ScheduledJob.objects.create(
+            name="Stale Queue Scheduled Job",
+            task="dry_run.TestDryRun",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_FUTURE,
+            user=self.user,
+            start_time=now() + timedelta(days=1),
+            job_queue=job_queue,
+            celery_kwargs={"queue": "original-queue", "nautobot_job_queue_type": JobQueueTypeChoices.TYPE_CELERY},
+        )
+        self.add_permissions("extras.run_job", "extras.view_scheduledjob")
+
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        job_result = JobResult.objects.get(pk=response.data["id"])
+        self.assertEqual(job_result.celery_kwargs["queue"], "renamed-queue")
+
 
 class MetadataTypeTest(APIViewTestCases.APIViewTestCase):
     model = MetadataType
