@@ -3,6 +3,7 @@ import math
 
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
+from django.db.models import Q
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
@@ -43,6 +44,42 @@ ARCHIVAL_ORDER = (
 # The records that can be archived are displayed in alphabetical order
 # But `ARCHIVAL_ORDER` is the actual order that archival occurs in
 ARCHIVAL_DISPLAY_ORDER = tuple(sorted(ARCHIVAL_ORDER))
+
+
+def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
+    """
+    A generator to navigate through a query set based on a specific timestamped field with an arbitrarily
+    determined batch size.
+
+    Assumes that caller provides a pre-filtered query set.
+
+    Args:
+        queryset (QuerySet): The records to slice.
+        timestamp_field_name (str): Name of a field the records will be filtered, ordered and paged by.
+        batch_size (int): Records per batch, and rows read per slice.
+
+    Returns:
+        (generator): Yields lists of up to `batch_size` records per batch.
+    """
+    # PK is necessary for when a slice is made where there are multiple elements that have the same timestamp.
+    # This allows resuming iteration with the next slice at the correct point instead of needing to grab all
+    # records at the same timestamp.
+    ordered_queryset = queryset.order_by(timestamp_field_name, "pk")
+
+    current_record_batch = list(ordered_queryset[:batch_size])
+
+    while current_record_batch:
+        last_record_in_batch = current_record_batch[-1]
+        current_timestamp = getattr(last_record_in_batch, timestamp_field_name)
+
+        yield current_record_batch
+
+        # Get next batch
+        newer_than_current_timestamp = Q(**{f"{timestamp_field_name}__gt": current_timestamp})
+        same_timestamp_later_pk = Q(**{timestamp_field_name: current_timestamp}, pk__gt=last_record_in_batch.pk)
+        records_after_current_batch = ordered_queryset.filter(newer_than_current_timestamp | same_timestamp_later_pk)
+        next_batch_of_records = records_after_current_batch[:batch_size]
+        current_record_batch = list(next_batch_of_records)
 
 
 # TODO: Ask if we want to gate this to super users/admins?
@@ -191,8 +228,8 @@ class ArchiveOldRecords(Job):
             (dict): Archived record count keyed by model label, or on a dry run the count a real run
                 would archive. Always carries the `extras.ObjectChange` key.
         """
-        object_changes_to_archive = (
-            ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=threshold_timestamp).order_by("time")
+        object_changes_to_archive = ObjectChange.objects.restrict(self.user, "delete").filter(
+            time__lt=threshold_timestamp
         )
 
         if dryrun:
@@ -210,11 +247,7 @@ class ArchiveOldRecords(Job):
         total_archived_object_change_count = 0
         current_batch = 0
 
-        while True:
-            object_change_batch = list(object_changes_to_archive[:batch_size])
-            if not object_change_batch:
-                break
-
+        for object_change_batch in _iterate_records_by_timestamp(object_changes_to_archive, "time", batch_size):
             try:
                 current_archived_object_change_count = self._process_archive_object_change_batch(object_change_batch)
             except Exception as exception:
@@ -341,7 +374,6 @@ class ArchiveOldRecords(Job):
                 files__isnull=True,
             )
             .select_related("user")
-            .order_by("date_done")
         )
 
         if dryrun:
@@ -382,11 +414,7 @@ class ArchiveOldRecords(Job):
         }
         current_batch = 0
 
-        while True:
-            job_result_batch = list(job_results_to_archive[:batch_size])
-            if not job_result_batch:
-                break
-
+        for job_result_batch in _iterate_records_by_timestamp(job_results_to_archive, "date_done", batch_size):
             try:
                 current_batch_counts = self._process_archive_job_result_batch(job_result_batch, batch_size)
             except Exception as exception:
@@ -527,11 +555,7 @@ class ArchiveOldRecords(Job):
 
         archived_job_log_entry_count = 0
 
-        while True:
-            job_log_entry_chunk = list(job_log_entries[:batch_size])
-            if not job_log_entry_chunk:
-                break
-
+        for job_log_entry_chunk in _iterate_records_by_timestamp(job_log_entries, "created", batch_size):
             with transaction.atomic():
                 ArchivedJobLogEntry.objects.bulk_create(
                     [ArchivedJobLogEntry.from_job_log_entry(job_log_entry) for job_log_entry in job_log_entry_chunk],
@@ -580,11 +604,7 @@ class ArchiveOldRecords(Job):
 
         archived_job_console_entry_count = 0
 
-        while True:
-            job_console_entry_chunk = list(job_console_entries[:batch_size])
-            if not job_console_entry_chunk:
-                break
-
+        for job_console_entry_chunk in _iterate_records_by_timestamp(job_console_entries, "timestamp", batch_size):
             with transaction.atomic():
                 ArchivedJobConsoleEntry.objects.bulk_create(
                     [
