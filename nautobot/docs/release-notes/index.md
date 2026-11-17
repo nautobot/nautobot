@@ -1,10 +1,14 @@
 # Release Notes
 
-## [3.3 - Fall 2026](version-3.3.md)
+## [3.3 - November 2026](version-3.3.md)
 
-TODO
-
-- Enhanced Import/Export: JSON/YAML, Upsert
+- Enhanced Import/Export with JSON/YAML and Upsert
+- Conditions on Webhooks and Job Hooks
+- REST API Rate Limiting
+- Archival Records for Change Log and Job Result
+- Toast Notifications
+- Expandable List Rows
+- Favorite Any Page
 
 ## [3.2 - July 2026](version-3.2.md)
 
