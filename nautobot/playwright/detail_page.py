@@ -88,6 +88,23 @@ class DetailPage(BasePage):
         expect(pane).not_to_contain_text(text)
 
     # -------------------------------------------------------------------------
+    # Panels inside a tab
+    # -------------------------------------------------------------------------
+
+    def _tab_panel(self, tab_id, title):
+        """Locator for the panels titled *title* inside the tab *tab_id*."""
+        return self.panel(title, within=self._tab_pane(tab_id))
+
+    def expect_tab_panel_to_contain(self, tab_id, title, text):
+        """Assert (auto-retrying) that exactly one panel titled *title* in tab *tab_id* shows *text*, and that the panel is visible."""
+        expect(self._tab_panel(tab_id, title).filter(has_text=text)).to_be_visible()
+
+    def expect_no_tab_panel_to_contain(self, tab_id, title, text):
+        """Assert (auto-retrying) that the tab *tab_id* exists and no panel titled *title* in it shows *text*, even as hidden text."""
+        expect(self._tab_pane(tab_id)).to_have_count(1)
+        expect(self._tab_panel(tab_id, title).filter(has_text=text)).to_have_count(0)
+
+    # -------------------------------------------------------------------------
     # Relationships panel
     # -------------------------------------------------------------------------
 
@@ -99,7 +116,7 @@ class DetailPage(BasePage):
         Every relationship on the object is a row in the same panel, so the panel's
         presence alone does not show that one association is in it.
         """
-        panel = self.panel(self._RELATIONSHIPS_PANEL, within=self._tab_pane(tab_id))
+        panel = self._tab_panel(tab_id, self._RELATIONSHIPS_PANEL)
         return panel.locator("tr").filter(has_text=side_label).filter(has_text=peer_name)
 
     def expect_relationship_peer(self, tab_id, side_label, peer_name):
