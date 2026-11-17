@@ -3,7 +3,6 @@
 from playwright.sync_api import expect
 
 from nautobot.extras.tests.integration.pages.custom_field_choices_formset import CustomFieldChoicesFormset
-from nautobot.playwright.base_page import select2_filter_pick
 from nautobot.playwright.object_form_page import ObjectFormPage
 
 
@@ -47,7 +46,7 @@ class CustomFieldFormPage(ObjectFormPage):
 
     def pick_content_type(self, text):
         """Add the content type whose label is *text*, e.g. "DCIM | device", and wait for the scope filter to load."""
-        select2_filter_pick(self.page, "content_types", search=text, pick_text=text)
+        self.pick_choice("content_types", text)
         expect(self.page.locator(self._SCOPE_FILTER_TABS)).to_be_attached()
 
     def fill_validation(self, minimum=None, maximum=None, regex=None):

@@ -114,34 +114,34 @@ class CustomFieldTestCase:
     # -------------------------------------------------------------------------
 
     @pytest.mark.behavioral
-    def test_create_type_select_with_choices(self, auth_page, base_url, api, create_object):
-        """A select field and a multi-select field created with two choices each show both choices on their detail view."""
+    @pytest.mark.parametrize("field_type", ["select", "multi-select"])
+    def test_create_type_select_with_choices(self, auth_page, base_url, api, create_object, field_type):
+        """A field of *field_type* created with two choices shows both choices on its detail view."""
         choices = ["choice1", "choice2"]
-        for field_type in ("select", "multi-select"):
-            label = unique_name()
-            form = start_device_custom_field(auth_page, base_url, create_object, label, field_type)
-            for index, value in enumerate(choices):
-                form.choices.fill(index, value)
+        label = unique_name()
+        form = start_device_custom_field(auth_page, base_url, create_object, label, field_type)
+        for index, value in enumerate(choices):
+            form.choices.fill(index, value)
 
-            detail = submit_new_custom_field(auth_page, base_url, form, label)
+        detail = submit_new_custom_field(auth_page, base_url, form, label)
 
-            detail.expect_choices(choices)
-            custom_field = get_custom_field(api, label)
-            assert custom_field["type"]["value"] == field_type
-            assert set(get_choices(api, custom_field)) == set(choices)
+        detail.expect_choices(choices)
+        custom_field = get_custom_field(api, label)
+        assert custom_field["type"]["value"] == field_type
+        assert set(get_choices(api, custom_field)) == set(choices)
 
     @pytest.mark.behavioral
-    def test_create_type_select_without_choices(self, auth_page, base_url, api, create_object):
-        """A select field and a multi-select field can be created with no choices."""
-        for field_type in ("select", "multi-select"):
-            label = unique_name()
-            form = start_device_custom_field(auth_page, base_url, create_object, label, field_type)
+    @pytest.mark.parametrize("field_type", ["select", "multi-select"])
+    def test_create_type_select_without_choices(self, auth_page, base_url, api, create_object, field_type):
+        """A field of *field_type* can be created with no choices."""
+        label = unique_name()
+        form = start_device_custom_field(auth_page, base_url, create_object, label, field_type)
 
-            submit_new_custom_field(auth_page, base_url, form, label)
+        submit_new_custom_field(auth_page, base_url, form, label)
 
-            custom_field = get_custom_field(api, label)
-            assert custom_field["type"]["value"] == field_type
-            assert get_choices(api, custom_field) == {}
+        custom_field = get_custom_field(api, label)
+        assert custom_field["type"]["value"] == field_type
+        assert get_choices(api, custom_field) == {}
 
     @pytest.mark.behavioral
     def test_create_type_select_with_choices_adding_dynamic_row(self, auth_page, base_url, api, create_object):
@@ -195,11 +195,14 @@ class CustomFieldTestCase:
         detail.expect_no_choice("replace_me")
         assert set(get_choices(api, custom_field)) == {"new_choice"}
 
-    # TODO(NAUTOBOT-XXXX): remove this marker when the bug is fixed. Deleting a saved choice's row hides the
-    # row but sets TOTAL_FORMS to the number of rows still shown (jquery.formset.js). The hidden row keeps its
-    # index, so the last row, the one added here, falls outside TOTAL_FORMS and its choice is not saved.
+    # TODO(#9829): remove this marker when the bug is fixed. Deleting a saved choice's row hides the row but
+    # sets TOTAL_FORMS to the number of rows still shown (jquery.formset.js). The hidden row keeps its index,
+    # so the last row, the one added here, falls outside TOTAL_FORMS and its choice is not saved.
+    # `raises=AssertionError` keeps a click timeout from counting as the expected failure.
     @pytest.mark.xfail(
-        strict=True, reason="NAUTOBOT-XXXX: a row added before a saved choice's row is deleted is not saved"
+        strict=True,
+        raises=AssertionError,
+        reason="#9829: a row added before a saved choice's row is deleted is not saved",
     )
     @pytest.mark.behavioral
     def test_update_type_select_create_delete_choices(self, auth_page, base_url, api, create_device_custom_field):
@@ -215,6 +218,34 @@ class CustomFieldTestCase:
         new_row = form.choices.add_row()
         form.choices.delete_row(0)
         form.choices.fill(new_row, "new_choice")
+        form.submit()
+
+        detail.expect_url_contains(detail_url)
+        detail.expect_flash_message(f"Modified custom field {label}")
+        detail.expect_choices(["new_choice"])
+        detail.expect_no_choice("delete_me")
+        assert set(get_choices(api, custom_field)) == {"new_choice"}
+
+    @pytest.mark.behavioral
+    def test_update_type_select_delete_saved_choice_and_fill_blank_row(
+        self, auth_page, base_url, api, create_device_custom_field
+    ):
+        """Deleting the saved choice's row and filling one of the edit form's blank rows in one edit replaces the choice.
+
+        This is what the Selenium version of test_update_type_select_create_delete_choices did: it filled a
+        blank row, which stays inside TOTAL_FORMS after the delete, so it is not affected by #9829.
+        """
+        custom_field = create_device_custom_field("select", choices=["delete_me"])
+        label = custom_field["label"]
+        detail = CustomFieldDetailPage(auth_page, base_url)
+        detail.navigate(custom_field["id"])
+        detail_url = detail.current_url()
+        detail.click_edit()
+        form = CustomFieldFormPage(auth_page, base_url)
+
+        form.choices.delete_row(0)
+        # Row 0 is the saved choice, and rows 1 to 5 are the edit form's blank rows.
+        form.choices.fill(1, "new_choice")
         form.submit()
 
         detail.expect_url_contains(detail_url)
@@ -291,7 +322,7 @@ class CustomFieldTestCase:
     def test_saving_object_after_its_custom_field_deleted(
         self, auth_page, base_url, api, created_device, create_device_custom_field
     ):
-        """A device that has a value for a deleted custom field can still be saved, and the value is no longer shown.
+        """A device that has a value for a deleted custom field can still be saved.
 
         Deleting a custom field removes its key from every cached list of custom fields (see
         `invalidate_models_cache`), so the edit form no longer displays the field and saving it
@@ -317,10 +348,10 @@ class CustomFieldTestCase:
         form = open_device_edit_form(auth_page, base_url, device)
         form.submit()
 
+        # The detail view and the API show only custom fields that still exist, so checking for the deleted
+        # field's value there would pass whatever is stored. The flash message and heading show the save worked.
         detail.expect_flash_message("Modified device")
         detail.expect_heading(device["name"])
-        detail.expect_tab_not_to_contain("main", choice)
-        assert custom_field["key"] not in get_device_custom_fields(api, device)
 
     # -------------------------------------------------------------------------
     # Type-dependent fields on the add form
@@ -366,7 +397,7 @@ class CustomFieldTestCase:
 
     @pytest.mark.behavioral
     def test_submit_ignores_hidden_regex_value(self, auth_page, base_url, api, create_object):
-        """Switching from text to integer keeps the minimum and maximum, which integers use, and does not save the hidden regex."""
+        """Switching from text to integer saves the minimum and maximum, which integers use, and does not save the hidden regex."""
         label = unique_name()
         form = start_device_custom_field(auth_page, base_url, create_object, label, "text")
         form.fill_validation(minimum=2, maximum=10, regex="^ignore_me$")
