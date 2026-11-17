@@ -1724,7 +1724,9 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         records = []
         for batch_number, record_batch in enumerate(
-            _iterate_records_by_timestamp(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
+            _iterate_records_by_timestamp(
+                ObjectChange.objects.filter(time__lt=threshold_timestamp), "time", SMALL_ARCHIVE_BATCH_SIZE
+            )
         ):
             self.assertLess(batch_number, maximum_batch_count)
             records.extend(record_batch)
