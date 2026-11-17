@@ -1062,7 +1062,9 @@ class JobViewSetBase(
 
             # Approval is not required for dryrun
             # TODO: remove this once we have the ability to configure an approval workflow to ignore jobs with specific parameters(including `dryrun`)
-            dryrun = data.get("dryrun", False) if job_class.supports_dryrun else False
+            # Use the validated/cleaned value rather than the raw request data: a
+            # string such as "false" is truthy and would otherwise skip approval.
+            dryrun = cleaned_data.get("dryrun", False) if job_class.supports_dryrun else False
 
             if (not dryrun and scheduled_job_has_approval_workflow) or schedule_data[
                 "interval"
