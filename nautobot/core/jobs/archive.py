@@ -55,7 +55,7 @@ def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size
 
     Args:
         queryset (QuerySet): The records to slice.
-        timestamp_field_name (str): Creation timestamp the records are filtered, ordered and paged by.
+        timestamp_field_name (str): Name of the timestamp field the records are filtered, ordered and paged by.
         batch_size (int): Records per batch, and rows read per slice.
         threshold_timestamp (datetime): Only records older than this are read, or None to read them all.
 
