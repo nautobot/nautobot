@@ -49,8 +49,8 @@ class CustomFieldChoicesFormset:
     def add_row(self):
         """Click "Add another Custom Field Choice", wait for the new row, and return its index.
 
-        Indexes count every row in the DOM, including hidden ones, so the new row's index is the
-        number of rows before the click.
+        The index numbering includes every row in the DOM, including hidden ones, so the new row's index
+        is the number of rows that existed before the click.
         """
         index = self.page.locator(self._ROWS).count()
         self.page.locator(self._ADD_ROW).click()

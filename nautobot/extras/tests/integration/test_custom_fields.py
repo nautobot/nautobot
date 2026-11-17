@@ -15,8 +15,9 @@ EXTRA_CHOICE_ROWS = 5
 # The weight that a new choice row starts with.
 DEFAULT_CHOICE_WEIGHT = 100
 
-# Which parts of the form customfield_form.js shows for each type: the Validation Rules card, its
-# minimum, maximum and regex fields, and the Custom Field Choices card. Checked in this order.
+# For each type, the parts of the form that customfield_form.js shows. The parts are the Validation Rules
+# card, its minimum, maximum and regex fields, and the Custom Field Choices card. The test checks the
+# types in this order.
 VISIBLE_PARTS_BY_TYPE = {
     "text": {"validation_rules": True, "minimum": True, "maximum": True, "regex": True, "choices": False},
     "integer": {"validation_rules": True, "minimum": True, "maximum": True, "regex": False, "choices": False},
@@ -32,7 +33,8 @@ VISIBLE_PARTS_BY_TYPE = {
 
 LENGTH_HELP_TEXT = ("Minimum length of the value.", "Maximum length of the value.")
 NUMERIC_HELP_TEXT = ("Minimum numeric value.", "Maximum numeric value.")
-# The minimum and maximum help text for each type that shows those fields, checked in this order.
+# For each type that shows the minimum and maximum fields, the help text under them. The test checks the
+# types in this order.
 HELP_TEXT_BY_TYPE = {
     "text": LENGTH_HELP_TEXT,
     "integer": NUMERIC_HELP_TEXT,
