@@ -20,7 +20,11 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.archive import _iterate_records_by_timestamp, ArchiveOldRecords
+from nautobot.core.jobs.archive import (
+    _filter_out_records_whose_relations_block_deletion,
+    _iterate_records_by_timestamp,
+    ArchiveOldRecords,
+)
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -1829,7 +1833,10 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             _value="probe",
         )
 
-        job_result = self.run_archive_old_records_job()
+        self.user.is_superuser = True
+        self.user.save()
+
+        job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
         self.assertJobResultStatus(job_result)
         self.assertTrue(ArchivedObjectChange.objects.filter(pk=old_object_change.pk).exists())
@@ -1838,6 +1845,100 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             job_result.job_log_entries.filter(log_level=LogLevelChoices.LOG_ERROR).values_list("message", flat=True)
         )
         self.assertEqual(error_messages, [])
+
+    def test_an_object_change_with_metadata_is_held_hot(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+        metadata_type = MetadataType.objects.create(
+            name="Archive Hold Hot Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        object_change_content_type = ContentType.objects.get_for_model(ObjectChange)
+        metadata_type.content_types.set([object_change_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=object_change_content_type,
+            assigned_object_id=old_object_change.pk,
+            scoped_fields=["change_context_detail"],
+            _value="probe",
+        )
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        self.assertEqual(ObjectMetadata.objects.filter(assigned_object_id=old_object_change.pk).count(), 1)
+
+    def test_object_changes_held_hot_are_reported(self):
+        self.make_object_change(age_in_days=90)
+        held_object_change = self.make_object_change(age_in_days=90)
+        metadata_type = MetadataType.objects.create(
+            name="Archive Hold Report Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        object_change_content_type = ContentType.objects.get_for_model(ObjectChange)
+        metadata_type.content_types.set([object_change_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=object_change_content_type,
+            assigned_object_id=held_object_change.pk,
+            scoped_fields=["change_context_detail"],
+            _value="probe",
+        )
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(ArchivedObjectChange.objects.count(), 1)
+        does_omit_message_exist = any(
+            "Omitting 1 ObjectChange records" in message for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_omit_message_exist, self.get_job_log_messages(job_result))
+
+    def test_a_falsy_force_value_does_not_release_generic_relations(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+        metadata_type = MetadataType.objects.create(
+            name="Archive Falsy Force Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        object_change_content_type = ContentType.objects.get_for_model(ObjectChange)
+        metadata_type.content_types.set([object_change_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=object_change_content_type,
+            assigned_object_id=old_object_change.pk,
+            scoped_fields=["change_context_detail"],
+            _value="probe",
+        )
+
+        for falsy_force_value in (False, None, 0, ""):
+            remaining_object_changes = _filter_out_records_whose_relations_block_deletion(
+                ObjectChange.objects.all(), ObjectChange, (), falsy_force_value
+            )
+            self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
+
+    def test_forcing_cascade_delete_requires_a_superuser(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_superuser_message_exist = any(
+            "is not a superuser and cannot force cascading deletes" in message
+            for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_superuser_message_exist)
+
+    def test_protecting_relations_hold_records_hot_even_when_forced(self):
+        protected_manufacturer = Manufacturer.objects.create(name="Archive Protected Probe")
+        DeviceType.objects.create(manufacturer=protected_manufacturer, model="Archive Probe Model")
+        unprotected_manufacturer = Manufacturer.objects.create(name="Archive Unprotected Probe")
+
+        remaining_manufacturers = _filter_out_records_whose_relations_block_deletion(
+            Manufacturer.objects.all(), Manufacturer, (), force_cascade_delete=True
+        )
+
+        self.assertNotIn(protected_manufacturer, remaining_manufacturers)
+        self.assertIn(unprotected_manufacturer, remaining_manufacturers)
 
     def test_a_model_this_job_does_not_archive_fails_the_job(self):
         """
@@ -2286,7 +2387,10 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             _value="probe",
         )
 
-        archive_job_result = self.run_archive_old_records_job()
+        self.user.is_superuser = True
+        self.user.save()
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
         self.assertJobResultStatus(archive_job_result)
         self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
@@ -2361,6 +2465,55 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
         self.assertFalse(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
         self.assertTrue(FileProxy.objects.filter(pk=file_proxy.pk).exists())
+
+    def test_a_job_result_that_carries_files_is_archived_when_forced(self):
+        old_job_result = self.make_job_result(age_in_days=90)
+        forced_file_proxy = FileProxy.objects.create(
+            name="forced-output.txt",
+            file=ContentFile(b"job output", name="forced-output.txt"),
+            job_result=old_job_result,
+        )
+        self.user.is_superuser = True
+        self.user.save()
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertFalse(FileProxy.objects.filter(pk=forced_file_proxy.pk).exists())
+
+    def test_job_results_held_hot_are_reported(self):
+        self.make_job_result(age_in_days=90)
+        held_job_result = self.make_job_result(age_in_days=90)
+        FileProxy.objects.create(
+            name="held-report-probe.txt",
+            file=ContentFile(b"job output", name="held-report-probe.txt"),
+            job_result=held_job_result,
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(ArchivedJobResult.objects.count(), 1)
+        does_omit_message_exist = any(
+            "Omitting 1 JobResult records" in message for message in self.get_job_log_messages(archive_job_result)
+        )
+        self.assertTrue(does_omit_message_exist, self.get_job_log_messages(archive_job_result))
+
+    def test_a_falsy_force_value_does_not_release_cascading_relations(self):
+        old_job_result = self.make_job_result(age_in_days=90)
+        FileProxy.objects.create(
+            name="falsy-force-probe.txt",
+            file=ContentFile(b"job output", name="falsy-force-probe.txt"),
+            job_result=old_job_result,
+        )
+
+        for falsy_force_value in (False, None, 0, ""):
+            remaining_job_results = _filter_out_records_whose_relations_block_deletion(
+                JobResult.objects.all(), JobResult, (JobLogEntry, JobConsoleEntry), falsy_force_value
+            )
+            self.assertNotIn(old_job_result, remaining_job_results, falsy_force_value)
 
     def test_archival_runs_in_batches_of_the_requested_size(self):
         # Batching is determined by log output
