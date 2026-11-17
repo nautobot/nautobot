@@ -20,7 +20,7 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.archive import ArchiveOldRecords
+from nautobot.core.jobs.archive import _iterate_records_before_threshold, ArchiveOldRecords
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -1567,6 +1567,15 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(job_result)))
 
+    def test_a_dry_run_counts_only_records_past_the_threshold(self):
+        self.make_object_change(age_in_days=90)
+        self.make_object_change(age_in_days=1)
+
+        job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(job_result.result["extras.ObjectChange"], 1)
+
     def test_records_older_than_the_threshold_are_archived(self):
         """Records past the threshold move to the archive; records inside it stay live."""
         old_object_change = self.make_object_change(age_in_days=90)
@@ -1640,6 +1649,52 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(ArchivedObjectChange.objects.count(), 5)
         batch_messages = [message for message in self.get_job_log_messages(job_result) if message.startswith("Batch ")]
         self.assertEqual(len(batch_messages), 3, batch_messages)
+
+    def test_records_that_share_a_timestamp_are_all_archived(self):
+        object_changes = [self.make_object_change(age_in_days=90) for _ in range(5)]
+        shared_timestamp = timezone.now() - timedelta(days=90)
+        ObjectChange.objects.filter(pk__in=[object_change.pk for object_change in object_changes]).update(
+            time=shared_timestamp
+        )
+
+        job_result = self.run_archive_old_records_job(archive_batch_size=SMALL_ARCHIVE_BATCH_SIZE)
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(ObjectChange.objects.count(), 0)
+        self.assertEqual(
+            set(ArchivedObjectChange.objects.values_list("pk", flat=True)),
+            {object_change.pk for object_change in object_changes},
+        )
+
+    def test_batch_iteration_ends_when_the_records_are_not_deleted(self):
+        object_changes = [self.make_object_change(age_in_days=90) for _ in range(5)]
+
+        maximum_batch_count = 10
+
+        yielded_pks = []
+        for batch_number, record_batch in enumerate(
+            _iterate_records_before_threshold(ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE)
+        ):
+            self.assertLess(batch_number, maximum_batch_count)
+            yielded_pks.extend(record.pk for record in record_batch)
+
+        self.assertEqual(len(yielded_pks), len(object_changes))
+        self.assertEqual(set(yielded_pks), {object_change.pk for object_change in object_changes})
+
+    def test_records_at_or_after_the_threshold_are_not_returned(self):
+        for age_in_days in (120, 90, 60, 10, 5):
+            self.make_object_change(age_in_days=age_in_days)
+        threshold_timestamp = timezone.now() - timedelta(days=ARCHIVE_AGE_THRESHOLD_IN_DAYS)
+
+        record_batches = list(
+            _iterate_records_before_threshold(
+                ObjectChange.objects.all(), "time", SMALL_ARCHIVE_BATCH_SIZE, threshold_timestamp
+            )
+        )
+        records = [record for record_batch in record_batches for record in record_batch]
+
+        self.assertEqual(len(records), 3)
+        self.assertTrue(all(record.time < threshold_timestamp for record in records))
 
     def test_rerunning_overwrites_rather_than_duplicating(self):
         """Archiving Object Changes makes the assumption that Object Changes do not change state.
@@ -1915,6 +1970,23 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertEqual(ArchivedJobLogEntry.objects.count(), 0)
         self.assertEqual(ArchivedJobConsoleEntry.objects.count(), 0)
         self.assertTrue(any("Dry Run" in message for message in self.get_job_log_messages(archive_job_result)))
+
+    def test_a_dry_run_counts_only_job_results_past_the_threshold(self):
+        self.make_job_result(age_in_days=90, log_entry_count=2, console_entry_count=2)
+        self.make_job_result(age_in_days=1, log_entry_count=3, console_entry_count=3)
+
+        archive_job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(
+            archive_job_result.result,
+            {
+                "extras.ObjectChange": 0,
+                "extras.JobResult": 1,
+                "extras.JobLogEntry": 2,
+                "extras.JobConsoleEntry": 2,
+            },
+        )
 
     def test_job_results_older_than_the_threshold_are_archived(self):
         """Job results past the threshold move to the archive; job results inside it stay live."""
