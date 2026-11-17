@@ -1,0 +1,1 @@
+Added the `DetailPage` methods `expect_tab_panel_to_contain` and `expect_no_tab_panel_to_contain` to `nautobot.playwright`.
