@@ -422,6 +422,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
         NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
         NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS=3600,
         NAUTOBOT_RATE_LIMITING_REST_BUDGET=1,
+        REST_API_MAX_DEPTH=3,
     )
     def test_request_that_consumes_entire_budget_is_allowed_and_next_request_fails(self):
         self.add_permissions("dcim.view_device")

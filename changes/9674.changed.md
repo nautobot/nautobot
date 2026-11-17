@@ -1,0 +1,1 @@
+Changed the default maximum `depth` query parameter value permitted in REST API `GET` requests from 10 to 2. The new `REST_API_MAX_DEPTH` configuration parameter can be set to permit a higher value (up to a maximum of 10) if desired.
