@@ -6,7 +6,7 @@ This document describes all new features and changes in Nautobot 3.3.
 
 ### Administrators
 
-#### ChangeLog only occur when change happens
+#### Change Records Are Created Only When a Field Value Changes
 
 Saving an object without changing any of its field values no longer creates a change record or triggers webhooks, job hooks, or events. If an integration depends on these, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../user-guide/administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False`.
 
@@ -39,7 +39,7 @@ Continous UI improvements include:
 
 #### Change Log and Job Result Archiving
 
-The new "Archive Old Records" system Job moves change records and Job results, with their log and console entries, that are older than a given number of days out of the main tables and into separate archive tables and potentially database. This keeps the main tables small and fast while preserving the full history for audits. Archived records have their own views, APIs, and permissions.
+The new "Archive Old Records" system Job finds change records and Job results that are older than a given number of days. It moves them, together with the Job results' log and console entries, out of the main tables and into separate archive tables, which are designed so they can later be moved to a separate database. Archiving keeps the main tables small and fast while preserving the full history for audits. Archived records have their own views, APIs, and permissions.
 
 #### REST API Rate Limiting
 
@@ -55,7 +55,7 @@ When [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../user-guide/administration/c
 
 #### Other Additions
 
-- Device Types and Module Types have optional depth and weight fields.
+- Device Types have optional depth and weight fields, and Module Types have an optional weight field.
 - A [Playwright](../development/core/playwright-testing.md)-based framework for browser tests is now included.
 
 ### Changed
@@ -70,7 +70,7 @@ The IP address and interface of an existing IP Address Assignment can no longer 
 
 ### Dependencies
 
-Normal Nautobot minor-version releases bumps for 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
+As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 #### Removed Python 3.10 Support
 
