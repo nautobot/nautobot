@@ -1716,23 +1716,23 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
     def test_records_at_or_after_the_threshold_are_not_returned(self):
         for age_in_days in (120, 90, 60, 10, 5):
-            self.make_object_change(age_in_days=age_in_days)
+            self.make_object_change(age_in_days=age_in_days, object_repr=f"object change {age_in_days} days old")
         threshold_timestamp = timezone.now() - timedelta(days=ARCHIVE_AGE_THRESHOLD_IN_DAYS)
 
+        records_before_threshold = ObjectChange.objects.filter(time__lt=threshold_timestamp).order_by("time", "pk")
+        expected_records = list(records_before_threshold)
         expected_record_count = 3
+        self.assertEqual(len(expected_records), expected_record_count)
         maximum_batch_count = expected_record_count + 1
 
         records = []
         for batch_number, record_batch in enumerate(
-            _iterate_records_by_timestamp(
-                ObjectChange.objects.filter(time__lt=threshold_timestamp), "time", SMALL_ARCHIVE_BATCH_SIZE
-            )
+            _iterate_records_by_timestamp(records_before_threshold, "time", SMALL_ARCHIVE_BATCH_SIZE)
         ):
             self.assertLess(batch_number, maximum_batch_count)
             records.extend(record_batch)
 
-        self.assertEqual(len(records), expected_record_count)
-        self.assertTrue(all(record.time < threshold_timestamp for record in records))
+        self.assertEqual(records, expected_records)
 
     def test_rerunning_overwrites_rather_than_duplicating(self):
         """Archiving Object Changes makes the assumption that Object Changes do not change state.
