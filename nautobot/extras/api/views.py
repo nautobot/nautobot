@@ -1394,10 +1394,18 @@ class ScheduledJobViewSet(
         job_class = get_job(job_model.class_path, reload=True)
         job_kwargs = job_class.prepare_job_kwargs(scheduled_job.kwargs or {})
         job_kwargs["dryrun"] = True
+        # Schedules created before Nautobot 3.2.10 store `queue` / `nautobot_job_queue_type` in `celery_kwargs`;
+        # these may be stale and would otherwise override `job_queue` below.
+        celery_kwargs = {
+            key: value
+            for key, value in (scheduled_job.celery_kwargs or {}).items()
+            if key not in ("queue", "nautobot_job_queue_type")
+        }
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            celery_kwargs=scheduled_job.celery_kwargs or {},
+            job_queue=scheduled_job.job_queue,
+            celery_kwargs=celery_kwargs,
             job_kwargs=job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
