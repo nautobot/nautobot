@@ -34,7 +34,7 @@ Continous UI improvements include:
 - Object list rows can be expanded to show an overview of the object.
 - Any page can be added to the navbar favorites.
 - Favorites can be ordered.
-- Column headers are stick in Object list views.
+- Sticky headers on Object list views.
 - Multiple custom links are grouped into a single dropdown.
 
 #### Change Log and Job Result Archiving
