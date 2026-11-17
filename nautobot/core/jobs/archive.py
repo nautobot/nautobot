@@ -46,18 +46,18 @@ ARCHIVAL_ORDER = (
 ARCHIVAL_DISPLAY_ORDER = tuple(sorted(ARCHIVAL_ORDER))
 
 
-def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size, threshold_timestamp=None):
+def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size, max_timestamp=None):
     """
     A generator to navigate through a query set based on a specific timestamped field with an arbitrarily
     determined batch size.
 
-    `before_threshold` means a timestamp older than `threshold_timestamp`, or every record when it is None.
+    `before_threshold` means a timestamp older than `max_timestamp`, or every record when it is None.
 
     Args:
         queryset (QuerySet): The records to slice.
         timestamp_field_name (str): Name of a field the records will be filtered, ordered and paged by.
         batch_size (int): Records per batch, and rows read per slice.
-        threshold_timestamp (datetime): Only records older than this are read, or None to read them all.
+        max_timestamp (datetime): Only records older than this are read, or None to read them all.
 
     Returns:
         (generator): Yields lists of up to `batch_size` records per batch.
@@ -67,8 +67,8 @@ def _iterate_records_before_threshold(queryset, timestamp_field_name, batch_size
     # records at the same timestamp.
     ordered_queryset = queryset.order_by(timestamp_field_name, "pk")
 
-    if threshold_timestamp is not None:
-        older_than_threshold = {f"{timestamp_field_name}__lt": threshold_timestamp}
+    if max_timestamp is not None:
+        older_than_threshold = {f"{timestamp_field_name}__lt": max_timestamp}
         ordered_queryset = ordered_queryset.filter(**older_than_threshold)
 
     current_record_batch = list(ordered_queryset[:batch_size])
