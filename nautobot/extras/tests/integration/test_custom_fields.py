@@ -197,7 +197,7 @@ class CustomFieldTestCase:
 
     # TODO(NAUTOBOT-XXXX): remove this marker when the bug is fixed. Deleting a saved choice's row hides the
     # row but sets TOTAL_FORMS to the number of rows still shown (jquery.formset.js). The hidden row keeps its
-    # index, so the last row, the one added here, falls outside TOTAL_FORMS and its choice is dropped.
+    # index, so the last row, the one added here, falls outside TOTAL_FORMS and its choice is not saved.
     @pytest.mark.xfail(
         strict=True, reason="NAUTOBOT-XXXX: a row added before a saved choice's row is deleted is not saved"
     )
@@ -235,7 +235,7 @@ class CustomFieldTestCase:
         custom_field = create_device_custom_field("text")
         response = api.patch(f"/api/dcim/devices/{device['id']}/", data={"custom_fields": {custom_field["key"]: value}})
         assert response.ok, f"PATCH device {device['id']} returned {response.status}: {response.text()}"
-        # The API drops a value whose key is missing from its cached list of the model's custom fields,
+        # The API discards a value whose key is missing from its cached list of the model's custom fields,
         # so check that the value was saved before looking for it in the UI.
         assert response.json()["custom_fields"].get(custom_field["key"]) == value
 
@@ -294,7 +294,7 @@ class CustomFieldTestCase:
         """A device that has a value for a deleted custom field can still be saved, and the value is no longer shown.
 
         Deleting a custom field removes its key from every cached list of custom fields (see
-        `invalidate_models_cache`), so the edit form no longer offers the field and saving it
+        `invalidate_models_cache`), so the edit form no longer displays the field and saving it
         does not fail validation on the leftover value.
         """
         choice = "SelectionChoice"
@@ -366,7 +366,7 @@ class CustomFieldTestCase:
 
     @pytest.mark.behavioral
     def test_submit_ignores_hidden_regex_value(self, auth_page, base_url, api, create_object):
-        """Switching from text to integer keeps the minimum and maximum, which integers use, and drops the hidden regex."""
+        """Switching from text to integer keeps the minimum and maximum, which integers use, and does not save the hidden regex."""
         label = unique_name()
         form = start_device_custom_field(auth_page, base_url, create_object, label, "text")
         form.fill_validation(minimum=2, maximum=10, regex="^ignore_me$")

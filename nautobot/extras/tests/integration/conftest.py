@@ -86,11 +86,14 @@ def webhook_name(api):
 
 @pytest.fixture
 def create_device_custom_field(create_object):
-    """Callable creating a Device custom field of *field_type*, deleted after the test.
+    """Return a function that creates a Device custom field and deletes it after the test.
 
-    Each value in *choices* becomes a choice of the field, in the order given. Other keyword
-    arguments are sent as fields of the custom field, e.g. `advanced_ui=True`. Returns the
-    custom field's API record.
+    The function creates one choice for each value in *choices*, in the order given, and sends
+    other keyword arguments as fields of the custom field, e.g. `advanced_ui=True`.
+
+    Returns:
+        A function that takes *field_type*, *choices* and keyword arguments, and returns the
+        custom field's API record.
     """
 
     def _create(field_type, choices=(), **fields):

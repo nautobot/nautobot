@@ -8,13 +8,10 @@ from nautobot.playwright.object_form_page import ObjectFormPage
 
 
 class CustomFieldFormPage(ObjectFormPage):
-    """The Custom Field add form, and the edit form, which opens from the detail view's `click_edit`.
+    """Page object for the Custom Field add form, and for the edit form that `click_edit` opens."""
 
-    customfield_form.js shows only the cards and fields that apply to the selected type, and
-    disables the inputs it hides, so the browser does not submit their values. The choice rows
-    are handled by the `choices` component.
-    """
-
+    # customfield_form.js shows only the cards and fields that apply to the selected type, and disables the
+    # inputs it hides, so the browser does not submit their values. The `choices` component handles the choice rows.
     ADD_PATH = "/extras/custom-fields/add/"
 
     _TYPE = "#id_type"
@@ -22,7 +19,7 @@ class CustomFieldFormPage(ObjectFormPage):
     # Each validation field is wrapped in a div with its own id, which the script hides and shows.
     _VALIDATION_FIELD = "#nb-validation-{name}-field"
     _VALIDATION_HELP_TEXT = "#nb-validation-{name}-field .form-text"
-    # Picking a content type makes HTMX replace the Scope filter card with one holding the filter tabs. The
+    # Picking a content type makes HTMX replace the Scope filter card with a card that contains the filter tabs. The
     # form's submit handler reads that card's Advanced tab, so wait for it before submitting.
     _SCOPE_FILTER_TABS = "#nb-scope-filter-form-container #filter-tabs"
 
@@ -36,9 +33,10 @@ class CustomFieldFormPage(ObjectFormPage):
     # -------------------------------------------------------------------------
 
     def fill_label(self, label):
-        """Type *label*, and a key made from it, which must be a valid identifier.
+        """Type *label* into Label, and a key made from it into Key.
 
-        The page fills the key from the label on keyup or change, and `fill()` sends neither event.
+        The key must be a valid identifier. The page fills Key from Label only on a keyup or change
+        event, and `fill()` sends neither event, so this method types the key itself.
         """
         self.fill_input("label", label)
         self.fill_input("key", label.replace("-", "_").replace(" ", "_").lower())
@@ -48,12 +46,12 @@ class CustomFieldFormPage(ObjectFormPage):
         self.page.locator(self._TYPE).select_option(field_type)
 
     def pick_content_type(self, text):
-        """Add the content type reading *text*, e.g. "DCIM | device", and wait for the scope filter to load."""
+        """Add the content type whose label is *text*, e.g. "DCIM | device", and wait for the scope filter to load."""
         select2_filter_pick(self.page, "content_types", search=text, pick_text=text)
         expect(self.page.locator(self._SCOPE_FILTER_TABS)).to_be_attached()
 
     def fill_validation(self, minimum=None, maximum=None, regex=None):
-        """Type the validation rules that are given."""
+        """Type each validation rule that is not None into its field."""
         for name, value in (("minimum", minimum), ("maximum", maximum), ("regex", regex)):
             if value is not None:
                 self.fill_input(f"validation_{name}", str(value))
