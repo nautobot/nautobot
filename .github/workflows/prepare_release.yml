@@ -41,7 +41,7 @@ jobs:
         uses: "networktocode/gh-action-setup-poetry-environment@v6"
         with:
           poetry-install-options: "--with dev"
-          poetry-version: "2.1.4"
+          poetry-version: "2.5.1"
 
       - name: "Validate Branch and Tags"
         run: |
