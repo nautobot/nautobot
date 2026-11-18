@@ -21,6 +21,10 @@ on: # yamllint disable-line rule:truthy rule:comments
         description: "Date of the release YYYY-MM-DD (defaults to today's date in the US Eastern TZ)."
         required: false
         default: ""
+      previous_tag:
+        description: "The previous version tag to use for reporting diffs (defaults to the latest tag on this branch)"
+        required: false
+        default: ""
 
 jobs:
   prepare-release:
@@ -53,7 +57,11 @@ jobs:
 
           # 2. Try to get the previous version tag
           # If it fails (no tags), get the hash of the first commit
-          if PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null); then
+          if [ -n "${{ github.event.inputs.previous_tag }}" ]; then
+            PREV_TAG="${{ github.event.inputs.previous_tag }}"
+            echo "PREVIOUS_TAG=$PREV_TAG" >> $GITHUB_ENV
+            echo "Using user-specified previous tag: $PREV_TAG"
+          elif PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null); then
             echo "PREVIOUS_TAG=$PREV_TAG" >> $GITHUB_ENV
             echo "Found previous tag: $PREV_TAG"
           else
@@ -65,9 +73,22 @@ jobs:
 
       - name: "Determine New Version"
         id: "versioning"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          if [[ "${{ github.event.inputs.bump_rule }}" != "prerelease" ]]; then
-            # Perform the bump based on the user input
+          # Bump the version based on the user input
+          CURRENT_VER=$(poetry version --short)
+          set +e  # continue running if the next command fails
+          GITHUB_RELEASE_EXISTS=$(gh release view v$CURRENT_VER --json publishedAt --jq '.publishedAt')
+          set -e
+
+          # Unconditionally bump the version if the current version is a .0 prerelease
+          if [[ $CURRENT_VER == *a0 || $CURRENT_VER == *b0 || $CURRENT_VER == *rc0 ]]; then
+            poetry version ${{ github.event.inputs.bump_rule }}
+          # If the bump rule is prerelease and a corresponding GitHub release doesn't already exist, no need to bump
+          elif [[ "${{ github.event.inputs.bump_rule }}" == "prerelease" && "$CURRENT_VER" =~ (a|b|rc)[0-9]+$ && -z "$GITHUB_RELEASE_EXISTS" ]]; then
+            echo "Prerelease v$CURRENT_VER does not exist in GitHub, using this version as-is"
+          else:
             poetry version ${{ github.event.inputs.bump_rule }}
           fi
 
