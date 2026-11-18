@@ -1816,8 +1816,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
     @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
     def test_a_superuser_is_also_blocked_from_forcing_cascade_delete(self):
-        self.user.is_superuser = True
-        self.user.save()
         old_object_change = self.make_object_change(age_in_days=90)
 
         job_result = self.run_archive_old_records_job(force_cascade_delete=True)
@@ -1881,9 +1879,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             scoped_fields=["change_context_detail"],
             _value="probe",
         )
-
-        self.user.is_superuser = True
-        self.user.save()
 
         job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
@@ -2426,9 +2421,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             _value="probe",
         )
 
-        self.user.is_superuser = True
-        self.user.save()
-
         archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
         self.assertJobResultStatus(archive_job_result)
@@ -2513,8 +2505,6 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             file=ContentFile(b"job output", name="forced-output.txt"),
             job_result=old_job_result,
         )
-        self.user.is_superuser = True
-        self.user.save()
 
         archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
