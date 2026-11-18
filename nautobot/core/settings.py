@@ -108,6 +108,15 @@ ALLOWED_URL_SCHEMES = [
     "xmpp",
 ]
 
+# Allow the Archive Old Records system job to be run with Force Cascade Delete. Defaults to False if not set here.
+if (
+    "NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED" in os.environ
+    and os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"] != ""
+):
+    ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED = is_truthy(
+        os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"]
+    )
+
 # Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
