@@ -1,0 +1,1 @@
+Changed the read-only database health check (used in maintenance mode) to run `SELECT 1`, so it confirms that the database answers a query rather than only that it accepts a connection.
