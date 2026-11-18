@@ -184,13 +184,6 @@ class ArchivedObjectChange(ObjectChangeSnapshotsMixin, ArchivedLogModel):
 
         return new_archived_object_change
 
-    def get_related_changes_queryset(self):
-        """Retrieve other ArchivedObjectChanges that have the same `changed_object`, excluding this record."""
-        return ArchivedObjectChange.objects.filter(
-            changed_object_type_id=self.changed_object_type_id,
-            changed_object_id=self.changed_object_id,
-        ).exclude(pk=self.pk)
-
     @property
     def changed_object_type(self):
         """

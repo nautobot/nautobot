@@ -83,23 +83,12 @@ class ObjectChangeSnapshotsMixin:
     Supports lookup of "adjacent" (previous/next) records, retrieval of object data snapshot, and calculation of diffs
     between adjacent records.
 
-    Subclasses must implement the `get_related_changes_queryset` method, and must define fields `time`, `action`,
-    `object_data`, `object_data_v2`.
+    Subclasses must define the fields `changed_object_type_id`, `changed_object_id`, `time`, `action`, `object_data`,
+    and `object_data_v2`.
     """
 
     def get_action_class(self):
         return ObjectChangeActionChoices.CSS_CLASSES.get(self.action)
-
-    def get_related_changes_queryset(self):
-        """
-        Retrieve other records that apply to the same "changed object" as this one.
-
-        Generally shouldn't be called directly; instead, call `get_related_changes`.
-
-        Returns:
-            (QuerySet): Records applying to the same "changed object", excluding this record itself.
-        """
-        raise NotImplementedError
 
     def get_related_changes(self, user=None, permission="view"):
         """
@@ -114,7 +103,10 @@ class ObjectChangeSnapshotsMixin:
         Returns:
             (QuerySet): Records applying to the same "changed object", excluding this record itself.
         """
-        related_changes = self.get_related_changes_queryset()
+        related_changes = type(self).objects.filter(
+            changed_object_type_id=self.changed_object_type_id,
+            changed_object_id=self.changed_object_id,
+        ).exclude(pk=self.pk)
         if user is not None:
             related_changes = related_changes.restrict(user, permission)
         return related_changes
@@ -318,10 +310,3 @@ class ObjectChange(ObjectChangeSnapshotsMixin, SavedViewMixin, BaseModel):
             self.object_repr = str(self.changed_object)[:CHANGELOG_MAX_OBJECT_REPR]
 
         return super().save(*args, **kwargs)
-
-    def get_related_changes_queryset(self):
-        """Return queryset of all ObjectChanges for this changed object, excluding this ObjectChange."""
-        return ObjectChange.objects.filter(
-            changed_object_type=self.changed_object_type,
-            changed_object_id=self.changed_object_id,
-        ).exclude(pk=self.pk)
