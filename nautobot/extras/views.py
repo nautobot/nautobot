@@ -1288,7 +1288,7 @@ class ObjectChangeDetailViewMixin(ObjectDetailViewMixin):
                 .filter(request_id=instance.request_id)
                 .exclude(pk=instance.pk)
             )
-            related_changes_table = self.table_class(data=related_changes, orderable=False)
+            related_changes_table = self.table_class(data=related_changes, orderable=False)  # pylint: disable=not-callable
             paginate = {"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
             RequestConfig(request, paginate).configure(related_changes_table)
 
