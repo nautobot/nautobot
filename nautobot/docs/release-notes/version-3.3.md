@@ -49,9 +49,9 @@ Nautobot can now [rate limit REST API requests](../user-guide/administration/con
 
 Nautobot can now report request and database query durations in a `Server-Timing` response header and in Prometheus metrics. See [Request Performance Measurements](../user-guide/administration/configuration/request-performance-measurements.md).
 
-#### Primary IP Without Interface Assignment
+#### `IPAddressAssignment` Records Can No Longer Be Edited
 
-When [`PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT`](../user-guide/administration/configuration/settings.md#primary_ip_requires_interface_assignment) is disabled, an IP address that is not assigned to any interface can be used as the primary IP of a Device, Virtual Machine, or Virtual Device Context.
+An existing "IP Address Assignment" record can no longer be changed in place, including through the REST API. Delete the assignment and create a new one instead. Assigning IP addresses through the UI is unaffected by this change.
 
 #### Other Additions
 
@@ -71,13 +71,6 @@ The IP address and interface of an existing IP Address Assignment can no longer 
 ### Dependencies
 
 As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
-
-#### Removed Python 3.10 Support
-
-As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
-
-<!-- pyml disable-num-lines 2 blanks-around-headers -->
-<!-- towncrier release notes start -->
 
 ## v3.3.0a2 (2026-11-13)
 
