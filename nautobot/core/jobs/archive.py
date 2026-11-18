@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 import math
 
 from django.contrib.contenttypes.fields import GenericRelation
@@ -22,6 +23,8 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.signals import _handle_deleted_object
+
+logger = logging.getLogger(__name__)
 
 name = "System Jobs"
 JOB_NAME = "Archive Old Records"
@@ -112,18 +115,42 @@ def _filter_out_records_whose_relations_block_deletion(
         on_delete = getattr(related_object, "on_delete", None)
         # TODO: Don't forget to handle DB_CASCADE when we adopt Django 6.1
         is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
+        related_model_name = related_object.related_model._meta.verbose_name
         if is_relationship_guarded:
             # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
             queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
+            logger.info(
+                "Not archiving %s records that are referenced by a %s."
+                " If you wish to archive these records, you will need to manually delete the related %s"
+                " records first.",
+                model._meta.verbose_name,
+                related_model_name,
+                related_model_name,
+            )
         if not is_relationship_guarded and not force_cascade_delete:
             # CASCADE deletion would occur, but execution has not permitted CASCADE delete to happen.
             # Effectively filtering only records that have nothing to CASCADE.
             queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
+            logger.info(
+                "Not archiving %s records that are referenced by a %s, because deleting them would delete the"
+                " related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                model._meta.verbose_name,
+                related_model_name,
+                related_model_name,
+            )
 
     if not force_cascade_delete:
         for private_field in model._meta.private_fields:
             if isinstance(private_field, GenericRelation):
                 queryset = queryset.filter(**{f"{private_field.name}__isnull": True})
+                generic_related_model_name = private_field.related_model._meta.verbose_name
+                logger.info(
+                    "Not archiving %s records that are referenced by a %s, because deleting them would delete"
+                    " the related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                    model._meta.verbose_name,
+                    generic_related_model_name,
+                    generic_related_model_name,
+                )
 
     return queryset
 
