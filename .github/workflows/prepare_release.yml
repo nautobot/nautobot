@@ -22,7 +22,7 @@ on: # yamllint disable-line rule:truthy rule:comments
         required: false
         default: ""
       previous_tag:
-        description: "The previous version tag to use for reporting diffs (defaults to the latest tag on this branch)"
+        description: "The previous version tag that GitHub's generated release notes start from (defaults to the latest tag on this branch)"
         required: false
         default: ""
 
@@ -82,13 +82,14 @@ jobs:
           GITHUB_RELEASE_EXISTS=$(gh release view v$CURRENT_VER --json publishedAt --jq '.publishedAt')
           set -e
 
-          # Unconditionally bump the version if the current version is a .0 prerelease
+          # Always bump the version if the current version ends in a0, b0, or rc0
           if [[ $CURRENT_VER == *a0 || $CURRENT_VER == *b0 || $CURRENT_VER == *rc0 ]]; then
             poetry version ${{ github.event.inputs.bump_rule }}
-          # If the bump rule is prerelease and a corresponding GitHub release doesn't already exist, no need to bump
+          # Keep the current version without bumping it if the bump rule is "prerelease", the current version
+          # is already a prerelease (ends in a, b, or rc plus a number), and no GitHub release exists for it yet
           elif [[ "${{ github.event.inputs.bump_rule }}" == "prerelease" && "$CURRENT_VER" =~ (a|b|rc)[0-9]+$ && -z "$GITHUB_RELEASE_EXISTS" ]]; then
             echo "Prerelease v$CURRENT_VER does not exist in GitHub, using this version as-is"
-          else:
+          else
             poetry version ${{ github.event.inputs.bump_rule }}
           fi
 
