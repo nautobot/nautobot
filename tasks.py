@@ -50,7 +50,6 @@ except ModuleNotFoundError:
 
 
 if sys.version_info >= (3, 14):
-    # https://github.com/pyinvoke/invoke/issues/1070 impacts Python 3.14 and greater and is not yet fixed upstream.
 
     def _bytes_to_read(input_) -> int:
         """
