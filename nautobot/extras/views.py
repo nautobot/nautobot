@@ -1275,7 +1275,7 @@ class ObjectChangeDetailViewMixin(ObjectDetailViewMixin):
 
     def get_extra_context(self, request, instance):
         """
-        Adds snapshot diff and related changes table for the object change detail view.
+        Add the snapshot diff, previous/next change links, and Related Changes table to the detail view context.
         """
         context = super().get_extra_context(request, instance)
 
