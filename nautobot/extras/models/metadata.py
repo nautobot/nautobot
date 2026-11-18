@@ -481,12 +481,13 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
                         "YYYY-MM-DDTHH:MM:SS(+,-)zz:zz",
                     ]
                     try:
-                        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z")
+                        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+                        # Success means no time zone info entered so assume UTC timezone
+                        value += "+0000"
                     except ValueError:
                         try:
-                            # No time zone info entered so assume UTC timezone
-                            datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
-                            value += "+0000"
+                            # Try again with time zone included
+                            datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z")
                         except ValueError:
                             raise ValidationError(
                                 f"Datetime values must be in the following formats {acceptable_datetime_formats}"

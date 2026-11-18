@@ -136,6 +136,9 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 --- 3.2.9 "Python 3.10 support removed"
     Python 3.10 support was removed.
 
++++ 3.3.0 "Python 3.15 support added"
+    Python 3.15 support was added.
+
 #### Database
 
 Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL are officially supported.

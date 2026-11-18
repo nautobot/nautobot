@@ -72,6 +72,10 @@ The IP address and interface of an existing IP Address Assignment can no longer 
 
 As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
+#### Added Python 3.15 Support
+
+Nautobot 3.3 supports Python 3.15.
+
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 
