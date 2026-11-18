@@ -30,6 +30,10 @@ For more details, refer to the [import and export documentation](../user-guide/f
 
 ### Dependencies
 
+#### Added Python 3.15 Support
+
+Nautobot 3.3 supports Python 3.15.
+
 #### Removed Python 3.10 Support
 
 As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.

@@ -12,6 +12,7 @@ Currently images are pushed for the following Python versions:
 * 3.12
 * 3.13
 * 3.14
+* 3.15
 
 +++ 2.3.0 "Added Python 3.12"
     Python 3.12 was added to the set of published images and became the default version.
@@ -33,6 +34,9 @@ Currently images are pushed for the following Python versions:
 
 --- 3.2.9 "Removed Python 3.10"
     Python 3.10 was removed from the set of published images as Python 3.10 is now end-of-life.
+
++++ 3.3.0 "Added Python 3.15"
+    Python 3.15 was added to the set of published images and became the default version.
 
 ## Platforms
 
@@ -60,13 +64,13 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
-| `latest`                                                      | Latest stable release | 3.14           | `latest`       |
+| `latest`                                                      | Latest stable release | 3.15           | `latest`       |
 | `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.11` |
-| `${NAUTOBOT_VER}`                                             | As specified          | 3.14           | `3.1.0`        |
+| `${NAUTOBOT_VER}`                                             | As specified          | 3.15           | `3.1.0`        |
 | `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `3.1.0-py3.11`  |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.14           | `3.1`          |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.15           | `3.1`          |
 | `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `3.1-py3.11`    |
-| `stable`                                                      | Latest stable release | 3.14           | `stable`       |
+| `stable`                                                      | Latest stable release | 3.15           | `stable`       |
 | `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.11` |
 
 ### Developer Tags
@@ -77,11 +81,11 @@ In addition to all tags described in the previous section, the following additio
 
 | Tag                                                  | Nautobot Branch              | Python Version |
 | ---------------------------------------------------- | ---------------------------- | -------------- |
-| `develop`                                            | `develop`, the latest commit | 3.14           |
+| `develop`                                            | `develop`, the latest commit | 3.15           |
 | `develop-py${PYTHON_VER}`                            | `develop`, the latest commit | As specified   |
 | `ltm-2.4`                                            | `ltm-2.4`, the latest commit | 3.12           |
 | `ltm-2.4-py${PYTHON_VER}`                            | `ltm-2.4`, the latest commit | As specified   |
-| `next`                                               | `next`, the latest commit    | 3.14           |
+| `next`                                               | `next`, the latest commit    | 3.15           |
 | `next-py${PYTHON_VER}`                               | `next`, the latest commit    | As specified   |
 
 ## Getting Started
