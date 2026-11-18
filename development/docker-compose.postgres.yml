@@ -1,7 +1,7 @@
 ---
 services:
   db:
-    image: "postgres:${POSTGRES_VER}"
+    image: postgres:${POSTGRES_VER:-15}
     command:
       - "postgres"
       - "-c"
@@ -11,7 +11,7 @@ services:
     env_file:
       - dev.env
     volumes:
-      - pgdata_nautobot:/var/lib/postgresql/data
+      - "pgdata${POSTGRES_VER:-15}_nautobot:/var/lib/postgresql/data"
     healthcheck:
       interval: 10s
       timeout: 5s
@@ -19,4 +19,6 @@ services:
       retries: 3
       test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
 volumes:
-  pgdata_nautobot:
+  "pgdata15_nautobot":
+  "pgdata16_nautobot":
+  "pgdata17_nautobot":

@@ -189,6 +189,8 @@ def docker_compose(context, command, **kwargs):
     ]
 
     for compose_file in context.nautobot.compose_files:
+        if compose_file == "docker-compose.postgres.yml":
+            compose_file = f"docker-compose.postgres.{context.nautobot.postgres_ver}.yml"
         compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
@@ -622,7 +624,9 @@ def vscode(context, workspace_launch=True):
     except FileNotFoundError:
         lines = []
     finally:
-        cleaned_lines = [og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|POSTGRES_VER|PYTHON_VER)=", og_line)]
+        cleaned_lines = [
+            og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|POSTGRES_VER|PYTHON_VER)=", og_line)
+        ]
         cleaned_lines.append(f"NAUTOBOT_VER={get_nautobot_major_minor_version(context)}")
         cleaned_lines.append(f"POSTGRES_VER={context.nautobot.postgres_ver}")
         cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")

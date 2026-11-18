@@ -1,0 +1,22 @@
+---
+services:
+  db:
+    image: "postgres:${POSTGRES_VER:-18}"
+    command:
+      - "postgres"
+      - "-c"
+      # Default is 64. This ceiling helps cover TransactionTestCase flushes for
+      # test runs with many parallel workers from running OOM.
+      - "max_locks_per_transaction=512"
+    env_file:
+      - dev.env
+    volumes:
+      - "pgdata${POSTGRES_VER:-18}_nautobot:/var/lib/postgresql"
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+      test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
+volumes:
+  pgdata18_nautobot:

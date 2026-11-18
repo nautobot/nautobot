@@ -626,7 +626,7 @@ jobs:
       NAUTOBOT_PLAYWRIGHT_API_TOKEN: "0123456789abcdef0123456789abcdef01234567"
     services:
       postgres:
-        image: "postgres:14-alpine"
+        image: "postgres:18-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
