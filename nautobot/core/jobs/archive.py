@@ -110,6 +110,7 @@ def _filter_out_records_whose_relations_block_deletion(
             continue
 
         on_delete = getattr(related_object, "on_delete", None)
+        # TODO: Don't forget to handle DB_CASCADE when we adopt Django 6.1
         is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
         if is_relationship_guarded:
             # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
