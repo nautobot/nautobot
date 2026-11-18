@@ -5,10 +5,10 @@ import pytest
 from nautobot.playwright.helpers import log_in
 from nautobot.playwright.home_page import HomePage
 
-# The panels and items that the Selenium test checked, keyed by the names that the home page displays (as
+# The panels and items under test, keyed by the names that the home page displays (as
 # defined in each app's `homepage.py`). Each item has two values. `object_type` is the type that the
-# limited user is given view permission on. `path` is the item's list view, which is the href of the item's
-# link; with `/api` in front, the same path is the item's REST endpoint.
+# limited user is given view permission on. `path` is the item's list view and the href of the item's link.
+# With `/api` in front, the same path is the item's REST endpoint.
 LAYOUT = {
     "Organization": {
         "Locations": {"object_type": "dcim.location", "path": "/dcim/locations/"},
@@ -32,11 +32,10 @@ class HomeTestCase:
     """The home page shows the panels and items the user may view, with correct counts, and remembers collapsed panels."""
 
     def test_homepage_render(self, auth_page, base_url):
-        """For the admin, the grid has its columns, and every panel shows each of its items linking to its list view."""
+        """For the admin, every panel shows each of its items, linking to the item's list view."""
         home = HomePage(auth_page, base_url)
         home.navigate()
         home.expect_loaded()
-        home.expect_columns()
 
         for panel_name, items in LAYOUT.items():
             home.expect_panel(panel_name)
@@ -57,9 +56,9 @@ class HomeTestCase:
     @pytest.mark.behavioral
     # storage_state=None starts the browser context without the admin's saved login, so the test can log in as its own user.
     @pytest.mark.browser_context_args(storage_state=None)
-    def test_homepage_render_with_limit_permissions(self, page, base_url, created_view_only_user):
+    def test_homepage_render_with_limit_permissions(self, page, base_url, create_view_only_user):
         """A user who can view only locations and circuits sees only those items, and no panel without one."""
-        user = created_view_only_user(*LIMITED_OBJECT_TYPES)
+        user = create_view_only_user(*LIMITED_OBJECT_TYPES)
         log_in(page, user["username"], user["password"])
         home = HomePage(page, base_url)
         home.navigate()

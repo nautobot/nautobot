@@ -1,16 +1,9 @@
-"""Shared component object for the navigation menu, the sidenav (`nav#sidenav`) on every logged-in page.
+"""Shared component object for the sidenav (`nav#sidenav`), which has one `li[data-section-name]` per tab.
 
-The sidenav lists one tab per `li[data-section-name]`. Each tab contains a button and a flyout. The flyout
-contains one `<ul>` per group: the group's label (`li.nb-sidenav-link-group`) followed by its item links. The server
-leaves out every item the user has no permission for, then every group left with no items, then every tab
-left with no groups, so a tab or group the user cannot use is missing from the DOM rather than hidden.
-
-Every tab's flyout is in the DOM from page load but is not displayed until its tab is clicked. Read labels
-with `text_content()`: `inner_text()` returns '' for anything not displayed, so it reads every label of a
-closed flyout as blank. A link must be displayed before it can be clicked, so expand its tab first.
-
-The Favorites flyout reuses the group and link classes, but its `<li>` has no `data-section-name`, so
-scoping everything to the tabs keeps favorites out of the results.
+A tab, group or item that the user may not view is missing from the DOM, not hidden. Every flyout is in
+the DOM from page load, so read labels with `text_content()`, because `inner_text()` returns '' in a closed
+flyout. Expand a tab before clicking one of its links. Lookups are scoped to `li[data-section-name]`,
+because the Favorites flyout uses the same group and link classes without that attribute.
 """
 
 from playwright.sync_api import expect, Page
@@ -47,10 +40,6 @@ class NavMenu:
         """Locator for the tab named *tab_name*."""
         return self.page.locator(f'{self._TAB}[data-section-name="{tab_name}"]')
 
-    def tab_names(self):
-        """Return the name of every rendered tab, in order."""
-        return [tab.get_attribute("data-section-name") for tab in self.page.locator(self._TAB).all()]
-
     def expect_tab(self, tab_name):
         """Assert (auto-retrying) that the sidenav has exactly one tab named *tab_name*."""
         expect(self.tab(tab_name)).to_have_count(1)
@@ -77,7 +66,7 @@ class NavMenu:
     def _is_tab_expanded(self, tab_name):
         """Return True if the flyout of tab *tab_name* is open, read once from its button's `aria-expanded`.
 
-        Used only to decide whether `expand_tab()` or `collapse_tab()` needs to click. Tests assert the state
+        Only `expand_tab()` and `collapse_tab()` call it, to decide whether to click. Tests assert the state
         with `expect_tab_expanded()` or `expect_tab_collapsed()`, which retry.
         """
         return self.tab(tab_name).locator(self._TAB_BUTTON).get_attribute("aria-expanded") == "true"
@@ -107,16 +96,14 @@ class NavMenu:
         label = self.page.locator(self._GROUP_LABEL).filter(has_text=exact_text(group_name))
         return self.tab(tab_name).locator(self._GROUP).filter(has=label)
 
-    def group_labels(self, tab_name):
-        """Return the label of every group in tab *tab_name*, read with `text_content()` so that a closed flyout's labels are read too."""
-        labels = self.tab(tab_name).locator(f"{self._GROUP} > {self._GROUP_LABEL}")
-        return [(label.text_content() or "").strip() for label in labels.all()]
-
-    def item_labels(self, tab_name, group_name):
-        """Return the label of every item in group *group_name* of tab *tab_name*, read with `text_content()`."""
-        links = self.group(tab_name, group_name).locator(self._ITEM_LINK)
-        return [(link.text_content() or "").strip() for link in links.all()]
+    def expect_group(self, tab_name, group_name):
+        """Assert (auto-retrying) that tab *tab_name* has exactly one group labeled *group_name*."""
+        expect(self.group(tab_name, group_name)).to_have_count(1)
 
     def item_link(self, tab_name, group_name, item_name):
         """Locator for the item link labeled exactly *item_name* in group *group_name* of tab *tab_name*."""
         return self.group(tab_name, group_name).locator(self._ITEM_LINK).filter(has_text=exact_text(item_name))
+
+    def expect_item(self, tab_name, group_name, item_name):
+        """Assert (auto-retrying) that group *group_name* of tab *tab_name* has exactly one *item_name* link."""
+        expect(self.item_link(tab_name, group_name, item_name)).to_have_count(1)

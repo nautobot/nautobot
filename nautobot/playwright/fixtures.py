@@ -206,10 +206,10 @@ def create_object(api):
 
 
 @pytest.fixture
-def created_view_only_user(create_object):
-    """Callable that creates a user who can view only the given object types, deleted on teardown.
+def create_view_only_user(create_object):
+    """Return a callable that creates a user who can view only the given object types. Teardown deletes the user.
 
-        user = created_view_only_user("dcim.location", "circuits.circuit")
+        user = create_view_only_user("dcim.location", "circuits.circuit")
         log_in(page, user["username"], user["password"])
 
     The user is not staff or a superuser and belongs to no group. It gets one object permission, with the

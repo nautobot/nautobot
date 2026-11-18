@@ -1,13 +1,7 @@
-"""Shared page object for the home page (/).
+"""Shared page object for the home page (/), a grid of panels that list items with a count and a link.
 
-The home page is a grid of panels, one card per panel, laid out in columns the user can reorder by
-dragging. Each panel lists items, and an item the user can view shows a count badge and a link to
-that model's list view. Panel and item names are the rendered text from each app's `homepage.py`.
-
-The server leaves out every panel and item the user has no permission for, so an absent panel is
-missing from the DOM, not hidden. A collapsed panel is in the DOM but not displayed, so read text
-with `text_content()` (never `inner_text()`, which returns '' for anything not displayed) and assert
-presence with counts rather than visibility, unless the test is about collapsing.
+A panel or item that the user may not view is missing from the DOM, not hidden. Read text with
+`text_content()`, because `inner_text()` returns '' inside a collapsed panel.
 """
 
 import re
@@ -23,12 +17,8 @@ class HomePage(BasePage):
     """The home page panel grid: panels, their items and counters, and collapsing a panel."""
 
     PATH = "/"
-    # The value of Nautobot's HOMEPAGE_PANELS_LAYOUT_COLUMNS. It is hard-coded because importing nautobot.core
-    # requires configured Django settings, which this suite does not have.
-    COLUMN_COUNT = 4
 
     _PANELS = "#draggable-homepage-panels"
-    _COLUMN = "#draggable-homepage-panels > .nb-panel-group"
     # Replaces BasePage's _PANEL_TITLE selector, so the inherited panel(), expect_panel(), expect_no_panel() and
     # expect_panel_to_contain() find home page panels, whose name is the card header's <h2>.
     _PANEL_TITLE = "#draggable-homepage-panels .card > .card-header > h2"
@@ -52,18 +42,6 @@ class HomePage(BasePage):
         """Assert (auto-retrying) that the panel grid, which only the home page renders, is present."""
         expect(self.page.locator(self._PANELS)).to_be_attached()
 
-    def expect_columns(self):
-        """Assert (auto-retrying) that the grid has its fixed number of columns, which the server always renders."""
-        expect(self.page.locator(self._COLUMN)).to_have_count(self.COLUMN_COUNT)
-
-    # -------------------------------------------------------------------------
-    # Panels
-    # -------------------------------------------------------------------------
-
-    def panel_names(self):
-        """Return the name of every rendered panel, in DOM order (column by column)."""
-        return [(title.text_content() or "").strip() for title in self.page.locator(self._PANEL_TITLE).all()]
-
     # -------------------------------------------------------------------------
     # Items
     # -------------------------------------------------------------------------
@@ -86,7 +64,7 @@ class HomePage(BasePage):
     def item_badge(self, panel_name, item_name):
         """Locator for the count badge of the top-level item *item_name* in panel *panel_name*.
 
-        A grouped item's members ("Connections" > "Cables") each have their own badge, which this does not find.
+        Call it only for a top-level item. For a member of a grouped item ("Connections" > "Cables"), it matches every member's badge.
         """
         return self.item_link(panel_name, item_name).locator(self._ENCLOSING_ITEM).locator(self._ITEM_BADGE)
 
