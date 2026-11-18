@@ -98,11 +98,11 @@ class MigrationsBackend(NautobotHealthCheckBackend):
 class RedisHealthCheck(NautobotHealthCheckBackend):
     def check_sentinel(self, sentinel_servers, service_name, db, **kwargs):
         try:
-            sentinel = Sentinel(
+            sentinel_ = Sentinel(
                 sentinel_servers,
                 **kwargs,
             )
-            with sentinel.master_for(service_name=service_name, db=db) as master:
+            with sentinel_.master_for(service_name=service_name, db=db) as master:
                 master.ping()
         except (ConnectionRefusedError, exceptions.ConnectionError, exceptions.TimeoutError) as e:
             self.add_error(ServiceUnavailable(f"Unable to connect to Redis Sentinel: {type(e).__name__}"), e)
