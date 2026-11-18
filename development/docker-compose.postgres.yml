@@ -1,7 +1,7 @@
 ---
 services:
   db:
-    image: postgres:14
+    image: "postgres:${POSTGRES_VER}"
     command:
       - "postgres"
       - "-c"
