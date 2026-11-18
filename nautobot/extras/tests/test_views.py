@@ -1736,6 +1736,13 @@ class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTest
         # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass (but it SHOULD be!).
         super().test_filter_form_fields_are_working()
 
+    def test_diff_panel_loads_diff_viewer(self):
+        """Make sure the JS code needed to initialize the diff view rendering is present in the page."""
+        instance = self._get_queryset().first()
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+        body = self.client.get(instance.get_absolute_url()).content.decode()
+        self.assertIn("js/editor.js", body)
+
 
 class ComputedFieldTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
