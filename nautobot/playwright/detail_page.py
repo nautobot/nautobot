@@ -92,7 +92,7 @@ class DetailPage(BasePage):
     # -------------------------------------------------------------------------
 
     def _tab_panel(self, tab_id, title):
-        """Locator for the panels titled *title* inside the tab *tab_id*."""
+        """Return the locator for the panels titled *title* inside the tab *tab_id*."""
         return self.panel(title, within=self._tab_pane(tab_id))
 
     def expect_tab_panel_to_contain(self, tab_id, title, text):
