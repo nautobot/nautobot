@@ -174,6 +174,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
             queryset_map = {
+                "archived_object_changes": ChangeLoggedModelsQuery,
                 "tags": TaggableClassesQuery,
                 "job_hooks": ChangeLoggedModelsQuery,
                 "roles": RoleModelsQuery,

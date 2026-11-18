@@ -14,8 +14,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.db.models import Count, Q
 from django.test import override_settings, RequestFactory, tag
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -1735,6 +1737,45 @@ class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTest
         # TODO: there's a baseline breakage here for the `time__gte` and `time__lte` fields, not failing in baseline
         # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass (but it SHOULD be!).
         super().test_filter_form_fields_are_working()
+
+    @override_settings(PAGINATE_COUNT=50)
+    def test_list_objects_linkifies_changed_objects_efficiently(self):
+        self.add_permissions("extras.view_archivedobjectchange")
+
+        # Create 20 ArchivedObjectChanges for one Location, and 20 more for distinct Statuses (sharing a content-type)
+        location = Location.objects.first()
+        for i in range(20):
+            oc = location.to_objectchange("update")
+            oc.request_id = uuid.uuid4()
+            oc.save()
+            ArchivedObjectChange.from_object_change(oc).save()
+            oc = Status.objects.all()[i].to_objectchange("update")
+            oc.request_id = uuid.uuid4()
+            oc.save()
+            ArchivedObjectChange.from_object_change(oc).save()
+
+        # Get the table and assert that the number of queries is not N+1
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertLess(len(captured), settings.PAGINATE_COUNT)
+
+        # Assert that object URLs are included:
+        at_least_one_url = False
+        for record in response.context["table"].data.data[: settings.PAGINATE_COUNT]:
+            changed_obj = None
+            if record.changed_object_type:
+                changed_obj = (
+                    record.changed_object_type.model_class()._base_manager.filter(pk=record.changed_object_id).first()
+                )
+            if changed_obj is not None:
+                try:
+                    self.assertIn(changed_obj.get_absolute_url(), response_body)
+                    at_least_one_url = True
+                except AttributeError:
+                    continue
+        self.assertTrue(at_least_one_url, "No changed-object URLs were present in the table?")
 
     def test_diff_panel_loads_diff_viewer(self):
         """Make sure the JS code needed to initialize the diff view rendering is present in the page."""

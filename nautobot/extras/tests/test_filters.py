@@ -602,6 +602,16 @@ class ArchivedObjectChangeTestCase(FilterTestCases.FilterTestCase):
         ("user_name",),
     )
 
+    def test_changed_object_type(self):
+        content_type_ids = list(ArchivedObjectChange.objects.values_list("changed_object_type_id", flat=True)[:3])
+        params = {"changed_object_type": []}
+        for ctid in content_type_ids:
+            ct = ContentType.objects.get_for_id(ctid)
+            params["changed_object_type"].append(f"{ct.app_label}.{ct.model}")
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(changed_object_type_id__in=content_type_ids)
+        )
+
 
 class ComputedFieldTestCase(FilterTestCases.FilterTestCase):
     queryset = ComputedField.objects.all()

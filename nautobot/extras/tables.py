@@ -76,6 +76,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+from .utils import resolve_object_urls
 
 logger = logging.getLogger(__name__)
 
@@ -1739,13 +1740,24 @@ class ArchivedJobResultTable(JobResultTable):
         )
 
 
+class ArchivedChangedObjectColumn(tables.Column):
+    """
+    Render `object_repr`, linked to the object derived from `changed_object_type_id` and `changed_object_id`, if found.
+    """
+
+    def render(self, record, table):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        url = table.changed_object_urls.get((record.changed_object_type_id, record.changed_object_id))
+        if url:
+            return format_html('<a href="{}">{}</a>', url, record.object_repr)
+        return record.object_repr
+
+
 class ArchivedObjectChangeTable(BaseTable):
     time = tables.DateTimeColumn(linkify=True, short=True)
     action = ChoiceFieldColumn()
     # Not orderable because it isn't a real FK, so it would order by `content_type_id` instead of by ContentType order.
     changed_object_type = tables.Column(verbose_name="Type", orderable=False)
-    # TODO: plain text for now. Linking is added in CONCRETE-3.
-    object_repr = tables.Column(verbose_name="Object")
+    object_repr = ArchivedChangedObjectColumn(verbose_name="Object")
     request_id = tables.TemplateColumn(template_code=ARCHIVEDOBJECTCHANGE_REQUEST_ID, verbose_name="Request ID")
 
     class Meta(BaseTable.Meta):
@@ -1758,6 +1770,22 @@ class ArchivedObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._changed_object_urls = None
+
+    @property
+    def changed_object_urls(self):
+        """Reusable property mapping each row's (changed_object_type_id, changed_object_id) to its object URL."""
+        if self._changed_object_urls is None:
+            rows = self.paginated_rows
+            self._changed_object_urls = resolve_object_urls(
+                (record.changed_object_type_id, record.changed_object_id)
+                for record in (getattr(row, "record", row) for row in rows)
+            )
+
+        return self._changed_object_urls
 
 
 #

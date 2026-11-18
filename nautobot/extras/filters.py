@@ -727,12 +727,31 @@ class ArchivedJobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         ]
 
 
+class ArchivedContentTypeMultipleChoiceFilter(ContentTypeMultipleChoiceFilter):
+    """
+    Filter a content_type_id field or similar (an IntegerField, not a ForeignKey) by "app_label.model" strings.
+
+    Inherits from ContentTypeMultipleChoiceFilter so that it gets the correct (negation-only) filter extensions added
+    by BaseFilterSet without needing to add a dependency on this extras-specific class in nautobot.core.filters.
+    """
+
+    def get_filter_predicate(self, v):
+        app_label, model = v.lower().strip().split(".")
+        return {self.field_name: ContentType.objects.get_by_natural_key(app_label, model).pk}
+
+
 class ArchivedObjectChangeFilterSet(BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "user_name": "icontains",
             "object_repr": "icontains",
         },
+    )
+    changed_object_type = ArchivedContentTypeMultipleChoiceFilter(
+        label="Object Type",
+        field_name="changed_object_type_id",
+        choices=ChangeLoggedModelsQuery().get_choices,
+        conjoined=False,
     )
     change_context = MultipleChoiceFilter(label="Change Context", choices=ObjectChangeEventContextChoices)
     change_context_detail = MultiValueCharFilter(label="Change Context Detail")
