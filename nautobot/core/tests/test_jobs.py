@@ -1465,7 +1465,7 @@ ARCHIVE_BATCH_SIZE = 1000
 SMALL_ARCHIVE_BATCH_SIZE = 2
 
 
-@override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=True)
+@override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=True)
 class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     """
     Test the ArchiveOldRecords system job's handling of ObjectChange records.
@@ -1799,37 +1799,48 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
-    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
-    def test_the_job_is_blocked_while_the_setting_is_disabled(self):
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
+    def test_forcing_cascade_delete_is_blocked_while_the_setting_is_disabled(self):
         old_object_change = self.make_object_change(age_in_days=90)
 
-        job_result = self.run_archive_old_records_job()
+        job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         does_disabled_message_exist = any(
-            "ARCHIVE_OLD_RECORDS_JOB_ENABLED" in message for message in self.get_job_log_messages(job_result)
+            "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED" in message
+            for message in self.get_job_log_messages(job_result)
         )
         self.assertTrue(does_disabled_message_exist)
 
-    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
-    def test_a_superuser_is_also_blocked_while_the_setting_is_disabled(self):
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
+    def test_a_superuser_is_also_blocked_from_forcing_cascade_delete(self):
         self.user.is_superuser = True
         self.user.save()
         old_object_change = self.make_object_change(age_in_days=90)
 
-        job_result = self.run_archive_old_records_job()
+        job_result = self.run_archive_old_records_job(force_cascade_delete=True)
 
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
 
-    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
-    def test_a_dry_run_is_blocked_while_the_setting_is_disabled(self):
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
+    def test_the_job_still_runs_without_forcing_while_the_setting_is_disabled(self):
         old_object_change = self.make_object_change(age_in_days=90)
 
-        job_result = self.run_archive_old_records_job(dryrun=True)
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 1)
+
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
+    def test_a_forced_dry_run_is_blocked_while_the_setting_is_disabled(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job(force_cascade_delete=True, dryrun=True)
 
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
@@ -2011,7 +2022,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
 
 
-@override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=True)
+@override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=True)
 class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
     """
     Test the ArchiveOldRecords system job's handling of JobResult records and their child records.

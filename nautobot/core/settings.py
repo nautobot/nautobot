@@ -927,10 +927,11 @@ CONSTANCE_CONFIG = {
         help_text="Allow users to enable request profiling on their login session.",
         field_type=bool,
     ),
-    "ARCHIVE_OLD_RECORDS_JOB_ENABLED": ConstanceConfigItem(
+    "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED": ConstanceConfigItem(
         default=False,
-        help_text="Allow the Archive Old Records system job to run. While this is `False` the job refuses to "
-        "start, because it deletes the live records it copies into the archive tables.",
+        help_text="Allow the Archive Old Records system job to be run with Force Cascade Delete. While this is "
+        "`False` the job refuses to start when that option is selected, because it deletes related records "
+        "that are never copied into the archive tables. The job itself still runs without the option.",
         field_type=bool,
     ),
     "BANNER_BOTTOM": ConstanceConfigItem(
@@ -1120,7 +1121,7 @@ CONSTANCE_CONFIG = {
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
-    "Archival": ["ARCHIVE_OLD_RECORDS_JOB_ENABLED"],
+    "Archival": ["ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"],
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],

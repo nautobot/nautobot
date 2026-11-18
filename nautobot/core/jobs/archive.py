@@ -195,13 +195,6 @@ class ArchiveOldRecords(Job):
                 "extras.JobConsoleEntry": 7}`. Every archivable model is present, so a model that this run
                 was not asked to archive reports 0 rather than being absent.
         """
-        if not get_settings_or_config("ARCHIVE_OLD_RECORDS_JOB_ENABLED", fallback=False):
-            self.logger.error(
-                "%s is disabled. Set the ARCHIVE_OLD_RECORDS_JOB_ENABLED setting to True to allow it to run.",
-                JOB_NAME,
-            )
-            raise RuntimeError(f"{JOB_NAME} is disabled by the ARCHIVE_OLD_RECORDS_JOB_ENABLED setting")
-
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
 
         # Every check below asks whether a label is in `selected_models`, so a name this job does not
@@ -220,6 +213,16 @@ class ArchiveOldRecords(Job):
         # Permissions are checked up front in order to loudly fail for a clearer user experience
         if self.user is None:
             raise PermissionDenied(f"{JOB_NAME} deletes records and requires a user, but this run has none")
+        if force_cascade_delete and not get_settings_or_config(
+            "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED", fallback=False
+        ):
+            self.logger.error(
+                "Force Cascade Delete is disabled. Set the ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED "
+                "setting to True to allow it."
+            )
+            raise RuntimeError(
+                "Force Cascade Delete is disabled by the ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED setting"
+            )
         # ----------------------------------------
         # ObjectChange
         if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.delete_objectchange"):
