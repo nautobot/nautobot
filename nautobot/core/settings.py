@@ -927,6 +927,12 @@ CONSTANCE_CONFIG = {
         help_text="Allow users to enable request profiling on their login session.",
         field_type=bool,
     ),
+    "ARCHIVE_OLD_RECORDS_JOB_ENABLED": ConstanceConfigItem(
+        default=False,
+        help_text="Allow the Archive Old Records system job to run. While this is `False` the job refuses to "
+        "start, because it deletes the live records it copies into the archive tables.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
@@ -1114,6 +1120,7 @@ CONSTANCE_CONFIG = {
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Archival": ["ARCHIVE_OLD_RECORDS_JOB_ENABLED"],
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],

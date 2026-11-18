@@ -4,10 +4,11 @@ import math
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
-from django.db.models import PROTECT, Q, RESTRICT
+from django.db.models import DO_NOTHING, PROTECT, Q, RESTRICT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import BooleanVar, DryRunVar, IntegerVar, Job, MultiChoiceVar
 from nautobot.extras.models import (
@@ -93,7 +94,8 @@ def _filter_out_records_whose_relations_block_deletion(
         queryset (QuerySet): The records being considered for archival.
         model (Model): The live model the queryset selects from.
         preapproved_models_that_can_be_deleted (tuple): These models are archived with the provided `model`, or are
-            approved to be deleted alongside it, whatever their CASCADE, PROTECT, or RESTRICT delete option.
+            approved to be deleted alongside it, whatever their CASCADE, DO_NOTHING, PROTECT, or RESTRICT
+            delete option.
         force_cascade_delete (bool): A user-override that allows the ability to force related records to be deleted.
 
     Returns:
@@ -107,8 +109,14 @@ def _filter_out_records_whose_relations_block_deletion(
         if accessor_name is None:
             continue
 
-        relation_protects_record = getattr(related_object, "on_delete", None) in (PROTECT, RESTRICT)
-        if relation_protects_record or not force_cascade_delete:
+        on_delete = getattr(related_object, "on_delete", None)
+        is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
+        if is_relationship_guarded:
+            # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
+            queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
+        if not is_relationship_guarded and not force_cascade_delete:
+            # CASCADE deletion would occur, but execution has not permitted CASCADE delete to happen.
+            # Effectively filtering only records that have nothing to CASCADE.
             queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
 
     if not force_cascade_delete:
@@ -152,7 +160,7 @@ class ArchiveOldRecords(Job):
     force_cascade_delete = BooleanVar(
         description=(
             "Archive records even when deleting them would cascade into related objects. "
-            "Relations that protect the record are never overridden. Requires a superuser."
+            "Relations that protect the record are never overridden."
         ),
         label="Force Cascade Delete",
         default=False,
@@ -186,6 +194,13 @@ class ArchiveOldRecords(Job):
                 "extras.JobConsoleEntry": 7}`. Every archivable model is present, so a model that this run
                 was not asked to archive reports 0 rather than being absent.
         """
+        if not get_settings_or_config("ARCHIVE_OLD_RECORDS_JOB_ENABLED", fallback=False):
+            self.logger.error(
+                "%s is disabled. Set the ARCHIVE_OLD_RECORDS_JOB_ENABLED setting to True to allow it to run.",
+                JOB_NAME,
+            )
+            raise RuntimeError(f"{JOB_NAME} is disabled by the ARCHIVE_OLD_RECORDS_JOB_ENABLED setting")
+
         selected_models = set(selected_models_to_archive or ARCHIVAL_ORDER)
 
         # Every check below asks whether a label is in `selected_models`, so a name this job does not
@@ -204,27 +219,37 @@ class ArchiveOldRecords(Job):
         # Permissions are checked up front in order to loudly fail for a clearer user experience
         if self.user is None:
             raise PermissionDenied(f"{JOB_NAME} deletes records and requires a user, but this run has none")
-        if force_cascade_delete and not self.user.is_superuser:
-            self.logger.error('User "%s" is not a superuser and cannot force cascading deletes', self.user)
-            raise PermissionDenied("Forcing cascading deletes requires a superuser")
         # ----------------------------------------
         # ObjectChange
         if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
             raise PermissionDenied("User does not have delete permissions for ObjectChange records")
+        if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.add_archivedobjectchange"):
+            self.logger.error('User "%s" does not have permission to add ArchivedObjectChange records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedObjectChange records")
         # ----------------------------------------
         # JobResult/JobConsoleEntry/JobLogEntry
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobresult"):
             self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobResult records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjobresult"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobResult records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobResult records")
         # Cannot select JobConsoleEntry or JobLogEntry in the UI. These are derived from the selection
         # of JobResult
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobconsoleentry"):
             self.logger.error('User "%s" does not have permission to delete JobConsoleEntry records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobConsoleEntry records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjobconsoleentry"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobConsoleEntry records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobConsoleEntry records")
+        # -----
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_joblogentry"):
             self.logger.error('User "%s" does not have permission to delete JobLogEntry records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobLogEntry records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjoblogentry"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobLogEntry records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobLogEntry records")
 
         archived_record_counts = {
             OBJECT_CHANGE_LABEL: 0,

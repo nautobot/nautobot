@@ -7,6 +7,7 @@ from unittest import mock
 import uuid
 import weakref
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -1464,6 +1465,7 @@ ARCHIVE_BATCH_SIZE = 1000
 SMALL_ARCHIVE_BATCH_SIZE = 2
 
 
+@override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=True)
 class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
     """
     Test the ArchiveOldRecords system job's handling of ObjectChange records.
@@ -1479,6 +1481,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         # The job refuses to run without this, because archiving deletes the records it copies.
         self.add_permissions("extras.delete_objectchange")
+        self.add_permissions("extras.add_archivedobjectchange")
 
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing
@@ -1796,6 +1799,41 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(job_result))
 
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
+    def test_the_job_is_blocked_while_the_setting_is_disabled(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_disabled_message_exist = any(
+            "ARCHIVE_OLD_RECORDS_JOB_ENABLED" in message for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_disabled_message_exist)
+
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
+    def test_a_superuser_is_also_blocked_while_the_setting_is_disabled(self):
+        self.user.is_superuser = True
+        self.user.save()
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+
+    @override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=False)
+    def test_a_dry_run_is_blocked_while_the_setting_is_disabled(self):
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+
     def test_a_user_without_delete_permission_fails_the_job(self):
         """`restrict()` alone would archive nothing and still report success, so the job asks outright."""
         self.user.object_permissions.clear()
@@ -1914,20 +1952,6 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
             )
             self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
 
-    def test_forcing_cascade_delete_requires_a_superuser(self):
-        old_object_change = self.make_object_change(age_in_days=90)
-
-        job_result = self.run_archive_old_records_job(force_cascade_delete=True)
-
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
-        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
-        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
-        does_superuser_message_exist = any(
-            "is not a superuser and cannot force cascading deletes" in message
-            for message in self.get_job_log_messages(job_result)
-        )
-        self.assertTrue(does_superuser_message_exist)
-
     def test_protecting_relations_hold_records_hot_even_when_forced(self):
         protected_manufacturer = Manufacturer.objects.create(name="Archive Protected Probe")
         DeviceType.objects.create(manufacturer=protected_manufacturer, model="Archive Probe Model")
@@ -1987,6 +2011,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertTrue(self.is_handle_deleted_object_connected_to_pre_delete_signal())
 
 
+@override_config(ARCHIVE_OLD_RECORDS_JOB_ENABLED=True)
 class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
     """
     Test the ArchiveOldRecords system job's handling of JobResult records and their child records.
@@ -2008,6 +2033,9 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.add_permissions("extras.delete_jobresult")
         self.add_permissions("extras.delete_joblogentry")
         self.add_permissions("extras.delete_jobconsoleentry")
+        self.add_permissions("extras.add_archivedjobresult")
+        self.add_permissions("extras.add_archivedjoblogentry")
+        self.add_permissions("extras.add_archivedjobconsoleentry")
 
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing. Deleting the parents takes their log and console entries with them.
@@ -2411,6 +2439,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         self.user.object_permissions.clear()
         self.add_permissions("extras.delete_jobresult")
+        self.add_permissions("extras.add_archivedjobresult")
         log_entry_count = 3
         console_entry_count = 2
         old_job_result = self.make_job_result(
