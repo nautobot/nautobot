@@ -72,6 +72,9 @@ The IP address and interface of an existing IP Address Assignment can no longer 
 
 As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
+<!-- pyml disable-num-lines 2 blanks-around-headers -->
+<!-- towncrier release notes start -->
+
 ## v3.3.0a2 (2026-11-13)
 
 ### Added in v3.3.0a2
