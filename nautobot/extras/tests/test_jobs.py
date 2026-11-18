@@ -1182,7 +1182,7 @@ class JobTransactionTest(TransactionTestCase):
         self.assertEqual(job_result_2.date_done, latest_job_result.date_done)
 
     def test_job_profiling(self):
-        module = "profiling"
+        module = "profiling_job"
         name = "TestProfilingJob"
 
         job_result = create_job_result_and_run_job(module, name, profile=True)
