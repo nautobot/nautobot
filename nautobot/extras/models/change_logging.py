@@ -103,10 +103,14 @@ class ObjectChangeSnapshotsMixin:
         Returns:
             (QuerySet): Records applying to the same "changed object", excluding this record itself.
         """
-        related_changes = type(self).objects.filter(
-            changed_object_type_id=self.changed_object_type_id,
-            changed_object_id=self.changed_object_id,
-        ).exclude(pk=self.pk)
+        related_changes = (
+            type(self)
+            .objects.filter(
+                changed_object_type_id=self.changed_object_type_id,
+                changed_object_id=self.changed_object_id,
+            )
+            .exclude(pk=self.pk)
+        )
         if user is not None:
             related_changes = related_changes.restrict(user, permission)
         return related_changes
