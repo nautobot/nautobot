@@ -6,37 +6,75 @@ This document describes all new features and changes in Nautobot 3.3.
 
 ### Administrators
 
-TODO
+#### Change Records Are Created Only When a Field Value Changes
+
+Saving an object without changing any of its field values no longer creates a change record or triggers webhooks, job hooks, or events. If an integration depends on these, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../user-guide/administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False`.
+
+### App Developers
+
+`Webhook.check_for_conflicts()`, `JobHook.check_for_conflicts()`, and `SeleniumTestCase.assertNoAccessibilityViolations()` have been removed, and static files under `drf_spectacular_sidecar/` are no longer available. Models can opt out of the import and export Jobs by setting `is_importable_model` or `is_exportable_model` to `False`.
 
 ## Release Overview
 
 ### Added
 
-TODO
+#### Enhanced Import and Export
+
+Import and export now support JSON and YAML in addition to CSV. Users can choose which fields to export and in what order, and an import can update (commonly referred to as upsert) existing records as well as create new ones, matching rows on fields such as a device's name. Both actions now run in a job modal from the object list view. For details, see [Importing and Exporting Objects](../user-guide/feature-guides/import-and-export.md).
+
+#### Conditions on Webhooks and Job Hooks
+
+Webhooks and job hooks can now have [conditions](../user-guide/feature-guides/conditions.md), so a hook runs only for the changes you care about, such as a device status changing from "Staged" to "Active". Conditions are built from presets or written as raw Jinja2 expressions.
+
+#### UI Updates
+
+Continous UI improvements include:
+
+- Django Messages now appear as toasts that close on their own.
+- Object list rows can be expanded to show an overview of the object.
+- Any page can be added to the navbar favorites.
+- Favorites can be ordered.
+- Sticky headers on Object list views.
+- Multiple custom links are grouped into a single dropdown.
+
+#### Change Log and Job Result Archiving
+
+The new "Archive Old Records" system Job finds change records and Job results that are older than a given number of days. It moves them, together with the Job results' log and console entries, out of the main tables and into separate archive tables, which are designed so they can later be moved to a separate database. Archiving keeps the main tables small and fast while preserving the full history for audits. Archived records have their own views, APIs, and permissions.
+
+#### REST API Rate Limiting
+
+Nautobot can now [rate limit REST API requests](../user-guide/administration/configuration/rate-limiting.md) per API token, based on a user definable cost of each request. Rate limiting is disabled by default and supports report mode to get started or track.
+
+#### Request Performance Measurements
+
+Nautobot can now report request and database query durations in a `Server-Timing` response header and in Prometheus metrics. See [Request Performance Measurements](../user-guide/administration/configuration/request-performance-measurements.md).
+
+#### `IPAddressAssignment` Records Can No Longer Be Edited
+
+An existing "IP Address Assignment" record can no longer be changed in place, including through the REST API. Delete the assignment and create a new one instead. Assigning IP addresses through the UI is unaffected by this change.
+
+#### Other Additions
+
+- Device Types have optional depth and weight fields, and Module Types have an optional weight field.
+- A [Playwright](../development/core/playwright-testing.md)-based framework for browser tests is now included.
 
 ### Changed
 
-TODO
+#### Unchanged Saves Are No Longer Logged
 
-#### Enhanced Export/Import
+A save that changes none of an object's field values no longer creates a change record or triggers webhooks, job hooks, or events. See [Saves That Change Nothing](../user-guide/platform-functionality/change-logging.md#saves-that-change-nothing).
 
-The object export/import functionality has been enhanced in several ways:
+#### IP Address Assignments Can No Longer Be Edited
 
-- JSON and YAML formats are now supported in addition to the existing CSV format support.
-- Imports can now update existing records as well as create existing records, when requested ("upsert" functionality).
-- CSV export/import now includes a metadata header row, and includes support for a wider range of many-to-many fields.
-
-For more details, refer to the [import and export documentation](../user-guide/feature-guides/import-and-export.md).
+The IP address and interface of an existing IP Address Assignment can no longer be changed, including through the REST API. Delete the assignment and create a new one instead.
 
 ### Dependencies
+
+As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 #### Added Python 3.15 Support
 
 Nautobot 3.3 supports Python 3.15.
-
-#### Removed Python 3.10 Support
-
-As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
