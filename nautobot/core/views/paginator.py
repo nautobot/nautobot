@@ -6,15 +6,26 @@ from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAUL
 from nautobot.core.utils import config
 
 
+def coerce_paginate_count(value):
+    """
+    Return `value` as a positive integer page size, or None if it isn't a valid one.
+
+    Page sizes may come from stored data (such as a SavedView's `config`) that predates validation or was written
+    directly to the database, so this must never raise. Booleans are rejected even though they are `int` instances.
+    """
+    if isinstance(value, bool):
+        return None
+    try:
+        value = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return value if value > 0 else None
+
+
 class EnhancedPaginator(Paginator):
     def __init__(self, object_list, per_page, **kwargs):
-        try:
-            per_page = int(per_page)
-            if per_page < 1:
-                per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
-        except (TypeError, ValueError, OverflowError):
-            # TypeError covers non-scalar values (dict, list, None) and OverflowError covers infinite floats,
-            # either of which might come from a malformed SavedView config or user preference.
+        per_page = coerce_paginate_count(per_page)
+        if per_page is None:
             per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
         max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
@@ -44,22 +55,6 @@ class EnhancedPage(Page):
             page_list.insert(page_list.index(i), False)
 
         return page_list
-
-
-def coerce_paginate_count(value):
-    """
-    Return `value` as a positive integer page size, or None if it isn't a valid one.
-
-    Page sizes may come from stored data (such as a SavedView's `config`) that predates validation or was written
-    directly to the database, so this must never raise. Booleans are rejected even though they are `int` instances.
-    """
-    if isinstance(value, bool):
-        return None
-    try:
-        value = int(value)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    return value if value > 0 else None
 
 
 def get_paginate_count(request, saved_view=None, save_user_config=True):

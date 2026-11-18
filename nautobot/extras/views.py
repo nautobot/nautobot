@@ -3246,10 +3246,9 @@ class SavedViewUIViewSet(
             derived_count = None
             if derived_instance and isinstance(derived_instance.config, dict):
                 derived_count = coerce_paginate_count(derived_instance.config.get("pagination_count", None))
-            if derived_count is not None:
-                pagination_count = derived_count
-            else:
-                pagination_count = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            pagination_count = derived_count or get_settings_or_config(
+                "PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT
+            )
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = param_dict.get("sort", [])
         if not sort_order:

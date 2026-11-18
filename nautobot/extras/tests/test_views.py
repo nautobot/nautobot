@@ -3715,6 +3715,37 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=50)
+    def test_create_saved_view_pagination_count_from_derived_view(self):
+        """Without `per_page`, copy a valid `pagination_count` from the derived view, else use `PAGINATE_COUNT`."""
+        view_name = "dcim:location_list"
+        self.add_permissions("dcim.view_location")
+        create_url = self.get_view_url_for_saved_view(action="create")
+        # `sort`, a filter, and `table_changes_pending` keep the create view from reading other keys of the
+        # derived view's `config`, so that only the `pagination_count` handling is exercised.
+        base_params = "&status=active&sort=name&table_changes_pending=true"
+        cases = [
+            ("valid", {"pagination_count": 25}, 25),
+            ("missing", {}, 50),
+            ("malformed", {"pagination_count": {"a": 1}}, 50),
+            ("non-dict config", [1, 2], 50),
+        ]
+        for label, derived_config, expected in cases:
+            with self.subTest(label):
+                # `objects.create()` skips `clean()`, simulating malformed data already in the database.
+                derived = SavedView.objects.create(
+                    owner=self.user, name=f"Derived {label}", view=view_name, config=derived_config
+                )
+                name = f"New from {label}"
+                data = post_data({"name": name, "view": view_name, "params": f"saved_view={derived.pk}{base_params}"})
+                self.assertHttpStatus(self.client.post(create_url, data), 302)
+                self.assertEqual(SavedView.objects.get(name=name).config["pagination_count"], expected)
+
+        with self.subTest("no derived view"):
+            data = post_data({"name": "New without derived", "view": view_name, "params": base_params.lstrip("&")})
+            self.assertHttpStatus(self.client.post(create_url, data), 302)
+            self.assertEqual(SavedView.objects.get(name="New without derived").config["pagination_count"], 50)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_delete_saved_view_as_different_user(self):
         instance = self._get_queryset().first()
