@@ -1777,6 +1777,13 @@ class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTest
                     continue
         self.assertTrue(at_least_one_url, "No changed-object URLs were present in the table?")
 
+    def test_diff_panel_loads_diff_viewer(self):
+        """Make sure the JS code needed to initialize the diff view rendering is present in the page."""
+        instance = self._get_queryset().first()
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+        body = self.client.get(instance.get_absolute_url()).content.decode()
+        self.assertIn("js/editor.js", body)
+
 
 class ComputedFieldTestCase(
     ViewTestCases.BulkDeleteObjectsViewTestCase,
