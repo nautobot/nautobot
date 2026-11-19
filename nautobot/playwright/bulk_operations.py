@@ -77,12 +77,7 @@ class BulkOperationsTestCase:
 
     @pytest.fixture(autouse=True)
     def _setup(self, auth_page, base_url, create_object, status_for, api_count):
-        """Create this test's records, check their counts, and open the list view searched for them.
-
-        The list view must show all of this test's records. `expect_row_count(0)` after a delete
-        also passes when the row selector matches no rows at all, so this check proves that the
-        selector matches rows.
-        """
+        """Create this test's records, check their counts, and open the list view searched for them."""
         self.prefix = unique_name()
         self.endpoint = self.list_path.lstrip("/")
         self.filter_by = {field: value.format(prefix=self.prefix) for field, value in self.model_filter_by.items()}
@@ -101,6 +96,7 @@ class BulkOperationsTestCase:
         self.list_page = self.page_class(auth_page, base_url)
         self.job_result_page = JobResultPage(auth_page, base_url)
         self.go_to_model_list_page()
+        # expect_row_count(0) after a delete also passes when the row selector matches nothing, so check here that it matches rows.
         self.list_page.expect_row_count(self.expected_counts["all"])
 
     def go_to_model_list_page(self, **params):
