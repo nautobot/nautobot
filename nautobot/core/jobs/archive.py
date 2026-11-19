@@ -137,8 +137,8 @@ def _exclude_records_whose_relations_block_deletion(
                     related_model_name,
                     related_model_name,
                 )
-            # CASCADE deletion would occur, but execution has not permitted CASCADE delete to happen.
-            # Effectively filtering only records that have nothing to CASCADE.
+            # Deleting these records would cascade into related records, and Force Cascade Delete was not
+            # selected. Keep only the records that no related record references.
             queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
 
     if not force_cascade_delete:
