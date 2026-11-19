@@ -1817,6 +1817,9 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
     @override_config(ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED=False)
     def test_a_superuser_is_also_blocked_from_forcing_cascade_delete(self):
+        self.user.is_superuser = True
+        self.user.save()
+
         old_object_change = self.make_object_change(age_in_days=90)
 
         job_result = self.run_archive_old_records_job(force_cascade_delete=True)
@@ -1843,6 +1846,42 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+
+    def test_an_ordinary_user_holding_the_granted_permissions_archives_records(self):
+        """
+        The job has to work for a user who holds the permissions outright rather than by being a superuser.
+
+        `create_job_result_and_run_job` passes `is_superuser` only as a `get_or_create` default, and
+        `setUpNautobot` has already created this user, so that default never applies. Asserted here so a
+        change to either helper cannot quietly turn every archive test into a superuser run that would
+        pass no matter what the permission checks did.
+        """
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(job_result.user.pk, self.user.pk)
+        self.assertFalse(job_result.user.is_superuser)
+        self.assertFalse(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 1)
+
+    def test_an_ordinary_user_without_the_archive_add_permission_fails_the_job(self):
+        """The archived copy is written on the user's behalf, so the run needs their permission to add it."""
+        self.remove_permissions("extras.add_archivedobjectchange")
+        old_object_change = self.make_object_change(age_in_days=90)
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(job_result.user.is_superuser)
+        self.assertTrue(ObjectChange.objects.filter(pk=old_object_change.pk).exists())
+        self.assertEqual(ArchivedObjectChange.objects.count(), 0)
+        does_permission_message_exist = any(
+            "does not have permission to add ArchivedObjectChange records" in message
+            for message in self.get_job_log_messages(job_result)
+        )
+        self.assertTrue(does_permission_message_exist)
 
     def test_a_user_without_delete_permission_fails_the_job(self):
         """`restrict()` alone would archive nothing and still report success, so the job asks outright."""

@@ -938,9 +938,11 @@ CONSTANCE_CONFIG = {
     ),
     "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED": ConstanceConfigItem(
         default=False,
-        help_text="Allow the Archive Old Records system job to be run with Force Cascade Delete. While this is "
-        "`False` the job refuses to start when that option is selected, because it deletes related records "
-        "that are never copied into the archive tables. The job itself still runs without the option.",
+        help_text="Allows the Archive Old Records system job to be run with Force Cascade Delete. A Force Cascade"
+        " Delete means that relational records detected will also be deleted without being persisted in the archive"
+        " table. A good example of this is FileProxy records. When this is `False` the job will run, however any"
+        " records with relational records that set a delete option of cascading, protected, or restrictedrecords will"
+        " not be archived.",
         field_type=bool,
     ),
     "BANNER_BOTTOM": ConstanceConfigItem(

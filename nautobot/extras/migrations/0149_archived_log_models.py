@@ -84,7 +84,7 @@ class Migration(migrations.Migration):
                 "ordering": ["-date_created"],
                 "get_latest_by": "date_created",
                 "abstract": False,
-                "default_permissions": ("view",),
+                "default_permissions": ("view", "add"),
                 "indexes": [models.Index(fields=["status", "-date_created"], name="extras_ajr_statrcreate_idx")],
             },
         ),
@@ -134,7 +134,7 @@ class Migration(migrations.Migration):
                 "ordering": ["-time"],
                 "get_latest_by": "time",
                 "abstract": False,
-                "default_permissions": ("view",),
+                "default_permissions": ("view", "add"),
                 "indexes": [
                     models.Index(
                         fields=["changed_object_type_id", "changed_object_id"], name="extras_aoc_changed_obj_idx"
@@ -175,7 +175,7 @@ class Migration(migrations.Migration):
                 "ordering": ["created"],
                 "get_latest_by": "created",
                 "abstract": False,
-                "default_permissions": ("view",),
+                "default_permissions": ("view", "add"),
                 "indexes": [models.Index(fields=["job_result", "created"], name="extras_ajoblog_jr_created_idx")],
             },
         ),
@@ -206,7 +206,7 @@ class Migration(migrations.Migration):
                 "ordering": ["timestamp"],
                 "get_latest_by": "timestamp",
                 "abstract": False,
-                "default_permissions": ("view",),
+                "default_permissions": ("view", "add"),
                 "indexes": [models.Index(fields=["job_result", "timestamp"], name="extras_ajobconsole_jr_ts_idx")],
             },
         ),
