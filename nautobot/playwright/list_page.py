@@ -314,7 +314,7 @@ class ListPage(BasePage):
         return self._wait_for_job_result("Confirm")
 
     def _wait_for_job_result(self, button) -> str:
-        """Wait until clicking *button* redirects the browser to a job result page, and return the job result's ID."""
+        """Wait until the browser starts loading a job result page after the caller clicks *button*, and return the job result's ID."""
         try:
             self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
         except PlaywrightTimeoutError:
