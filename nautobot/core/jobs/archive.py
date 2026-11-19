@@ -87,7 +87,7 @@ def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
         current_record_batch = list(next_batch_of_records)
 
 
-def _filter_out_records_whose_relations_block_deletion(
+def _exclude_records_whose_relations_block_deletion(
     queryset, model, preapproved_models_that_can_be_deleted, force_cascade_delete
 ):
     """
@@ -187,8 +187,10 @@ class ArchiveOldRecords(Job):
     )
     force_cascade_delete = BooleanVar(
         description=(
-            "Archive records even when deleting them would cascade into related objects. "
-            "Relations that protect the record are never overridden."
+            "Allows the archival of records that will result in automatic `cascading` deletion"
+            " of related records that are not archivable. This may result in data loss! It is"
+            " recommended to run the job initially without enabling this option, and then"
+            " carefully review any records that the initial run skipped."
         ),
         label="Force Cascade Delete",
         default=False,
@@ -337,7 +339,7 @@ class ArchiveOldRecords(Job):
         archival_candidate_object_changes = ObjectChange.objects.restrict(self.user, "delete").filter(
             time__lt=threshold_timestamp
         )
-        object_changes_to_archive = _filter_out_records_whose_relations_block_deletion(
+        object_changes_to_archive = _exclude_records_whose_relations_block_deletion(
             archival_candidate_object_changes,
             ObjectChange,
             (),
@@ -494,7 +496,7 @@ class ArchiveOldRecords(Job):
             )
             .select_related("user")
         )
-        job_results_to_archive = _filter_out_records_whose_relations_block_deletion(
+        job_results_to_archive = _exclude_records_whose_relations_block_deletion(
             archival_candidate_job_results,
             JobResult,
             (JobLogEntry, JobConsoleEntry),
@@ -515,13 +517,13 @@ class ArchiveOldRecords(Job):
             # instead of reporting zero for records it would in fact archive.
             # Restricted like the real path below, so the dry run does not promise to archive entries that
             # a real run would not be allowed to see.
-            job_log_entry_count = _filter_out_records_whose_relations_block_deletion(
+            job_log_entry_count = _exclude_records_whose_relations_block_deletion(
                 JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
                 JobLogEntry,
                 (),
                 force_cascade_delete,
             ).count()
-            job_console_entry_count = _filter_out_records_whose_relations_block_deletion(
+            job_console_entry_count = _exclude_records_whose_relations_block_deletion(
                 JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
                 JobConsoleEntry,
                 (),
@@ -697,7 +699,7 @@ class ArchiveOldRecords(Job):
         archival_candidate_job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(
             job_result_id__in=job_result_pks
         )
-        job_log_entries = _filter_out_records_whose_relations_block_deletion(
+        job_log_entries = _exclude_records_whose_relations_block_deletion(
             archival_candidate_job_log_entries,
             JobLogEntry,
             (),
@@ -760,7 +762,7 @@ class ArchiveOldRecords(Job):
         archival_candidate_job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
             job_result_id__in=job_result_pks
         )
-        job_console_entries = _filter_out_records_whose_relations_block_deletion(
+        job_console_entries = _exclude_records_whose_relations_block_deletion(
             archival_candidate_job_console_entries,
             JobConsoleEntry,
             (),
