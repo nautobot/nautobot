@@ -1,1 +1,1 @@
-Removed the legacy pattern (`/<list_url/?export=<export-template-name>`, deprecated since v2.1) for exporting a list of records via an export-template without running the Export Object List job. 
+Removed the legacy pattern (`/<list_url>/?export=<export-template-name>`, deprecated since v2.1) for exporting a list of records via an export-template without running the Export Object List job.
