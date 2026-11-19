@@ -31,9 +31,9 @@ def import_serializer_context(user):
     """The serializer context an import deserializes under.
 
     Carries a request, built as `web_request_context` builds one, because some serializers take the owning
-    user from it rather than from the data -- `TokenSerializer` and `SavedViewSerializer` both read
-    `context["request"].user`, and without it neither model can be imported at all. A Job knows who is
-    running it, so there is a real answer to give them.
+    user from it rather than from the data -- `SavedViewSerializer` reads `context["request"].user`, and
+    without it SavedViews can't be imported at all. A Job knows who is running it, so there is a real
+    answer to give them.
     """
     request = mock_wsgi_request(user=user, SERVER_NAME="import_objects")
     return {"request": request}
@@ -438,9 +438,9 @@ def peek_import_model(text, import_format):
     """The `model` an import file declares for itself, or None if it declares none.
 
     Read without a serializer, deliberately: choosing a serializer is what knowing the model is *for*, so
-    the parsers cannot answer this -- they are handed a serializer before they read a byte. The Job
-    therefore still requires its `content_type`, and cross-checks the file's declaration against it; this
-    is for callers that want the file to supply the answer, such as the `import_objects` command.
+    the parsers cannot answer this -- they are handed a serializer before they read a byte. The
+    ImportObjects Job calls this only when it is given no `content_type`. When it is given one, it
+    checks the file's declared model against it after parsing instead.
 
     Args:
         text (str): The decoded file contents.

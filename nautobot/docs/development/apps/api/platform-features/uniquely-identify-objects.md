@@ -55,6 +55,9 @@ In the Python ORM, objects can be retrieved using the `get_by_natural_key()` met
 !!! info
     See the [documentation on natural keys](../../../../development/core/natural-keys.md) for more information on Nautobot's natural key implementation.
 
+!!! tip "Natural keys in import and export"
+    A model's natural key also decides how its records are matched to existing objects when [importing](../../../../user-guide/feature-guides/import-and-export.md#match-fields). If your model's serializer fields don't line up with its natural key, see [Natural Keys and Export/Import Match Fields](../../../../development/core/natural-keys.md#natural-keys-and-exportimport-match-fields) for the serializer `Meta` attributes and methods that adjust this.
+
 ## Customizing Natural Keys
 
 Nautobot provides settings for overriding the default behavior of the natural key for some models. These allow the natural key to be formed by a single field instead of a combination of fields. For more information, see the documentation for the settings listed below.
