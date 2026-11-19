@@ -2500,6 +2500,43 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
         self.assertEqual(error_messages, [])
 
+    def test_a_job_result_is_held_back_when_one_of_its_log_entries_is(self):
+        """
+        Deleting the parent takes its entries with it whether or not they were archived first.
+
+        An entry that cannot be archived must therefore hold its job result back too, or the parent
+        delete destroys the entry with no archived copy of it. Where the entry is held by a PROTECT or
+        RESTRICT relation the delete raises `ProtectedError` instead, failing the whole batch.
+        """
+        blocked_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+        clean_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+        blocked_log_entry = JobLogEntry.objects.filter(job_result_id=blocked_job_result.pk).first()
+
+        metadata_type = MetadataType.objects.create(
+            name="Archive Blocked Child Probe", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        job_log_entry_content_type = ContentType.objects.get_for_model(JobLogEntry)
+        metadata_type.content_types.set([job_log_entry_content_type])
+        ObjectMetadata.objects.create(
+            metadata_type=metadata_type,
+            assigned_object_type=job_log_entry_content_type,
+            assigned_object_id=blocked_log_entry.pk,
+            scoped_fields=["message"],
+            _value="probe",
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        # The blocked entry and its parent are both still live, and neither reached the archive.
+        self.assertTrue(JobResult.objects.filter(pk=blocked_job_result.pk).exists())
+        self.assertTrue(JobLogEntry.objects.filter(pk=blocked_log_entry.pk).exists())
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=blocked_job_result.pk).exists())
+        self.assertFalse(ArchivedJobLogEntry.objects.filter(pk=blocked_log_entry.pk).exists())
+        # The job result that holds nothing blocking is unaffected.
+        self.assertFalse(JobResult.objects.filter(pk=clean_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=clean_job_result.pk).exists())
+
     def test_a_user_without_child_delete_permission_fails_the_job(self):
         """
         The entries are restricted, and deleting their job result cascades them away regardless.
