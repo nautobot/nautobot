@@ -21,10 +21,18 @@ on:
         required: false
         type: string
         default: "develop"
+    secrets:
+      artifactory_username:
+        required: false
+      artifactory_password:
+        required: false
 
 env:
   PYTHON_VERSION: "3.12" # maximum version currently supported by both develop and ltm-2.4
   APP_NAME: ${{ inputs.app_name || inputs.plugin_name }}
+  # Poetry uses these two variables to log in to the private "artifactory-pypi" Poetry source. Poetry ignores them for apps that do not declare that source.
+  POETRY_HTTP_BASIC_ARTIFACTORY_PYPI_USERNAME: "${{ secrets.artifactory_username }}"
+  POETRY_HTTP_BASIC_ARTIFACTORY_PYPI_PASSWORD: "${{ secrets.artifactory_password }}"
 
 jobs:
   build:
@@ -76,6 +84,10 @@ jobs:
             NAUTOBOT_VER=${{ inputs.nautobot_branch }}
             PYTHON_VER=${{ env.PYTHON_VERSION }}
             CI=true
+          # When a caller does not pass secrets, the action logs an "is not a valid secret" warning for each secret and skips that secret.
+          secrets: |
+            "artifactory_username=${{ secrets.artifactory_username }}"
+            "artifactory_password=${{ secrets.artifactory_password }}"
           outputs: "type=docker,dest=/tmp/nautobot_${{ inputs.nautobot_branch }}.tar"
       - name: Upload docker image artifact
         uses: actions/upload-artifact@v4
