@@ -19,6 +19,7 @@ services:
       retries: 3
       test: "pg_isready -d $$POSTGRES_DB -U $$POSTGRES_USER"
 volumes:
+  "pgdata14_nautobot":
   "pgdata15_nautobot":
   "pgdata16_nautobot":
   "pgdata17_nautobot":
