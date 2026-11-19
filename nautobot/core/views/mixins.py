@@ -65,7 +65,7 @@ from nautobot.core.views.utils import (
 from nautobot.data_validation.tables import DataComplianceTableTab
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.forms import NoteForm
-from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
+from nautobot.extras.models import Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import (
     bulk_delete_with_bulk_change_logging,
@@ -884,24 +884,9 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
 
     # 3.0 TODO: remove, irrelevant after #4746
     def check_for_export(self, request, model, content_type):
-        # Check for export template rendering
-        queryset = self.filter_queryset(self.get_queryset())
-        if request.GET.get("export"):
-            et = get_object_or_404(
-                ExportTemplate,
-                content_type=content_type,
-                name=request.GET.get("export"),
-            )
-            try:
-                return et.render_to_response(queryset)
-            except Exception as e:
-                messages.error(
-                    request,
-                    f"There was an error rendering the selected export template ({et.name}): {e}",
-                )
-
         # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):
+        queryset = self.filter_queryset(self.get_queryset())
+        if "export" in request.GET and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"nautobot_{queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'

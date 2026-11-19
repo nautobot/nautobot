@@ -71,7 +71,7 @@ from nautobot.core.views.utils import (
     prepare_cloned_fields,
     view_changes_not_saved,
 )
-from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.models import SavedView, UserSavedViewAssociation
 from nautobot.extras.utils import FeatureQuery, get_saved_view_filter_params, get_saved_view_or_none
 
 
@@ -314,23 +314,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             if self.filterset_form is not None:
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
-        # Check for export template rendering
-        if request.GET.get("export"):  # 3.0 TODO: remove, irrelevant after #4746
-            et = get_object_or_404(
-                ExportTemplate,
-                content_type=content_type,
-                name=request.GET.get("export"),
-            )
-            try:
-                return et.render_to_response(self.queryset)
-            except Exception as e:
-                messages.error(
-                    request,
-                    f"There was an error rendering the selected export template ({et.name}): {e}",
-                )
-
         # Check for YAML export support
-        elif "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
+        if "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
