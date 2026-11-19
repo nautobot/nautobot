@@ -84,7 +84,8 @@ jobs:
             NAUTOBOT_VER=${{ inputs.nautobot_branch }}
             PYTHON_VER=${{ env.PYTHON_VERSION }}
             CI=true
-          # When a caller does not pass secrets, the action logs an "is not a valid secret" warning for each secret and skips that secret.
+          # If the calling workflow does not pass the artifactory secrets, each secret value is empty.
+          # The action then logs an "is not a valid secret" warning for each empty secret and does not pass that secret to the Docker build.
           secrets: |
             "artifactory_username=${{ secrets.artifactory_username }}"
             "artifactory_password=${{ secrets.artifactory_password }}"
