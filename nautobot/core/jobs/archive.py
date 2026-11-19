@@ -515,14 +515,18 @@ class ArchiveOldRecords(Job):
             # instead of reporting zero for records it would in fact archive.
             # Restricted like the real path below, so the dry run does not promise to archive entries that
             # a real run would not be allowed to see.
-            job_log_entry_count = (
-                JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive).count()
-            )
-            job_console_entry_count = (
-                JobConsoleEntry.objects.restrict(self.user, "delete")
-                .filter(job_result__in=job_results_to_archive)
-                .count()
-            )
+            job_log_entry_count = _filter_out_records_whose_relations_block_deletion(
+                JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
+                JobLogEntry,
+                (),
+                force_cascade_delete,
+            ).count()
+            job_console_entry_count = _filter_out_records_whose_relations_block_deletion(
+                JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
+                JobConsoleEntry,
+                (),
+                force_cascade_delete,
+            ).count()
             total_batch_count = math.ceil(job_result_count / batch_size)
             self.logger.warning(
                 "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived, "
@@ -549,7 +553,9 @@ class ArchiveOldRecords(Job):
 
         for job_result_batch in _iterate_records_by_timestamp(job_results_to_archive, "date_done", batch_size):
             try:
-                current_batch_counts = self._process_archive_job_result_batch(job_result_batch, batch_size)
+                current_batch_counts = self._process_archive_job_result_batch(
+                    job_result_batch, batch_size, force_cascade_delete
+                )
             except Exception as exception:
                 self.fail(
                     "Stopping at batch %d: %s. Archived %d JobResult records before stopping.",
@@ -583,7 +589,7 @@ class ArchiveOldRecords(Job):
 
         return archived_job_result_counts
 
-    def _process_archive_job_result_batch(self, job_result_batch, batch_size):
+    def _process_archive_job_result_batch(self, job_result_batch, batch_size, force_cascade_delete=False):
         """
         Copy one batch of job results and their children into the archive, then delete the live parents.
 
@@ -604,6 +610,7 @@ class ArchiveOldRecords(Job):
         Args:
             job_result_batch (list of JobResult): Live `JobResult` records to archive.
             batch_size (int): Chunk size for copying the children, which are unbounded per parent.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (dict): Archived record counts for this batch, keyed by model label.
@@ -625,8 +632,10 @@ class ArchiveOldRecords(Job):
             unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
         )
 
-        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
-        archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
+        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size, force_cascade_delete)
+        archived_job_console_entry_count = self._archive_job_console_entry(
+            job_result_pks, batch_size, force_cascade_delete
+        )
 
         _, deleted_counts_by_model = (
             JobResult.objects.restrict(self.user, "delete").filter(pk__in=job_result_pks).delete()
@@ -661,7 +670,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Job Log Entry
     # --------------------------------------------------------------------------
-    def _archive_job_log_entry(self, job_result_pks, batch_size):
+    def _archive_job_log_entry(self, job_result_pks, batch_size, force_cascade_delete=False):
         """
         Move the job results' `JobLogEntry` records into the archive, a bounded chunk at a time.
 
@@ -677,6 +686,7 @@ class ArchiveOldRecords(Job):
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose log entries are archived.
             batch_size (int): Number of log entries to load into memory, copy into the archive, and delete per chunk.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (int): Job log entries archived and removed from the live table.
@@ -684,7 +694,23 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_update_fields = [
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
         ]
-        job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(job_result_id__in=job_result_pks)
+        archival_candidate_job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(
+            job_result_id__in=job_result_pks
+        )
+        job_log_entries = _filter_out_records_whose_relations_block_deletion(
+            archival_candidate_job_log_entries,
+            JobLogEntry,
+            (),
+            force_cascade_delete,
+        )
+
+        omitted_job_log_entry_count = archival_candidate_job_log_entries.count() - job_log_entries.count()
+        if omitted_job_log_entry_count:
+            self.logger.warning(
+                "Omitting %d JobLogEntry records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_job_log_entry_count,
+            )
 
         archived_job_log_entry_count = 0
 
@@ -708,7 +734,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Job Console Entry
     # --------------------------------------------------------------------------
-    def _archive_job_console_entry(self, job_result_pks, batch_size):
+    def _archive_job_console_entry(self, job_result_pks, batch_size, force_cascade_delete=False):
         """
         Move the job results' `JobConsoleEntry` records into the archive, a bounded chunk at a time.
 
@@ -731,9 +757,23 @@ class ArchiveOldRecords(Job):
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
-        job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
+        archival_candidate_job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
             job_result_id__in=job_result_pks
         )
+        job_console_entries = _filter_out_records_whose_relations_block_deletion(
+            archival_candidate_job_console_entries,
+            JobConsoleEntry,
+            (),
+            force_cascade_delete,
+        )
+
+        omitted_job_console_entry_count = archival_candidate_job_console_entries.count() - job_console_entries.count()
+        if omitted_job_console_entry_count:
+            self.logger.warning(
+                "Omitting %d JobConsoleEntry records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_job_console_entry_count,
+            )
 
         archived_job_console_entry_count = 0
 
