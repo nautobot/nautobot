@@ -1955,7 +1955,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
 
         for falsy_force_value in (False, None, 0, ""):
             remaining_object_changes = _exclude_records_whose_relations_block_deletion(
-                ObjectChange.objects.all(), ObjectChange, (), falsy_force_value
+                ObjectChange.objects.all(), ObjectChange, (), falsy_force_value, logging.getLogger(__name__)
             )
             self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
 
@@ -1977,7 +1977,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertNotEqual(content_type_relations, [], "ContentType no longer has a relation without a related_name")
 
         remaining_content_types = _exclude_records_whose_relations_block_deletion(
-            ContentType.objects.all(), ContentType, (), False
+            ContentType.objects.all(), ContentType, (), False, logging.getLogger(__name__)
         )
         # Evaluating the queryset is what raises FieldError when the accessor name is used as a lookup.
         self.assertGreaterEqual(remaining_content_types.count(), 0)
@@ -1988,7 +1988,11 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         unprotected_manufacturer = Manufacturer.objects.create(name="Archive Unprotected Probe")
 
         remaining_manufacturers = _exclude_records_whose_relations_block_deletion(
-            Manufacturer.objects.all(), Manufacturer, (), force_cascade_delete=True
+            Manufacturer.objects.all(),
+            Manufacturer,
+            (),
+            force_cascade_delete=True,
+            logger=logging.getLogger(__name__),
         )
 
         self.assertNotIn(protected_manufacturer, remaining_manufacturers)
@@ -2565,7 +2569,11 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
 
         for falsy_force_value in (False, None, 0, ""):
             remaining_job_results = _exclude_records_whose_relations_block_deletion(
-                JobResult.objects.all(), JobResult, (JobLogEntry, JobConsoleEntry), falsy_force_value
+                JobResult.objects.all(),
+                JobResult,
+                (JobLogEntry, JobConsoleEntry),
+                falsy_force_value,
+                logging.getLogger(__name__),
             )
             self.assertNotIn(old_job_result, remaining_job_results, falsy_force_value)
 
