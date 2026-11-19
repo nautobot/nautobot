@@ -576,13 +576,13 @@ class LiveSearchView(AccessMixin, View):
                     else filtered_queryset
                 )[: LIVE_SEARCH_MAX_RESULTS + 1]
                 runnable_ids = None
-                extra_columns = None
+                extra_columns = []
 
                 def row_disabled(record):
                     return runnable_ids is not None and record.pk not in runnable_ids
 
                 def row_url(record):
-                    if runnable_ids is None:
+                    if model is not Job:
                         return record.get_absolute_url()
                     if not row_disabled(record):
                         return reverse("extras:job_run", kwargs={"pk": record.pk})
