@@ -197,6 +197,8 @@ The Job fails, with an error naming the entry at fault, rather than quietly writ
 - traverses more than three relations in a single path
 - names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
 
+This permission rule applies only to fields you name. A related object of a type you can't view is still exported by its natural key, without any of its other fields, much as a list view still shows it by name. This applies to the default columns and to a bare relation such as `user` in a selection. For example, a Rack Reservation export run by someone who can't view users still has a `user__username` column, but `user__email` can't be selected.
+
 The picker does not check these rules in advance; it lists every field that the data model defines for the object type. Two differences follow. It lists one relation less deep than a path may traverse, so a deeper path is available by typing it even though no checkbox offers it. And it does not hide the fields of a related model you lack permission for, so selecting one fails when the export runs, with the error above, rather than silently going missing from the list.
 
 #### Effect on re-importing the file
