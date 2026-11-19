@@ -117,40 +117,43 @@ def _exclude_records_whose_relations_block_deletion(
         is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
         related_model_name = related_object.related_model._meta.verbose_name
         if is_relationship_guarded:
+            if queryset.filter(**{f"{related_query_name}__isnull": False}).exists():
+                logger.info(
+                    "Not archiving %s records that are referenced by a %s."
+                    " If you wish to archive these records, you will need to manually delete the related %s"
+                    " records first.",
+                    model._meta.verbose_name,
+                    related_model_name,
+                    related_model_name,
+                )
             # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
             queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
-            logger.info(
-                "Not archiving %s records that are referenced by a %s."
-                " If you wish to archive these records, you will need to manually delete the related %s"
-                " records first.",
-                model._meta.verbose_name,
-                related_model_name,
-                related_model_name,
-            )
         if not is_relationship_guarded and not force_cascade_delete:
+            if queryset.filter(**{f"{related_query_name}__isnull": False}).exists():
+                logger.info(
+                    "Not archiving %s records that are referenced by a %s, because deleting them would delete the"
+                    " related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                    model._meta.verbose_name,
+                    related_model_name,
+                    related_model_name,
+                )
             # CASCADE deletion would occur, but execution has not permitted CASCADE delete to happen.
             # Effectively filtering only records that have nothing to CASCADE.
             queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
-            logger.info(
-                "Not archiving %s records that are referenced by a %s, because deleting them would delete the"
-                " related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
-                model._meta.verbose_name,
-                related_model_name,
-                related_model_name,
-            )
 
     if not force_cascade_delete:
         for private_field in model._meta.private_fields:
             if isinstance(private_field, GenericRelation):
+                if queryset.filter(**{f"{private_field.name}__isnull": False}).exists():
+                    generic_related_model_name = private_field.related_model._meta.verbose_name
+                    logger.info(
+                        "Not archiving %s records that are referenced by a %s, because deleting them would delete"
+                        " the related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                        model._meta.verbose_name,
+                        generic_related_model_name,
+                        generic_related_model_name,
+                    )
                 queryset = queryset.filter(**{f"{private_field.name}__isnull": True})
-                generic_related_model_name = private_field.related_model._meta.verbose_name
-                logger.info(
-                    "Not archiving %s records that are referenced by a %s, because deleting them would delete"
-                    " the related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
-                    model._meta.verbose_name,
-                    generic_related_model_name,
-                    generic_related_model_name,
-                )
 
     return queryset
 
