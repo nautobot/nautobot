@@ -65,7 +65,7 @@ class BulkOperationsTestCase:
 
     @property
     def model_plural(self) -> str:
-        """The model's verbose plural, as the list view's messages print it."""
+        """The plural in the list view's messages. It is override_model_plural when set, otherwise the model name plus "s"."""
         if self.override_model_plural is None:
             return f"{self.model_base_viewname.split(':')[1].replace('_', ' ')}s"
         return self.override_model_plural
