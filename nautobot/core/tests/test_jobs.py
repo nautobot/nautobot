@@ -12,6 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
+from django.db.models import ManyToOneRel
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 import time_machine
@@ -22,7 +23,7 @@ from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.archive import (
-    _filter_out_records_whose_relations_block_deletion,
+    _exclude_records_whose_relations_block_deletion,
     _iterate_records_by_timestamp,
     ArchiveOldRecords,
 )
@@ -1953,17 +1954,40 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_object_changes = _filter_out_records_whose_relations_block_deletion(
+            remaining_object_changes = _exclude_records_whose_relations_block_deletion(
                 ObjectChange.objects.all(), ObjectChange, (), falsy_force_value
             )
             self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
+
+    def test_a_reverse_relation_without_a_related_name_is_queried_by_its_query_name(self):
+        """
+        `get_accessor_name()` yields `<model>_set` for a reverse foreign key that declares no
+        `related_name`, which is not a name the ORM will resolve in a lookup. The query name is, so an
+        app model pointing at an archived model without a `related_name` must not break the filter.
+
+        `ContentType` is used because core models all declare a `related_name`; it carries several
+        reverse foreign keys that do not.
+        """
+        content_type_relations = [
+            related_object
+            for related_object in ContentType._meta.related_objects
+            if isinstance(related_object, ManyToOneRel)
+            and related_object.get_accessor_name() != related_object.field.related_query_name()
+        ]
+        self.assertNotEqual(content_type_relations, [], "ContentType no longer has a relation without a related_name")
+
+        remaining_content_types = _exclude_records_whose_relations_block_deletion(
+            ContentType.objects.all(), ContentType, (), False
+        )
+        # Evaluating the queryset is what raises FieldError when the accessor name is used as a lookup.
+        self.assertGreaterEqual(remaining_content_types.count(), 0)
 
     def test_protecting_relations_hold_records_hot_even_when_forced(self):
         protected_manufacturer = Manufacturer.objects.create(name="Archive Protected Probe")
         DeviceType.objects.create(manufacturer=protected_manufacturer, model="Archive Probe Model")
         unprotected_manufacturer = Manufacturer.objects.create(name="Archive Unprotected Probe")
 
-        remaining_manufacturers = _filter_out_records_whose_relations_block_deletion(
+        remaining_manufacturers = _exclude_records_whose_relations_block_deletion(
             Manufacturer.objects.all(), Manufacturer, (), force_cascade_delete=True
         )
 
@@ -2540,7 +2564,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_job_results = _filter_out_records_whose_relations_block_deletion(
+            remaining_job_results = _exclude_records_whose_relations_block_deletion(
                 JobResult.objects.all(), JobResult, (JobLogEntry, JobConsoleEntry), falsy_force_value
             )
             self.assertNotIn(old_job_result, remaining_job_results, falsy_force_value)

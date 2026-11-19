@@ -112,13 +112,15 @@ def _exclude_records_whose_relations_block_deletion(
         if accessor_name is None:
             continue
 
+        related_query_name = related_object.field.related_query_name()
+
         on_delete = getattr(related_object, "on_delete", None)
         # TODO: Don't forget to handle DB_CASCADE when we adopt Django 6.1
         is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
         related_model_name = related_object.related_model._meta.verbose_name
         if is_relationship_guarded:
             # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
-            queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
+            queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
             logger.info(
                 "Not archiving %s records that are referenced by a %s."
                 " If you wish to archive these records, you will need to manually delete the related %s"
@@ -130,7 +132,7 @@ def _exclude_records_whose_relations_block_deletion(
         if not is_relationship_guarded and not force_cascade_delete:
             # CASCADE deletion would occur, but execution has not permitted CASCADE delete to happen.
             # Effectively filtering only records that have nothing to CASCADE.
-            queryset = queryset.filter(**{f"{accessor_name}__isnull": True})
+            queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
             logger.info(
                 "Not archiving %s records that are referenced by a %s, because deleting them would delete the"
                 " related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
