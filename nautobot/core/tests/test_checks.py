@@ -3,7 +3,7 @@ from django.test import override_settings, TestCase
 from nautobot.core import checks
 from nautobot.dcim.choices import DeviceUniquenessChoices
 
-CUSTOM_COMPLEXITY_COST_FUNCTION_SETTING = "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+CUSTOM_COMPLEXITY_COST_FUNCTION_SETTING = "RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
 A_STRING_NOT_A_FUNCTION = "a string, not a function"
 
 
