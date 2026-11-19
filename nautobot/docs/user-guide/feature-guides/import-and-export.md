@@ -16,7 +16,7 @@ The Device Type and Module Type list views have one more action, **Import from J
 
 ## Limits
 
-- Each file an export writes is limited to [`JOB_CREATE_FILE_MAX_SIZE`](../administration/configuration/settings.md#job_create_file_max_size), 10 MiB by default. An export that would be larger fails with an error giving the size of the content and the limit. To export less, filter the list or select fewer fields.
+- Each file that an export writes is limited to [`JOB_CREATE_FILE_MAX_SIZE`](../administration/configuration/settings.md#job_create_file_max_size), 10 MiB by default. An export that would be larger fails with an error giving the size of the content and the limit. To export less, filter the list or select fewer fields.
 - Both Jobs are stopped after 30 minutes (a soft time limit of 1800 seconds, and a hard limit of 2000 seconds). Split a very large import into several files.
 
 ## Exporting
@@ -197,9 +197,9 @@ The Job fails, with an error naming the entry at fault, rather than quietly writ
 - traverses more than three relations in a single path
 - names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
 
-This permission rule applies only to fields you name. A related object of a type you can't view is still exported by its natural key, without any of its other fields, much as a list view still shows it by name. This applies to the default columns and to a bare relation such as `user` in a selection. For example, a Rack Reservation export run by someone who can't view users still has a `user__username` column, but `user__email` can't be selected.
+This permission rule applies only to fields you name. A related object of a type you can't view is still exported by its natural key, without any of its other fields, much as a list view still shows it by name. This applies to the default columns, and to a relation that a selection names without any of its fields, such as `user`. For example, a Rack Reservation export run by someone who can't view users still has a `user__username` column, but `user__email` can't be selected.
 
-The picker does not check these rules in advance; it lists every field that the data model defines for the object type. Two differences follow. It lists one relation less deep than a path may traverse, so a deeper path is available by typing it even though no checkbox offers it. And it does not hide the fields of a related model you lack permission for, so selecting one fails when the export runs, with the error above, rather than silently going missing from the list.
+The picker does not check these rules in advance; it lists every field that the data model defines for the object type. As a result, the picker differs from these rules in two ways. It lists one relation less deep than a path may traverse, so a deeper path can be selected by typing it, even though the list has no checkbox for it. And it does not hide the fields of a related model you lack permission for, so selecting one fails when the export runs, with the error above, rather than silently going missing from the list.
 
 #### Effect on re-importing the file
 
@@ -406,7 +406,7 @@ When importing, you can override the match fields for a particular file either b
 | Import (create rows) | Run permission for the `Import Objects` job, plus _add_ permission on the model. |
 | Import (update rows) | Run permission for the `Import Objects` job, plus _change_ permission on the model. |
 
-To download the file an export produces, you also need _view_ permission on the Job Result and on its output file. The [Export Job](../administration/guides/permissions.md#export-job) and [Import Job](../administration/guides/permissions.md#import-job) permission recipes show how to grant these.
+To download the file that an export produces, you also need _view_ permission on the Job Result and on its output file. The [Export Job](../administration/guides/permissions.md#export-job) and [Import Job](../administration/guides/permissions.md#import-job) permission recipes show how to grant these.
 
 In the default Create/Update [import mode](#creating-updating-or-both), either _add_ or _change_ permission lets the import start, and each record is then checked against the permission for what it does. Create Only mode requires _add_ permission and Update Only mode requires _change_ permission; without it, the import is refused before any record is read.
 
