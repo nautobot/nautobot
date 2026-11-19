@@ -10,7 +10,7 @@ from nautobot.core.rate_limiting.rest_calculator import (
 )
 from nautobot.core.testing import APITestCase
 
-SETTING = "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
+SETTING = "RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION"
 THIS_MODULE = "nautobot.core.tests.test_rate_limiting_custom_complexity_cost_function"
 
 
@@ -89,7 +89,7 @@ class CustomRateLimitingComplexityCostEstimationFunctionMiddlewareTestCase(APITe
         return response
 
     @override_settings(
-        NAUTOBOT_RATE_LIMITING_REST_MODE="report",
+        RATE_LIMITING_REST_MODE="report",
         **{SETTING: f"{THIS_MODULE}.method_aware_cost_function"},
     )
     def test_custom_function_prices_read_requests(self):
@@ -99,7 +99,7 @@ class CustomRateLimitingComplexityCostEstimationFunctionMiddlewareTestCase(APITe
         self.assertEqual(complexity_cost_header, "33")
 
     @override_settings(
-        NAUTOBOT_RATE_LIMITING_REST_MODE="report",
+        RATE_LIMITING_REST_MODE="report",
         **{SETTING: f"{THIS_MODULE}.method_aware_cost_function"},
     )
     def test_custom_function_prices_write_requests(self):
@@ -109,9 +109,9 @@ class CustomRateLimitingComplexityCostEstimationFunctionMiddlewareTestCase(APITe
         self.assertEqual(complexity_cost_header, "77")
 
     @override_settings(
-        NAUTOBOT_RATE_LIMITING_REST_MODE="report",
-        NAUTOBOT_RATE_LIMITING_REST_READ_COST=1.0,
-        NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST=3.0,
+        RATE_LIMITING_REST_MODE="report",
+        RATE_LIMITING_REST_READ_COST=1.0,
+        RATE_LIMITING_REST_PAGINATION_COST=3.0,
         **{SETTING: ""},
     )
     def test_builtin_estimate_is_used_when_unset(self):
@@ -121,8 +121,8 @@ class CustomRateLimitingComplexityCostEstimationFunctionMiddlewareTestCase(APITe
         self.assertEqual(complexity_cost_header, "4")
 
     @override_settings(
-        NAUTOBOT_RATE_LIMITING_REST_MODE="enforce",
-        NAUTOBOT_RATE_LIMITING_REST_BUDGET=1000,
+        RATE_LIMITING_REST_MODE="enforce",
+        RATE_LIMITING_REST_BUDGET=1000,
         **{SETTING: f"{THIS_MODULE}.flat_cost_function"},
     )
     def test_custom_cost_is_charged_against_budget(self):
