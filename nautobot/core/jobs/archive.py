@@ -84,33 +84,6 @@ def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
         current_record_batch = list(next_batch_of_records)
 
 
-def _parent_pks_whose_children_block_deletion(
-    child_queryset, child_model, parent_field_name, force_cascade_delete, logger
-):
-    """
-    Find the parents that cannot be archived because one of their children cannot be.
-
-    A child is taken by the cascade from its parent whether or not it was archived first, so a parent
-    whose child is held back would destroy that child and leave no archived copy of it. Where the child
-    is held back by a PROTECT or RESTRICT relation, the parent's delete raises `ProtectedError` instead.
-
-    Args:
-        child_queryset (QuerySet): The children belonging to the parents being considered for archival.
-        child_model (Model): The live model the child queryset selects from.
-        parent_field_name (str): Name of the child's foreign key column holding its parent's primary key.
-        force_cascade_delete (bool): A user-override that allows the ability to force related records to be deleted.
-        logger (Logger): The job logger that the skipped relations are reported to.
-
-    Returns:
-        (QuerySet): The primary keys of the parents that hold at least one child that cannot be archived.
-    """
-    archivable_children = _exclude_records_whose_relations_block_deletion(
-        child_queryset, child_model, (), force_cascade_delete, logger
-    )
-    blocked_children = child_queryset.exclude(pk__in=archivable_children.values("pk"))
-    return blocked_children.values_list(parent_field_name, flat=True)
-
-
 def _exclude_records_whose_relations_block_deletion(
     queryset, model, preapproved_models_that_can_be_deleted, force_cascade_delete, logger
 ):
@@ -534,35 +507,6 @@ class ArchiveOldRecords(Job):
             force_cascade_delete,
             self.logger,
         )
-
-        job_results_with_blocked_children = job_results_to_archive.filter(
-            Q(
-                pk__in=_parent_pks_whose_children_block_deletion(
-                    JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
-                    JobLogEntry,
-                    "job_result_id",
-                    force_cascade_delete,
-                    self.logger,
-                )
-            )
-            | Q(
-                pk__in=_parent_pks_whose_children_block_deletion(
-                    JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
-                    JobConsoleEntry,
-                    "job_result_id",
-                    force_cascade_delete,
-                    self.logger,
-                )
-            )
-        )
-        blocked_child_parent_count = job_results_with_blocked_children.count()
-        if blocked_child_parent_count:
-            self.logger.warning(
-                "Omitting %d JobResult records because their log or console entries hold records that would be "
-                "deleted with them. Re-run with Force Cascade Delete to archive them anyway.",
-                blocked_child_parent_count,
-            )
-        job_results_to_archive = job_results_to_archive.exclude(pk__in=job_results_with_blocked_children.values("pk"))
 
         omitted_job_result_count = archival_candidate_job_results.count() - job_results_to_archive.count()
         if omitted_job_result_count:
