@@ -73,6 +73,7 @@ class PaginatorTestCase(testing.TestCase):
             {"pagination_count": {"a": 1}},
             {"pagination_count": [1, 2]},
             {"pagination_count": "abc"},
+            {"pagination_count": 1.5},
             {"pagination_count": 0},
             {"pagination_count": True},
             [1, 2],
@@ -84,7 +85,7 @@ class PaginatorTestCase(testing.TestCase):
     @override_settings(PAGINATE_COUNT=50, MAX_PAGE_SIZE=1000)
     def test_enhanced_paginator_invalid_per_page(self):
         """Fall back to `PAGINATE_COUNT` for a non-integer `per_page` instead of raising."""
-        for per_page in [{"a": 1}, [1, 2], "abc", None]:
+        for per_page in [{"a": 1}, [1, 2], "abc", None, 1.5]:
             with self.subTest(per_page=per_page):
                 self.assertEqual(paginator.EnhancedPaginator([], per_page).per_page, 50)
 

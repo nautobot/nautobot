@@ -3228,15 +3228,20 @@ class SavedViewTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.location_global_sv.is_shared, True)
         self.assertEqual(self.ipaddress_global_sv.is_shared, True)
 
-    def test_clean_accepts_valid_pagination_count(self):
-        self.sv.config = {"pagination_count": 50}
-        self.sv.full_clean()
+    def test_clean_normalizes_pagination_count_to_int(self):
+        for value in [50, "50", " 50 ", 50.0]:
+            with self.subTest(pagination_count=value):
+                self.sv.config = {"pagination_count": value}
+                self.sv.full_clean()
+                self.assertEqual(self.sv.config["pagination_count"], 50)
+                self.assertIs(type(self.sv.config["pagination_count"]), int)
 
     def test_clean_rejects_invalid_config(self):
         invalid_configs = [
             {"pagination_count": {"a": 1}},
             {"pagination_count": [1, 2]},
-            {"pagination_count": "50"},
+            {"pagination_count": "abc"},
+            {"pagination_count": "1.5"},
             {"pagination_count": None},
             {"pagination_count": 0},
             {"pagination_count": -5},

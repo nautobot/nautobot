@@ -55,6 +55,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import coerce_paginate_count
 from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -81,7 +82,7 @@ from nautobot.core.views.mixins import (
     ObjectListViewMixin,
     ObjectNotesViewMixin,
 )
-from nautobot.core.views.paginator import coerce_paginate_count, EnhancedPaginator, get_paginate_count
+from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
     check_filter_for_display,
     common_detail_view_context,

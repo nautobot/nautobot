@@ -24,7 +24,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.data import deepmerge, render_jinja2
+from nautobot.core.utils.data import coerce_paginate_count, deepmerge, render_jinja2
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -924,10 +924,10 @@ class SavedView(BaseModel, ChangeLoggedModel):
         if not isinstance(self.config, dict):
             raise ValidationError({"config": "Saved view configuration must be a JSON object."})
         if "pagination_count" in self.config:
-            pagination_count = self.config["pagination_count"]
-            # Reject bools explicitly since `True`/`False` are `int` instances in Python.
-            if isinstance(pagination_count, bool) or not isinstance(pagination_count, int) or pagination_count < 1:
+            pagination_count = coerce_paginate_count(self.config["pagination_count"])
+            if pagination_count is None:
                 raise ValidationError({"config": "`pagination_count` must be a positive integer."})
+            self.config["pagination_count"] = pagination_count
 
     clean.alters_data = True
 

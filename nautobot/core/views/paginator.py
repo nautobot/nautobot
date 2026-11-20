@@ -4,22 +4,7 @@ from django.core.paginator import Page, Paginator
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import config
-
-
-def coerce_paginate_count(value):
-    """
-    Return `value` as a positive integer page size, or None if it isn't a valid one.
-
-    Page sizes may come from stored data (such as a SavedView's `config`) that predates validation or was written
-    directly to the database, so this must never raise. Booleans are rejected even though they are `int` instances.
-    """
-    if isinstance(value, bool):
-        return None
-    try:
-        value = int(value)
-    except (TypeError, ValueError, OverflowError):
-        return None
-    return value if value > 0 else None
+from nautobot.core.utils.data import coerce_paginate_count
 
 
 class EnhancedPaginator(Paginator):
