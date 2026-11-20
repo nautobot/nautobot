@@ -69,6 +69,12 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
     user_instance, _ = User.objects.get_or_create(
         username=username, defaults={"is_superuser": True, "password": "password"}
     )
+    if job.job_class is not None:
+        # Convert querysets and model instances to primary keys, as the job form view and REST API do.
+        # Convert only the job variables. `kwargs` also contains `enqueue_job()` arguments, such as `schedule`,
+        # that must stay model instances.
+        job_vars = job.job_class._get_vars()
+        kwargs.update(job.job_class.serialize_data({key: value for key, value in kwargs.items() if key in job_vars}))
     # Run the job synchronously in the current thread as if it were being executed by a worker
     # TODO: in Nautobot core testing, we set `CELERY_TASK_ALWAYS_EAGER = True`, so we *could* use enqueue_job() instead,
     #       but switching now would be a potentially breaking change for apps...
