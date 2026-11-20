@@ -1,1 +1,0 @@
-Added a test to detect schema drift for the archived models populated by the `Archive Old Records` job.
