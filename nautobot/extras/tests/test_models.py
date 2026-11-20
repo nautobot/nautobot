@@ -73,6 +73,7 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -458,6 +459,76 @@ class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
         self.assertTrue(
             ApprovalWorkflowStageResponse.objects.filter(user=self.users[0], comments="Cancel this.").exists(),
         )
+
+
+class ArchivedObjectChangeTest(ModelTestCases.BaseModelTestCase):
+    model = ArchivedObjectChange
+
+    @expectedFailure
+    def test_get_docs_url(self):
+        """Docs are not yet added for this model."""
+        super().test_get_docs_url()
+
+    def test_related_changes_methods_return_none_when_no_relevant_records(self):
+        oldest = ArchivedObjectChange.objects.last()
+        self.assertIsNotNone(oldest)
+        self.assertIsNone(oldest.get_prev_change())
+        newest = ArchivedObjectChange.objects.first()
+        self.assertIsNotNone(newest)
+        self.assertIsNone(newest.get_next_change())
+
+    def test_related_changes_methods_work_correctly(self):
+        center = ArchivedObjectChange.objects.filter(action=ObjectChangeActionChoices.ACTION_UPDATE).last()
+        related = []
+        for offset in (timedelta(seconds=-2), timedelta(seconds=-1), timedelta(seconds=1), timedelta(seconds=2)):
+            related.append(
+                ArchivedObjectChange.objects.create(
+                    time=center.time + offset,
+                    user_name=center.user_name,
+                    request_id=uuid.uuid4(),
+                    action=ObjectChangeActionChoices.ACTION_UPDATE,
+                    changed_object_type_id=center.changed_object_type_id,
+                    changed_object_id=center.changed_object_id,
+                    object_repr="Related change",
+                    object_data=None,
+                    object_data_v2=center.object_data,
+                )
+            )
+
+        # Unfiltered by user
+        self.assertEqual(related[0].get_next_change(), related[1])
+        self.assertEqual(related[1].get_prev_change(), related[0])
+        self.assertEqual(related[1].get_next_change(), center)
+        self.assertEqual(center.get_prev_change(), related[1])
+        self.assertEqual(center.get_next_change(), related[2])
+        self.assertEqual(related[2].get_prev_change(), center)
+        self.assertEqual(related[2].get_next_change(), related[3])
+        self.assertEqual(related[3].get_prev_change(), related[2])
+
+        # Filtered by user
+        self.user = User.objects.create_user(username="nautobotuser")
+        self.add_permissions(
+            "extras.view_archivedobjectchange", constraints={"pk__in": [related[0].pk, center.pk, related[3].pk]}
+        )
+        self.assertEqual(related[0].get_next_change(user=self.user), center)
+        self.assertEqual(center.get_prev_change(user=self.user), related[0])
+        self.assertEqual(center.get_next_change(user=self.user), related[3])
+        self.assertEqual(related[3].get_prev_change(user=self.user), center)
+
+    def test_diff_methods_work(self):
+        created = ArchivedObjectChange.objects.filter(action=ObjectChangeActionChoices.ACTION_CREATE).last()
+        self.assertIsNotNone(created)
+        snapshots = created.get_snapshots()
+        self.assertIsNone(snapshots["prechange"])
+        self.assertIsNotNone(snapshots["postchange"])
+        self.assertIsNotNone(snapshots["differences"])
+
+        deleted = ArchivedObjectChange.objects.filter(action=ObjectChangeActionChoices.ACTION_DELETE).first()
+        self.assertIsNotNone(deleted)
+        snapshots = deleted.get_snapshots()
+        self.assertIsNotNone(snapshots["prechange"])
+        self.assertIsNone(snapshots["postchange"])
+        self.assertIsNotNone(snapshots["differences"])
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):

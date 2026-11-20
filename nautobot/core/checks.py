@@ -180,8 +180,8 @@ def check_sensitive_fields_are_enforceable(app_configs, **kwargs):
 
 @register(Tags.compatibility)
 def check_custom_rate_limiting_complexity_cost_estimation_function(app_configs, **kwargs):
-    """Resolve NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION at startup."""
-    dotted_import_path = settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION
+    """Resolve RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION at startup."""
+    dotted_import_path = settings.RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION
 
     if not dotted_import_path:
         return []
@@ -191,7 +191,7 @@ def check_custom_rate_limiting_complexity_cost_estimation_function(app_configs, 
     except Exception as exception:
         return [
             Error(
-                "settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION could not be imported.",
+                "settings.RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION could not be imported.",
                 hint=(
                     f"{exception}. The value must be a dotted path to an importable function, for example "
                     '"my_package.my_module.my_function". A loose file beside nautobot_config.py is not '
@@ -206,7 +206,7 @@ def check_custom_rate_limiting_complexity_cost_estimation_function(app_configs, 
     if not callable(custom_estimation_function):
         return [
             Error(
-                "settings.NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION is not callable.",
+                "settings.RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION is not callable.",
                 hint=(
                     f'"{dotted_import_path}" resolved to a {type(custom_estimation_function).__name__}. '
                     "It must be a function that takes a HTTPRequest and returns an integer."

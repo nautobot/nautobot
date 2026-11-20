@@ -17,6 +17,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
 )
+from nautobot.extras.constants import KUBERNETES_JSON_HEADERS
 from nautobot.extras.models import Job, JobResult
 from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
@@ -397,6 +398,7 @@ class K8sStrategy(JobCancelStrategy):
                     name=job_name,
                     namespace=namespace,
                     body=delete_options,
+                    _headers=dict(KUBERNETES_JSON_HEADERS),
                 )
             logger.info("Deleted K8s job %s", job_name)
             return True

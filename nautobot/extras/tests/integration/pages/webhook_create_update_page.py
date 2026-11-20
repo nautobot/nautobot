@@ -5,7 +5,7 @@ import re
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import BasePage, select2_filter_pick
+from nautobot.playwright.base_page import BasePage
 
 
 class WebhookCreateUpdatePage(BasePage):
@@ -76,12 +76,12 @@ class WebhookCreateUpdatePage(BasePage):
         Wait until that new row has replaced the old one.
         """
         old_row = self._condition_row(index).element_handle()
-        select2_filter_pick(self.page, f"condition-{index}-{name}", search=text, pick_text=text)
+        self.select2_filter_pick(f"condition-{index}-{name}", search=text, pick_text=text)
         self.page.wait_for_function("row => !row.isConnected", arg=old_row)
 
     def pick_content_type(self, text):
         """Select the content type reading *text* and wait until every row has been drawn again."""
-        select2_filter_pick(self.page, "content_types", search=text, pick_text=text)
+        self.select2_filter_pick("content_types", search=text, pick_text=text)
         self._wait_until_rows_are_drawn()
 
     def pick_condition_type(self, index, text):
@@ -102,11 +102,11 @@ class WebhookCreateUpdatePage(BasePage):
 
     def pick_condition_negation(self, index, text):
         """Choose `When` or `Not When`, reading *text*, in the row at *index*. The row is not asked for again."""
-        select2_filter_pick(self.page, f"condition-{index}-negate", search=text, pick_text=text)
+        self.select2_filter_pick(f"condition-{index}-negate", search=text, pick_text=text)
 
     def pick_condition_value(self, index, key, text):
         """Choose *text* in the value control *key* of the row at *index*."""
-        select2_filter_pick(self.page, f"condition-{index}-{key}", search=text, pick_text=text)
+        self.select2_filter_pick(f"condition-{index}-{key}", search=text, pick_text=text)
 
     def pick_condition_day(self, index, key, day):
         """Open the calendar of the date control *key* in the row at *index* and click *day* of the month it shows."""

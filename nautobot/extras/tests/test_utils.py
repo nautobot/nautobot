@@ -536,6 +536,7 @@ class UtilsTestCase(TestCase):
         mock_api_instance.create_namespaced_job.assert_called_once()
         create_call = mock_api_instance.create_namespaced_job.call_args
         body = create_call[1]["body"]
+        self.assertEqual(create_call[1]["_headers"], {"Content-Type": "application/json"})
         self.assertEqual(body["metadata"]["name"], f"test-pod-{job_result.pk}")
         self.assertEqual(
             body["spec"]["template"]["spec"]["containers"][0]["command"],

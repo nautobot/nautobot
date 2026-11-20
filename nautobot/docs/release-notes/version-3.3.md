@@ -6,36 +6,101 @@ This document describes all new features and changes in Nautobot 3.3.
 
 ### Administrators
 
-TODO
+#### Change Records Are Created Only When a Field Value Changes
+
+Saving an object without changing any of its field values no longer creates a change record or triggers webhooks, job hooks, or events. If an integration depends on these, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../user-guide/administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False`.
+
+### App Developers
+
+`Webhook.check_for_conflicts()`, `JobHook.check_for_conflicts()`, and `SeleniumTestCase.assertNoAccessibilityViolations()` have been removed, and static files under `drf_spectacular_sidecar/` are no longer available. Models can opt out of the import and export Jobs by setting `is_importable_model` or `is_exportable_model` to `False`.
 
 ## Release Overview
 
 ### Added
 
-TODO
+#### Enhanced Import and Export
+
+Import and export now support JSON and YAML in addition to CSV. Users can choose which fields to export and in what order, and an import can update (commonly referred to as upsert) existing records as well as create new ones, matching rows on fields such as a device's name. Both actions now run in a job modal from the object list view. For details, see [Importing and Exporting Objects](../user-guide/feature-guides/import-and-export.md).
+
+#### Conditions on Webhooks and Job Hooks
+
+Webhooks and job hooks can now have [conditions](../user-guide/feature-guides/conditions.md), so a hook runs only for the changes you care about, such as a device status changing from "Staged" to "Active". Conditions are built from presets or written as raw Jinja2 expressions.
+
+#### UI Updates
+
+Continous UI improvements include:
+
+- Django Messages now appear as toasts that close on their own.
+- Object list rows can be expanded to show an overview of the object.
+- Any page can be added to the navbar favorites.
+- Favorites can be ordered.
+- Sticky headers on Object list views.
+- Multiple custom links are grouped into a single dropdown.
+
+#### Change Log and Job Result Archiving
+
+The new "Archive Old Records" system Job finds change records and Job results that are older than a given number of days. It moves them, together with the Job results' log and console entries, out of the main tables and into separate archive tables, which are designed so they can later be moved to a separate database. Archiving keeps the main tables small and fast while preserving the full history for audits. Archived records have their own views, APIs, and permissions.
+
+#### REST API Rate Limiting
+
+Nautobot can now [rate limit REST API requests](../user-guide/administration/configuration/rate-limiting.md) per API token, based on a user definable cost of each request. Rate limiting is disabled by default and supports report mode to get started or track.
+
+#### Request Performance Measurements
+
+Nautobot can now report request and database query durations in a `Server-Timing` response header and in Prometheus metrics. See [Request Performance Measurements](../user-guide/administration/configuration/request-performance-measurements.md).
+
+#### `IPAddressAssignment` Records Can No Longer Be Edited
+
+An existing "IP Address Assignment" record can no longer be changed in place, including through the REST API. Delete the assignment and create a new one instead. Assigning IP addresses through the UI is unaffected by this change.
+
+#### Other Additions
+
+- Device Types have optional depth and weight fields, and Module Types have an optional weight field.
+- A [Playwright](../development/core/playwright-testing.md)-based framework for browser tests is now included.
 
 ### Changed
 
-TODO
+#### Unchanged Saves Are No Longer Logged
 
-#### Enhanced Export/Import
+A save that changes none of an object's field values no longer creates a change record or triggers webhooks, job hooks, or events. See [Saves That Change Nothing](../user-guide/platform-functionality/change-logging.md#saves-that-change-nothing).
 
-The object export/import functionality has been enhanced in several ways:
+#### IP Address Assignments Can No Longer Be Edited
 
-- JSON and YAML formats are now supported in addition to the existing CSV format support.
-- Imports can now update existing records as well as create existing records, when requested ("upsert" functionality).
-- CSV export/import now includes a metadata header row, and includes support for a wider range of many-to-many fields.
-
-For more details, refer to the [import and export documentation](../user-guide/feature-guides/import-and-export.md).
+The IP address and interface of an existing IP Address Assignment can no longer be changed, including through the REST API. Delete the assignment and create a new one instead.
 
 ### Dependencies
 
-#### Removed Python 3.10 Support
-
-As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
+As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
+
+## v3.3.0a2 (2026-11-13)
+
+### Added in v3.3.0a2
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Added `click_add` to `nautobot.playwright.list_page.ListPage`.
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Added `expect_heading`, `expect_on_add_form`, `expect_input_value` and `expect_field_error` to `nautobot.playwright.object_form_page.ObjectFormPage`.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added an optional `within` argument to `nautobot.playwright.base_page.BasePage.panel`, which limits the panel search to the given locator.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added `expect_relationship_peer` and `expect_no_relationship_peer` to `nautobot.playwright.detail_page.DetailPage`, which check a detail view's Relationships panel.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Added `nautobot.playwright.object_form_page.ObjectFormPage.submit_and_return_pk`, which submits an add form and returns the new object's pk from the detail view it redirects to.
+- [#9752](https://github.com/nautobot/nautobot/issues/9752) - Added the `CHANGELOG_LEGACY_OBJECT_DATA` setting, which controls whether new change records store `object_data`, the snapshot format used before Nautobot 1.3.
+- [#9776](https://github.com/nautobot/nautobot/issues/9776) - Added a location filter to the cable connection form that restricts the available terminations to the selected location.
+
+### Changed in v3.3.0a2
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Changed `nautobot.playwright.object_form_page.ObjectFormPage.fill_input` to fill a textarea as well as a text input with the given name.
+
+### Fixed in v3.3.0a2
+
+- [#9799](https://github.com/nautobot/nautobot/issues/9799) - Fixed an issue in which the login page would self-reload every 15 seconds.
+- [#9805](https://github.com/nautobot/nautobot/issues/9805) - Fixed Kubernetes Job execution and cancellation failing with HTTP 415 when `urllib3-future` is installed, due to the `kubernetes` 37.x client no longer sending a `Content-Type` header.
+
+### Housekeeping in v3.3.0a2
+
+- [#9627](https://github.com/nautobot/nautobot/issues/9627) - Replaced the Config Context Schema Selenium tests with Playwright tests.
+- [#9650](https://github.com/nautobot/nautobot/issues/9650) - Replaced the Selenium relationship tests with a Playwright `RelationshipsTestCase`.
+- [#9745](https://github.com/nautobot/nautobot/issues/9745) - Ported the theme modal tests from Selenium to Playwright and added theme modal helpers to the shared `BasePage`.
 
 ## v3.3.0a1 (2026-11-09)
 

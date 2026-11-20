@@ -51,38 +51,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Nautobot optional settings/defaults
 #
 
-# Rate Limiting Settings
-NAUTOBOT_RATE_LIMITING_REST_BUDGET = int(os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET", "1000"))
-NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS = int(
-    os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS", "60")
-)
-
-# REST Rate Limiting Complexity Cost Settings
-NAUTOBOT_RATE_LIMITING_REST_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_REST_MODE", "off"))
-NAUTOBOT_RATE_LIMITING_REST_READ_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_READ_COST", "1"))
-NAUTOBOT_RATE_LIMITING_REST_WRITE_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_WRITE_COST", "3"))
-NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST = float(
-    os.getenv("NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST", "3")
-)
-NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST = float(
-    os.getenv("NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST", "3")
-)
-NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST", "3"))
-NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL = float(
-    os.getenv("NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL", "1")
-)
-NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER = float(
-    os.getenv("NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER", "3")
-)
-NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER", "3"))
-
-# GraphQL Rate Limiting Complexity Cost Settings
-NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE", "off"))
-
-NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = os.getenv(
-    "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION", ""
-)
-
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
@@ -107,6 +75,15 @@ ALLOWED_URL_SCHEMES = [
     "vnc",
     "xmpp",
 ]
+
+# Allow the Archive Old Records system job to be run with Force Cascade Delete. Defaults to False if not set here.
+if (
+    "NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED" in os.environ
+    and os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"] != ""
+):
+    ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED = is_truthy(
+        os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"]
+    )
 
 # Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
@@ -308,6 +285,36 @@ if (
     and os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"] != ""
 ):
     RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT = is_truthy(os.environ["NAUTOBOT_RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT"])
+
+# Rate Limiting Settings
+RATE_LIMITING_REST_BUDGET = int(os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET", "1000"))
+RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS = int(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS", "60")
+)
+
+# REST Rate Limiting Complexity Cost Settings
+RATE_LIMITING_REST_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_REST_MODE", "off"))
+RATE_LIMITING_REST_READ_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_READ_COST", "1"))
+RATE_LIMITING_REST_WRITE_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_WRITE_COST", "3"))
+RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST", "3"))
+RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST", "3")
+)
+RATE_LIMITING_REST_PAGINATION_COST = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST", "3"))
+RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL", "1")
+)
+RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER = float(
+    os.getenv("NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER", "3")
+)
+RATE_LIMITING_REST_CSV_MULTIPLIER = float(os.getenv("NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER", "3"))
+
+# GraphQL Rate Limiting Complexity Cost Settings
+RATE_LIMITING_GRAPHQL_MODE = str(os.getenv("NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE", "off"))
+
+RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = os.getenv(
+    "NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION", ""
+)
 
 # How frequently to check for a new Nautobot release on GitHub, and the URL to check for this information.
 # Defaults to disabled (no URL) and check every 24 hours when enabled
@@ -927,6 +934,15 @@ CONSTANCE_CONFIG = {
         help_text="Allow users to enable request profiling on their login session.",
         field_type=bool,
     ),
+    "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED": ConstanceConfigItem(
+        default=False,
+        help_text="Allows the Archive Old Records system job to be run with Force Cascade Delete. A Force Cascade"
+        " Delete means that relational records detected will also be deleted without being persisted in the archive"
+        " table. A good example of this is FileProxy records. When this is `False` the job will run, however any"
+        " records with relational records that set a delete option of cascading, protected, or restricted records will"
+        " not be archived.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
@@ -1114,6 +1130,7 @@ CONSTANCE_CONFIG = {
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Archival": ["ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"],
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],

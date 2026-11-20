@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 
 from playwright.sync_api import expect, TimeoutError as PlaywrightTimeoutError
 
-from nautobot.playwright.base_page import BasePage, select2_filter_pick
+from nautobot.playwright.base_page import BasePage
 
 
 class ListPage(BasePage):
@@ -22,6 +22,8 @@ class ListPage(BasePage):
 
     LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
+    # Rendered by the add_button tag on every list view that has an add URL.
+    _ADD_BUTTON = "#add-button"
     # The row selection checkbox; its value is the object's id.
     _PK_CHECKBOX = "input[name='pk']"
     # `generic/object_list.html` renders this around the table on every branch, with or without change
@@ -88,6 +90,10 @@ class ListPage(BasePage):
     def navigate(self, **params):
         """Go to the list view, optionally with given query *params*, e.g. for pinning it to test-owned records."""
         self._goto(f"{self.LIST_PATH}?{urlencode(params)}" if params else self.LIST_PATH)
+
+    def click_add(self):
+        """Click Add and wait for the add form to load."""
+        self._click_and_wait_for_navigation(self._ADD_BUTTON)
 
     def object_table_wrapper(self):
         """Return the locator of the wrapper around the object table. A page without it is not an object list."""
@@ -351,7 +357,7 @@ class ListPage(BasePage):
         Pass `exact=False` for fields whose options render an ancestry path
         (e.g. location fields: "Parent → Child").
         """
-        select2_filter_pick(self.page, field_name, search=value, pick_text=value, exact=exact)
+        self.select2_filter_pick(field_name, search=value, pick_text=value, exact=exact)
 
     def apply_filters(self):
         """Submit the drawer's basic-tab filter form and wait for the filtered reload."""

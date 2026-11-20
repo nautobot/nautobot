@@ -1,0 +1,1 @@
+Added new System Job `Archive Old Records`, which is used to migrate old `ObjectChange`, `JobResult`, `JobConsoleEntry`, and `JobLogEntry` records to a separate set of database tables.

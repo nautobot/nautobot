@@ -71,6 +71,8 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -148,6 +150,8 @@ __all__ = (
     "ApprovalWorkflowStageDefinitionFormSet",
     "ApprovalWorkflowStageFilterForm",
     "ApprovalWorkflowStageResponseFilterForm",
+    "ArchivedJobResultFilterForm",
+    "ArchivedObjectChangeFilterForm",
     "BaseDynamicGroupMembershipFormSet",
     "ComputedFieldBulkEditForm",
     "ComputedFieldFilterForm",
@@ -440,6 +444,40 @@ class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
 
     model = ApprovalWorkflowStageResponse
     q = forms.CharField(required=False, label="Search")
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobResultFilterForm(BootstrapMixin, forms.Form):
+    model = ArchivedJobResult
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+    status = forms.MultipleChoiceField(
+        choices=JobResultStatusChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+
+
+class ArchivedObjectChangeFilterForm(BootstrapMixin, forms.Form):
+    model = ArchivedObjectChange
+    q = forms.CharField(required=False, label="Search")
+    time__gte = forms.DateTimeField(label="After", required=False, widget=DateTimePicker())
+    time__lte = forms.DateTimeField(label="Before", required=False, widget=DateTimePicker())
+    action = forms.ChoiceField(
+        choices=add_blank_choice(ObjectChangeActionChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
+    changed_object_type = MultipleContentTypeField(
+        label="Object Type", queryset=ChangeLoggedModelsQuery().as_queryset(), choices_as_strings=True, required=False
+    )
+    change_context = forms.MultipleChoiceField(
+        required=False, label="Change Context", choices=ObjectChangeEventContextChoices, widget=StaticSelect2Multiple()
+    )
 
 
 #

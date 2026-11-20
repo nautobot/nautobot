@@ -4,7 +4,6 @@ import re
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import select2_filter_pick
 from nautobot.playwright.object_form_page import ObjectFormPage
 
 
@@ -32,7 +31,7 @@ class DynamicGroupFormPage(ObjectFormPage):
 
         The option text is matched as a substring, because location options show their full ancestry path.
         """
-        select2_filter_pick(self.page, f"filter-{field_name}", search=value, pick_text=value, exact=False)
+        self.select2_filter_pick(f"filter-{field_name}", search=value, pick_text=value, exact=False)
         expect(self.page.locator(f"select[name='filter-{field_name}'] option:checked", has_text=value)).to_have_count(1)
 
     def save(self):

@@ -99,6 +99,11 @@ router.register("notes", views.NoteViewSet)
 # Change logging
 router.register("object-changes", views.ObjectChangeViewSet)
 
+# Archived log models
+router.register("archived-object-changes", views.ArchivedObjectChangeViewSet)
+router.register("archived-job-results", views.ArchivedJobResultViewSet)
+router.register("archived-job-logs", views.ArchivedJobLogEntryViewSet)
+
 # Relationships
 router.register("relationships", views.RelationshipViewSet)
 router.register("relationship-associations", views.RelationshipAssociationViewSet)
