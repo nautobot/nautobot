@@ -31,6 +31,7 @@
                                         <div id="a_conn_{{ a.connector }}_fields">
                                             {% render_field a.type_field %}
                                             <div id="a_conn_{{ a.connector }}_termination_fields">
+                                                {% render_field a.location_field %}
                                                 {% render_field a.parent_field %}
                                                 {% render_field a.term_field %}
                                             </div>
@@ -47,6 +48,7 @@
                                         <div id="b_conn_{{ b.connector }}_fields">
                                             {% render_field b.type_field %}
                                             <div id="b_conn_{{ b.connector }}_termination_fields">
+                                                {% render_field b.location_field %}
                                                 {% render_field b.parent_field %}
                                                 {% render_field b.term_field %}
                                             </div>
