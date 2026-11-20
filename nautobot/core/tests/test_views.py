@@ -13,8 +13,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import override_settings, RequestFactory, tag
-from django.test.utils import override_script_prefix
+from django.test.utils import CaptureQueriesContext, override_script_prefix
 from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
@@ -33,8 +34,12 @@ from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
-from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, SavedView, Status
+from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    ObjectChangeActionChoices,
+    ObjectChangeEventContextChoices,
+)
+from nautobot.extras.models import FileProxy, ObjectChange, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -139,6 +144,55 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
 
 
 class HomeViewTestCase(TestCase):
+    def test_changelog_panel_does_not_query_once_per_row(self):
+        """The home page changelog panel must not run a query for each row.
+
+        The panel displays each row's `changed_object`, which is a GenericForeignKey. The panel must load these objects
+        with one query for each content type.
+        """
+        # Without this permission, the panel shows "No permission" and does not display the rows created below.
+        self.add_permissions("extras.view_objectchange")
+
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        locations = [
+            Location.objects.create(name=f"changelog-panel-{i}", location_type=location_type, status=status)
+            for i in range(12)
+        ]
+        location_ct = ContentType.objects.get_for_model(Location)
+
+        # Each row points to a different Location. Without the prefetch, the panel runs one Location query for each of
+        # the twelve rows. With the prefetch, it runs one Location query for all of them.
+        for location in locations:
+            ObjectChange.objects.create(
+                user_name="changelog-panel-test",
+                request_id=uuid.uuid4(),
+                action=ObjectChangeActionChoices.ACTION_UPDATE,
+                change_context=ObjectChangeEventContextChoices.CONTEXT_ORM,
+                changed_object_type=location_ct,
+                changed_object_id=location.pk,
+                object_repr=str(location),
+                object_data={},
+            )
+
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode()
+
+        # Make sure that the panel displays these rows. If it does not, the query count below does not test the panel.
+        self.assertNotIn("No permission", content, "the changelog panel did not render")
+        self.assertIn("changelog-panel-test", content, "the changelog panel rendered none of these rows")
+
+        location_table = connection.ops.quote_name(Location._meta.db_table)
+        location_queries = len([q for q in ctx.captured_queries if f"FROM {location_table}" in q["sql"]])
+        self.assertLessEqual(
+            location_queries,
+            2,
+            f"the changelog panel issued {location_queries} dcim_location queries for twelve rows; "
+            "changed_object has lost its prefetch_related",
+        )
+
     def test_home(self):
         url = reverse("home")
 
