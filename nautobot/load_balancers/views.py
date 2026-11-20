@@ -33,6 +33,7 @@ class VirtualServerUIViewSet(NautobotUIViewSet):
                 fields=[
                     "name",
                     "vip",
+                    "dns_name",
                     "enabled",
                     "tenant",
                 ],

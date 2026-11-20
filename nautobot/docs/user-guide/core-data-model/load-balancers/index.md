@@ -44,6 +44,7 @@ erDiagram
     "load_balancers.VirtualServer"[VirtualServer] {
         string name UK
         IPAddress vip FK
+        string dns_name
         int port
         choices protocol
         Prefix source_nat_pool FK
@@ -129,7 +130,7 @@ erDiagram
 
     }
 
-    "load_balancers.VirtualServer" }o--|| "ipam.IPAddress" : "must have"
+    "load_balancers.VirtualServer" }o--o| "ipam.IPAddress" : has
     "load_balancers.VirtualServer" }o--o| "ipam.Prefix" : has
     "load_balancers.VirtualServer" }o--o| "dcim.Device" : has
     "load_balancers.VirtualServer" }o--o| "dcim.DeviceRedundancyGroup" : has

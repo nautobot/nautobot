@@ -6,6 +6,7 @@ from django.db import DEFAULT_DB_ALIAS, IntegrityError
 from django.utils.text import slugify
 
 from nautobot.circuits import choices as circuit_choices
+from nautobot.cloud import choices as cloud_choices
 from nautobot.core.choices import ColorChoices
 from nautobot.dcim import choices as dcim_choices
 from nautobot.extras import choices as extras_choices
@@ -18,6 +19,9 @@ from nautobot.vpn import choices as vpn_choices
 # Add new mappings here as other models are supported.
 STATUS_CHOICESET_MAP = {
     "circuits.Circuit": circuit_choices.CircuitStatusChoices,
+    "cloud.CloudAccount": cloud_choices.CloudStatusChoices,
+    "cloud.CloudNetwork": cloud_choices.CloudStatusChoices,
+    "cloud.CloudService": cloud_choices.CloudStatusChoices,
     "dcim.Cable": dcim_choices.CableStatusChoices,
     "dcim.Controller": dcim_choices.DeviceStatusChoices,
     "dcim.Device": dcim_choices.DeviceStatusChoices,
