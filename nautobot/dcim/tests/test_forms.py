@@ -25,6 +25,7 @@ from nautobot.dcim.forms import (
     ConsoleServerPortTemplateForm,
     DeviceFilterForm,
     DeviceForm,
+    FrontPortTemplateImportForm,
     InterfaceBulkEditForm,
     InterfaceCreateForm,
     InterfaceForm,
@@ -53,6 +54,7 @@ from nautobot.dcim.models import (
     PowerFeed,
     PowerPanel,
     Rack,
+    RearPortTemplate,
     SoftwareImageFile,
     SoftwareVersion,
 )
@@ -69,6 +71,58 @@ class ConsoleServerPortTemplateTestCase(FormTestCases.BaseFormTestCase):
     def test_empty_filter_is_valid(self):
         form = ConsoleServerPortTemplateFilterForm(data={})
         self.assertTrue(form.is_valid(), form.errors)
+
+
+class FrontPortTemplateImportFormTestCase(FormTestCases.BaseFormTestCase):
+    form_class = FrontPortTemplateImportForm
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_type = DeviceType.objects.first()
+        cls.module_type = ModuleType.objects.first()
+        for parent_field in ("device_type", "module_type"):
+            RearPortTemplate.objects.create(
+                **{parent_field: getattr(cls, parent_field)},
+                name="Repro R1",
+                type=PortTypeChoices.TYPE_MPO,
+                positions=12,
+            )
+
+    def test_rear_port_aliases(self):
+        for parent_field in ("device_type", "module_type"):
+            for field in ("rear_port", "rear_port_template"):
+                with self.subTest(parent_field=parent_field, field=field):
+                    form = self.form_class(
+                        data={
+                            parent_field: getattr(self, parent_field).pk,
+                            "name": "F1",
+                            "type": "lc-upc",
+                            "rear_port_position": 1,
+                            field: "Repro R1",
+                        }
+                    )
+                    self.assertTrue(form.is_valid(), form.errors)
+                    self.assertEqual(form.instance.rear_port_template.name, "Repro R1")
+                    self.assertEqual(form.instance.rear_port_template.parent, getattr(self, parent_field))
+
+    def test_missing_rear_port(self):
+        for parent_field in ("device_type", "module_type"):
+            for value in ({}, {"rear_port": None}, {"rear_port_template": ""}):
+                with self.subTest(parent_field=parent_field, value=value):
+                    form = self.form_class(
+                        data={
+                            parent_field: getattr(self, parent_field).pk,
+                            "name": "F1",
+                            "type": "lc-upc",
+                            "rear_port_position": 1,
+                            **value,
+                        }
+                    )
+                    self.assertFalse(form.is_valid())
+                    self.assertIn("A rear port must be specified.", form.errors["rear_port_template"])
+
+    def test_unbound_form(self):
+        self.assertFalse(self.form_class().is_valid())
 
 
 class DeviceTestCase(FormTestCases.BaseFormTestCase):

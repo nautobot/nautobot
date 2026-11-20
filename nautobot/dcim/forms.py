@@ -2126,7 +2126,7 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
         """
         Map an input of "rear_port" to the model's expected "rear_port_template" for devicetype-library compatibility.
         """
-        if self.data["rear_port"] and not self.data["rear_port_template"]:
+        if self.data.get("rear_port") and not self.data.get("rear_port_template"):
             self.data["rear_port_template"] = self.data["rear_port"]
         return super().is_valid()
 
