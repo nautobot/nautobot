@@ -1217,19 +1217,20 @@ class JobTable(BaseTable):
 
     def render_description(self, value, record):
         return format_html(
-            '<div class="{}">{}</div>',
-            "text-body-secondary" if not self.get_row_url(record) else "",
+            '<div class="nb-rendered-markdown{}">{}</div>',
+            " text-body-secondary" if not self.get_row_url(record) else "",
             render_markdown(value),
         )
 
     def render_name(self, value, record):
         runnable = bool(self.get_row_url(record))
         return format_html(
-            '<span class="d-inline-flex gap-2 align-items-start {}">'
-            '<span class="btn btn-sm p-2 rounded-circle flex-shrink-0 {}" aria-hidden="true">'
+            '<span class="d-inline-flex column-gap-10 align-items-start{}" style="{}">'
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle flex-shrink-0{}" aria-hidden="true">'
             '<span class="mdi mdi-play"></span></span>{}</span>',
-            "" if runnable else "text-body-secondary",
-            "btn-primary" if runnable else "btn-secondary disabled",
+            "" if runnable else " text-body-secondary",
+            "" if runnable else "cursor: not-allowed",
+            "" if runnable else " disabled",
             value,
         )
 
