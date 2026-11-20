@@ -18,6 +18,7 @@ from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
 from netaddr.core import AddrFormatError
+from tree_queries.models import TreeNode
 
 from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
@@ -217,7 +218,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
     Field for choosing any number of `ContentType` objects.
 
     Optionally can restrict the available ContentTypes to those supporting a particular feature only.
-    Optionally can pass the selection through as a list of `{app_label}.{model}` strings instead of PK values.
+    Optionally can render and accept the selection as `{app_label}.{model}` strings instead of PK values.
+    The cleaned value is a `ContentType` queryset either way.
     """
 
     STATIC_CHOICES = True
@@ -228,7 +230,8 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         Args:
             feature (str): Feature name to use in constructing a FeatureQuery to restrict the available ContentTypes.
-            choices_as_strings (bool): If True, render selection as a list of `"{app_label}.{model}"` strings.
+            choices_as_strings (bool): If True, render and accept the selection as a list of `"{app_label}.{model}"`
+                strings.
         """
         from nautobot.extras import utils as extras_utils
 
@@ -248,8 +251,44 @@ class MultipleContentTypeField(django_forms.ModelMultipleChoiceField):
 
         super().__init__(*args, **kwargs)
 
+        self.choices_as_strings = choices_as_strings
         if choices_as_strings:
             self.choices = self._string_choices_from_queryset
+
+    def clean(self, value):
+        """Validate the selection and return the selected `ContentType` objects."""
+        if self.choices_as_strings:
+            return self._clean_as_strings(value)
+        return super().clean(value)
+
+    def _clean_as_strings(self, value):
+        """Same outcome as `ModelMultipleChoiceField.clean()`, but looks up `{app_label}.{model}` values, not PKs."""
+        value = self.prepare_value(value)
+        if not value:
+            if self.required:
+                raise ValidationError(self.error_messages["required"], code="required")
+            return self.queryset.none()
+        if not isinstance(value, (list, tuple)):
+            raise ValidationError(self.error_messages["invalid_list"], code="invalid_list")
+
+        pks_by_label = {f"{ct.app_label}.{ct.model}": ct.pk for ct in self.queryset}
+        for label in value:
+            if label not in pks_by_label:
+                raise ValidationError(
+                    self.error_messages["invalid_choice"], code="invalid_choice", params={"value": label}
+                )
+        self.run_validators(value)
+        return self.queryset.filter(pk__in=[pks_by_label[label] for label in value])
+
+    def prepare_value(self, value):
+        """Render `ContentType` objects as `{app_label}.{model}` strings when `choices_as_strings` is set."""
+        if not self.choices_as_strings:
+            return super().prepare_value(value)
+        if isinstance(value, ContentType):
+            return f"{value.app_label}.{value.model}"
+        if hasattr(value, "__iter__") and not isinstance(value, str):
+            return [self.prepare_value(item) for item in value]
+        return value
 
     def _string_choices_from_queryset(self):
         """Overload choices to return `{app_label}.{model}` instead of PKs."""
@@ -491,7 +530,8 @@ class DynamicModelChoiceMixin:
     """
     Args:
         display_field (str): The name of the attribute of an API response object to display in the selection list
-        query_params (Optional[dict]): Additional key/value pairs to attach to the API request
+        query_params (Optional[dict]): Additional key/value pairs to attach to the API request. If no `sort` is given,
+            choices are sorted by `name` where appropriate for the model (see `_sort_by_name()`).
         initial_params (Optional[dict]): Child field references to use for selecting a parent field's initial value
         null_option (Optional[str]): The string used to represent a null selection (if any)
         disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
@@ -524,6 +564,9 @@ class DynamicModelChoiceMixin:
         self.query_params = query_params or {}
         # Default to "exclude_m2m=true" for improved performance, if not otherwise specified
         self.query_params.setdefault("exclude_m2m", "true")
+        queryset = kwargs.get("queryset")
+        if queryset is not None and "sort" not in self.query_params and self._sort_by_name(queryset.model):
+            self.query_params["sort"] = "name"
         self.initial_params = initial_params or {}
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
@@ -537,6 +580,25 @@ class DynamicModelChoiceMixin:
         self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def _sort_by_name(model):
+        """
+        Whether dropdown choices for `model` should be sorted by `name` rather than by the model's default ordering.
+
+        A model's default ordering often groups records by a parent object (e.g. `Tenant` by `tenant_group`) that
+        isn't shown in the dropdown, so the choices look unsorted. Models whose ordering is deliberate keep it:
+        tree models (ordered by hierarchy, displayed with their ancestry), models with a natural-ordering `_name`
+        field (so that "eth2" sorts before "eth10"), and models ordered by a user-defined `weight`. Models already
+        ordered by `name` alone need no explicit sort.
+        """
+        field_names = {field.name for field in model._meta.concrete_fields}
+        if "name" not in field_names or "_name" in field_names:
+            return False
+        if issubclass(model, TreeNode):
+            return False
+        ordering = list(model._meta.ordering)
+        return ordering != ["name"] and "weight" not in ordering
 
     @property
     def embedded_create_permissions(self):

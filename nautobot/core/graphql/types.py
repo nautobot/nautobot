@@ -17,7 +17,7 @@ class OptimizedNautobotObjectType(DjangoObjectType):
     # which can re-introduce FK N+1 query regressions.
     #
     # Nautobot query optimization is handled explicitly by wrapping the *root* queryset with
-    # `graphene_django_optimizer.query(...)` in our GraphQL resolvers.
+    # `optimize_query(...)` (a wrapper around `graphene_django_optimizer`) in our GraphQL resolvers.
     # See nautobot/core/graphql/generators.py for more details.
     #
     # Permission enforcement for ID/node lookups is handled in get_node().

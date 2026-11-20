@@ -17,6 +17,7 @@ from nautobot.dcim.tables import DeviceTable
 from nautobot.dcim.utils import render_software_version_and_image_files
 from nautobot.dcim.views import ComponentCreateViewMixin
 from nautobot.extras.models import ConfigContext
+from nautobot.ipam.models import VLAN
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.api import serializers
@@ -327,9 +328,13 @@ class VMInterfaceUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve" and instance is not None:
             vlans = []
-            if instance.untagged_vlan is not None:
-                vlans.append(instance.untagged_vlan)
-                vlans[0].tagged = False
+            # Restrict `untagged_vlan` (a single FK) the same way `tagged_vlans` is restricted below,
+            # so a user without view permission on that VLAN doesn't see it in the table.
+            if instance.untagged_vlan_id is not None:
+                untagged_vlan = VLAN.objects.restrict(request.user, "view").filter(pk=instance.untagged_vlan_id).first()
+                if untagged_vlan is not None:
+                    untagged_vlan.tagged = False
+                    vlans.append(untagged_vlan)
             for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
                 vlan.tagged = True
                 vlans.append(vlan)
