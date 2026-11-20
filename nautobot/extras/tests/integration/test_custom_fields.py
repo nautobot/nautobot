@@ -127,7 +127,8 @@ class CustomFieldTestCase:
 
         detail = submit_new_custom_field(auth_page, base_url, form, label)
 
-        detail.expect_choices(choices)
+        for value in choices:
+            detail.expect_choice(value)
         custom_field = get_custom_field(api, label)
         assert custom_field["type"]["value"] == field_type
         assert set(get_choices(api, custom_field)) == set(choices)
@@ -163,8 +164,10 @@ class CustomFieldTestCase:
 
         detail = submit_new_custom_field(auth_page, base_url, form, label)
 
-        detail.expect_choices(["choice1", "choice2", "choice3"])
-        assert set(get_choices(api, get_custom_field(api, label))) == {"choice1", "choice2", "choice3"}
+        choices = ["choice1", "choice2", "choice3"]
+        for value in choices:
+            detail.expect_choice(value)
+        assert set(get_choices(api, get_custom_field(api, label))) == set(choices)
 
     @pytest.mark.behavioral
     def test_update_type_select_with_choices_editing_existing_choice(
@@ -193,7 +196,7 @@ class CustomFieldTestCase:
 
         detail.expect_url_contains(detail_url)
         detail.expect_flash_message(f"Modified custom field {label}")
-        detail.expect_choices(["new_choice"])
+        detail.expect_choice("new_choice")
         detail.expect_no_choice("replace_me")
         assert set(get_choices(api, custom_field)) == {"new_choice"}
 
@@ -224,7 +227,7 @@ class CustomFieldTestCase:
 
         detail.expect_url_contains(detail_url)
         detail.expect_flash_message(f"Modified custom field {label}")
-        detail.expect_choices(["new_choice"])
+        detail.expect_choice("new_choice")
         detail.expect_no_choice("delete_me")
         assert set(get_choices(api, custom_field)) == {"new_choice"}
 
@@ -232,11 +235,7 @@ class CustomFieldTestCase:
     def test_update_type_select_delete_saved_choice_and_fill_blank_row(
         self, auth_page, base_url, api, create_device_custom_field
     ):
-        """Deleting the saved choice's row and filling one of the edit form's blank rows in one edit replaces the choice.
-
-        This is what the Selenium version of test_update_type_select_create_delete_choices did: it filled a
-        blank row, which stays inside TOTAL_FORMS after the delete, so it is not affected by #9829.
-        """
+        """Deleting the saved choice's row and filling one of the edit form's blank rows in one edit replaces the choice."""
         custom_field = create_device_custom_field("select", choices=["delete_me"])
         label = custom_field["label"]
         detail = CustomFieldDetailPage(auth_page, base_url)
@@ -252,7 +251,7 @@ class CustomFieldTestCase:
 
         detail.expect_url_contains(detail_url)
         detail.expect_flash_message(f"Modified custom field {label}")
-        detail.expect_choices(["new_choice"])
+        detail.expect_choice("new_choice")
         detail.expect_no_choice("delete_me")
         assert set(get_choices(api, custom_field)) == {"new_choice"}
 
@@ -261,25 +260,29 @@ class CustomFieldTestCase:
     # -------------------------------------------------------------------------
 
     @pytest.mark.behavioral
-    def test_custom_field_advanced_ui(self, auth_page, base_url, api, created_device, create_device_custom_field):
+    def test_custom_field_advanced_ui(
+        self, auth_page, base_url, created_device, create_device_custom_field, update_object
+    ):
         """The field's label and value show on the device's main tab while `advanced_ui` is False, and only on its Advanced tab once it is True."""
         value = "This is some testing text"
-        device = created_device["device"]
         custom_field = create_device_custom_field("text")
-        response = api.patch(f"/api/dcim/devices/{device['id']}/", data={"custom_fields": {custom_field["key"]: value}})
-        assert response.ok, f"PATCH device {device['id']} returned {response.status}: {response.text()}"
+        device = update_object(
+            "dcim/devices/", created_device["device"]["id"], custom_fields={custom_field["key"]: value}
+        )
         # The API discards a value whose key is missing from its cached list of the model's custom fields,
         # so check that the value was saved before looking for it in the UI.
-        assert response.json()["custom_fields"].get(custom_field["key"]) == value
+        assert device["custom_fields"].get(custom_field["key"]) == value
 
         detail = DeviceDetailPage(auth_page, base_url)
         detail.navigate(device["id"])
+        # Check the main tab first: opening the Advanced tab hides the main tab's text.
         for text in (custom_field["label"], value):
             detail.expect_tab_to_contain("main", text)
+        detail.open_tab("advanced")
+        for text in (custom_field["label"], value):
             detail.expect_tab_not_to_contain("advanced", text)
 
-        response = api.patch(f"/api/extras/custom-fields/{custom_field['id']}/", data={"advanced_ui": True})
-        assert response.ok, f"PATCH custom field {custom_field['id']} returned {response.status}: {response.text()}"
+        update_object("extras/custom-fields/", custom_field["id"], advanced_ui=True)
 
         detail.navigate(device["id"])
         detail.open_tab("advanced")
@@ -339,12 +342,12 @@ class CustomFieldTestCase:
         form.submit()
         detail = DeviceDetailPage(auth_page, base_url)
         detail.expect_flash_message("Modified device")
-        detail.expect_tab_to_contain("main", choice)
+        detail.expect_panel_field("Custom Fields", custom_field["label"], choice)
         assert get_device_custom_fields(api, device)[custom_field["key"]] == choice
 
         custom_field_detail = CustomFieldDetailPage(auth_page, base_url)
         custom_field_detail.navigate(custom_field["id"])
-        custom_field_detail.delete()
+        custom_field_detail.click_delete_and_confirm()
         custom_field_detail.expect_flash_message(f"Deleted custom field {custom_field['label']}")
 
         form = open_device_edit_form(auth_page, base_url, device)
@@ -365,10 +368,19 @@ class CustomFieldTestCase:
 
         for field_type, visible in VISIBLE_PARTS_BY_TYPE.items():
             form.select_type(field_type)
-            form.expect_validation_rules_card(visible["validation_rules"])
+            if visible["validation_rules"]:
+                form.expect_validation_rules_card_visible()
+            else:
+                form.expect_validation_rules_card_hidden()
             for name in ("minimum", "maximum", "regex"):
-                form.expect_validation_field(name, visible[name])
-            form.expect_choices_card(visible["choices"])
+                if visible[name]:
+                    form.expect_validation_field_visible(name)
+                else:
+                    form.expect_validation_field_hidden(name)
+            if visible["choices"]:
+                form.choices.expect_visible()
+            else:
+                form.choices.expect_hidden()
 
     def test_type_controls_min_max_help_text(self, auth_page, base_url):
         """The minimum and maximum help text describes a numeric value for integers and a length for the other types."""

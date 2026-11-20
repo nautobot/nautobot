@@ -59,29 +59,25 @@ class CustomFieldFormPage(ObjectFormPage):
     # Type-dependent cards and fields
     # -------------------------------------------------------------------------
 
-    def expect_validation_rules_card(self, visible):
-        """Assert (auto-retrying) that the Validation Rules card is shown if *visible*, or hidden if not."""
-        self._expect_visibility(self.page.locator(self._VALIDATION_RULES_CARD), visible)
+    # The Custom Field Choices card has its own pair, `choices.expect_visible()` and `choices.expect_hidden()`.
 
-    def expect_validation_field(self, name, visible):
-        """Assert (auto-retrying) that the validation field *name* ("minimum", "maximum" or "regex") is shown if *visible*, or hidden if not."""
-        self._expect_visibility(self.page.locator(self._VALIDATION_FIELD.format(name=name)), visible)
+    def expect_validation_rules_card_visible(self):
+        """Assert (auto-retrying) that the Validation Rules card is shown."""
+        expect(self.page.locator(self._VALIDATION_RULES_CARD)).to_be_visible()
 
-    def expect_choices_card(self, visible):
-        """Assert (auto-retrying) that the Custom Field Choices card is shown if *visible*, or hidden if not."""
-        if visible:
-            self.choices.expect_visible()
-        else:
-            self.choices.expect_hidden()
+    def expect_validation_rules_card_hidden(self):
+        """Assert (auto-retrying) that the Validation Rules card is hidden."""
+        expect(self.page.locator(self._VALIDATION_RULES_CARD)).to_be_hidden()
+
+    def expect_validation_field_visible(self, name):
+        """Assert (auto-retrying) that the validation field *name* ("minimum", "maximum" or "regex") is shown."""
+        expect(self.page.locator(self._VALIDATION_FIELD.format(name=name))).to_be_visible()
+
+    def expect_validation_field_hidden(self, name):
+        """Assert (auto-retrying) that the validation field *name* ("minimum", "maximum" or "regex") is hidden."""
+        expect(self.page.locator(self._VALIDATION_FIELD.format(name=name))).to_be_hidden()
 
     def expect_validation_help_text(self, minimum, maximum):
         """Assert (auto-retrying) the help text under the minimum and maximum fields."""
         expect(self.page.locator(self._VALIDATION_HELP_TEXT.format(name="minimum"))).to_have_text(minimum)
         expect(self.page.locator(self._VALIDATION_HELP_TEXT.format(name="maximum"))).to_have_text(maximum)
-
-    @staticmethod
-    def _expect_visibility(locator, visible):
-        if visible:
-            expect(locator).to_be_visible()
-        else:
-            expect(locator).to_be_hidden()

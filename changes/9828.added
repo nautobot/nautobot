@@ -1,2 +1,2 @@
-Added `delete` to `nautobot.playwright.detail_page.DetailPage`.
+Added `click_delete_and_confirm` to `nautobot.playwright.detail_page.DetailPage`.
 Added `pick_choice` to `nautobot.playwright.object_form_page.ObjectFormPage`.

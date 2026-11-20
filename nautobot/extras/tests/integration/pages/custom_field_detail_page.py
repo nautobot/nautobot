@@ -13,12 +13,14 @@ class CustomFieldDetailPage(DetailPage):
 
     _CHOICES_PANEL = "Custom Field Choices"
 
-    def expect_choices(self, values):
-        """Assert (auto-retrying) that the Custom Field Choices panel lists each of *values*."""
-        panel = self.panel(self._CHOICES_PANEL)
-        for value in values:
-            expect(panel.get_by_role("cell", name=value, exact=True)).to_be_visible()
+    def _choice_cell(self, value):
+        """Locator for the Custom Field Choices panel's cell that shows *value*."""
+        return self.panel(self._CHOICES_PANEL).get_by_role("cell", name=value, exact=True)
+
+    def expect_choice(self, value):
+        """Assert (auto-retrying) that the Custom Field Choices panel lists *value*."""
+        expect(self._choice_cell(value)).to_be_visible()
 
     def expect_no_choice(self, value):
         """Assert (auto-retrying) that the Custom Field Choices panel does not list *value*."""
-        expect(self.panel(self._CHOICES_PANEL).get_by_role("cell", name=value, exact=True)).to_have_count(0)
+        expect(self._choice_cell(value)).to_have_count(0)

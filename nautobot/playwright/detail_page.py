@@ -69,11 +69,10 @@ class DetailPage(BasePage):
         """Click this model's Edit button and wait for the edit form to load."""
         self._click_and_wait_for_navigation(self._EDIT_BUTTON)
 
-    def delete(self):
-        """Delete the object through the UI and wait for the redirect.
+    def click_delete_and_confirm(self):
+        """Open the actions dropdown, click Delete, then click Confirm, and wait for the redirect.
 
-        Open the actions dropdown, click Delete, then click Confirm. Nautobot redirects to the
-        model's list view after a delete.
+        Nautobot redirects to the model's list view after a delete.
         """
         self.page.locator(self._ACTIONS_DROPDOWN).click()
         self._click_and_wait_for_navigation(self._DELETE_BUTTON)
