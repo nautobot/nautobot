@@ -4,7 +4,9 @@ Nautobot bundles the [Monaco editor](https://microsoft.github.io/monaco-editor/)
 
 ## Rendering an Editor
 
-Load `js/editor.js` in your template and add an element with the `nb-editor-container` class. The editor is configured through `data-*` attributes:
+The editor wrapper is not part of Nautobot's main JavaScript bundle, so each page that uses it must load `js/editor.js` itself, in the template's `javascript` block as shown below. The script is small, and Monaco itself is only downloaded the first time an editor is created on the page.
+
+With the script loaded, add an element with the `nb-editor-container` class. The editor is configured through `data-*` attributes:
 
 | Attribute       | Description                                                                  |
 | --------------- | ---------------------------------------------------------------------------- |
@@ -50,24 +52,31 @@ Elements that are added to the page after it has loaded, such as the body of a m
 
 Calling `create()` again on an element that already has an editor replaces that editor. If the editor cannot be initialized, an error message is shown in the element and the `Promise` resolves with `null`.
 
-```javascript
-const modal = document.getElementById("my-modal");
+The recommended way to load such content is [HTMX](../../../core/htmx.md). For example, a button that opens a modal and loads a fragment containing an `nb-editor-container` element into its body:
 
-modal.addEventListener("shown.bs.modal", async () => {
-    const response = await fetch("/plugins/my-app/my-diff-fragment/");
-    modal.querySelector(".modal-body").innerHTML = await response.text();
-    const host = modal.querySelector(".nb-editor-container");
-    if (host) {
-        await window.nb.editor.create(host);
-    }
+```django
+<button type="button"
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#my-modal"
+        hx-get="{% url 'plugins:my_app:my_diff_fragment' %}"
+        hx-target="#my-modal .modal-body">
+    Show diff
+</button>
+```
+
+```javascript
+const modalBody = document.querySelector("#my-modal .modal-body");
+
+// Dispose the editors in the content that is about to be replaced
+modalBody.addEventListener("htmx:beforeSwap", () => {
+    modalBody.querySelectorAll(".nb-editor-container").forEach((host) => window.nb.editor.dispose(host));
 });
 
-modal.addEventListener("hidden.bs.modal", () => {
-    const host = modal.querySelector(".nb-editor-container");
-    if (host) {
-        window.nb.editor.dispose(host);
-    }
+// Initialize the editors in the content that was just loaded
+modalBody.addEventListener("htmx:afterSwap", () => {
+    modalBody.querySelectorAll(".nb-editor-container").forEach((host) => window.nb.editor.create(host));
 });
 ```
 
-The page that loads the content must include `js/editor.js`; it does not need to contain an `nb-editor-container` element when it loads.
+`js/editor.js` must be loaded by the page itself, not by the fragment, because `window.nb.editor` has to exist before the content arrives. The page does not need to contain an `nb-editor-container` element when it loads.

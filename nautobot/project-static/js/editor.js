@@ -316,7 +316,7 @@
   window.nb ??= {};
   window.nb.editor = {
       create: createEditor,
-      dispose: (host) => Editor.disposeHost(host),
+      dispose: Editor.disposeHost,
   };
 
   // Initialize the editors that are present at page load
