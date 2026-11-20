@@ -73,7 +73,6 @@ The IP address and interface of an existing IP Address Assignment can no longer 
 As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.3.0b1 (2026-11-20)
@@ -93,8 +92,6 @@ As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's
 ### Changed in v3.3.0b1
 
 - [#9717](https://github.com/nautobot/nautobot/issues/9717) - Changed `select2_filter_pick` in `nautobot.playwright.base_page` from a module-level function to a `BasePage` method.
-- [#9769](https://github.com/nautobot/nautobot/issues/9769) - Enhanced `JobResultFactory` and `ArchivedJobResultFactory` to create canceled (revoked) records as well.
-- [#9812](https://github.com/nautobot/nautobot/issues/9812) - Changed `ObjectChangeFactory` to sometimes create records with a null `object_data`.
 - [#9840](https://github.com/nautobot/nautobot/issues/9840) - Renamed the settings variables named `NAUTOBOT_RATE_LIMITING_*` to simply `RATE_LIMITING_*`.
 
 ### Removed in v3.3.0b1
@@ -117,7 +114,9 @@ As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's
 - [#9669](https://github.com/nautobot/nautobot/issues/9669) - Changed `ObjectChangeFactory` and `JobResultFactory` to generate more recent timestamps, with factory-generated archived history always older than the factory-generated `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry` records it mirrors.
 - [#9696](https://github.com/nautobot/nautobot/issues/9696) - Ported the tests for embedded create and embedded search on object edit forms from Selenium to Playwright, and added the `EmbeddedModal` page component for Core Playwright tests.
 - [#9717](https://github.com/nautobot/nautobot/issues/9717) - Replaced the Selenium tag filter tests with their Playwright equivalents.
+- [#9769](https://github.com/nautobot/nautobot/issues/9769) - Enhanced `JobResultFactory` and `ArchivedJobResultFactory` to create canceled (revoked) records as well.
 - [#9792](https://github.com/nautobot/nautobot/issues/9792) - Added a test to detect schema drift for the archived models populated by the `Archive Old Records` job.
+- [#9812](https://github.com/nautobot/nautobot/issues/9812) - Changed `ObjectChangeFactory` to sometimes create records with a null `object_data`.
 - [#9837](https://github.com/nautobot/nautobot/issues/9837) - Changed the default Docker Compose development environment to use PostgreSQL 15, because PostgreSQL 14 has reached end of life. Note that Nautobot itself continues to support PostgreSQL 14 for the time being.
 - [#9837](https://github.com/nautobot/nautobot/issues/9837) - Added support for overriding the PostgreSQL version used by `tasks.py`.
 - [#9837](https://github.com/nautobot/nautobot/issues/9837) - Changed CI to run the integration tests against PostgreSQL 18. The other CI jobs that use PostgreSQL still run against PostgreSQL 14.
