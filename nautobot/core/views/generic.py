@@ -315,7 +315,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 filter_form = self.filterset_form(filter_params, label_suffix="")
 
         # Check for YAML export support
-        if "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
+        if request.GET.get("export") == "" and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"{settings.BRANDING_PREPENDED_FILENAME}{self.queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'

@@ -886,7 +886,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     def check_for_export(self, request, model, content_type):
         # Check for YAML export support
         queryset = self.filter_queryset(self.get_queryset())
-        if "export" in request.GET and hasattr(model, "to_yaml"):
+        if request.GET.get("export") == "" and hasattr(model, "to_yaml"):
             response = HttpResponse(self.queryset_to_yaml(), content_type="text/yaml")
             filename = f"nautobot_{queryset.model._meta.verbose_name_plural}.yaml"
             response["Content-Disposition"] = f'attachment; filename="{filename}"'
