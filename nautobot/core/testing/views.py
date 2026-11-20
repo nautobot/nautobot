@@ -1178,8 +1178,9 @@ class ViewTestCases:
                 response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
                 self.assertHttpStatus(response, 200)
                 # There should be some rows
-                self.assertBodyContains(response, 'class="even')
-                self.assertBodyContains(response, 'class="odd')
+                content = response.content.decode(response.charset)
+                self.assertRegex(content, r'class="[^"]*?even[^"]*?"')
+                self.assertRegex(content, r'class="[^"]*?odd[^"]*?"')
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
