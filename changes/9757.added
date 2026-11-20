@@ -1,0 +1,1 @@
+Added `HomePage`, `NavMenu`, the `exact_text()` helper and the `create_view_only_user` fixture to `nautobot.playwright`.

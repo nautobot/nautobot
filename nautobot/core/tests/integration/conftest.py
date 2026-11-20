@@ -27,6 +27,29 @@ def created_grouped_tenant(create_object):
 
 
 @pytest.fixture
+def default_homepage_layout(api):
+    """Start the session user on the default home page layout and restore the saved layout on teardown.
+
+    Writing `null` to `homepage_layout.panels` makes the home view render the default layout, with every
+    panel expanded. The API token and the browser login must be the same user.
+    """
+
+    def _set_panels(panels):
+        response = api.patch("/api/users/config/", data={"homepage_layout": {"panels": panels}})
+        if not response.ok:
+            pytest.fail(f"PATCH /api/users/config/ returned {response.status}: {response.text()}")
+
+    response = api.get("/api/users/config/")
+    if not response.ok:
+        pytest.fail(f"GET /api/users/config/ returned {response.status}: {response.text()}")
+    saved = (response.json().get("homepage_layout") or {}).get("panels")
+
+    _set_panels(None)
+    yield
+    _set_panels(saved)
+
+
+@pytest.fixture
 def user_favorites(api):
     """Callable that sets the session user's navbar favorites. The original list is restored on teardown.
 

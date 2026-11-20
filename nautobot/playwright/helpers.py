@@ -4,6 +4,7 @@ Ordinary functions, imported normally. Fixtures (anything pytest constructs
 per test, with dependencies or teardown) live in `fixtures.py`.
 """
 
+import re
 from uuid import uuid4
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -20,6 +21,15 @@ def unique_name(prefix="ZZZ-test"):
     repeated runs against a shared instance from colliding.
     """
     return f"{prefix}-{uuid4().hex[:8]}"
+
+
+def exact_text(text):
+    """Return a regex that matches *text* as the whole of an element's text, ignoring surrounding whitespace.
+
+    Pass it to a locator's `filter(has_text=...)`. A plain string there matches any element that contains
+    the text, so "Location" would also match "Location Types".
+    """
+    return re.compile(rf"^\s*{re.escape(text)}\s*$")
 
 
 def log_in(page, username, password):
