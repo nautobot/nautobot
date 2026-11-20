@@ -65,6 +65,14 @@ class RegistryTest(TestCase):
 
         with self.subTest("Test for model features without field_attributes"):
             custom_fields_registry = find_models_with_matching_fields(
-                app_models=apps.get_models(), field_names=["_custom_field_data"]
+                app_models=apps.get_models(),
+                field_names=["_custom_field_data"],
+                # The same constraint the registry itself is built with.
+                additional_constraints={"is_custom_field_model": True},
             )
             self.assertEqual(custom_fields_registry, registry["model_features"]["custom_fields"])
+
+        with self.subTest("Test that is_custom_field_model = False opts a model out of custom fields"):
+            # `ArchivedJobResult` has `_custom_field_data` but sets `is_custom_field_model = False`.
+            self.assertIn("jobresult", registry["model_features"]["custom_fields"]["extras"])
+            self.assertNotIn("archivedjobresult", registry["model_features"]["custom_fields"]["extras"])

@@ -1316,6 +1316,12 @@ class JobConsoleEntry(BaseModel):
 
     class Meta:
         ordering = ["timestamp"]
+        indexes = [
+            models.Index(
+                name="extras_jobconsole_jr_ts_idx",
+                fields=["job_result", "timestamp"],
+            )
+        ]
 
 
 #
