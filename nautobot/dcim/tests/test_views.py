@@ -1108,6 +1108,8 @@ subdevice_role: parent
 comments: test comment
 console-ports:
   - name: Console Port 1
+    label: Console Port 1 label
+    description: Console Port 1 description
     type: de-9
   - name: Console Port 2
     type: de-9
@@ -1115,6 +1117,8 @@ console-ports:
     type: de-9
 console-server-ports:
   - name: Console Server Port 1
+    label: Console Server Port 1 label
+    description: Console Server Port 1 description
     type: rj-45
   - name: Console Server Port 2
     type: rj-45
@@ -1122,6 +1126,8 @@ console-server-ports:
     type: rj-45
 power-ports:
   - name: Power Port 1
+    label: Power Port 1 label
+    description: Power Port 1 description
     type: iec-60320-c14
   - name: Power Port 2
     type: iec-60320-c14
@@ -1129,6 +1135,8 @@ power-ports:
     type: iec-60320-c14
 power-outlets:
   - name: Power Outlet 1
+    label: Power Outlet 1 label
+    description: Power Outlet 1 description
     type: iec-60320-c13
     power_port: Power Port 1
     feed_leg: A
@@ -1142,6 +1150,8 @@ power-outlets:
     feed_leg: A
 interfaces:
   - name: Interface 1
+    label: Interface 1 label
+    description: Interface 1 description
     type: 1000base-t
     port_type: 8p8c
     mgmt_only: true
@@ -1151,6 +1161,8 @@ interfaces:
     type: 1000base-t
 rear-ports:
   - name: Rear Port 1
+    label: Rear Port 1 label
+    description: Rear Port 1 description
     type: 8p8c
   - name: Rear Port 2
     type: 8p8c
@@ -1158,6 +1170,8 @@ rear-ports:
     type: 8p8c
 front-ports:
   - name: Front Port 1
+    label: Front Port 1 label
+    description: Front Port 1 description
     type: 8p8c
     rear_port: Rear Port 1
   - name: Front Port 2
@@ -1168,10 +1182,14 @@ front-ports:
     rear_port: Rear Port 3
 device-bays:
   - name: Device Bay 1
+    label: Device Bay 1 label
+    description: Device Bay 1 description
   - name: Device Bay 2
   - name: Device Bay 3
 module-bays:
   - name: Module Bay 1
+    label: Module Bay 1 label
+    description: Module Bay 1 description
     position: 1
   - name: Module Bay 2
     position: 2
@@ -1205,16 +1223,22 @@ module-bays:
         cp1 = dt.console_port_templates.first()
         self.assertEqual(cp1.name, "Console Port 1")
         self.assertEqual(cp1.type, ConsolePortTypeChoices.TYPE_DE9)
+        self.assertEqual(cp1.label, "Console Port 1 label")
+        self.assertEqual(cp1.description, "Console Port 1 description")
 
         self.assertEqual(dt.console_server_port_templates.count(), 3)
         csp1 = dt.console_server_port_templates.first()
         self.assertEqual(csp1.name, "Console Server Port 1")
         self.assertEqual(csp1.type, ConsolePortTypeChoices.TYPE_RJ45)
+        self.assertEqual(csp1.label, "Console Server Port 1 label")
+        self.assertEqual(csp1.description, "Console Server Port 1 description")
 
         self.assertEqual(dt.power_port_templates.count(), 3)
         pp1 = dt.power_port_templates.first()
         self.assertEqual(pp1.name, "Power Port 1")
         self.assertEqual(pp1.type, PowerPortTypeChoices.TYPE_IEC_C14)
+        self.assertEqual(pp1.label, "Power Port 1 label")
+        self.assertEqual(pp1.description, "Power Port 1 description")
 
         self.assertEqual(dt.power_outlet_templates.count(), 3)
         po1 = dt.power_outlet_templates.first()
@@ -1222,6 +1246,8 @@ module-bays:
         self.assertEqual(po1.type, PowerOutletTypeChoices.TYPE_IEC_C13)
         self.assertEqual(po1.power_port_template, pp1)
         self.assertEqual(po1.feed_leg, PowerOutletFeedLegChoices.FEED_LEG_A)
+        self.assertEqual(po1.label, "Power Outlet 1 label")
+        self.assertEqual(po1.description, "Power Outlet 1 description")
 
         self.assertEqual(dt.interface_templates.count(), 3)
         iface1 = dt.interface_templates.first()
@@ -1229,24 +1255,34 @@ module-bays:
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
         self.assertEqual(iface1.port_type, PortTypeChoices.TYPE_8P8C)
         self.assertTrue(iface1.mgmt_only)
+        self.assertEqual(iface1.label, "Interface 1 label")
+        self.assertEqual(iface1.description, "Interface 1 description")
 
         self.assertEqual(dt.rear_port_templates.count(), 3)
         rp1 = dt.rear_port_templates.first()
         self.assertEqual(rp1.name, "Rear Port 1")
+        self.assertEqual(rp1.label, "Rear Port 1 label")
+        self.assertEqual(rp1.description, "Rear Port 1 description")
 
         self.assertEqual(dt.front_port_templates.count(), 3)
         fp1 = dt.front_port_templates.first()
         self.assertEqual(fp1.name, "Front Port 1")
         self.assertEqual(fp1.rear_port_template, rp1)
         self.assertEqual(fp1.rear_port_position, 1)
+        self.assertEqual(fp1.label, "Front Port 1 label")
+        self.assertEqual(fp1.description, "Front Port 1 description")
 
         self.assertEqual(dt.device_bay_templates.count(), 3)
         db1 = dt.device_bay_templates.first()
         self.assertEqual(db1.name, "Device Bay 1")
+        self.assertEqual(db1.label, "Device Bay 1 label")
+        self.assertEqual(db1.description, "Device Bay 1 description")
 
         self.assertEqual(dt.module_bay_templates.count(), 3)
         mb1 = dt.module_bay_templates.first()
         self.assertEqual(mb1.name, "Module Bay 1")
+        self.assertEqual(mb1.label, "Module Bay 1 label")
+        self.assertEqual(mb1.description, "Module Bay 1 description")
 
     def test_import_objects_unknown_type_enums(self):
         """
