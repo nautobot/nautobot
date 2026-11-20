@@ -58,35 +58,50 @@ def check_filter_for_display(filters, field_name, values, prefix=None):
             - display: (str) Resolved field name, whether that's a field label or fallback to inputted `field_name` if label unavailable
             - values: (list) List of dictionaries with the same `name` and `display` keys
     """
+    null_choice_value = getattr(settings, "FILTERS_NULL_CHOICE_VALUE", "null")
     values = values if isinstance(values, (list, tuple)) else [values]
-    values = [v if v != "null" else None for v in values]
 
     filters_field_name = field_name
     if prefix is not None:
         filters_field_name = field_name.removeprefix(f"{prefix}-")
 
+    filter_field = filters.get(filters_field_name) if filters else None
+    null_display = (getattr(filter_field, "null_label", None) if filter_field else None) or "None"
+
+    def _format_value(val):
+        if val in ("null", null_choice_value, None):
+            return {"name": null_choice_value, "display": null_display}
+        return {"name": val, "display": val}
+
     resolved_filter = {
         "name": field_name,
         "display": field_name,
-        "values": [{"name": value, "display": value} for value in values],
+        "values": [_format_value(value) for value in values],
     }
 
-    if filters_field_name not in filters.keys():
+    if filter_field is None:
         return resolved_filter
-
-    filter_field = filters[filters_field_name]
 
     resolved_filter["display"] = get_filter_field_label(filter_field)
 
-    if len(values) == 0 or not hasattr(filter_field, "queryset") or not is_uuid(values[0]):
+    uuid_values = [v for v in values if v not in ("null", null_choice_value, None) and is_uuid(v)]
+    if len(uuid_values) == 0 or not hasattr(filter_field, "queryset"):
         return resolved_filter
     else:
         try:
+            lookup_map = {}
+            for obj in filter_field.queryset.filter(pk__in=uuid_values):
+                lookup_map[str(obj.pk)] = getattr(obj, "display", str(obj))
             new_values = []
-            for value in filter_field.queryset.filter(pk__in=values):
-                new_values.append({"name": str(value.pk), "display": getattr(value, "display", str(value))})
+            for value in values:
+                if value in ("null", null_choice_value, None):
+                    new_values.append({"name": null_choice_value, "display": null_display})
+                elif is_uuid(value) and str(value) in lookup_map:
+                    new_values.append({"name": str(value), "display": lookup_map[str(value)]})
+                else:
+                    new_values.append({"name": value, "display": value})
             resolved_filter["values"] = new_values
-        except (FieldError, AttributeError):
+        except (FieldError, AttributeError, ValidationError):
             pass
 
     return resolved_filter

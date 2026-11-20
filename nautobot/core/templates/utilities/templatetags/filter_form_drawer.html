@@ -194,15 +194,27 @@
                     const dynamicFilterFormSearchParams = new URLSearchParams(new FormData(dynamicFilterForm));
                     const searchParams = new URLSearchParams(window.location.search);
 
-                    const nextSearchParams = new URLSearchParams([
-                        ...[...defaultFilterFormSearchParams].filter(([, value]) => value !== ''),
-                        ...[...dynamicFilterFormSearchParams].filter(
-                            ([property, value]) => value !== '' && !defaultFilterFormSearchParams.has(property, value),
-                        ),
-                        ...[...searchParams].filter(
-                            ([property]) => NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
-                        ),
-                    ]);
+                    const seenParams = new Set();
+                    const nextSearchParams = new URLSearchParams(
+                        [
+                            ...[...defaultFilterFormSearchParams].filter(([, value]) => value !== ''),
+                            ...[...dynamicFilterFormSearchParams].filter(
+                                ([property, value]) =>
+                                value !== '' && !defaultFilterFormSearchParams.has(property, value),
+                            ),
+                            ...[...searchParams].filter(
+                                ([property]) =>
+                                NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
+                            ),
+                        ].filter(([property, value]) => {
+                            const key = `${property}=${value}`;
+                            if (seenParams.has(key)) {
+                                return false;
+                            }
+                            seenParams.add(key);
+                            return true;
+                        }),
+                    );
 
                     if (nextSearchParams.has('saved_view')) {
                         const all_filters_removed = [...nextSearchParams].every(([property]) =>
