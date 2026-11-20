@@ -939,7 +939,7 @@ CONSTANCE_CONFIG = {
         help_text="Allows the Archive Old Records system job to be run with Force Cascade Delete. A Force Cascade"
         " Delete means that relational records detected will also be deleted without being persisted in the archive"
         " table. A good example of this is FileProxy records. When this is `False` the job will run, however any"
-        " records with relational records that set a delete option of cascading, protected, or restrictedrecords will"
+        " records with relational records that set a delete option of cascading, protected, or restricted records will"
         " not be archived.",
         field_type=bool,
     ),
