@@ -101,9 +101,14 @@ class Command(BaseCommand):
             from nautobot.dcim.models import CableType
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
+                ArchivedJobConsoleEntryFactory,
+                ArchivedJobLogEntryFactory,
+                ArchivedJobResultFactory,
+                ArchivedObjectChangeFactory,
                 ContactFactory,
                 DynamicGroupFactory,
                 ExternalIntegrationFactory,
+                JobConsoleEntryFactory,
                 JobLogEntryFactory,
                 JobQueueFactory,
                 JobResultFactory,
@@ -427,6 +432,11 @@ class Command(BaseCommand):
             has_contact=False,
             description="with teams",
         )
+        _create_batch(JobConsoleEntryFactory, 50)
+        _create_batch(ArchivedObjectChangeFactory, 100)
+        _create_batch(ArchivedJobResultFactory, 20)
+        _create_batch(ArchivedJobLogEntryFactory, 100)
+        _create_batch(ArchivedJobConsoleEntryFactory, 50)
 
         # Populate member caches for non-static DynamicGroups
         call_command("refresh_dynamic_group_member_caches")

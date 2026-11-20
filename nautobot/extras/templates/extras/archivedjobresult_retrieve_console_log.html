@@ -1,0 +1,22 @@
+{% extends 'extras/archivedjobresult_retrieve.html' %}
+
+{% block extra_tab_content %}
+    <div class="card h-100 mb-0">
+        <div class="card-header">
+            <strong>Console Log</strong>
+            <div class="float-end">
+                <span id="job-status">{% include 'extras/inc/job_label.html' with result=object %}</span>
+            </div>
+        </div>
+
+        {% spaceless %}
+            <div class="card-body overflow-hidden">
+                <pre class="h-100 mb-0 overflow-y-auto" id="console-output">
+                    <code class="h-100">
+                        {% include "extras/inc/archivedjobresult_console_log_lines.html" %}
+                    </code>
+                </pre>
+            </div>
+        {% endspaceless %}
+    </div>
+{% endblock %}
