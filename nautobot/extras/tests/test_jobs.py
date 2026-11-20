@@ -758,6 +758,26 @@ class JobTransactionTest(TransactionTestCase):
         self.assertEqual(info_log.message, f"Role: {role.name}")
         self.assertEqual(job_result.result, "Nice Roles!")
 
+    def test_object_vars_with_model_instances(self):
+        """Test that a job runs with a model instance for its ObjectVar and a queryset for its MultiObjectVar."""
+        module = "object_vars"
+        name = "TestObjectVars"
+
+        device_ct = ContentType.objects.get_for_model(Device)
+        role = models.Role.objects.create(name="Device Role")
+        role.content_types.add(device_ct)
+        job_result = create_job_result_and_run_job(
+            module, name, role=role, roles=models.Role.objects.filter(pk=role.pk)
+        )
+
+        info_log = models.JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, grouping="run"
+        ).first()
+
+        self.assertJobResultStatus(job_result)
+        self.assertEqual(info_log.message, f"Role: {role.name}")
+        self.assertEqual(job_result.result, "Nice Roles!")
+
     def test_optional_object_var(self):
         """
         Test that an optional Object variable field behaves as expected.
