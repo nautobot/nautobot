@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from nautobot.dcim.models import Location, LocationType
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
@@ -21,6 +21,47 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.assertIn('Clusters may not associate to locations of type "Location Type 1"', str(cm.exception))
 
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
+
+    def test_host_locations_on_cluster_update(self):
+        location_type = LocationType.objects.create(name="Facility", nestable=True)
+        location_type.content_types.add(
+            ContentType.objects.get_for_model(Cluster), ContentType.objects.get_for_model(Device)
+        )
+        location_fields = {"location_type": location_type, "status": Status.objects.get_for_model(Location).first()}
+        campus = Location.objects.create(name="Campus", **location_fields)
+        building = Location.objects.create(name="Building A", parent=campus, **location_fields)
+        room = Location.objects.create(name="Room", parent=building, **location_fields)
+        sibling = Location.objects.create(name="Building B", parent=campus, **location_fields)
+        cluster = Cluster.objects.create(name="Compute", cluster_type=ClusterType.objects.create(name="Compute"))
+        device_type = DeviceType.objects.create(
+            model="Server", manufacturer=Manufacturer.objects.create(name="Example")
+        )
+        role = Role.objects.create(name="Cluster Host")
+        role.content_types.add(ContentType.objects.get_for_model(Device))
+        for location in (campus, room, sibling):
+            device = Device(
+                device_type=device_type,
+                role=role,
+                status=Status.objects.get_for_model(Device).first(),
+                location=location,
+                cluster=cluster,
+            )
+            device.validated_save()
+
+        cluster.location = campus
+        cluster.validated_save()
+        cluster.comments = "Updated"
+        cluster.validated_save()
+
+        cluster.location = building
+        with self.assertRaises(ValidationError) as error:
+            cluster.validated_save()
+        self.assertIn("location", error.exception.message_dict)
+        cluster.refresh_from_db()
+        self.assertEqual(cluster.location, campus)
+
+        cluster.location = None
+        cluster.validated_save()
 
 
 class VirtualMachineTestCase(TestCase):  # TODO: change to BaseModelTestCase
