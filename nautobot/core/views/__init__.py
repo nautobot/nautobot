@@ -35,7 +35,6 @@ from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import ERROR_500_TEMPLATE_NAME, page_not_found
 from django.views.generic import TemplateView, View
 from django.views.static import serve
-from django_tables2 import Column
 from graphene_django.views import GraphQLView
 from packaging import version
 from prometheus_client import (
@@ -84,7 +83,7 @@ from nautobot.core.views.utils import (
     METRICS_CACHE_KEY,
 )
 from nautobot.extras.forms import GraphQLQueryForm
-from nautobot.extras.models import FileProxy, GraphQLQuery, Job, Status
+from nautobot.extras.models import FileProxy, GraphQLQuery, Status
 from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import StatusTable
@@ -575,40 +574,14 @@ class LiveSearchView(AccessMixin, View):
                     if hasattr(filtered_queryset, "restrict")
                     else filtered_queryset
                 )[: LIVE_SEARCH_MAX_RESULTS + 1]
-                runnable_ids = None
-                extra_columns = []
-
-                def row_disabled(record):
-                    return runnable_ids is not None and record.pk not in runnable_ids
-
-                def row_url(record):
-                    if model is not Job:
-                        return record.get_absolute_url()
-                    if not row_disabled(record):
-                        return reverse("extras:job_run", kwargs={"pk": record.pk})
-                    return None
-
-                if model is Job:
-                    runnable_ids = set(
-                        Job.objects.restrict(request.user, "run")
-                        .filter(pk__in=[job.pk for job in restricted_queryset if job.runnable])
-                        .values_list("pk", flat=True)
-                    )
-
-                    extra_columns = [
-                        (
-                            "name",
-                            Column(attrs={"a": {"class": "job_run", "title": "Run/Schedule"}}, linkify=row_url),
-                        ),
-                    ]
 
                 def row_onclick(record):
-                    url = row_url(record)
+                    url = table.get_row_url(record)
                     return f'window.location.href = "{url}";' if url else None
 
                 table = table_class(
                     restricted_queryset,
-                    extra_columns=extra_columns,
+                    user=request.user,
                     # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
                     attrs={"class": "table nb-table-headings"},
                     hide_hierarchy_ui=True,
@@ -616,14 +589,12 @@ class LiveSearchView(AccessMixin, View):
                     orderable=False,
                     row_attrs={
                         # Event handlers and attributes below are defined in order to imitate anchor link behavior.
-                        "class": lambda record: "disabled" if row_disabled(record) else None,
-                        "aria-disabled": lambda record: "true" if row_disabled(record) else None,
-                        "role": lambda record: None if row_disabled(record) else "link",
-                        "tabindex": lambda record: None if row_disabled(record) else 0,
+                        "role": lambda record: "link" if table.get_row_url(record) else None,
+                        "tabindex": lambda record: 0 if table.get_row_url(record) else None,
                         "onclick": row_onclick,
                         "onkeydown": lambda record: (
                             "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }"
-                            if not row_disabled(record)
+                            if table.get_row_url(record)
                             else None
                         ),
                     },

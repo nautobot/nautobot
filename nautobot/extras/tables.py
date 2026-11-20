@@ -3,7 +3,9 @@ import re
 from textwrap import dedent
 
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from django.utils.html import format_html, format_html_join
+from django.utils.text import slugify
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema import Draft7Validator
@@ -1137,8 +1139,8 @@ class JobTable(BaseTable):
     pk = ToggleColumn()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(
-        attrs={"a": {"class": "job_run", "title": "Run/Schedule"}},
-        linkify=("extras:job_run", {"pk": tables.A("pk")}),
+        attrs={"a": {"class": "job_run d-inline-flex gap-2 align-items-start", "title": "Run/Schedule"}},
+        linkify=lambda record, table: table.get_row_url(record),
     )
     source_version = tables.Column(orderable=False)
     installed = BooleanColumn()
@@ -1175,12 +1177,59 @@ class JobTable(BaseTable):
     tags = TagColumn(url_name="extras:job_list")
     actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
 
-    def render_description(self, value):
-        return render_markdown(value)
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        self._runnable_ids = None
+        row_attrs = dict(kwargs.pop("row_attrs", None) or {})
+        row_attrs.update(
+            {
+                "class": lambda record: (
+                    f"collapseme-{slugify(record.grouping)} collapse show nb-transition-none"
+                    + (" disabled" if not self.get_row_url(record) else "")
+                ),
+                "aria-disabled": lambda record: "true" if not self.get_row_url(record) else None,
+                "style": lambda record: (
+                    "--bs-table-color: var(--bs-secondary-color);" if not self.get_row_url(record) else None
+                ),
+            }
+        )
+        super().__init__(*args, user=user, row_attrs=row_attrs, **kwargs)
 
-    def render_name(self, value):
+    def before_render(self, request):
+        super().before_render(request)
+        if self.user != request.user:
+            self.user = request.user
+            self._runnable_ids = None
+
+    def get_row_url(self, record):
+        """Use the same Run/Schedule destination and object permissions in every Job table."""
+        if not record.runnable or self.user is None:
+            return None
+        if self._runnable_ids is None:
+            self._runnable_ids = set(
+                JobModel.objects.restrict(self.user, "run")
+                .filter(pk__in=[job.pk for job in self.data.data])
+                .values_list("pk", flat=True)
+            )
+        if record.pk in self._runnable_ids:
+            return reverse("extras:job_run", kwargs={"pk": record.pk})
+        return None
+
+    def render_description(self, value, record):
         return format_html(
-            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
+            '<div class="{}">{}</div>',
+            "text-body-secondary" if not self.get_row_url(record) else "",
+            render_markdown(value),
+        )
+
+    def render_name(self, value, record):
+        runnable = bool(self.get_row_url(record))
+        return format_html(
+            '<span class="d-inline-flex gap-2 align-items-start {}">'
+            '<span class="btn btn-sm p-2 rounded-circle flex-shrink-0 {}" aria-hidden="true">'
+            '<span class="mdi mdi-play"></span></span>{}</span>',
+            "" if runnable else "text-body-secondary",
+            "btn-primary" if runnable else "btn-secondary disabled",
             value,
         )
 

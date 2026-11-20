@@ -607,10 +607,10 @@ class LiveSearchViewTestCase(TestCase):
         search_url = reverse("live_search", kwargs={"path": reverse("extras:job_list")[1:]}, query={"q": job.name})
         run_url = reverse("extras:job_run", kwargs={"pk": job.pk})
 
-        for enabled in (True, False):
-            with self.subTest(enabled=enabled):
-                Job.objects.filter(pk=job.pk).update(enabled=enabled, installed=True)
-                if not enabled:
+        for enabled, installed, can_run in ((True, True, False), (False, True, True), (True, False, True)):
+            with self.subTest(enabled=enabled, installed=installed, can_run=can_run):
+                Job.objects.filter(pk=job.pk).update(enabled=enabled, installed=installed)
+                if can_run:
                     self.add_permissions("extras.run_job")
                 response = self.client.get(search_url, headers={"HX-Request": "true"})
                 self.assertContains(response, job.name)
