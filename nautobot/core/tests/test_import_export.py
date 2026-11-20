@@ -1490,6 +1490,23 @@ class ExportRelatedObjectPermissionTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "requires permission to view users.user", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(job_result.files.exists())
 
+    def test_perm__default_export_identifies_an_unviewable_relation_by_its_natural_key_only(self):
+        """With no selection, an unviewable related object is exported as its natural key and nothing more."""
+        limited_user = self.create_rack_reservation_and_limited_user()
+        for export_format in ("csv", "json"):
+            with self.subTest(export_format=export_format):
+                job_result = self.run_export(
+                    model=RackReservation, username=limited_user.username, export_format=export_format
+                )
+                if export_format == "csv":
+                    row = self.export_rows(job_result)[0]
+                    user_columns = sorted(key for key in row if key.startswith("user__"))
+                    self.assertEqual(user_columns, ["user__username"])
+                    self.assertEqual(row["user__username"], "reservation-owner")
+                else:
+                    record = self.export_document(job_result)["records"][0]
+                    self.assertEqual(record["user"], {"username": "reservation-owner"})
+
     def test_perm__id_of_an_unviewable_relation_is_allowed(self):
         """`id` stays available: it is what an unviewable relation is reduced to.
 

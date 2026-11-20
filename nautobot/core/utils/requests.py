@@ -16,7 +16,7 @@ from nautobot.core.utils.filtering import get_filterset_field
 NON_FILTER_PARAMS = (
     "all_filters_removed",  # indicator for if all filters have been removed from the saved view
     "clear_view",  # indicator for if the clear view button is clicked or not
-    "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
+    "export",  # legacy trigger for devicetype-library YAML export
     "page",  # used by django-tables2.RequestConfig
     "per_page",  # used by get_paginate_count
     "saved_view",  # saved_view indicator pk or composite keys

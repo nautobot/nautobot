@@ -311,6 +311,18 @@ One example of using this command would be to [export data from PostgreSQL](../m
 !!! warning
     While this command _can_ be used in combination with `nautobot-server loaddata` as a way to do database backup-and-restore, it's not generally the most efficient or straightforward way to do so. Refer to [Database Backup](../upgrading/database-backup.md) for recommendations.
 
+### `export_objects`
+
+`nautobot-server export_objects --username <username> [--format {csv,json,yaml}] [--fields <fields>] [--filter <query>] [-o <path>] <app_label.model>`
+
+Export objects of one type to a CSV, JSON, or YAML file by running the `Export Object List` system Job locally, as the given user. Without `-o`, the export is written to standard output. This command is intended for development and manual testing.
+
+```no-highlight
+nautobot-server export_objects dcim.device --username admin -o devices.csv
+```
+
+Please see [Importing and Exporting Objects](../../feature-guides/import-and-export.md#exporting-from-the-command-line) for more information.
+
 ### `fix_custom_fields`
 
 `nautobot-server fix_custom_fields [app_label.ModelName [app_label.ModelName ...]]`
@@ -418,6 +430,18 @@ RedisBackend             ... working
 ```
 
 Please see the [health-checks documentation](../guides/health-checks.md) for more information.
+
+### `import_objects`
+
+`nautobot-server import_objects --username <username> [--content-type <app_label.model>] [--format {auto,csv,json,yaml}] [--match-fields <fields>] [--mode {create_update,create,update}] [--rollback | --no-rollback] <file>`
+
+Import objects from a CSV, JSON, or YAML file by running the `Import Objects` system Job locally, as the given user. `--content-type` may be omitted for a file that declares its own model, as every file Nautobot exports does. This command is intended for development and manual testing.
+
+```no-highlight
+nautobot-server import_objects ./statuses.yaml --username admin
+```
+
+Please see [Importing and Exporting Objects](../../feature-guides/import-and-export.md#importing-from-the-command-line) for more information.
 
 ### `init`
 

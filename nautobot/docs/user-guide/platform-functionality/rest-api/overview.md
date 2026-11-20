@@ -1061,3 +1061,8 @@ In addition to the standard JSON format for REST APIs, Nautobot's REST API also 
 
 !!! tip
     Nautobot's JSON support in the REST API is more fully-featured than its CSV support; not all data can be populated, retrieved, or modified by CSV at this time due to limitations of the CSV format in describing certain types of data. When in doubt, prefer JSON over CSV when interacting with the REST API.
+
+CSV in the REST API uses the same conventions as [file exports and imports](../../feature-guides/import-and-export.md): related objects are given by natural-key columns such as `device_type__manufacturer__name`, the string `NULL` means a null value, and `NoObject` means a null related object. It differs from a file export or import in these ways:
+
+* A CSV response has no [metadata line](../../feature-guides/import-and-export.md#the-self-describing-file); the first line is the header.
+* A CSV request creates or updates objects exactly as the equivalent JSON request does. It doesn't use [match fields](../../feature-guides/import-and-export.md#match-fields) to decide whether a row creates or updates an object. To do that, or to import JSON or YAML files, run the `Import Objects` Job through the REST API instead.

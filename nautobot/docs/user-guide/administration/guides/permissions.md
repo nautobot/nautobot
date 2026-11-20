@@ -431,3 +431,28 @@ Create a Permission to allow users to download a job's output file(s), such as t
 
 !!! info
     Export jobs run with the permissions of the user that start the job.
+
+To let users export with an [Export Template](../../platform-functionality/exporttemplate.md), also grant _view_ permission on the Export Templates they may use (Object type: `Extras > Export template`). Only the templates a user can view appear in the **Actions** menu.
+
+### Import Job
+
+The Import action is the `Import Objects` system Job. See [Importing and Exporting Objects](../../feature-guides/import-and-export.md#permissions) for how its permissions apply to each imported record.
+
+Create a Permission to allow users to start an Import job:
+
+- Permission Name: `Start Import job`
+- Action: `run`
+- Users/Groups: Any user or restrict as needed
+- Constraints: `[{"module_name": "nautobot.core.jobs", "job_class_name": "ImportObjects"}]`
+
+Create a Permission to allow users to view the results of Import jobs they ran:
+
+- Permission Name: `View Import results`
+- Action: `View`
+- Users/Groups: Any user or restrict as needed
+- Constraints: `[{"user": "$user", "task_name": "nautobot.core.jobs.ImportObjects"}]`
+
+Users also need _add_ permission on each object type they may create by import, and _change_ permission on each object type they may update. Constraints on those permissions limit which objects an import may create or change.
+
+!!! info
+    Import jobs run with the permissions of the user that start the job.
