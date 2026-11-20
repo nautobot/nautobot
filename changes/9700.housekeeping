@@ -1,0 +1,1 @@
+Ported the device bulk edit and bulk delete Selenium tests to Playwright.
