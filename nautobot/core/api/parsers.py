@@ -6,11 +6,73 @@ import logging
 from django.conf import settings
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
-from rest_framework.parsers import BaseParser
+from rest_framework.parsers import BaseParser, MultiPartParser
 
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 
 logger = logging.getLogger(__name__)
+
+CUSTOM_FIELDS_BRACKET_KEY_PREFIX = "custom_fields["
+CUSTOM_FIELDS_DOT_KEY_PREFIX = "custom_fields."
+
+
+def normalize_form_data_custom_fields(data):
+    """
+    Collect custom field values from flat multipart/form-data keys into a single custom_fields dict.
+
+    Supports JSON-encoded custom_fields, cf_<key>, custom_fields.<key>, and custom_fields[<key>] field names.
+    """
+    if not isinstance(data, dict):
+        return data
+
+    custom_fields = {}
+    keys_to_remove = []
+
+    if "custom_fields" in data:
+        cf_value = data["custom_fields"]
+        keys_to_remove.append("custom_fields")
+        if isinstance(cf_value, dict):
+            custom_fields.update(cf_value)
+        elif isinstance(cf_value, str):
+            if cf_value.strip():
+                try:
+                    parsed = json.loads(cf_value)
+                except json.JSONDecodeError as exc:
+                    raise ParseError(f"Invalid JSON for custom_fields: {exc}") from exc
+                if not isinstance(parsed, dict):
+                    raise ParseError("custom_fields must be a JSON object.")
+                custom_fields.update(parsed)
+        elif cf_value is not None:
+            raise ParseError("custom_fields must be a JSON object or JSON-encoded object string.")
+
+    for key, value in data.items():
+        if key.startswith("cf_"):
+            custom_fields[key[3:]] = None if value == "" else value
+            keys_to_remove.append(key)
+        elif key.startswith(CUSTOM_FIELDS_DOT_KEY_PREFIX):
+            custom_fields[key[len(CUSTOM_FIELDS_DOT_KEY_PREFIX) :]] = None if value == "" else value
+            keys_to_remove.append(key)
+        elif key.startswith(CUSTOM_FIELDS_BRACKET_KEY_PREFIX) and key.endswith("]"):
+            inner_key = key[len(CUSTOM_FIELDS_BRACKET_KEY_PREFIX) : -1]
+            if inner_key:
+                custom_fields[inner_key] = None if value == "" else value
+                keys_to_remove.append(key)
+
+    for key in keys_to_remove:
+        data.pop(key, None)
+
+    if custom_fields:
+        data["custom_fields"] = custom_fields
+
+    return data
+
+
+class NautobotMultiPartParser(MultiPartParser):
+    """MultiPartParser that normalizes custom_fields from flat form keys."""
+
+    def parse(self, stream, media_type=None, parser_context=None):
+        data = super().parse(stream, media_type, parser_context)
+        return normalize_form_data_custom_fields(data)
 
 
 class NautobotCSVParser(BaseParser):
