@@ -1,14 +1,16 @@
 from datetime import timedelta
 import math
 
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import DO_NOTHING, PROTECT, Q, RESTRICT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices
-from nautobot.extras.jobs import DryRunVar, IntegerVar, Job, MultiChoiceVar
+from nautobot.extras.jobs import BooleanVar, DryRunVar, IntegerVar, Job, MultiChoiceVar
 from nautobot.extras.models import (
     ArchivedJobConsoleEntry,
     ArchivedJobLogEntry,
@@ -82,7 +84,80 @@ def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
         current_record_batch = list(next_batch_of_records)
 
 
-# TODO: Ask if we want to gate this to super users/admins?
+def _exclude_records_whose_relations_block_deletion(
+    queryset, model, preapproved_models_that_can_be_deleted, force_cascade_delete, logger
+):
+    """
+    Filter a queryset to the records whose deletion does not take unrelated records with it.
+
+    Args:
+        queryset (QuerySet): The records being considered for archival.
+        model (Model): The live model the queryset selects from.
+        preapproved_models_that_can_be_deleted (tuple): These models are archived with the provided `model`, or are
+            approved to be deleted alongside it, whatever their CASCADE, DO_NOTHING, PROTECT, or RESTRICT
+            delete option.
+        force_cascade_delete (bool): A user-override that allows the ability to force related records to be deleted.
+        logger (Logger): The job logger that the skipped relations are reported to.
+
+    Returns:
+        (QuerySet): The queryset that has been filtered down to the records that are safe to archive.
+    """
+    for related_object in model._meta.related_objects:
+        if related_object.related_model in preapproved_models_that_can_be_deleted:
+            continue
+
+        accessor_name = related_object.get_accessor_name()
+        if accessor_name is None:
+            continue
+
+        related_query_name = related_object.field.related_query_name()
+
+        on_delete = getattr(related_object, "on_delete", None)
+        # TODO: Don't forget to handle DB_CASCADE when we adopt Django 6.1
+        is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
+        related_model_name = related_object.related_model._meta.verbose_name
+        if is_relationship_guarded:
+            if queryset.filter(**{f"{related_query_name}__isnull": False}).exists():
+                logger.info(
+                    "Not archiving %s records that are referenced by a %s."
+                    " If you wish to archive these records, you will need to manually delete the related %s"
+                    " records first.",
+                    model._meta.verbose_name,
+                    related_model_name,
+                    related_model_name,
+                )
+            # If it's a foreign key that hasn't been set AKA it's null, we allow deletion
+            queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
+        if not is_relationship_guarded and not force_cascade_delete:
+            if queryset.filter(**{f"{related_query_name}__isnull": False}).exists():
+                logger.info(
+                    "Not archiving %s records that are referenced by a %s, because deleting them would delete the"
+                    " related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                    model._meta.verbose_name,
+                    related_model_name,
+                    related_model_name,
+                )
+            # Deleting these records would cascade into related records, and Force Cascade Delete was not
+            # selected. Keep only the records that no related record references.
+            queryset = queryset.filter(**{f"{related_query_name}__isnull": True})
+
+    if not force_cascade_delete:
+        for private_field in model._meta.private_fields:
+            if isinstance(private_field, GenericRelation):
+                if queryset.filter(**{f"{private_field.name}__isnull": False}).exists():
+                    generic_related_model_name = private_field.related_model._meta.verbose_name
+                    logger.info(
+                        "Not archiving %s records that are referenced by a %s, because deleting them would delete"
+                        " the related %s records as well. Re-run with Force Cascade Delete to archive them anyway.",
+                        model._meta.verbose_name,
+                        generic_related_model_name,
+                        generic_related_model_name,
+                    )
+                queryset = queryset.filter(**{f"{private_field.name}__isnull": True})
+
+    return queryset
+
+
 class ArchiveOldRecords(Job):
     """
     Move database records that are past specific age threshold into a warm table.
@@ -113,6 +188,17 @@ class ArchiveOldRecords(Job):
         min_value=1,
         required=True,
     )
+    force_cascade_delete = BooleanVar(
+        description=(
+            "Allows the archival of records that will result in automatic `cascading` deletion"
+            " of related records that are not archivable. This may result in data loss! It is"
+            " recommended to run the job initially without enabling this option, and then"
+            " carefully review any records that the initial run skipped."
+        ),
+        label="Force Cascade Delete",
+        default=False,
+        required=False,
+    )
     dryrun = DryRunVar(description="Report what would be archived without moving anything.")
 
     class Meta:
@@ -129,6 +215,7 @@ class ArchiveOldRecords(Job):
         selected_models_to_archive=None,
         archive_age_threshold=None,
         archive_batch_size=None,
+        force_cascade_delete=False,
         dryrun=True,
     ):
         """
@@ -158,24 +245,47 @@ class ArchiveOldRecords(Job):
         # Permissions are checked up front in order to loudly fail for a clearer user experience
         if self.user is None:
             raise PermissionDenied(f"{JOB_NAME} deletes records and requires a user, but this run has none")
+        if force_cascade_delete and not get_settings_or_config(
+            "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED", fallback=False
+        ):
+            self.logger.error(
+                "Force Cascade Delete is disabled. Set the ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED "
+                "setting to True to allow it."
+            )
+            raise RuntimeError(
+                "Force Cascade Delete is disabled by the ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED setting"
+            )
         # ----------------------------------------
         # ObjectChange
         if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
             raise PermissionDenied("User does not have delete permissions for ObjectChange records")
+        if OBJECT_CHANGE_LABEL in selected_models and not self.user.has_perm("extras.add_archivedobjectchange"):
+            self.logger.error('User "%s" does not have permission to add ArchivedObjectChange records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedObjectChange records")
         # ----------------------------------------
         # JobResult/JobConsoleEntry/JobLogEntry
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobresult"):
             self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobResult records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjobresult"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobResult records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobResult records")
         # Cannot select JobConsoleEntry or JobLogEntry in the UI. These are derived from the selection
         # of JobResult
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_jobconsoleentry"):
             self.logger.error('User "%s" does not have permission to delete JobConsoleEntry records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobConsoleEntry records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjobconsoleentry"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobConsoleEntry records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobConsoleEntry records")
+        # -----
         if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.delete_joblogentry"):
             self.logger.error('User "%s" does not have permission to delete JobLogEntry records', self.user)
             raise PermissionDenied("User does not have delete permissions for JobLogEntry records")
+        if JOB_RESULT_LABEL in selected_models and not self.user.has_perm("extras.add_archivedjoblogentry"):
+            self.logger.error('User "%s" does not have permission to add ArchivedJobLogEntry records', self.user)
+            raise PermissionDenied("User does not have add permissions for ArchivedJobLogEntry records")
 
         archived_record_counts = {
             OBJECT_CHANGE_LABEL: 0,
@@ -195,12 +305,12 @@ class ArchiveOldRecords(Job):
         try:
             if OBJECT_CHANGE_LABEL in selected_models:
                 archived_object_change_counts = self._archive_object_changes(
-                    archive_model_threshold_timestamp, archive_batch_size, dryrun
+                    archive_model_threshold_timestamp, archive_batch_size, dryrun, force_cascade_delete
                 )
                 archived_record_counts.update(archived_object_change_counts)
             if JOB_RESULT_LABEL in selected_models:
                 archived_job_result_counts = self._archive_job_results(
-                    archive_model_threshold_timestamp, archive_batch_size, dryrun
+                    archive_model_threshold_timestamp, archive_batch_size, dryrun, force_cascade_delete
                 )
                 archived_record_counts.update(archived_job_result_counts)
         finally:
@@ -212,7 +322,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Object Change
     # --------------------------------------------------------------------------
-    def _archive_object_changes(self, threshold_timestamp, batch_size, dryrun):
+    def _archive_object_changes(self, threshold_timestamp, batch_size, dryrun, force_cascade_delete=False):
         """
         Archive `ObjectChange` records older than `threshold_timestamp`, one batch at a time.
 
@@ -223,14 +333,30 @@ class ArchiveOldRecords(Job):
             threshold_timestamp (datetime): Records older than this are archived.
             batch_size (int): Records to move per batch.
             dryrun (bool): Report what would move without moving anything.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (dict): Archived record count keyed by model label, or on a dry run the count a real run
                 would archive. Always carries the `extras.ObjectChange` key.
         """
-        object_changes_to_archive = ObjectChange.objects.restrict(self.user, "delete").filter(
+        archival_candidate_object_changes = ObjectChange.objects.restrict(self.user, "delete").filter(
             time__lt=threshold_timestamp
         )
+        object_changes_to_archive = _exclude_records_whose_relations_block_deletion(
+            archival_candidate_object_changes,
+            ObjectChange,
+            (),
+            force_cascade_delete,
+            self.logger,
+        )
+
+        omitted_object_change_count = archival_candidate_object_changes.count() - object_changes_to_archive.count()
+        if omitted_object_change_count:
+            self.logger.warning(
+                "Omitting %d ObjectChange records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_object_change_count,
+            )
 
         if dryrun:
             object_change_count = object_changes_to_archive.count()
@@ -340,7 +466,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Job Results
     # --------------------------------------------------------------------------
-    def _archive_job_results(self, threshold_timestamp, batch_size, dryrun):
+    def _archive_job_results(self, threshold_timestamp, batch_size, dryrun, force_cascade_delete=False):
         """
         Archive `JobResult` records older than `threshold_timestamp`, together with their log and console
         entries, one batch at a time.
@@ -358,6 +484,7 @@ class ArchiveOldRecords(Job):
             threshold_timestamp (datetime): Job results that finished before this are archived.
             batch_size (int): Job results to move per batch, and the chunk size used for their children.
             dryrun (bool): Report what would move without moving anything.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (dict): Archived record counts keyed by model label, or on a dry run the counts a real run
@@ -365,16 +492,29 @@ class ArchiveOldRecords(Job):
                 `extras.JobConsoleEntry` keys.
         """
         # Only job results that are done can be archived
-        job_results_to_archive = (
+        archival_candidate_job_results = (
             JobResult.objects.restrict(self.user, "delete")
             .filter(
                 date_done__lt=threshold_timestamp,
                 status__in=JobResultStatusChoices.READY_STATES,
-                # TODO: Add optional flag to include files, otherwise default to leaving the JobResult unarchived
-                files__isnull=True,
             )
             .select_related("user")
         )
+        job_results_to_archive = _exclude_records_whose_relations_block_deletion(
+            archival_candidate_job_results,
+            JobResult,
+            (JobLogEntry, JobConsoleEntry),
+            force_cascade_delete,
+            self.logger,
+        )
+
+        omitted_job_result_count = archival_candidate_job_results.count() - job_results_to_archive.count()
+        if omitted_job_result_count:
+            self.logger.warning(
+                "Omitting %d JobResult records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_job_result_count,
+            )
 
         if dryrun:
             job_result_count = job_results_to_archive.count()
@@ -382,14 +522,20 @@ class ArchiveOldRecords(Job):
             # instead of reporting zero for records it would in fact archive.
             # Restricted like the real path below, so the dry run does not promise to archive entries that
             # a real run would not be allowed to see.
-            job_log_entry_count = (
-                JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive).count()
-            )
-            job_console_entry_count = (
-                JobConsoleEntry.objects.restrict(self.user, "delete")
-                .filter(job_result__in=job_results_to_archive)
-                .count()
-            )
+            job_log_entry_count = _exclude_records_whose_relations_block_deletion(
+                JobLogEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
+                JobLogEntry,
+                (),
+                force_cascade_delete,
+                self.logger,
+            ).count()
+            job_console_entry_count = _exclude_records_whose_relations_block_deletion(
+                JobConsoleEntry.objects.restrict(self.user, "delete").filter(job_result__in=job_results_to_archive),
+                JobConsoleEntry,
+                (),
+                force_cascade_delete,
+                self.logger,
+            ).count()
             total_batch_count = math.ceil(job_result_count / batch_size)
             self.logger.warning(
                 "%s Dry Run: %d JobResult records in batches of %d for a total of %d operations would be archived, "
@@ -416,7 +562,9 @@ class ArchiveOldRecords(Job):
 
         for job_result_batch in _iterate_records_by_timestamp(job_results_to_archive, "date_done", batch_size):
             try:
-                current_batch_counts = self._process_archive_job_result_batch(job_result_batch, batch_size)
+                current_batch_counts = self._process_archive_job_result_batch(
+                    job_result_batch, batch_size, force_cascade_delete
+                )
             except Exception as exception:
                 self.fail(
                     "Stopping at batch %d: %s. Archived %d JobResult records before stopping.",
@@ -450,7 +598,7 @@ class ArchiveOldRecords(Job):
 
         return archived_job_result_counts
 
-    def _process_archive_job_result_batch(self, job_result_batch, batch_size):
+    def _process_archive_job_result_batch(self, job_result_batch, batch_size, force_cascade_delete=False):
         """
         Copy one batch of job results and their children into the archive, then delete the live parents.
 
@@ -471,6 +619,7 @@ class ArchiveOldRecords(Job):
         Args:
             job_result_batch (list of JobResult): Live `JobResult` records to archive.
             batch_size (int): Chunk size for copying the children, which are unbounded per parent.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (dict): Archived record counts for this batch, keyed by model label.
@@ -492,8 +641,10 @@ class ArchiveOldRecords(Job):
             unique_fields=["id"] if connection.features.supports_update_conflicts_with_target else [],
         )
 
-        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size)
-        archived_job_console_entry_count = self._archive_job_console_entry(job_result_pks, batch_size)
+        archived_job_log_entry_count = self._archive_job_log_entry(job_result_pks, batch_size, force_cascade_delete)
+        archived_job_console_entry_count = self._archive_job_console_entry(
+            job_result_pks, batch_size, force_cascade_delete
+        )
 
         _, deleted_counts_by_model = (
             JobResult.objects.restrict(self.user, "delete").filter(pk__in=job_result_pks).delete()
@@ -528,7 +679,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Job Log Entry
     # --------------------------------------------------------------------------
-    def _archive_job_log_entry(self, job_result_pks, batch_size):
+    def _archive_job_log_entry(self, job_result_pks, batch_size, force_cascade_delete=False):
         """
         Move the job results' `JobLogEntry` records into the archive, a bounded chunk at a time.
 
@@ -544,6 +695,7 @@ class ArchiveOldRecords(Job):
         Args:
             job_result_pks (list of uuid.UUID): Primary keys of the job results whose log entries are archived.
             batch_size (int): Number of log entries to load into memory, copy into the archive, and delete per chunk.
+            force_cascade_delete (bool): Archive records even when deleting them cascades into related objects.
 
         Returns:
             (int): Job log entries archived and removed from the live table.
@@ -551,7 +703,24 @@ class ArchiveOldRecords(Job):
         archived_job_log_entry_update_fields = [
             field.name for field in ArchivedJobLogEntry._meta.fields if field.name != "id"
         ]
-        job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(job_result_id__in=job_result_pks)
+        archival_candidate_job_log_entries = JobLogEntry.objects.restrict(self.user, "delete").filter(
+            job_result_id__in=job_result_pks
+        )
+        job_log_entries = _exclude_records_whose_relations_block_deletion(
+            archival_candidate_job_log_entries,
+            JobLogEntry,
+            (),
+            force_cascade_delete,
+            self.logger,
+        )
+
+        omitted_job_log_entry_count = archival_candidate_job_log_entries.count() - job_log_entries.count()
+        if omitted_job_log_entry_count:
+            self.logger.warning(
+                "Omitting %d JobLogEntry records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_job_log_entry_count,
+            )
 
         archived_job_log_entry_count = 0
 
@@ -575,7 +744,7 @@ class ArchiveOldRecords(Job):
     # --------------------------------------------------------------------------
     # Job Console Entry
     # --------------------------------------------------------------------------
-    def _archive_job_console_entry(self, job_result_pks, batch_size):
+    def _archive_job_console_entry(self, job_result_pks, batch_size, force_cascade_delete=False):
         """
         Move the job results' `JobConsoleEntry` records into the archive, a bounded chunk at a time.
 
@@ -598,9 +767,24 @@ class ArchiveOldRecords(Job):
         archived_job_console_entry_update_fields = [
             field.name for field in ArchivedJobConsoleEntry._meta.fields if field.name != "id"
         ]
-        job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
+        archival_candidate_job_console_entries = JobConsoleEntry.objects.restrict(self.user, "delete").filter(
             job_result_id__in=job_result_pks
         )
+        job_console_entries = _exclude_records_whose_relations_block_deletion(
+            archival_candidate_job_console_entries,
+            JobConsoleEntry,
+            (),
+            force_cascade_delete,
+            self.logger,
+        )
+
+        omitted_job_console_entry_count = archival_candidate_job_console_entries.count() - job_console_entries.count()
+        if omitted_job_console_entry_count:
+            self.logger.warning(
+                "Omitting %d JobConsoleEntry records because related records would be deleted "
+                "with them. Re-run with Force Cascade Delete to archive them anyway.",
+                omitted_job_console_entry_count,
+            )
 
         archived_job_console_entry_count = 0
 

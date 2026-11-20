@@ -96,7 +96,7 @@ class ArchivedLogModel(BaseModel):
     class Meta:
         abstract = True
         # Archived data must be read-only
-        default_permissions = ("view",)
+        default_permissions = ("view", "add")
 
 
 class ArchivedObjectChange(ObjectChangeSnapshotsMixin, ArchivedLogModel):

@@ -108,6 +108,15 @@ ALLOWED_URL_SCHEMES = [
     "xmpp",
 ]
 
+# Allow the Archive Old Records system job to be run with Force Cascade Delete. Defaults to False if not set here.
+if (
+    "NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED" in os.environ
+    and os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"] != ""
+):
+    ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED = is_truthy(
+        os.environ["NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"]
+    )
+
 # Banners to display to users. Markdown and limited HTML are allowed.
 if "NAUTOBOT_BANNER_BOTTOM" in os.environ and os.environ["NAUTOBOT_BANNER_BOTTOM"] != "":
     BANNER_BOTTOM = os.environ["NAUTOBOT_BANNER_BOTTOM"]
@@ -927,6 +936,15 @@ CONSTANCE_CONFIG = {
         help_text="Allow users to enable request profiling on their login session.",
         field_type=bool,
     ),
+    "ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED": ConstanceConfigItem(
+        default=False,
+        help_text="Allows the Archive Old Records system job to be run with Force Cascade Delete. A Force Cascade"
+        " Delete means that relational records detected will also be deleted without being persisted in the archive"
+        " table. A good example of this is FileProxy records. When this is `False` the job will run, however any"
+        " records with relational records that set a delete option of cascading, protected, or restrictedrecords will"
+        " not be archived.",
+        field_type=bool,
+    ),
     "BANNER_BOTTOM": ConstanceConfigItem(
         default="",
         help_text="Custom Markdown or limited HTML to display in a banner at the bottom of all pages.",
@@ -1114,6 +1132,7 @@ CONSTANCE_CONFIG = {
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
+    "Archival": ["ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"],
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION", "CHANGELOG_LEGACY_OBJECT_DATA", "CHANGELOG_M2M_EXCLUDED_ASSOCIATIONS"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4", "PRIMARY_IP_REQUIRES_INTERFACE_ASSIGNMENT"],

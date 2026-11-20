@@ -113,6 +113,21 @@ properties:
     items:
       type: "string"
     type: "array"
+  ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED:
+    default: false
+    description: >-
+      Allow the "Archive Old Records" system job to be run with its "Force Cascade Delete" option, which archives
+      records even when deleting them would cascade into related objects.
+    details: |-
+      The related records are deleted along with the records being archived, and no archived copy of them is kept.
+      Relations that protect the record are never overridden, whatever this is set to.
+
+      While this is `false`, selecting the option makes the job fail before anything is archived. The job still
+      runs as normal when the option is left unselected.
+    environment_variable: "NAUTOBOT_ARCHIVE_OLD_RECORDS_JOB_FORCE_CASCADE_DELETE_ENABLED"
+    is_constance_config: true
+    type: "boolean"
+    version_added: "3.3.0"
   AUTH_PASSWORD_VALIDATORS:
     default: []
     description: >-

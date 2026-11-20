@@ -715,11 +715,11 @@ class ArchivedLogModelTestCase(TestCase):
         instance = ArchivedJobLogEntry(id=uuid.uuid4())
         self.assertIsNone(instance.get_absolute_url())
 
-    def test_archived_models_offer_only_the_view_permission(self):
-        """Rotation writes archived records and nothing else does, so there is no add, change or delete."""
+    def test_archived_models_offer_only_the_view_and_add_permissions(self):
+        """Rotation is the only writer, and it needs `add` to be grantable, so there is no change or delete."""
         for archived in self.archived_models:
             with self.subTest(model=archived.__name__):
-                self.assertEqual(archived._meta.default_permissions, ("view",))
+                self.assertEqual(archived._meta.default_permissions, ("view", "add"))
 
     def test_archived_models_only_have_foreign_keys_to_archived_models(self):
         """
