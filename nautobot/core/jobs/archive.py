@@ -4,9 +4,11 @@ import math
 from django.contrib.contenttypes.fields import GenericRelation
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
-from django.db.models import DO_NOTHING, PROTECT, Q, RESTRICT
+from django.db.models import CASCADE, DO_NOTHING, PROTECT, Q, RESTRICT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
+
+import logging
 
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.choices import JobResultStatusChoices
@@ -22,6 +24,8 @@ from nautobot.extras.models import (
     ObjectChange,
 )
 from nautobot.extras.signals import _handle_deleted_object
+
+LOGGER = logging.getLogger(__name__)
 
 name = "System Jobs"
 JOB_NAME = "Archive Old Records"
@@ -82,6 +86,58 @@ def _iterate_records_by_timestamp(queryset, timestamp_field_name, batch_size):
         records_after_current_batch = ordered_queryset.filter(newer_than_current_timestamp | same_timestamp_later_pk)
         next_batch_of_records = records_after_current_batch[:batch_size]
         current_record_batch = list(next_batch_of_records)
+
+
+def _find_relations_of_concern(
+    model, preapproved_models_that_can_be_deleted=(), force_cascade_delete=False, logger=LOGGER
+):
+    """
+    Given a model, recursively report its relevant relations that need to be filtered out if non-null.
+    """
+    guarded_relations = set()
+    for relation in model._meta.related_objects:
+        accessor_name = relation.get_accessor_name()
+        if accessor_name is None:
+            continue
+
+        related_query_name = relation.field.related_query_name()
+        if related_query_name is None:
+            continue
+
+        on_delete = getattr(relation, "on_delete", None)
+        if on_delete is None:
+            continue
+
+        is_relationship_guarded = on_delete in (PROTECT, RESTRICT, DO_NOTHING)
+        if is_relationship_guarded:
+            logger.info(
+                "Relation %r must be null in order to delete %s records.", related_query_name, model._meta.verbose_name
+            )
+            guarded_relations.add(related_query_name)
+        elif on_delete is CASCADE:  # TODO: when moving to Django 6.1, handle DB_CASCADE as well
+            if not force_cascade_delete and relation.related_model not in preapproved_models_that_can_be_deleted:
+                logger.info(
+                    "Cascade-deleted relation %r must be null in order to delete %s records.",
+                    related_query_name,
+                    model._meta.verbose_name,
+                )
+                guarded_relations.add(related_query_name)
+            else:
+                logger.info(
+                    "Since cascade deletion from %s might also delete %s records through the %r relation, recurse!",
+                    model._meta.verbose_name,
+                    relation.related_model._meta.verbose_name,
+                    related_query_name,
+                )
+                nested_guarded_relations = _find_relations_of_concern(
+                    relation.related_model, preapproved_models_that_can_be_deleted, force_cascade_delete, logger
+                )
+                for nested_relation in nested_guarded_relations:
+                    guarded_relations.add(f"{related_query_name}__{nested_relation}")
+
+    guarded_relations = sorted(guarded_relations)
+    logger.info("The identified guarded relations for %s are %s", model._meta.verbose_name, guarded_relations)
+    return guarded_relations
 
 
 def _exclude_records_whose_relations_block_deletion(

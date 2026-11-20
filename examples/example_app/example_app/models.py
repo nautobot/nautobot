@@ -15,6 +15,10 @@ class ExampleModel(OrganizationalModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, help_text="The name of this Example.", unique=True)
     number = models.IntegerField(default=100, help_text="The number of this Example.")
 
+    job_log_entry = models.ForeignKey(
+        to="extras.JobLogEntry", on_delete=models.CASCADE, related_name="example_models", null=True, blank=True
+    )
+
     class Meta:
         ordering = ["name"]
 
@@ -32,6 +36,13 @@ class ExampleModel(OrganizationalModel):
 class AnotherExampleModel(OrganizationalModel):
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     number = models.IntegerField(default=100)
+
+    job_log_entry = models.ForeignKey(
+        to="extras.JobLogEntry", on_delete=models.PROTECT, related_name="more_example_models", null=True, blank=True
+    )
+    example_model = models.ForeignKey(
+        to=ExampleModel, on_delete=models.PROTECT, related_name="more_example_models", null=True, blank=True
+    )
 
     # by default the natural key would just be "name" since it's a unique field. But we can override it:
     natural_key_field_names = ["name", "number"]
