@@ -4326,6 +4326,31 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_create_rejects_invalid_config(self):
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for config in [{"pagination_count": {"a": 1}}, {"pagination_count": "abc"}, {"pagination_count": 1.5}, [1, 2]]:
+            with self.subTest(config=config):
+                data = {"name": "Invalid Saved View", "view": "dcim:location_list", "config": config}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 400)
+                self.assertIn("config", response.data)
+        self.assertFalse(SavedView.objects.filter(name="Invalid Saved View").exists())
+
+    def test_create_stores_normalized_pagination_count(self):
+        """A numeric `pagination_count` is saved as an integer, not as the string or float that was submitted."""
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for value in ["50", 50.0]:
+            with self.subTest(pagination_count=value):
+                name = f"Normalized {value!r}"
+                data = {"name": name, "view": "dcim:location_list", "config": {"pagination_count": value}}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 201)
+                stored = SavedView.objects.get(name=name).config["pagination_count"]
+                self.assertEqual(stored, 50)
+                self.assertIs(type(stored), int)
+
     def _other_user_saved_view(self, **kwargs):
         """
         Create a SavedView owned by some other user.
