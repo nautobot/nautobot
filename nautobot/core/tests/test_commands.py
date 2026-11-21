@@ -1,14 +1,48 @@
 from io import StringIO
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.management import call_command
+from django.core.management import call_command, CommandError
+from django.test import SimpleTestCase
 import yaml
 
 from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import Device
 from nautobot.extras.models import Status
+
+
+class PostUpgradeTestCase(SimpleTestCase):
+    """Test the migration target passed to Django by post_upgrade."""
+
+    def test_migrate_app(self):
+        for args, app_label in (((), None), (("--migrate-app", "example_app"), "example_app")):
+            with (
+                self.subTest(app_label=app_label),
+                patch("nautobot.core.management.commands.migrate.Command.execute") as migrate,
+            ):
+                call_command(
+                    "post_upgrade",
+                    *args,
+                    clear_cache=False,
+                    clearsessions=False,
+                    collectstatic=False,
+                    remove_stale_contenttypes=False,
+                    trace_paths=False,
+                    send_installation_metrics=False,
+                    refresh_content_type_cache=False,
+                    refresh_dynamic_group_member_caches=False,
+                    stdout=StringIO(),
+                )
+                migrate.assert_called_once()
+                self.assertEqual(migrate.call_args.kwargs["app_label"], app_label)
+
+    @patch("nautobot.core.management.commands.post_upgrade.call_command")
+    def test_empty_migrate_app(self, run_command):
+        with self.assertRaisesMessage(CommandError, "--migrate-app requires a non-empty app label"):
+            call_command("post_upgrade", "--migrate-app", "", stdout=StringIO())
+        run_command.assert_not_called()
 
 
 class ManagementCommandTestCase(TestCase):
