@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import FieldError
+from django.db.models import ProtectedError
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
@@ -33,6 +34,15 @@ class CeleryWorkerNotRunningException(APIException):
 class FilterSetFieldNotFound(Exception):
     """
     An exception indicating that a filterset field could not be found.
+    """
+
+
+class NautobotProtectedError(ProtectedError):
+    """
+    A `ProtectedError` whose message is written for the user.
+
+    Django's deletion collector raises a plain `ProtectedError` whose message names internal models and fields.
+    The UI shows the message of this subclass as is, and replaces that of a plain `ProtectedError` with a generic one.
     """
 
 

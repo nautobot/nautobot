@@ -16,7 +16,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import connections, InterfaceError, models, OperationalError, transaction
-from django.db.models import Count, ProtectedError, Q, signals
+from django.db.models import Count, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_celery_beat.clockedschedule import clocked
@@ -32,6 +32,7 @@ from nautobot.core.celery import (
 )
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import serialize_object_v2
@@ -283,7 +284,7 @@ class Job(PrimaryModel):
 
     def delete(self, *args, **kwargs):
         if self.module_name.startswith("nautobot."):
-            raise ProtectedError(
+            raise NautobotProtectedError(
                 f"Unable to delete Job {self}. System Job cannot be deleted",
                 [],
             )

@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -28,7 +27,7 @@ from nautobot.core.api.views import (
     NautobotAPIVersionMixin,
     ReadOnlyModelViewSet,
 )
-from nautobot.core.exceptions import CeleryWorkerNotRunningException
+from nautobot.core.exceptions import CeleryWorkerNotRunningException, NautobotProtectedError
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
@@ -1095,7 +1094,7 @@ class JobViewSet(
 
     def perform_destroy(self, instance):
         if instance.module_name.startswith("nautobot."):
-            raise ProtectedError(
+            raise NautobotProtectedError(
                 f"Unable to delete Job {instance}. System Job cannot be deleted",
                 [],
             )

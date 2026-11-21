@@ -5,6 +5,7 @@ from django.core.validators import validate_ipv46_address
 from django.db.models import ProtectedError, Q
 import netaddr
 
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models.querysets import LocationToLocationsQuerySetMixin, RestrictedQuerySet
 from nautobot.core.utils.data import merge_dicts_without_collision
 
@@ -319,7 +320,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
             if protected_model._meta.model_name == "ipaddress" and new_parent is None:
                 # If any of the child IPs would have a null parent after this change, raise an
                 # error.
-                raise ProtectedError(
+                raise NautobotProtectedError(
                     msg=(
                         f"Cannot delete Prefix {protected_parent} because it has child IPAddress"
                         " objects that would no longer have a parent."
@@ -328,7 +329,7 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
                 ) from err
 
             if protected_model._meta.model_name == "ipaddressrange" and new_parent is None:
-                raise ProtectedError(
+                raise NautobotProtectedError(
                     msg=(
                         f"Cannot delete Prefix {protected_parent} because it has child IPAddressRange"
                         " objects that would no longer have a parent."

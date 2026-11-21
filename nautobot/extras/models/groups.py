@@ -14,6 +14,7 @@ from django.utils.functional import cached_property
 import django_filters
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
@@ -614,7 +615,7 @@ class DynamicGroup(PrimaryModel):
     def delete(self, *args, **kwargs):
         """Check if we're a child and attempt to block delete if we are."""
         if self.parents.exists():
-            raise models.ProtectedError(
+            raise NautobotProtectedError(
                 msg="Cannot delete DynamicGroup while child of other DynamicGroups.",
                 protected_objects=set(self.parents.all()),
             )

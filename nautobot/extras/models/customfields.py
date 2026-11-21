@@ -17,6 +17,7 @@ from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.forms import (
     add_blank_choice,
     CommentField,
@@ -1239,12 +1240,12 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         if self.custom_field.default:
             # Cannot delete the choice if it is the default value.
             if self.custom_field.type == CustomFieldTypeChoices.TYPE_SELECT and self.custom_field.default == self.value:
-                raise models.ProtectedError(
+                raise NautobotProtectedError(
                     msg="Cannot delete this choice because it is the default value for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
             elif self.value in self.custom_field.default:
-                raise models.ProtectedError(
+                raise NautobotProtectedError(
                     msg="Cannot delete this choice because it is one of the default values for the field.",
                     protected_objects=[self],  # TODO: should this be self.field instead?
                 )
@@ -1254,7 +1255,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
             for ct in self.custom_field.content_types.all():
                 model = ct.model_class()
                 if model.objects.filter(**{f"_custom_field_data__{self.custom_field.key}": self.value}).exists():
-                    raise models.ProtectedError(
+                    raise NautobotProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
                     )
@@ -1266,7 +1267,7 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
                 if model.objects.filter(
                     **{f"_custom_field_data__{self.custom_field.key}__contains": self.value}
                 ).exists():
-                    raise models.ProtectedError(
+                    raise NautobotProtectedError(
                         msg="Cannot delete this choice because it is in active use.",
                         protected_objects=[self],  # TODO should this be model.objects.filter(...) instead?
                     )

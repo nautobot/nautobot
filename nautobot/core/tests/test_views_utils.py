@@ -3,15 +3,20 @@ import urllib.parse
 
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.db import ProgrammingError
-from django.test import tag
+from django.db.models import ProtectedError
+from django.test import RequestFactory, tag
 
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models.querysets import count_related
 from nautobot.core.testing import TestCase
 from nautobot.core.views.utils import (
     check_filter_for_display,
     get_bulk_queryset_from_view,
     get_saved_views_for_user,
+    handle_protectederror,
     prepare_cloned_fields,
 )
 from nautobot.dcim.filters import DeviceFilterSet
@@ -177,6 +182,46 @@ class CheckCountRelatedSubquery(TestCase):
             manufacturer_count=count_related(Manufacturer, "inventory_items__device", distinct=True)
         )
         self.assertEqual(qs.get(pk=device1.pk).manufacturer_count, 3)
+
+
+class HandleProtectedErrorTest(TestCase):
+    def setUp(self):
+        self.manufacturer = Manufacturer.objects.create(name="Acme ProtectedError")
+        self.device_type = DeviceType.objects.create(manufacturer=self.manufacturer, model="Acme 1000")
+        self.request = RequestFactory().post("/")
+        self.request.session = {}
+        self.request._messages = FallbackStorage(self.request)
+
+    def get_message(self):
+        messages = [str(message) for message in get_messages(self.request)]
+        self.assertEqual(len(messages), 1)
+        return messages[0]
+
+    def test_django_protected_error_gets_generic_message(self):
+        """A ProtectedError from Django's deletion collector doesn't show its internal message."""
+        with self.assertRaises(ProtectedError) as cm:
+            self.manufacturer.delete()
+        handle_protectederror([self.manufacturer], self.request, cm.exception)
+        self.assertEqual(
+            self.get_message(),
+            f"Unable to delete <strong>{self.manufacturer}</strong>. 1 dependent objects were found: "
+            f'<a href="{self.device_type.get_absolute_url()}">{self.device_type}</a>',
+        )
+
+    def test_nautobot_protected_error_keeps_its_message(self):
+        """A NautobotProtectedError's message is shown as is, escaped, and kept apart from the dependent objects."""
+        error = NautobotProtectedError("Can't delete <Acme> {now}.", [self.device_type])
+        handle_protectederror([self.manufacturer], self.request, error)
+        self.assertEqual(
+            self.get_message(),
+            "Can&#x27;t delete &lt;Acme&gt; {now}. "
+            f'<a href="{self.device_type.get_absolute_url()}">{self.device_type}</a>',
+        )
+
+    def test_nautobot_protected_error_without_dependent_objects(self):
+        error = NautobotProtectedError("Unable to delete Job Foo. System Job cannot be deleted", [])
+        handle_protectederror([self.manufacturer], self.request, error)
+        self.assertEqual(self.get_message(), "Unable to delete Job Foo. System Job cannot be deleted")
 
 
 class CheckPrepareClonedFields(TestCase):
