@@ -1,0 +1,1 @@
+Added the `--migrate-app APP_LABEL` option to `nautobot-server post_upgrade` to limit database migrations to a single app.
