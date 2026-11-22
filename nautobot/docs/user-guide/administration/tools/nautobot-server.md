@@ -575,6 +575,12 @@ Do not automatically collect static files into a single location.
 `--no-migrate`  
 Do not automatically perform any database migrations.
 
+`--migrate-app APP_LABEL`
+Limit database migrations to the single app with the given label (for example `--migrate-app dcim`), instead of migrating all apps. Only meaningful when migrations are enabled (i.e. `--no-migrate` was not specified).
+
++++ 3.2.10
+    Added the `--migrate-app` option to `post_upgrade`.
+
 `--no-remove-stale-contenttypes`  
 Do not automatically remove stale content types.
 

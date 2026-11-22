@@ -1,14 +1,15 @@
 import argparse
 
+from django.apps import apps
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 HELP_TEXT = """
 Performs Nautobot common server upgrade operations using a single entrypoint.
 
 This will run the following management commands with default settings, in order:
 
-- migrate
+- migrate (optionally limited to a single app via --migrate-app)
 - clear_cache
 - trace_paths
 - collectstatic
@@ -59,6 +60,14 @@ class Command(BaseCommand):
             help="Do not automatically perform any database migrations.",
         )
         parser.add_argument(
+            "--migrate-app",
+            dest="migrate_app",
+            metavar="APP_LABEL",
+            default=None,
+            help="Limit database migrations to the single app with this label (e.g. --migrate-app dcim). "
+            "Only meaningful when migrations are enabled (i.e. --no-migrate was not specified).",
+        )
+        parser.add_argument(
             "--no-remove-stale-contenttypes",
             action="store_false",
             dest="remove_stale_contenttypes",
@@ -97,14 +106,30 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
-            self.stdout.write("Performing database migrations...")
-            call_command(
-                "migrate",
-                skip_checks=False,  # make sure Postgres version check and others are applied
-                interactive=False,
-                traceback=options["traceback"],
-                verbosity=options["verbosity"],
-            )
+            migrate_app = options.get("migrate_app")
+            if migrate_app:
+                try:
+                    apps.get_app_config(migrate_app)
+                except LookupError:
+                    raise CommandError(f"No installed app with label '{migrate_app}'.") from None
+                self.stdout.write(f"Performing database migrations for app '{migrate_app}'...")
+                call_command(
+                    "migrate",
+                    migrate_app,
+                    skip_checks=False,  # make sure Postgres version check and others are applied
+                    interactive=False,
+                    traceback=options["traceback"],
+                    verbosity=options["verbosity"],
+                )
+            else:
+                self.stdout.write("Performing database migrations...")
+                call_command(
+                    "migrate",
+                    skip_checks=False,  # make sure Postgres version check and others are applied
+                    interactive=False,
+                    traceback=options["traceback"],
+                    verbosity=options["verbosity"],
+                )
             self.stdout.write()
 
         # Run clear_cache
