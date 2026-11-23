@@ -677,6 +677,7 @@ nav:
           - UI Extensions:
               - "development/apps/api/ui-extensions/index.md"
               - Banners: "development/apps/api/ui-extensions/banners.md"
+              - Code and Diff Editor: "development/apps/api/ui-extensions/code-editor.md"
               - Home Page: "development/apps/api/ui-extensions/home-page.md"
               - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
               - Navigation: "development/apps/api/ui-extensions/navigation.md"

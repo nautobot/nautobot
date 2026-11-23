@@ -108,6 +108,7 @@ properties:
     - "xmpp"
     description: >-
       A list of permitted URL schemes referenced when rendering links within Nautobot.
+      Custom Link target URLs are restricted to these schemes.
       Note that only the schemes specified in this list will be accepted; if adding your own,
       be sure to replicate all of the default values as well (excluding those schemes which are not desirable).
     items:

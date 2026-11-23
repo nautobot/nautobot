@@ -202,6 +202,19 @@ class ApprovalWorkflowTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCa
             "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_current_state_cannot_be_modified_via_workflow_endpoint(self):
+        workflow = self.approval_workflows[0]
+        self.add_permissions("extras.change_approvalworkflow")
+        url = reverse("extras-api:approvalworkflow-detail", kwargs={"pk": workflow.pk})
+
+        response = self.client.patch(
+            url, data={"current_state": ApprovalWorkflowStateChoices.APPROVED}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
     def test_cancel_finished_workflow(self):
         self.add_permissions("extras.view_approvalworkflow")
         self.approval_workflows[0].current_state = ApprovalWorkflowStateChoices.APPROVED
@@ -985,6 +998,48 @@ class ApprovalWorkflowStageTest(
         )
         # And the stage state must not have advanced.
         self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_state_cannot_be_modified_via_stage_endpoint(self):
+        """PATCH on the stage must not change its state; only approve/deny responses may do so."""
+        stage = self.approval_workflow_stages[0]
+        scheduled_job = self.scheduled_jobs[0]
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.change_scheduledjob")
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        for state in (ApprovalWorkflowStateChoices.APPROVED, ApprovalWorkflowStateChoices.DENIED):
+            with self.subTest(state=state):
+                response = self.client.patch(url, data={"state": state}, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(response.data["state"], ApprovalWorkflowStateChoices.PENDING)
+                stage.refresh_from_db()
+                self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+                self.assertIsNone(stage.decision_date)
+
+        stage.approval_workflow.refresh_from_db()
+        self.assertEqual(stage.approval_workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.decision_date)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_stage_cannot_be_moved_to_another_workflow(self):
+        """PATCH on the stage must not re-parent it to a different workflow or stage definition."""
+        stage = self.approval_workflow_stages[0]
+        self.add_permissions("extras.change_approvalworkflowstage")
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        for field_name, value in (
+            ("approval_workflow", self.approval_workflows[3].pk),
+            ("approval_workflow_stage_definition", self.approval_workflow_stage_definitions[1].pk),
+        ):
+            with self.subTest(field_name=field_name):
+                response = self.client.patch(url, data={field_name: str(value)}, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field_name, response.data)
+
+        stage.refresh_from_db()
+        self.assertEqual(stage.approval_workflow, self.approval_workflows[0])
+        self.assertEqual(stage.approval_workflow_stage_definition, self.approval_workflow_stage_definitions[0])
 
     def test_nested_response_user_has_correct_object_type(self):
         """Regression: nested response `user` must carry its own object_type (users.user), not the parent's."""
@@ -4325,6 +4380,31 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "is_shared": True,
             },
         ]
+
+    def test_create_rejects_invalid_config(self):
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for config in [{"pagination_count": {"a": 1}}, {"pagination_count": "abc"}, {"pagination_count": 1.5}, [1, 2]]:
+            with self.subTest(config=config):
+                data = {"name": "Invalid Saved View", "view": "dcim:location_list", "config": config}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 400)
+                self.assertIn("config", response.data)
+        self.assertFalse(SavedView.objects.filter(name="Invalid Saved View").exists())
+
+    def test_create_stores_normalized_pagination_count(self):
+        """A numeric `pagination_count` is saved as an integer, not as the string or float that was submitted."""
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for value in ["50", 50.0]:
+            with self.subTest(pagination_count=value):
+                name = f"Normalized {value!r}"
+                data = {"name": name, "view": "dcim:location_list", "config": {"pagination_count": value}}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 201)
+                stored = SavedView.objects.get(name=name).config["pagination_count"]
+                self.assertEqual(stored, 50)
+                self.assertIs(type(stored), int)
 
     def _other_user_saved_view(self, **kwargs):
         """

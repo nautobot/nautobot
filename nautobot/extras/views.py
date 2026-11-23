@@ -55,6 +55,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import coerce_paginate_count
 from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -3247,10 +3248,12 @@ class SavedViewUIViewSet(
                 return redirect(reverse(view_name))
         pagination_count = param_dict.get("per_page", None)
         if not pagination_count:
-            if derived_instance and derived_instance.config.get("pagination_count", None):
-                pagination_count = derived_instance.config["pagination_count"]
-            else:
-                pagination_count = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            derived_count = None
+            if derived_instance and isinstance(derived_instance.config, dict):
+                derived_count = coerce_paginate_count(derived_instance.config.get("pagination_count", None))
+            pagination_count = derived_count or get_settings_or_config(
+                "PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT
+            )
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = param_dict.get("sort", [])
         if not sort_order:

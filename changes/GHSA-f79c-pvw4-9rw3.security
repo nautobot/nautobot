@@ -1,0 +1,1 @@
+Fixed the `connected-device` REST API endpoint to render the connected device in a brief `{id, object_type, url, display}` form when the requesting user does not have permission to view it.

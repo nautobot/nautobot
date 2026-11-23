@@ -1,0 +1,1 @@
+Fixed Git repository sync following a symbolic link that points outside the repository checkout, which could read a worker-local file and store its contents in records such as Export Templates or Config Contexts.

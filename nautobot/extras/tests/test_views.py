@@ -2620,6 +2620,45 @@ class CustomLinkRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
+    def test_custom_link_url_scheme_enforcement(self):
+        """A target URL that renders to a script-executing scheme must not reach the link href."""
+        content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        for target_url, needle, group_name in [
+            ("javascript:alert('xss')", "javascript:alert", ""),
+            ("  javascript:alert('xss')", "javascript:alert", ""),
+            ("data:text/html,<script>alert('xss')</script>", "data:text/html", ""),
+            ("javascript:alert('xss')", "javascript:alert", "Links"),
+        ]:
+            with self.subTest(target_url=target_url, group_name=group_name):
+                CustomLink.objects.all().delete()
+                CustomLink.objects.create(
+                    content_type=content_type,
+                    name="Test",
+                    text="Hello",
+                    target_url=target_url,
+                    group_name=group_name,
+                    new_window=False,
+                )
+                response = self.client.get(location.get_absolute_url(), follow=True)
+                self.assertEqual(response.status_code, 200)
+                content = extract_page_body(response.content.decode(response.charset))
+                self.assertNotIn(needle, content, content)
+                self.assertIn("disallowed scheme", content, content)
+
+        CustomLink.objects.all().delete()
+        CustomLink.objects.create(
+            content_type=content_type, name="Test", text="Hello", target_url="/dcim/locations/", new_window=False
+        )
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('href="/dcim/locations/"', content, content)
+        self.assertNotIn("disallowed scheme", content, content)
+
 
 class DynamicGroupTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -3791,6 +3830,37 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["filter_params"]["status"], ["active"])
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=50)
+    def test_create_saved_view_pagination_count_from_derived_view(self):
+        """Without `per_page`, copy a valid `pagination_count` from the derived view, else use `PAGINATE_COUNT`."""
+        view_name = "dcim:location_list"
+        self.add_permissions("dcim.view_location")
+        create_url = self.get_view_url_for_saved_view(action="create")
+        # `sort`, a filter, and `table_changes_pending` keep the create view from reading other keys of the
+        # derived view's `config`, so that only the `pagination_count` handling is exercised.
+        base_params = "&status=active&sort=name&table_changes_pending=true"
+        cases = [
+            ("valid", {"pagination_count": 25}, 25),
+            ("missing", {}, 50),
+            ("malformed", {"pagination_count": {"a": 1}}, 50),
+            ("non-dict config", [1, 2], 50),
+        ]
+        for label, derived_config, expected in cases:
+            with self.subTest(label):
+                # `objects.create()` skips `clean()`, simulating malformed data already in the database.
+                derived = SavedView.objects.create(
+                    owner=self.user, name=f"Derived {label}", view=view_name, config=derived_config
+                )
+                name = f"New from {label}"
+                data = post_data({"name": name, "view": view_name, "params": f"saved_view={derived.pk}{base_params}"})
+                self.assertHttpStatus(self.client.post(create_url, data), 302)
+                self.assertEqual(SavedView.objects.get(name=name).config["pagination_count"], expected)
+
+        with self.subTest("no derived view"):
+            data = post_data({"name": "New without derived", "view": view_name, "params": base_params.lstrip("&")})
+            self.assertHttpStatus(self.client.post(create_url, data), 302)
+            self.assertEqual(SavedView.objects.get(name="New without derived").config["pagination_count"], 50)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_delete_saved_view_as_different_user(self):

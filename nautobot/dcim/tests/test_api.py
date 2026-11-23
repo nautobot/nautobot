@@ -4715,7 +4715,7 @@ class ConnectedDeviceTest(APITestCase):
             name="TestDevice1",
             location=location,
         )
-        device2 = Device.objects.create(
+        self.device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_status,
@@ -4728,13 +4728,13 @@ class ConnectedDeviceTest(APITestCase):
             name="eth0",
             status=interface_status,
         )
-        interface2 = Interface.objects.create(
-            device=device2,
+        self.interface2 = Interface.objects.create(
+            device=self.device2,
             name="eth0",
             status=interface_status,
         )
 
-        cable = Cable(termination_a=interface1, termination_b=interface2, status=cable_status)
+        cable = Cable(termination_a=interface1, termination_b=self.interface2, status=cable_status)
         cable.validated_save()
 
     def test_get_connected_device(self):
@@ -4742,10 +4742,45 @@ class ConnectedDeviceTest(APITestCase):
         response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
         self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
 
-        self.add_permissions("dcim.view_interface")
+        self.add_permissions("dcim.view_interface", "dcim.view_device")
         response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], self.device1.name)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_connected_device_masks_device_the_user_cannot_view(self):
+        """
+        Look up a connected device as a user permitted to view the peer interface but not the connected device.
+
+        The connected device must be downgraded to its brief representation rather than exposing full detail
+        (including any requested `config_context`); it is rendered in full only once the user may view it.
+        """
+        url = reverse("dcim-api:connected-device-list") + "?peer_device=TestDevice2&peer_interface=eth0"
+        self.add_permissions("dcim.view_interface", constraints={"id": str(self.interface2.id)})
+
+        with self.subTest("no Device permission"):
+            response = self.client.get(url + "&include=config_context", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(set(response.data.keys()), BRIEF_REPRESENTATION_KEYS)
+            self.assertEqual(str(response.data["id"]), str(self.device1.pk))
+            self.assertEqual(response.data["object_type"], "dcim.device")
+            self.assertEqual(response.data["display"], self.device1.display)
+            self.assert_no_verboten_content(response)
+
+        with self.subTest("Device permission constrained to a different device"):
+            self.add_permissions("dcim.view_device", constraints={"id": str(self.device2.id)})
+            response = self.client.get(url + "&include=config_context", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(set(response.data.keys()), BRIEF_REPRESENTATION_KEYS)
+
+        with self.subTest("Device permission constrained to the connected device"):
+            # `add_permissions()` names the ObjectPermission after the permission string, which must be unique.
+            self.remove_permissions("dcim.view_device", constraints={"id": str(self.device2.id)})
+            self.add_permissions("dcim.view_device", constraints={"id": str(self.device1.id)})
+            response = self.client.get(url + "&include=config_context", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["name"], self.device1.name)
+            self.assertIn("config_context", response.data)
 
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
