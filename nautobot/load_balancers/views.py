@@ -61,6 +61,7 @@ class VirtualServerUIViewSet(NautobotUIViewSet):
                     "device_redundancy_group",
                     "cloud_service",
                     "virtual_chassis",
+                    "virtual_device_context",
                 ],
             ),
             ObjectsTablePanel(

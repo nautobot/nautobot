@@ -13,7 +13,7 @@ from nautobot.core.forms import (
     StaticSelect2,
     TagFilterField,
 )
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis, VirtualDeviceContext
 from nautobot.extras.forms import (
     NautobotBulkEditForm,
     NautobotFilterForm,
@@ -60,6 +60,7 @@ class VirtualServerForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     cloud_service = DynamicModelChoiceField(queryset=CloudService.objects.all(), required=False)
     virtual_chassis = DynamicModelChoiceField(queryset=VirtualChassis.objects.all(), required=False)
+    virtual_device_context = DynamicModelChoiceField(queryset=VirtualDeviceContext.objects.all(), required=False)
     certificate_profiles = DynamicModelMultipleChoiceField(
         queryset=models.CertificateProfile.objects.all(),
         required=False,
@@ -82,6 +83,7 @@ class VirtualServerForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-
         "device_redundancy_group",
         "cloud_service",
         "virtual_chassis",
+        "virtual_device_context",
         "health_check_monitor",
         "ssl_offload",
         "certificate_profiles",
@@ -127,6 +129,7 @@ class VirtualServerBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  #
     device_redundancy_group = DynamicModelChoiceField(queryset=DeviceRedundancyGroup.objects.all(), required=False)
     cloud_service = DynamicModelChoiceField(queryset=CloudService.objects.all(), required=False)
     virtual_chassis = DynamicModelChoiceField(queryset=VirtualChassis.objects.all(), required=False)
+    virtual_device_context = DynamicModelChoiceField(queryset=VirtualDeviceContext.objects.all(), required=False)
     health_check_monitor = DynamicModelChoiceField(queryset=models.HealthCheckMonitor.objects.all(), required=False)
     ssl_offload = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="SSL Offload")
     add_certificate_profiles = DynamicModelMultipleChoiceField(
@@ -154,6 +157,7 @@ class VirtualServerBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  #
             "source_nat_type",
             "tenant",
             "virtual_chassis",
+            "virtual_device_context",
         ]
 
 
@@ -198,6 +202,12 @@ class VirtualServerFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint:
         to_field_name="name",
         required=False,
         label="Virtual Chassis",
+    )
+    virtual_device_context = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        required=False,
+        label="Virtual Device Context",
     )
     health_check_monitor = DynamicModelMultipleChoiceField(
         queryset=models.HealthCheckMonitor.objects.all(),
