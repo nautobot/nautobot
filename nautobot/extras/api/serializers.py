@@ -214,13 +214,13 @@ class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
         )
         return ApprovalWorkflowStageResponseSerializer(queryset, many=True, context=self.context).data
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Prevent moving an existing stage to a different workflow or stage definition."""
         if self.instance is not None:
             for field_name in ("approval_workflow", "approval_workflow_stage_definition"):
-                if field_name in data and data[field_name] != getattr(self.instance, field_name):
+                if field_name in attrs and attrs[field_name] != getattr(self.instance, field_name):
                     raise serializers.ValidationError({field_name: "This field cannot be changed once set."})
-        return super().validate(data)
+        return super().validate(attrs)
 
     class Meta:
         """Meta attributes."""
