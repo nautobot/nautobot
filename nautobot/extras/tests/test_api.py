@@ -205,6 +205,19 @@ class ApprovalWorkflowTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCa
             "You are not permitted to cancel this workflow. This workflow can be only canceled by submitter.",
         )
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_current_state_cannot_be_modified_via_workflow_endpoint(self):
+        workflow = self.approval_workflows[0]
+        self.add_permissions("extras.change_approvalworkflow")
+        url = reverse("extras-api:approvalworkflow-detail", kwargs={"pk": workflow.pk})
+
+        response = self.client.patch(
+            url, data={"current_state": ApprovalWorkflowStateChoices.APPROVED}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
     def test_cancel_finished_workflow(self):
         self.add_permissions("extras.view_approvalworkflow")
         self.approval_workflows[0].current_state = ApprovalWorkflowStateChoices.APPROVED
@@ -988,6 +1001,48 @@ class ApprovalWorkflowStageTest(
         )
         # And the stage state must not have advanced.
         self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_state_cannot_be_modified_via_stage_endpoint(self):
+        """PATCH on the stage must not change its state; only approve/deny responses may do so."""
+        stage = self.approval_workflow_stages[0]
+        scheduled_job = self.scheduled_jobs[0]
+        self.add_permissions("extras.change_approvalworkflowstage", "extras.change_scheduledjob")
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        for state in (ApprovalWorkflowStateChoices.APPROVED, ApprovalWorkflowStateChoices.DENIED):
+            with self.subTest(state=state):
+                response = self.client.patch(url, data={"state": state}, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                self.assertEqual(response.data["state"], ApprovalWorkflowStateChoices.PENDING)
+                stage.refresh_from_db()
+                self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+                self.assertIsNone(stage.decision_date)
+
+        stage.approval_workflow.refresh_from_db()
+        self.assertEqual(stage.approval_workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.decision_date)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_stage_cannot_be_moved_to_another_workflow(self):
+        """PATCH on the stage must not re-parent it to a different workflow or stage definition."""
+        stage = self.approval_workflow_stages[0]
+        self.add_permissions("extras.change_approvalworkflowstage")
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        for field_name, value in (
+            ("approval_workflow", self.approval_workflows[3].pk),
+            ("approval_workflow_stage_definition", self.approval_workflow_stage_definitions[1].pk),
+        ):
+            with self.subTest(field_name=field_name):
+                response = self.client.patch(url, data={field_name: str(value)}, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field_name, response.data)
+
+        stage.refresh_from_db()
+        self.assertEqual(stage.approval_workflow, self.approval_workflows[0])
+        self.assertEqual(stage.approval_workflow_stage_definition, self.approval_workflow_stage_definitions[0])
 
     def test_nested_response_user_has_correct_object_type(self):
         """Regression: nested response `user` must carry its own object_type (users.user), not the parent's."""
@@ -3583,6 +3638,44 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    @mock.patch("nautobot.extras.models.jobs.JobResult.enqueue_job")
+    def test_run_job_string_dryrun_does_not_bypass_approval(self, mock_enqueue_job, mock_get_worker_count):
+        """A string `dryrun` value must not bypass a required approval workflow.
+
+        The approval gate must consult the validated (cleaned) value: a raw string such as
+        "false" is truthy and, if read directly from the request, would skip approval entirely.
+        """
+        ApprovalWorkflowDefinition.objects.create(
+            name="Dryrun Bypass Workflow",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+        )
+        dryrun_job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        dryrun_job_model.enabled = True
+        # An approval workflow cannot coexist with sensitive variables; force this off for the test.
+        dryrun_job_model.has_sensitive_variables_override = True
+        dryrun_job_model.has_sensitive_variables = False
+        dryrun_job_model.validated_save()
+
+        mock_get_worker_count.return_value = 1
+        mock_enqueue_job.return_value = JobResult.objects.create(name="dryrun-approval-guard", user=self.user)
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        url = self.get_run_url(class_path="dry_run.TestDryRun")
+
+        # "false" is a truthy string; the cleaned DryRunVar value is False, so approval still applies.
+        response = self.client.post(url, {"data": {"dryrun": "false"}}, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+        # The job must be held for approval, not enqueued for immediate execution.
+        mock_enqueue_job.assert_not_called()
+        scheduled_job = ScheduledJob.objects.filter(job_model=dryrun_job_model).last()
+        self.assertIsNotNone(scheduled_job)
+        self.assertTrue(scheduled_job.associated_approval_workflows.exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_immediate_job_with_no_approval_workflow_defined(self, mock_get_worker_count):
         """
         Run an immediate job with no approval workflow defined.
@@ -4356,6 +4449,31 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_create_rejects_invalid_config(self):
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for config in [{"pagination_count": {"a": 1}}, {"pagination_count": "abc"}, {"pagination_count": 1.5}, [1, 2]]:
+            with self.subTest(config=config):
+                data = {"name": "Invalid Saved View", "view": "dcim:location_list", "config": config}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 400)
+                self.assertIn("config", response.data)
+        self.assertFalse(SavedView.objects.filter(name="Invalid Saved View").exists())
+
+    def test_create_stores_normalized_pagination_count(self):
+        """A numeric `pagination_count` is saved as an integer, not as the string or float that was submitted."""
+        self.add_permissions("extras.add_savedview")
+        url = self._get_list_url()
+        for value in ["50", 50.0]:
+            with self.subTest(pagination_count=value):
+                name = f"Normalized {value!r}"
+                data = {"name": name, "view": "dcim:location_list", "config": {"pagination_count": value}}
+                response = self.client.post(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, 201)
+                stored = SavedView.objects.get(name=name).config["pagination_count"]
+                self.assertEqual(stored, 50)
+                self.assertIs(type(stored), int)
+
     def _other_user_saved_view(self, **kwargs):
         """
         Create a SavedView owned by some other user.
@@ -4845,6 +4963,31 @@ class ScheduledJobTest(
 
         self.assertHttpStatus(dry_run("Hidden Scheduled Job"), status.HTTP_404_NOT_FOUND)
         self.assertHttpStatus(dry_run("Visible Scheduled Job"), status.HTTP_200_OK)
+
+    def test_dry_run_uses_current_job_queue_name(self):
+        """Dry-run uses the scheduled job's JobQueue, not a stale queue name stored in `celery_kwargs`."""
+        job_model = Job.objects.get_for_class_path("dry_run.TestDryRun")
+        job_model.enabled = True
+        job_model.validated_save()
+        job_queue = JobQueue.objects.create(name="renamed-queue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        scheduled_job = ScheduledJob.objects.create(
+            name="Stale Queue Scheduled Job",
+            task="dry_run.TestDryRun",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_FUTURE,
+            user=self.user,
+            start_time=now() + timedelta(days=1),
+            job_queue=job_queue,
+            celery_kwargs={"queue": "original-queue", "nautobot_job_queue_type": JobQueueTypeChoices.TYPE_CELERY},
+        )
+        self.add_permissions("extras.run_job", "extras.view_scheduledjob")
+
+        url = reverse("extras-api:scheduledjob-dry-run", kwargs={"pk": scheduled_job.pk})
+        response = self.client.post(url, format="json", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        job_result = JobResult.objects.get(pk=response.data["id"])
+        self.assertEqual(job_result.celery_kwargs["queue"], "renamed-queue")
 
 
 class MetadataTypeTest(APIViewTestCases.APIViewTestCase):

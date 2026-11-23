@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from graphql import GraphQLError
 
 from nautobot.core.graphql import execute_query
 from nautobot.users.models import User
@@ -17,9 +18,13 @@ class Command(BaseCommand):
         is_valid = True
         error_dict = {}
         for graph_ql_query in graph_ql_querys:
-            result = execute_query(graph_ql_query.query, user=user).to_dict()
-            if result.get("errors"):
-                errors = result.get("errors")
+            try:
+                result = execute_query(graph_ql_query.query, user=user)
+                errors = [error.formatted for error in result.errors or []]
+            except GraphQLError as error:
+                # execute_query() parses the query first and raises on syntax errors rather than returning them.
+                errors = [error.formatted]
+            if errors:
                 error_dict[graph_ql_query.name] = errors
                 is_valid = False
         if is_valid:

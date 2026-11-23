@@ -238,10 +238,11 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             scheduled_job = entry.model
             job_model = scheduled_job.job_model
             celery_kwargs = dict(entry.options)
-            job_queue = scheduled_job.job_queue
-
-            if job_queue is not None:
-                celery_kwargs.setdefault("queue", job_queue.name)
+            # Derive the queue from the JobQueue FK at dispatch time so a renamed or retyped JobQueue is honored.
+            # `job_queue` is null if the JobQueue was deleted; fall back to the Job's default queue.
+            job_queue = scheduled_job.job_queue or job_model.default_job_queue
+            celery_kwargs["queue"] = job_queue.name
+            celery_kwargs["nautobot_job_queue_type"] = job_queue.queue_type
 
             job_result = JobResult.objects.create(
                 name=job_model.name,
@@ -253,13 +254,13 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             )
 
             # Distinguish between Celery and Kubernetes job queues
-            if task and job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+            if task and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                 job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
                 # Return an AsyncResult object to mimic the behavior of Celery tasks
                 # after the job is finished by the Kubernetes Job Pod.
                 resp = AsyncResult(job_result.id)
             else:
-                dispatch_kwargs = dict(entry.options)
+                dispatch_kwargs = dict(celery_kwargs)
                 dispatch_kwargs["task_id"] = str(job_result.id)
                 if task:
                     resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **dispatch_kwargs)

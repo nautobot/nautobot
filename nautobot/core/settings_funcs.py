@@ -3,6 +3,7 @@
 from collections import namedtuple
 import os
 import sys
+from urllib.parse import quote
 
 from django.conf import settings
 import structlog
@@ -74,11 +75,12 @@ def parse_redis_connection(redis_database):
     redis_password = os.getenv("NAUTOBOT_REDIS_PASSWORD", "")
 
     # Default Redis credentials to being empty unless a username or password is
-    # provided. Then map it to "username:password@". We're not URL-encoding the
-    # password because the Redis Python client already does this.
+    # provided. Then map it to "username:password@". Both are percent-encoded so that
+    # URL-reserved characters (such as "#", "/", "@" or ":") don't break the URL;
+    # the Redis client and Celery/Kombu decode them again when parsing it.
     redis_creds = ""
     if redis_username or redis_password:
-        redis_creds = f"{redis_username}:{redis_password}@"
+        redis_creds = f"{quote(redis_username, safe='')}:{quote(redis_password, safe='')}@"
 
     if redis_scheme == "unix":
         return f"{redis_scheme}://{redis_creds}{redis_host}?db={redis_database}"
