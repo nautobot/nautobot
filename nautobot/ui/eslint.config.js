@@ -15,6 +15,7 @@ export default defineConfig([
       camelcase: 'off', // Some of the names use snake case to stay consistent with their backend counterparts.
       'id-length': ['error', { exceptions: ['$', 'q'] }], // Prevent obscure one-char names but make some explicit exceptions.
       'import/order': ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'never' }], // Keep imports consistent.
+      'import/no-unresolved': ['error', { ignore: ['\\.css$', 'webpack', 'react'] }],
       'max-lines': 'off',              // Code length and organization should be up to its author, not linter, to decide.
       'max-lines-per-function': 'off', // Ditto.
       'max-statements': 'off',         // Ditto.

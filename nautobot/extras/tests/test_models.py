@@ -3228,6 +3228,35 @@ class SavedViewTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.location_global_sv.is_shared, True)
         self.assertEqual(self.ipaddress_global_sv.is_shared, True)
 
+    def test_clean_normalizes_pagination_count_to_int(self):
+        for value in [50, "50", " 50 ", 50.0]:
+            with self.subTest(pagination_count=value):
+                self.sv.config = {"pagination_count": value}
+                self.sv.full_clean()
+                self.assertEqual(self.sv.config["pagination_count"], 50)
+                self.assertIs(type(self.sv.config["pagination_count"]), int)
+
+    def test_clean_rejects_invalid_config(self):
+        invalid_configs = [
+            {"pagination_count": {"a": 1}},
+            {"pagination_count": [1, 2]},
+            {"pagination_count": "abc"},
+            {"pagination_count": "1.5"},
+            {"pagination_count": None},
+            {"pagination_count": 0},
+            {"pagination_count": -5},
+            {"pagination_count": 1.5},
+            {"pagination_count": True},
+            [1, 2],
+            "string",
+        ]
+        for config in invalid_configs:
+            with self.subTest(config=config):
+                self.sv.config = config
+                with self.assertRaises(ValidationError) as cm:
+                    self.sv.full_clean()
+                self.assertIn("config", cm.exception.message_dict)
+
 
 @override_settings(TIME_ZONE="UTC")
 class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
@@ -3919,6 +3948,36 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.assertIsNone(result)
         # Verify the task was never dispatched.
         scheduler.send_task.assert_not_called()
+
+    def test_apply_async_dispatches_to_renamed_job_queue(self):
+        """A JobQueue renamed after the schedule was created is used by name when the schedule fires."""
+        from nautobot.core.celery.schedulers import NautobotDatabaseScheduler
+
+        job_queue = JobQueue.objects.create(name="original-queue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+        scheduled_job = ScheduledJob.create_schedule(
+            job_model=self.job_model,
+            user=self.user,
+            name="Renamed Queue Job",
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            job_queue=job_queue,
+            job_kwargs={},
+        )
+        self.assertNotIn("queue", scheduled_job.celery_kwargs)
+        self.assertNotIn("nautobot_job_queue_type", scheduled_job.celery_kwargs)
+        entry = NautobotScheduleEntry(model=scheduled_job)
+
+        job_queue.name = "renamed-queue"
+        job_queue.validated_save()
+
+        scheduler = mock.MagicMock(spec=NautobotDatabaseScheduler)
+        scheduler.app = mock.MagicMock()
+        mock_task = scheduler.app.tasks.get.return_value
+        NautobotDatabaseScheduler.apply_async(scheduler, entry, advance=False)
+
+        self.assertEqual(mock_task.apply_async.call_args.kwargs["queue"], "renamed-queue")
+        job_result = JobResult.objects.get(scheduled_job=scheduled_job)
+        self.assertEqual(job_result.celery_kwargs["queue"], "renamed-queue")
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")

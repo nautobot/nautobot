@@ -1717,6 +1717,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         self.enabled = False
         self.save()
 
+    on_workflow_initiated.alters_data = True
+
     def on_workflow_approved(self, approval_workflow):
         """When approved, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
@@ -1726,6 +1728,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.approved", payload=publish_event_payload)
+
+    on_workflow_approved.alters_data = True
 
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
@@ -1737,6 +1741,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.denied", payload=publish_event_payload)
 
+    on_workflow_denied.alters_data = True
+
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
@@ -1746,6 +1752,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         publish_event_payload = {"data": serialize_object_v2(self)}
         publish_event(topic="nautobot.jobs.approval.canceled", payload=publish_event_payload)
+
+    on_workflow_canceled.alters_data = True
 
     def get_approval_template(self):
         """
@@ -1861,13 +1869,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
             raise ValueError("task_queue and job_queue are mutually exclusive")
-        if job_queue is not None and task_queue is None:
-            task_queue = job_queue.name
-        elif task_queue is not None and job_queue is None:
-            job_queue = JobQueue.objects.get(name=task_queue)
-        else:  # both None
-            job_queue = job_model.default_job_queue
-            task_queue = job_queue.name
+        if job_queue is None:
+            job_queue = JobQueue.objects.get(name=task_queue) if task_queue is not None else job_model.default_job_queue
 
         if interval == JobExecutionType.TYPE_IMMEDIATELY:
             start_time = timezone.localtime()
@@ -1889,10 +1892,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         celery_kwargs = {
             "nautobot_job_profile": profile,
-            "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
-            "nautobot_job_queue_type": job_queue.queue_type,  # need a migration to set this field
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

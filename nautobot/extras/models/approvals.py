@@ -291,6 +291,8 @@ class ApprovalWorkflow(OrganizationalModel):
         self.save()
         self.object_under_review.on_workflow_canceled(self)
 
+    cancel.alters_data = True
+
     def save(self, *args, **kwargs):
         """
         Override the save() method to

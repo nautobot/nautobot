@@ -23,7 +23,7 @@
                                 <span class="visually-hidden">Help</span>
                             </a>
                         {% endif %}
-                        {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new:{% endif %}{% endblock %}
+                        {% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}
                     </h3>
                     {% block form %}
                         {% block form_fields %}
