@@ -2620,6 +2620,45 @@ class CustomLinkRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
+    def test_custom_link_url_scheme_enforcement(self):
+        """A target URL that renders to a script-executing scheme must not reach the link href."""
+        content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        for target_url, needle, group_name in [
+            ("javascript:alert('xss')", "javascript:alert", ""),
+            ("  javascript:alert('xss')", "javascript:alert", ""),
+            ("data:text/html,<script>alert('xss')</script>", "data:text/html", ""),
+            ("javascript:alert('xss')", "javascript:alert", "Links"),
+        ]:
+            with self.subTest(target_url=target_url, group_name=group_name):
+                CustomLink.objects.all().delete()
+                CustomLink.objects.create(
+                    content_type=content_type,
+                    name="Test",
+                    text="Hello",
+                    target_url=target_url,
+                    group_name=group_name,
+                    new_window=False,
+                )
+                response = self.client.get(location.get_absolute_url(), follow=True)
+                self.assertEqual(response.status_code, 200)
+                content = extract_page_body(response.content.decode(response.charset))
+                self.assertNotIn(needle, content, content)
+                self.assertIn("disallowed scheme", content, content)
+
+        CustomLink.objects.all().delete()
+        CustomLink.objects.create(
+            content_type=content_type, name="Test", text="Hello", target_url="/dcim/locations/", new_window=False
+        )
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('href="/dcim/locations/"', content, content)
+        self.assertNotIn("disallowed scheme", content, content)
+
 
 class DynamicGroupTestCase(
     ViewTestCases.CreateObjectViewTestCase,
