@@ -41,6 +41,10 @@ There are several conditions that must be met in order to extend a filter:
 !!! note
     An app is not required to define both `filterset_fields` and `filterform_fields`.
 
+Validators on a registered form field are also applied to submitted values of the matching filter in the `FilterSet`,
+including REST API requests. Scalar form fields validate each value of a multi-value filter separately. The filter's
+own validation and cleaned value are retained. Form fields without a matching filter do not create a new filter.
+
 You can view an example of `filter_extensions.py` by viewing [the one provided](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/filter_extensions.py) with the Example App.
 
 !!! tip

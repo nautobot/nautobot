@@ -1,16 +1,22 @@
+from decimal import Decimal
 from unittest import mock, skip
 
+from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.http import QueryDict
 from django.template import engines
 from django.test import override_settings, tag
 from django.urls import NoReverseMatch, reverse
+import django_filters
 import django_tables2 as tables
 import netaddr
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.filters import MultiValueCharFilter, MultiValueNumberFilter
 from nautobot.core.testing import APIViewTestCases, disable_warnings, extract_page_body, TestCase, ViewTestCases
 from nautobot.core.utils.lookup import get_table_for_model
 from nautobot.data_validation.custom_validators import BaseValidator
@@ -665,6 +671,7 @@ class FilterExtensionTest(TestCase):
 
     queryset = Tenant.objects.all()
     filterset = TenantFilterSet
+    user_permissions = ("tenancy.view_tenant",)
 
     @classmethod
     def setUpTestData(cls):
@@ -674,6 +681,9 @@ class FilterExtensionTest(TestCase):
             Tenant.objects.create(name="Tenant 2", tenant_group=tenant_groups[1], description="tenant-2.nautobot.com"),
             Tenant.objects.create(name="Tenant 3", tenant_group=tenant_groups[2], description="tenant-3.nautobot.com"),
         )
+        Tenant.objects.create(name="Valid filter tenant", description="ABC12")
+        Tenant.objects.create(name="Another valid filter tenant", description="DEF34")
+        Tenant.objects.create(name="Invalid filter tenant", description="abc12")
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
@@ -790,6 +800,311 @@ class FilterExtensionTest(TestCase):
         )
         self.assertTrue(form.is_valid())
         self.assertIn("example_app_description", form.fields.keys())
+
+    def test_filter_form_validators(self):
+        from example_app.filter_extensions import TenantFilterExtension
+
+        field_name = "example_app_validated_description"
+        field = TenantFilterExtension.filterform_fields[field_name]
+        self.assertIs(TenantFilterForm.base_fields[field_name], field)  # pylint: disable=no-member
+        self.assertEqual(TenantFilterForm().fields[field_name].validators, field.validators)
+        for value, valid in (("ABC12", True), ("abc12", False), ("", True)):
+            with self.subTest(value=value):
+                form = TenantFilterForm(data={field_name: value})
+                self.assertEqual(form.is_valid(), valid, form.errors)
+                if not valid:
+                    self.assertEqual(form.errors[field_name], ["Invalid filter value"])
+
+    def test_filterset_form_validators(self):
+        field_name = "example_app_validated_description"
+        filterset = self.filterset({field_name: ["abc12"]}, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertEqual(filterset.errors[field_name], ["Invalid filter value"])
+
+    def test_list_filter_form_validators(self):
+        response = self.client.get(
+            reverse("tenancy:tenant_list"),
+            {"example_app_validated_description": "abc12"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["table"].rows), 0)
+        self.assertContains(response, "Invalid filters were specified")
+        self.assertContains(response, "Invalid filter value")
+
+    def test_validated_filter_results(self):
+        params = {"example_app_validated_description": "ABC12"}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid(), filterset.errors)
+        self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(description="ABC12"))
+
+        response = self.client.get(reverse("tenancy:tenant_list"), params, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertCountEqual(
+            [row.record.pk for row in response.context["table"].rows],
+            self.queryset.filter(description="ABC12").values_list("pk", flat=True),
+        )
+
+    def test_multiple_filter_values(self):
+        field_name = "example_app_validated_description"
+        for values, valid in ((["ABC12", "DEF34"], True), (["abc12", "ABC12"], False), (["ABC12", "abc12"], False)):
+            for querydict in (False, True):
+                with self.subTest(values=values, querydict=querydict):
+                    params = {field_name: values}
+                    if querydict:
+                        params = QueryDict(mutable=True)
+                        params.setlist(field_name, values)
+                    filterset = self.filterset(params, self.queryset)
+                    self.assertEqual(filterset.is_valid(), valid, filterset.errors)
+                    if valid:
+                        self.assertEqual(filterset.form.cleaned_data[field_name], values)
+                        self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(description__in=values))
+                    else:
+                        self.assertEqual(filterset.errors[field_name], ["Invalid filter value"])
+                        self.assertNotIn(field_name, filterset.form.cleaned_data)
+
+            response = self.client.get(
+                reverse("tenancy:tenant_list"), {field_name: values}, headers={"HX-Request": "true"}
+            )
+            self.assertHttpStatus(response, 200)
+            expected_count = self.queryset.filter(description__in=values).count() if valid else 0
+            self.assertEqual(len(response.context["table"].rows), expected_count)
+
+    def test_optional_filter_values(self):
+        field_name = "example_app_validated_description"
+        for params in ({}, {field_name: ""}, {field_name: []}, {field_name: [""]}):
+            with self.subTest(params=params):
+                filterset = self.filterset(params, self.queryset)
+                self.assertTrue(filterset.is_valid(), filterset.errors)
+                self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset)
+
+    def test_builtin_filters(self):
+        params = {"name": ["Tenant 1", "Tenant 2"]}
+        filterset = self.filterset(params, self.queryset)
+        self.assertTrue(filterset.is_valid(), filterset.errors)
+        self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(name__in=params["name"]))
+        response = self.client.get(reverse("tenancy:tenant_list"), params, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.context["table"].rows), 2)
+
+    def _register_test_extension(self, filterset_fields, filterform_fields, filterset_form_class=forms.Form):
+        """Register real extensions on isolated subclasses to avoid changing the global test environment."""
+
+        class ExtendedFilterSet(TenantFilterSet):
+            class Meta(TenantFilterSet.Meta):
+                form = filterset_form_class
+
+        class ExtendedFilterForm(TenantFilterForm):
+            pass
+
+        class Extension(plugins.FilterExtension):
+            model = "tenancy.tenant"
+
+        Extension.filterset_fields = filterset_fields
+        Extension.filterform_fields = filterform_fields
+        with (
+            mock.patch("nautobot.core.utils.lookup.get_filterset_for_model", return_value=ExtendedFilterSet),
+            mock.patch("nautobot.core.utils.lookup.get_form_for_model", return_value=ExtendedFilterForm),
+        ):
+            plugins.register_filter_extensions([Extension], "example_app")
+        return ExtendedFilterSet, ExtendedFilterForm
+
+    def test_multiple_validators(self):
+        calls = []
+
+        def custom_validator(value):
+            calls.append(value)
+            if value != "ABC12":
+                raise ValidationError("Custom validation error", code="custom")
+
+        field_name = "example_app_validators"
+        field = forms.CharField(
+            required=False,
+            validators=[RegexValidator(r"^[A-Z]{3}[0-9]{2}$", message="Invalid filter value"), custom_validator],
+        )
+        filterset_class, form_class = self._register_test_extension(
+            {field_name: MultiValueCharFilter(field_name="description")}, {field_name: field}
+        )
+        self.assertIs(form_class.base_fields[field_name], field)  # pylint: disable=no-member
+        filterset = filterset_class({field_name: ["abc12"]}, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertEqual(filterset.errors[field_name], ["Invalid filter value", "Custom validation error"])
+        self.assertEqual(calls, ["abc12"])
+        self.assertEqual([error.code for error in filterset.errors.as_data()[field_name]], ["invalid", "custom"])
+        self.assertTrue(filterset_class({field_name: "ABC12"}, self.queryset).is_valid())
+        self.assertEqual(calls, ["abc12", "ABC12"])
+
+    def test_integer_form_field_with_string_filter(self):
+        def validate_even(value):
+            if value % 2:
+                raise ValidationError("Must be even")
+
+        field_name = "example_app_integer"
+        filterset_class, _ = self._register_test_extension(
+            {field_name: MultiValueCharFilter(field_name="description")},
+            {field_name: forms.IntegerField(required=False, min_value=10, max_value=99, validators=[validate_even])},
+        )
+        for value, error in (
+            ("42", None),
+            ("9", "Ensure this value is greater than or equal to 10."),
+            ("100", "Ensure this value is less than or equal to 99."),
+            ("41", "Must be even"),
+            ("invalid", "Enter a whole number."),
+            ("", None),
+        ):
+            with self.subTest(value=value):
+                filterset = filterset_class({field_name: [value]}, self.queryset)
+                self.assertEqual(filterset.is_valid(), error is None, filterset.errors)
+                if error:
+                    self.assertIn(error, filterset.errors[field_name])
+                else:
+                    self.assertEqual(filterset.form.cleaned_data[field_name], [value] if value else [])
+
+    def test_multiple_choice_form_field(self):
+        def validate_selection(values):
+            if len(values) > 1:
+                raise ValidationError("Select only one description")
+
+        field_name = "example_app_choices"
+        choices = [("ABC12", "ABC12"), ("DEF34", "DEF34")]
+        filterset_class, _ = self._register_test_extension(
+            {field_name: django_filters.MultipleChoiceFilter(field_name="description", choices=choices)},
+            {field_name: forms.MultipleChoiceField(required=False, choices=choices, validators=[validate_selection])},
+        )
+        for values in (["ABC12"], ["ABC12", "DEF34"], []):
+            with self.subTest(values=values):
+                params = QueryDict(mutable=True)
+                params.setlist(field_name, values)
+                filterset = filterset_class(params, self.queryset)
+                self.assertEqual(filterset.is_valid(), len(values) <= 1, filterset.errors)
+                if len(values) > 1:
+                    self.assertEqual(filterset.errors[field_name], ["Select only one description"])
+
+    def test_string_form_field_with_numeric_filter(self):
+        field_name = "example_app_number"
+        filterset_class, _ = self._register_test_extension(
+            {field_name: MultiValueNumberFilter(field_name="description")},
+            {field_name: forms.CharField(required=False, validators=[RegexValidator(r"^[0-9]{2}$")])},
+        )
+        filterset = filterset_class({field_name: ["42"]}, self.queryset)
+        self.assertTrue(filterset.is_valid(), filterset.errors)
+        self.assertEqual(filterset.form.cleaned_data[field_name], [Decimal("42")])
+        self.assertFalse(filterset_class({field_name: ["9"]}, self.queryset).is_valid())
+
+    def test_custom_filterset_form_clean(self):
+        class CopyingForm(forms.Form):
+            def clean(self):
+                return dict(super().clean())
+
+        class NoReturnForm(forms.Form):
+            def clean(self):
+                super().clean()
+                self.cleaned_data = dict(self.cleaned_data)
+
+        field_name = "example_app_custom_form"
+        for form_class in (CopyingForm, NoReturnForm):
+            with self.subTest(form_class=form_class):
+                filterset_class, _ = self._register_test_extension(
+                    {field_name: MultiValueCharFilter(field_name="description")},
+                    {field_name: forms.CharField(required=False, validators=[RegexValidator(r"^ABC12$")])},
+                    filterset_form_class=form_class,
+                )
+                filterset = filterset_class({field_name: ["abc12"]}, self.queryset)
+                with mock.patch.object(filterset.filters[field_name], "filter") as filter_method:
+                    filterset.qs
+                filter_method.assert_not_called()
+                self.assertFalse(filterset.is_valid())
+                self.assertNotIn(field_name, filterset.form.cleaned_data)
+
+    def test_multiple_extensions_and_registration_conflicts(self):
+        field_name = "example_app_first"
+        field = forms.CharField(required=False, validators=[RegexValidator(r"^ABC12$")])
+        filterset_class, form_class = self._register_test_extension(
+            {field_name: MultiValueCharFilter(field_name="description")}, {field_name: field}
+        )
+
+        class OtherExtension(plugins.FilterExtension):
+            model = "tenancy.tenant"
+            filterset_fields = {"other_app_second": MultiValueCharFilter(field_name="description")}
+            filterform_fields = {
+                field_name: forms.CharField(validators=[RegexValidator(r"^wrong$")]),
+                "other_app_second": forms.CharField(required=False, validators=[RegexValidator(r"^DEF34$")]),
+            }
+
+        with (
+            mock.patch("nautobot.core.utils.lookup.get_filterset_for_model", return_value=filterset_class),
+            mock.patch("nautobot.core.utils.lookup.get_form_for_model", return_value=form_class),
+            self.assertLogs("nautobot.extras.plugins", level="ERROR"),
+        ):
+            plugins.register_filter_extensions([OtherExtension], "other_app")
+
+        self.assertIs(form_class.base_fields[field_name], field)  # pylint: disable=no-member
+        filterset = filterset_class({field_name: "ABC12", "other_app_second": "DEF34"}, self.queryset)
+        self.assertTrue(filterset.is_valid(), filterset.errors)
+        filterset = filterset_class({field_name: "wrong", "other_app_second": "wrong"}, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertEqual(set(filterset.errors), {field_name, "other_app_second"})
+        self.assertNotIn("other_app_second", self.filterset().filters)
+
+    def test_filterset_validators_are_retained(self):
+        field_name = "example_app_both"
+        filterset_class, _ = self._register_test_extension(
+            {field_name: django_filters.CharFilter(field_name="description", min_length=6)},
+            {field_name: forms.CharField(required=False, validators=[RegexValidator(r"^[A-Z]{3}[0-9]{2}$")])},
+        )
+        filterset = filterset_class({field_name: "ABC12"}, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertEqual(filterset.errors[field_name], ["Ensure this value has at least 6 characters (it has 5)."])
+
+    def test_form_only_extension(self):
+        field_name = "name__iew"
+        filterset_class, _ = self._register_test_extension(
+            {}, {field_name: forms.CharField(required=False, validators=[RegexValidator(r"^Tenant [0-9]$")])}
+        )
+        filterset = filterset_class({field_name: ["Tenant 1"]}, self.queryset)
+        self.assertTrue(filterset.is_valid(), filterset.errors)
+        self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(name="Tenant 1"))
+        self.assertFalse(filterset_class({field_name: ["tenant 1"]}, self.queryset).is_valid())
+
+    def test_form_field_without_filter(self):
+        filterset_class, _ = self._register_test_extension(
+            {}, {"example_app_unmatched": forms.CharField(validators=[RegexValidator(r"^valid$")])}
+        )
+        with override_settings(STRICT_FILTERING=False):
+            filterset = filterset_class({"name": ["Tenant 1"], "example_app_unmatched": "invalid"}, self.queryset)
+            self.assertTrue(filterset.is_valid(), filterset.errors)
+            self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(name="Tenant 1"))
+
+    def test_invalid_filter_is_not_applied(self):
+        filterset = self.filterset({"example_app_validated_description": ["abc12"]}, self.queryset)
+        with mock.patch.object(filterset.filters["example_app_validated_description"], "filter") as filter_method:
+            filterset.qs
+        filter_method.assert_not_called()
+        self.assertFalse(filterset.is_valid())
+
+    def test_filter_form_prefix(self):
+        field_name = "example_app_validated_description"
+        params = QueryDict(mutable=True)
+        params.setlist(f"filters-{field_name}", ["abc12", "ABC12"])
+        filterset = self.filterset(params, self.queryset, prefix="filters")
+        with override_settings(STRICT_FILTERING=False):
+            self.assertFalse(filterset.is_valid())
+            self.assertEqual(filterset.errors[field_name], ["Invalid filter value"])
+
+    def test_api_filter_form_validators(self):
+        for value, expected_status in (("ABC12", 200), ("abc12", 400)):
+            with self.subTest(value=value):
+                response = self.client.get(
+                    reverse("tenancy-api:tenant-list"), {"example_app_validated_description": value}
+                )
+                self.assertHttpStatus(response, expected_status)
+                if expected_status == 200:
+                    self.assertCountEqual(
+                        [tenant["description"] for tenant in response.data["results"]],
+                        self.queryset.filter(description=value).values_list("description", flat=True),
+                    )
+                else:
+                    self.assertEqual(response.data["example_app_validated_description"], ["Invalid filter value"])
 
 
 class TableExtensionTest(TestCase):
