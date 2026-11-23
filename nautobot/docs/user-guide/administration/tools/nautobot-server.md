@@ -553,7 +553,7 @@ Performs pre-migration validation checks for Nautobot 2.0. Only available in Nau
 
 ### `post_upgrade`
 
-`nautobot-server post_upgrade [--migrate-app APP_LABEL]`
+`nautobot-server post_upgrade`
 
 Performs common server post-upgrade operations using a single entrypoint.
 
