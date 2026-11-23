@@ -1,0 +1,1 @@
+Fixed approval workflow stage and approval workflow states being directly modifiable through the REST API, which allowed bypassing approval requirements.
