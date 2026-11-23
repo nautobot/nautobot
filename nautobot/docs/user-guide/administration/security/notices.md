@@ -3,6 +3,114 @@
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
 <!-- pyml disable-num-lines 2000 proper-names -->
+## GHSA-v8x2-8vhg-5vc3
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 23, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user able to commit to a Git repository that Nautobot syncs could add a symbolic link pointing outside the repository, causing the Nautobot worker to read a file from its local filesystem during sync and store that file's contents in records such as Export Templates or Config Contexts, where users with view access to those records could read them.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-v8x2-8vhg-5vc3">GHSA-v8x2-8vhg-5vc3</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.47</li>
+        <li>&ge;3.0.0, &lt;3.2.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.47 (<a href="https://github.com/nautobot/nautobot/commit/40eb7ee0176111c00d30d985616976257a6ac234">patch</a>)</li>
+        <li>3.2.10 (<a href="https://github.com/nautobot/nautobot/commit/94c59b0a7211070c75f2ade957d20693035b93d1">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-gfqr-fp2c-h495
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 23, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with permission to add or change Custom Link records could set a link's target URL to one that executes script, which would run in the browser of any user who clicked that link on an object's detail page, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495">GHSA-gfqr-fp2c-h495</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.47</li>
+        <li>&ge;3.0.0, &lt;3.2.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.47 (<a href="https://github.com/nautobot/nautobot/commit/08e808b818aea6e16117bf59025706af4aefdf4b">patch</a>)</li>
+        <li>3.2.10 (<a href="https://github.com/nautobot/nautobot/commit/bda04c962474bc45ce112171d29873d84dde6700">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-f79c-pvw4-9rw3
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>November 23, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Missing permissions enforcement on the REST API <code>/api/dcim/connected-device/</code> endpoint. A user granted view permission on an interface through a constrained <code>ObjectPermission</code> received the full serialized detail of the device cabled to that interface, including devices outside their permitted scope.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-f79c-pvw4-9rw3">GHSA-f79c-pvw4-9rw3</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.47</li>
+        <li>&ge;3.0.0, &lt;3.2.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.47 (<a href="https://github.com/nautobot/nautobot/commit/99f519c98b3777eb931fbf4d9e55c010211f083d">patch</a>)</li>
+        <li>3.2.10 (<a href="https://github.com/nautobot/nautobot/commit/798cf2e9684dc260d8a46f8fe81d05866c814720">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## GHSA-546w-cg72-vf5w
 
 <!-- pyml disable-next-line no-inline-html -->
