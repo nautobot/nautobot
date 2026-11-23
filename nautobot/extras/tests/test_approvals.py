@@ -550,10 +550,7 @@ class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIVie
     """ApprovalWorkflow API tests."""
 
     model = models.ApprovalWorkflow
-    choices_fields = (
-        "current_state",
-        "object_under_review_content_type",
-    )
+    choices_fields = ("object_under_review_content_type",)
 
     @classmethod
     def setUpTestData(cls):
@@ -565,25 +562,21 @@ class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIVie
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
                 "object_under_review_content_type": "extras.scheduledjob",
                 "object_under_review_object_id": scheduled_jobs[5].pk,
-                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
                 "object_under_review_content_type": "extras.scheduledjob",
                 "object_under_review_object_id": scheduled_jobs[6].pk,
-                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow_definition": cls.approval_workflow_def_1.pk,
                 "object_under_review_content_type": "extras.scheduledjob",
                 "object_under_review_object_id": scheduled_jobs[7].pk,
-                "current_state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
         ]
 
         cls.update_data = {
             "approval_workflow_definition": cls.approval_workflow_def_2.pk,
-            "current_state": choices.ApprovalWorkflowStateChoices.APPROVED,
         }
 
 
@@ -744,7 +737,7 @@ class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.A
     """ApprovalWorkflowStage API tests."""
 
     model = models.ApprovalWorkflowStage
-    choices_fields = ("state",)
+    choices_fields = ()
 
     @classmethod
     def setUpTestData(cls):
@@ -754,20 +747,21 @@ class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.A
             {
                 "approval_workflow": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage_definition": cls.approval_workflow_1_stage_def_4.pk,
-                "state": choices.ApprovalWorkflowStateChoices.PENDING,
             },
             {
                 "approval_workflow": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage_definition": cls.approval_workflow_1_stage_def_5.pk,
-                "state": choices.ApprovalWorkflowStateChoices.APPROVED,
             },
             {
                 "approval_workflow": cls.approval_workflow_1_instance_1.pk,
                 "approval_workflow_stage_definition": cls.approval_workflow_1_stage_def_6.pk,
-                "state": choices.ApprovalWorkflowStateChoices.DENIED,
             },
         ]
 
+        # `state` is read-only and the parent FKs can't be changed on update, so PATCH the stage that
+        # `test_update_object` targets with its current FK values.
+        stage = models.ApprovalWorkflowStage.objects.first()
         cls.update_data = {
-            "state": choices.ApprovalWorkflowStateChoices.APPROVED,
+            "approval_workflow": stage.approval_workflow.pk,
+            "approval_workflow_stage_definition": stage.approval_workflow_stage_definition.pk,
         }
