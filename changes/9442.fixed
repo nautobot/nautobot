@@ -1,0 +1,1 @@
+Fixed Dynamic Group `/members/` REST API endpoint not respecting the `depth` query parameter.
