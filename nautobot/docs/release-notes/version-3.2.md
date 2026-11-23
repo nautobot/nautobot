@@ -287,16 +287,15 @@ The Device detail view "Module Bays" tab now supports a hierarchical view with a
 As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
-
 <!-- towncrier release notes start -->
 
 ## v3.2.10 (2026-11-23)
 
 ### Security in v3.2.10
 
-- [#GHSA-f79c-pvw4-9rw3](https://github.com/nautobot/nautobot/issues/GHSA-f79c-pvw4-9rw3) - Fixed the `connected-device` REST API endpoint to render the connected device in a brief `{id, object_type, url, display}` form when the requesting user does not have permission to view it.
-- [#GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/issues/GHSA-gfqr-fp2c-h495) - Fixed Custom Links rendering a target URL with a disallowed scheme (such as `javascript:`), which could execute script in the browser of a user who clicked the link.
-- [#GHSA-v8x2-8vhg-5vc3](https://github.com/nautobot/nautobot/issues/GHSA-v8x2-8vhg-5vc3) - Fixed Git repository sync following a symbolic link that points outside the repository checkout, which could read a worker-local file and store its contents in records such as Export Templates or Config Contexts.
+- [GHSA-f79c-pvw4-9rw3](https://github.com/nautobot/nautobot/security/advisories/GHSA-f79c-pvw4-9rw3) - Fixed the `connected-device` REST API endpoint to render the connected device in a brief `{id, object_type, url, display}` form when the requesting user does not have permission to view it.
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Fixed Custom Links rendering a target URL with a disallowed scheme (such as `javascript:`), which could execute script in the browser of a user who clicked the link.
+- [GHSA-v8x2-8vhg-5vc3](https://github.com/nautobot/nautobot/security/advisories/GHSA-v8x2-8vhg-5vc3) - Fixed Git repository sync following a symbolic link that points outside the repository checkout, which could read a worker-local file and store its contents in records such as Export Templates or Config Contexts.
 - [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `linkify-it` to `6.1.0` to mitigate several security vulnerabilities.
 - [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `markdown-it` to `15.0.3` to mitigate multiple security vulnerabilities.
 - [#9779](https://github.com/nautobot/nautobot/issues/9779) - Fixed the REST API job-run endpoint treating a string `dryrun` value such as `"false"` as truthy, which let a user bypass an applicable approval workflow and run a job immediately.
@@ -313,7 +312,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Changed in v3.2.10
 
-- [#GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/issues/GHSA-gfqr-fp2c-h495) - Changed Custom Link target URLs to only permit URL schemes listed in the `ALLOWED_URL_SCHEMES` setting (relative URLs are still allowed); a link whose rendered URL uses any other scheme, such as `javascript:`, is now rendered disabled.
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Changed Custom Link target URLs to only permit URL schemes listed in the `ALLOWED_URL_SCHEMES` setting (relative URLs are still allowed); a link whose rendered URL uses any other scheme, such as `javascript:`, is now rendered disabled.
 - [#9425](https://github.com/nautobot/nautobot/issues/9425) - Migrated the GraphiQL UI from GraphiQL v2.x to v5.x.
 - [#9494](https://github.com/nautobot/nautobot/issues/9494) - Changed DistinctViewTabs to not render at all, if user lacks permission to view their content.
 - [#9735](https://github.com/nautobot/nautobot/issues/9735) - Changed dynamic dropdowns in forms to sort choices by name by default for models whose default ordering groups records by a related object.

@@ -281,6 +281,23 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 
+## v2.4.47 (2026-11-23)
+
+### Security in v2.4.47
+
+- [GHSA-f79c-pvw4-9rw3](https://github.com/nautobot/nautobot/security/advisories/GHSA-f79c-pvw4-9rw3) - Fixed the `connected-device` REST API endpoint to render the connected device in a brief `{id, object_type, url, display}` form when the requesting user does not have permission to view it.
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Fixed Custom Links rendering a target URL with a disallowed scheme (such as `javascript:`), which could execute script in the browser of a user who clicked the link.
+- [GHSA-v8x2-8vhg-5vc3](https://github.com/nautobot/nautobot/security/advisories/GHSA-v8x2-8vhg-5vc3) - Fixed Git repository sync following a symbolic link that points outside the repository checkout, which could read a worker-local file and store its contents in records such as Export Templates or Config Contexts.
+
+### Added in v2.4.47
+
+- [#9810](https://github.com/nautobot/nautobot/issues/9810) - Added the `DATABASE_HEALTH_CHECK_READ_ONLY` setting to run a read-only `SELECT 1` database health check without enabling maintenance mode.
+
+### Changed in v2.4.47
+
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Changed Custom Link target URLs to only permit URL schemes listed in the `ALLOWED_URL_SCHEMES` setting (relative URLs are still allowed); a link whose rendered URL uses any other scheme, such as `javascript:`, is now rendered disabled.
+- [#9810](https://github.com/nautobot/nautobot/issues/9810) - Changed the read-only database health check (used in maintenance mode) to run `SELECT 1`, so it confirms that the database answers a query rather than only that it accepts a connection.
+
 ## v2.4.46 (2026-11-09)
 
 ### Security in v2.4.46
