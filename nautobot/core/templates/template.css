@@ -81,3 +81,164 @@
     src: url('{% static 'fonts/UbuntuMono-Bold.woff2' %}') format('woff2');
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+.nb-markdown {
+  /* Keep markdown from blowing up table row height */
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: inherit;
+  max-width: 100%;
+  --nb-md-border: var(--bs-border-color);
+  --nb-md-muted: var(--bs-secondary-color);
+  --nb-md-bg-subtle: var(--bs-secondary-bg);
+  --nb-md-code-bg: var(--bs-tertiary-bg);
+  --nb-md-quote-bg: var(--bs-tertiary-bg);
+  --nb-md-link: var(--bs-link-color);
+  --nb-md-link-hover: var(--bs-link-hover-color);
+  --nb-md-radius-sm: 0.25rem;
+  --nb-md-radius-md: 0.5rem;
+}
+
+/* Reset margins to be cell-friendly */
+.nb-markdown > * {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.nb-markdown > *:first-child { margin-top: 0; }
+.nb-markdown > *:last-child  { margin-bottom: 0; }
+
+/* Headings */
+.nb-markdown h1,
+.nb-markdown h2,
+.nb-markdown h3,
+.nb-markdown h4,
+.nb-markdown h5,
+.nb-markdown h6 {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* Size hierarchy scaled down */
+.nb-markdown h1 { font-size: 1.25rem; padding-bottom: 0.25rem; }
+.nb-markdown h2 { font-size: 1.15rem; padding-bottom: 0.2rem; }
+.nb-markdown h3 { font-size: 1.05rem; }
+.nb-markdown h4 { font-size: 0.95rem; }
+.nb-markdown h5 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.nb-markdown h6 {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--nb-md-muted);
+}
+
+/* Paragraphs */
+.nb-markdown p { margin: 0.35rem 0; }
+
+/* Links */
+.nb-markdown a {
+  color: var(--nb-md-link);
+  text-decoration: none;
+}
+.nb-markdown a:hover {
+  color: var(--nb-md-link-hover);
+  text-decoration: underline;
+}
+
+/* Inline code */
+.nb-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.92em;
+  padding: 0.08rem 0.28rem;
+  border-radius: var(--nb-md-radius-sm);
+  background: var(--nb-md-code-bg);
+  border: 1px solid var(--nb-md-border);
+  white-space: break-spaces;
+}
+
+/* Code blocks: constrained, scrollable */
+.nb-markdown pre {
+  margin: 0.45rem 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--nb-md-radius-md);
+  background: var(--nb-md-code-bg);
+  border: 1px solid var(--nb-md-border);
+  overflow: auto;
+  max-width: 100%;
+}
+.nb-markdown pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.88em;
+  white-space: pre;
+}
+
+/* Lists */
+.nb-markdown ul,
+.nb-markdown ol {
+  margin: 0.35rem 0 0.35rem 1.25rem;
+  padding: 0;
+}
+.nb-markdown li { margin: 0.2rem 0; }
+.nb-markdown li > p { margin: 0.2rem 0; }
+
+/* Blockquotes */
+.nb-markdown blockquote {
+  margin: 0.45rem 0;
+  padding: 0.35rem 0.65rem;
+  border-left: 0.25rem solid var(--nb-md-border);
+  background: var(--nb-md-quote-bg);
+  border-radius: var(--nb-md-radius-sm);
+}
+
+/* Horizontal rule */
+.nb-markdown hr {
+  border: 0;
+  border-top: 1px solid var(--nb-md-border);
+  margin: 0.6rem 0;
+}
+
+/* Tables inside markdown: minimal */
+.nb-markdown table {
+  border-collapse: collapse;
+  margin: 0.45rem 0;
+  font-size: 0.95em;
+}
+.nb-markdown th,
+.nb-markdown td {
+  border-top: 1px solid var(--nb-md-border);
+  border-bottom: 1px solid var(--nb-md-border);
+  padding: 0.4rem 0.8rem;
+  vertical-align: top;
+}
+.nb-markdown thead th {
+  background: var(--nb-md-bg-subtle);
+  font-weight: 600;
+}
+
+/* Images: never overflow a cell */
+.nb-markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--nb-md-radius-sm);
+}
+
+/* Prevent long unbroken strings from breaking layout */
+.nb-markdown,
+.nb-markdown * {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Optional: compact mode */
+.nb-markdown.nb-markdown--compact {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+.nb-markdown.nb-markdown--compact > * {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
