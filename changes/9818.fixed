@@ -1,3 +1,0 @@
-Fixed scheduled Jobs being sent to a Job Queue's old name after the Job Queue was renamed.
-Fixed dry-runs of scheduled Jobs failing after the scheduled Job's Job Queue was renamed.
-Fixed scheduled Jobs being sent to a deleted Job Queue instead of the Job's default Job Queue.
