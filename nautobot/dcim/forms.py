@@ -2028,6 +2028,7 @@ class ConsolePortTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "description",
         ]
 
 
@@ -2040,6 +2041,7 @@ class ConsoleServerPortTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "description",
         ]
 
 
@@ -2055,6 +2057,7 @@ class PowerPortTemplateImportForm(ComponentTemplateImportForm):
             "maximum_draw",
             "allocated_draw",
             "power_factor",
+            "description",
         ]
 
 
@@ -2076,6 +2079,7 @@ class PowerOutletTemplateImportForm(ComponentTemplateImportForm):
             "power_port_template",
             "power_port",
             "feed_leg",
+            "description",
         ]
 
     def is_valid(self):
@@ -2100,6 +2104,7 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
             "mgmt_only",
             "speed",
             "duplex",
+            "description",
         ]
 
 
@@ -2116,10 +2121,12 @@ class FrontPortTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "module_type",
             "name",
+            "label",
             "type",
             "rear_port_template",
             "rear_port",
             "rear_port_position",
+            "description",
         ]
 
     def is_valid(self):
@@ -2138,8 +2145,10 @@ class RearPortTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "module_type",
             "name",
+            "label",
             "type",
             "positions",
+            "description",
         ]
 
 
@@ -2149,6 +2158,8 @@ class DeviceBayTemplateImportForm(ComponentTemplateImportForm):
         fields = [
             "device_type",
             "name",
+            "label",
+            "description",
         ]
 
 
@@ -2159,7 +2170,9 @@ class ModuleBayTemplateImportForm(ComponentTemplateImportForm):
             "device_type",
             "module_type",
             "name",
+            "label",
             "position",
+            "description",
         ]
 
 
