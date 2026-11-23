@@ -1,1 +1,0 @@
-Fix VM Interface detail page showing information about untagged VLANs to users without VLAN view permission.

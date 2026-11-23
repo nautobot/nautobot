@@ -1,1 +1,0 @@
-Added optional `artifactory_username` and `artifactory_password` secrets to the upstream app testing workflow, so that apps with private Network to Code dependencies can install those dependencies.
