@@ -1,0 +1,1 @@
+Changed Custom Link target URLs to only permit URL schemes listed in the `ALLOWED_URL_SCHEMES` setting (relative URLs are still allowed); a link whose rendered URL uses any other scheme, such as `javascript:`, is now rendered disabled.
