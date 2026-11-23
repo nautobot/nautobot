@@ -194,6 +194,8 @@ Representative core examples that meet this bar:
 
 The common thread: cascading the delete would destroy or rewrite data that the user almost certainly did not intend to lose, and nulling the reference is not available because the field is required.
 
+When code blocks a delete itself (for example in a model's `delete()` method) with a message written for the user, raise `nautobot.core.exceptions.NautobotProtectedError` rather than `ProtectedError`. The UI shows that subclass's message as is; for a plain `ProtectedError`, such as the one Django raises for a `PROTECT` foreign key, it shows a generic "Unable to delete" message that names the object and links its dependent objects.
+
 #### Examples in core
 
 ```python

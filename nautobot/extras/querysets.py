@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import F, Model, OuterRef, ProtectedError, Q, Subquery
+from django.db.models import F, Model, OuterRef, Q, Subquery
 from django.db.models.functions import JSONObject
 
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.extras.choices import ScheduledJobStateChoices
@@ -246,7 +247,7 @@ class JobQuerySet(RestrictedQuerySet):
     def delete(self):
         for job in self:
             if job.module_name.startswith("nautobot."):
-                raise ProtectedError(
+                raise NautobotProtectedError(
                     f"Unable to delete Job {job}. System Job cannot be deleted",
                     [],
                 )

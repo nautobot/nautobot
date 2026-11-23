@@ -19,6 +19,7 @@ from rest_framework import exceptions, serializers
 
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models.utils import is_taggable
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
@@ -279,11 +280,18 @@ def handle_protectederror(obj_list, request, e):
     """
     protected_objects = list(e.protected_objects)
     protected_count = len(protected_objects) if len(protected_objects) <= 50 else "More than 50"
-    err_message = format_html(
-        str(e.args[0]) if e.args else "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
-        ", ".join(str(obj) for obj in obj_list),
-        protected_count,
-    )
+    if isinstance(e, NautobotProtectedError) and e.args:
+        # A message written for the user. Django's own ProtectedError message names internal models and fields
+        # instead of the object being deleted, so it gets the generic message below.
+        message = str(e.args[0])
+        separator = " " if protected_objects and not message[-1:].isspace() else ""
+        err_message = format_html("{}{}", message, separator)
+    else:
+        err_message = format_html(
+            "Unable to delete <strong>{}</strong>. {} dependent objects were found: ",
+            ", ".join(str(obj) for obj in obj_list),
+            protected_count,
+        )
 
     # Format objects based on whether they have a detail view/absolute url
     objects_with_absolute_url = []

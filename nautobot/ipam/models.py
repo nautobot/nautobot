@@ -13,6 +13,7 @@ from django.utils.functional import cached_property
 import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.forms.utils import parse_numeric_range
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextField
@@ -531,7 +532,7 @@ class VRFDeviceAssignment(BaseModel):
         """Block removing a VRF from a Device, VirtualMachine, or VDC while its interfaces still use the VRF."""
         interfaces = interfaces_assigned_to_vrf(self.vrf, self.parent)
         if interfaces.exists():
-            raise models.ProtectedError(
+            raise NautobotProtectedError(
                 msg=(
                     f"Cannot remove VRF {self.vrf} from {self.parent} because it is still assigned to one or more "
                     "of its interfaces. Remove the VRF from those interfaces first."
@@ -821,7 +822,7 @@ class Prefix(PrimaryModel):
 
         with transaction.atomic():
             if self.parent is None and self.ip_addresses.exists():
-                raise models.ProtectedError(
+                raise NautobotProtectedError(
                     msg=(
                         f"Cannot delete Prefix {self} because it has child IP Address objects that "
                         "would no longer have a valid parent: "
@@ -830,7 +831,7 @@ class Prefix(PrimaryModel):
                 )
 
             if self.parent is None and self.ip_address_ranges.exists():
-                raise models.ProtectedError(
+                raise NautobotProtectedError(
                     msg=(
                         f"Cannot delete Prefix {self} because it has child IP Address Range objects that "
                         "would no longer have a valid parent: "

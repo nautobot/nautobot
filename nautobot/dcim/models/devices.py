@@ -14,6 +14,7 @@ from django.utils.html import format_html, format_html_join
 import yaml
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import NautobotProtectedError
 from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
@@ -1287,7 +1288,7 @@ class VirtualChassis(PrimaryModel):
             lag__device=F("device")
         )
         if interfaces:
-            raise ProtectedError(
+            raise NautobotProtectedError(
                 f"Unable to delete virtual chassis {self}. There are member interfaces which form a cross-chassis LAG",
                 interfaces,
             )
