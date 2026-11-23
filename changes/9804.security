@@ -1,1 +1,0 @@
-Fixed a Saved View with a non-integer `pagination_count` or a non-object `config` causing a server error on list views it was applied to, and added validation that rejects such configuration when a Saved View is created or edited.
