@@ -106,6 +106,7 @@ from nautobot.dcim.models import (
     VirtualDeviceContext,
 )
 from nautobot.extras.filters import (
+    CreatedUpdatedModelFilterSetMixin,
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
     RelationshipModelFilterSetMixin,
@@ -1082,6 +1083,7 @@ class InterfaceFilterSet(
     PathEndpointModelFilterSetMixin,
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
+    CreatedUpdatedModelFilterSetMixin,
 ):
     # Override device and device_id filters from ModularDeviceComponentModelFilterSetMixin to
     # match against any peer virtual chassis members
