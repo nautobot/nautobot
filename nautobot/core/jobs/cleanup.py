@@ -44,8 +44,7 @@ def _delete_batch(model, pks, deletion_summary):
     """
     _, deleted_counts_by_model = model.objects.filter(pk__in=pks).delete()
     for model_label, deleted_count in deleted_counts_by_model.items():
-        if deleted_count:
-            deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
+        deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
 
 
 class CleanupTypes(ChoiceSet):
