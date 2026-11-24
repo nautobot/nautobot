@@ -30,8 +30,8 @@ name = "System Jobs"
 JOB_NAME = "Archive Old Records"
 
 FORCE_CASCADE_DELETE_HINT = (
-    "Records skipped only because deleting them would also delete related records can be archived"
-    " by re-running with Force Cascade Delete."
+    "To archive the records that were skipped only because deleting them would also delete related records,"
+    " re-run with Force Cascade Delete."
 )
 
 # Read from `_meta.label` rather than written out, so that they cannot drift from the model and so that
@@ -299,7 +299,7 @@ class ArchiveOldRecords(Job):
         if omitted_object_change_count:
             self.logger.warning(
                 "Omitting %d ObjectChange records because related records prevent their deletion,"
-                " would be deleted with them, or may not be viewed or deleted by this user.",
+                " would be deleted with them, or may not be deleted by this user.",
                 omitted_object_change_count,
             )
             if not force_cascade_delete:
@@ -506,7 +506,7 @@ class ArchiveOldRecords(Job):
         if omitted_job_result_count:
             self.logger.warning(
                 "Omitting %d JobResult records because related records prevent their deletion,"
-                " would be deleted with them, or may not be viewed or deleted by this user.",
+                " would be deleted with them, or may not be deleted by this user.",
                 omitted_job_result_count,
             )
             if not force_cascade_delete:

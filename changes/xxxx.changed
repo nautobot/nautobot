@@ -1,0 +1,2 @@
+Changed the "Logs Cleanup" system Job to require permission to delete Job log entries and Job console entries when deleting Job results.
+Changed the "Archive Old Records" and "Logs Cleanup" system Jobs to skip, and report, records referenced through a foreign key that has no reverse relation (a `related_name` ending in `+`), or through a cascade that refers back to a model already in the cascade.

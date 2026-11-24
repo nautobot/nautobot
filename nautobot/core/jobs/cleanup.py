@@ -87,28 +87,38 @@ class LogsCleanup(Job):
         """
         Delete the records that can be deleted safely, together with everything that cascades from them.
 
-        Records are held back, and reported, when deleting them would fail: see
-        `exclude_records_whose_relations_block_deletion`. They are also held back when the user may not view or delete
-        every record that would be deleted with them: see `exclude_records_whose_dependents_the_user_cannot_delete`.
-        Everything else is deleted through `QuerySet.delete()`,
-        so that Django clears many-to-many rows, applies `SET_NULL` and similar options, and follows generic
-        relations, rather than this job reimplementing each case.
+        Records are skipped, and reported, when deleting them would fail: see
+        `exclude_records_whose_relations_block_deletion`. They are also skipped when the user may not delete every
+        record that would be deleted with them: see `exclude_records_whose_dependents_the_user_cannot_delete`.
+        Everything else is deleted through `QuerySet.delete()`, so that Django clears many-to-many rows, applies
+        `SET_NULL` and similar options, and follows generic relations, rather than this job reimplementing each case.
 
         `QuerySet.delete()` loads the records it deletes into memory, so they are deleted in batches. The log and
         console entries of a batch of job results are deleted first, in batches of their own, because a single job
-        result can carry tens of thousands of them.
+        result can carry tens of thousands of them. Each batch commits on its own, which keeps the transactions as
+        small as the batches. If deleting a job result then fails, its entries are already gone and the job result is
+        left in place, to be deleted by the next run.
 
         Args:
             queryset (QuerySet): The records to delete.
             model (Model): The model the queryset selects from.
             deletion_summary (dict): Deleted record counts keyed by model label, updated in place.
         """
+        candidate_queryset = queryset
         queryset = exclude_records_whose_relations_block_deletion(
             queryset, model, (), force_cascade_delete=True, logger=self.logger
         )
         queryset = exclude_records_whose_dependents_the_user_cannot_delete(
             queryset, model, (), force_cascade_delete=True, user=self.user, logger=self.logger
         )
+        omitted_record_count = candidate_queryset.count() - queryset.count()
+        if omitted_record_count:
+            self.logger.warning(
+                "Omitting %d %s records because related records prevent their deletion, or may not be deleted by"
+                " this user.",
+                omitted_record_count,
+                model._meta.object_name,
+            )
         for batch_pks in _iterate_pks_in_batches(queryset, CLEANUP_BATCH_SIZE):
             if model is JobResult:
                 for child_model in (JobLogEntry, JobConsoleEntry):
@@ -127,9 +137,16 @@ class LogsCleanup(Job):
                 )
                 return 0
 
-        if CleanupTypes.JOB_RESULT in cleanup_types and not self.user.has_perm("extras.delete_jobresult"):
-            self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
-            raise PermissionDenied("User does not have delete permissions for JobResult records")
+        if CleanupTypes.JOB_RESULT in cleanup_types:
+            # Deleting a job result also deletes its log and console entries.
+            for model in (JobResult, JobLogEntry, JobConsoleEntry):
+                if not self.user.has_perm(f"extras.delete_{model._meta.model_name}"):
+                    self.logger.error(
+                        'User "%s" does not have permission to delete %s records', self.user, model._meta.object_name
+                    )
+                    raise PermissionDenied(
+                        f"User does not have delete permissions for {model._meta.object_name} records"
+                    )
 
         if CleanupTypes.OBJECT_CHANGE in cleanup_types and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)

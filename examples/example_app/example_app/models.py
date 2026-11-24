@@ -46,6 +46,9 @@ class AnotherExampleModel(OrganizationalModel):
     example_model = models.ForeignKey(
         to=ExampleModel, on_delete=models.PROTECT, related_name="more_example_models", null=True, blank=True
     )
+    job_log_entry_without_reverse_relation = models.ForeignKey(
+        to="extras.JobLogEntry", on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
 
     # by default the natural key would just be "name" since it's a unique field. But we can override it:
     natural_key_field_names = ["name", "number"]

@@ -45,6 +45,17 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AddField(
+            model_name="anotherexamplemodel",
+            name="job_log_entry_without_reverse_relation",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="+",
+                to="extras.joblogentry",
+            ),
+        ),
+        migrations.AddField(
             model_name="examplemodel",
             name="linked_example_models",
             field=models.ManyToManyField(
