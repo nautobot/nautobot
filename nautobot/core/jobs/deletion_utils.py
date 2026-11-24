@@ -3,6 +3,8 @@
 from django.contrib.contenttypes.fields import GenericRel, GenericRelation
 from django.db.models import CASCADE, DO_NOTHING, PROTECT, RESTRICT
 
+from nautobot.core.models.querysets import restrict_queryset
+
 
 def _get_reverse_relations(model):
     """
@@ -57,9 +59,11 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
         force_cascade_delete (bool): Whether the caller accepts the deletion of records reached by a cascade.
 
     Returns:
-        (tuple[list, list]): `(blocking_relations, cascading_relations)`. Each is a list of
-            `(lookup, related_model)` pairs sorted by lookup, where `related_model` is the model at the end of
-            the lookup.
+        (tuple[list, list, list]): `(blocking_relations, cascading_relations, followed_relations)`. Each is a list
+            of `(lookup, related_model)` pairs sorted by lookup, where `related_model` is the model at the end of
+            the lookup. `followed_relations` are the relations the search continued through: those to a
+            preapproved model, and with `force_cascade_delete` every cascade. Their records are deleted along with
+            the `model` records.
     """
     # Many models are reached by more than one path. For example, every `BaseModel` has GenericRelations to
     # `ObjectMetadata` and `DataCompliance`, which are `BaseModel`s too. Each model's relations are therefore
@@ -72,8 +76,8 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
             return relations_by_model[current_model]
 
         models_being_searched.add(current_model)
-        blocking_relations = {}
-        cascading_relations = {}
+        relations = ({}, {}, {})  # blocking, cascading, followed
+        blocking_relations, cascading_relations, followed_relations = relations
 
         for lookup, related_model, on_delete in _get_reverse_relations(current_model):
             if related_model not in preapproved_models:
@@ -86,6 +90,7 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
                     cascading_relations[lookup] = related_model
                     continue
 
+            followed_relations[lookup] = related_model
             if related_model in models_being_searched:
                 # The cascade returns to a model whose relations are already being searched, so they are reported
                 # where that model first appears. A lookup path cannot follow the cascade around the cycle to every
@@ -93,18 +98,17 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
                 # or `RestrictedError`, which stops the run rather than deleting records that should be kept.
                 continue
 
-            nested_blocking_relations, nested_cascading_relations = search(related_model, ())
-            for nested_lookup, nested_related_model in nested_blocking_relations.items():
-                blocking_relations[f"{lookup}__{nested_lookup}"] = nested_related_model
-            for nested_lookup, nested_related_model in nested_cascading_relations.items():
-                cascading_relations[f"{lookup}__{nested_lookup}"] = nested_related_model
+            for nested_relations, own_relations in zip(search(related_model, ()), relations):
+                for nested_lookup, nested_related_model in nested_relations.items():
+                    own_relations[f"{lookup}__{nested_lookup}"] = nested_related_model
 
         models_being_searched.discard(current_model)
-        relations_by_model[current_model] = (blocking_relations, cascading_relations)
-        return blocking_relations, cascading_relations
+        relations_by_model[current_model] = relations
+        return relations
 
-    blocking_relations, cascading_relations = search(model, preapproved_models_that_can_be_deleted)
-    return sorted(blocking_relations.items()), sorted(cascading_relations.items())
+    return tuple(
+        sorted(found_relations.items()) for found_relations in search(model, preapproved_models_that_can_be_deleted)
+    )
 
 
 def exclude_records_whose_relations_block_deletion(
@@ -128,7 +132,7 @@ def exclude_records_whose_relations_block_deletion(
     Returns:
         (QuerySet): The records that are safe to delete.
     """
-    blocking_relations, cascading_relations = find_relations_of_concern(
+    blocking_relations, cascading_relations, _ = find_relations_of_concern(
         model, preapproved_models_that_can_be_deleted, force_cascade_delete
     )
     model_name = model._meta.object_name
@@ -166,5 +170,59 @@ def exclude_records_whose_relations_block_deletion(
                 related_model._meta.label,
             )
             queryset = queryset.exclude(**{f"{lookup}__isnull": False})
+
+    return queryset
+
+
+def exclude_records_whose_dependents_the_user_cannot_delete(
+    queryset, model, preapproved_models_that_can_be_deleted, force_cascade_delete, user, logger
+):
+    """
+    Remove from a queryset the records whose deletion would delete records that the user may not view or delete.
+
+    Deleting a record deletes the records that cascade from it, whatever the user's permissions on them. A user who
+    may delete a record, but not everything that goes with it, would otherwise delete those records too. The records
+    checked are those that `find_relations_of_concern` follows, with the same arguments. The number of records held
+    back for each relation and action is logged.
+
+    Args:
+        queryset (QuerySet): The records being considered for deletion.
+        model (Model): The model the queryset selects from.
+        preapproved_models_that_can_be_deleted (tuple): See `find_relations_of_concern`.
+        force_cascade_delete (bool): See `find_relations_of_concern`.
+        user (User): The user whose permissions are checked.
+        logger (Logger): The job logger that the held records are reported to.
+
+    Returns:
+        (QuerySet): The records whose deletion deletes only records that the user may view and delete.
+    """
+    _, _, followed_relations = find_relations_of_concern(
+        model, preapproved_models_that_can_be_deleted, force_cascade_delete
+    )
+    model_name = model._meta.object_name
+
+    for lookup, related_model in followed_relations:
+        for action in ("view", "delete"):
+            all_related_records = related_model._default_manager.all()
+            permitted_related_records = restrict_queryset(all_related_records, user, action)
+            # A queryset with no filter means the user may act on every record, so there is nothing to hold back.
+            if not permitted_related_records.query.where:
+                continue
+            unpermitted_related_records = all_related_records.exclude(pk__in=permitted_related_records.values("pk"))
+            # As in `exclude_records_whose_relations_block_deletion`, `exclude()` removes a record when any one of
+            # its related records matches, across a multi-valued relation.
+            held_record_count = queryset.filter(**{f"{lookup}__in": unpermitted_related_records}).distinct().count()
+            if held_record_count:
+                logger.info(
+                    "Skipping %d %s records whose deletion would also delete %s records through `%s`, which user"
+                    " %s is not permitted to %s.",
+                    held_record_count,
+                    model_name,
+                    related_model._meta.label,
+                    lookup,
+                    user,
+                    action,
+                )
+                queryset = queryset.exclude(**{f"{lookup}__in": unpermitted_related_records})
 
     return queryset

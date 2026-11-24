@@ -5,7 +5,10 @@ from django.db.models.signals import pre_delete
 from django.utils import timezone
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.core.jobs.deletion_utils import exclude_records_whose_relations_block_deletion
+from nautobot.core.jobs.deletion_utils import (
+    exclude_records_whose_dependents_the_user_cannot_delete,
+    exclude_records_whose_relations_block_deletion,
+)
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.jobs import IntegerVar, Job, MultiChoiceVar
 from nautobot.extras.models import JobConsoleEntry, JobLogEntry, JobResult, ObjectChange
@@ -85,7 +88,9 @@ class LogsCleanup(Job):
         Delete the records that can be deleted safely, together with everything that cascades from them.
 
         Records are held back, and reported, when deleting them would fail: see
-        `exclude_records_whose_relations_block_deletion`. Everything else is deleted through `QuerySet.delete()`,
+        `exclude_records_whose_relations_block_deletion`. They are also held back when the user may not view or delete
+        every record that would be deleted with them: see `exclude_records_whose_dependents_the_user_cannot_delete`.
+        Everything else is deleted through `QuerySet.delete()`,
         so that Django clears many-to-many rows, applies `SET_NULL` and similar options, and follows generic
         relations, rather than this job reimplementing each case.
 
@@ -100,6 +105,9 @@ class LogsCleanup(Job):
         """
         queryset = exclude_records_whose_relations_block_deletion(
             queryset, model, (), force_cascade_delete=True, logger=self.logger
+        )
+        queryset = exclude_records_whose_dependents_the_user_cannot_delete(
+            queryset, model, (), force_cascade_delete=True, user=self.user, logger=self.logger
         )
         for batch_pks in _iterate_pks_in_batches(queryset, CLEANUP_BATCH_SIZE):
             if model is JobResult:
