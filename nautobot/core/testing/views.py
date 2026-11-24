@@ -2055,14 +2055,9 @@ class ViewTestCases:
             self.assertIsNotNone(denied_pk, f"Test requires at least two instances of {self.model._meta.model_name}.")
             pk_list = [permitted_pk, str(denied_pk)]
 
-            obj_perm = users_models.ObjectPermission(
-                name="Test permission",
-                constraints={"pk": permitted_pk},
-                actions=["delete"],
+            self.add_permissions(
+                f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}", constraints={"pk": permitted_pk}
             )
-            obj_perm.save()
-            obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
             self.add_permissions("extras.view_jobresult")
 
             job_model = BulkDeleteObjects().job_model
