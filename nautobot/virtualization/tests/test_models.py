@@ -23,6 +23,11 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
 
     def test_host_locations_on_cluster_update(self):
+        """A cluster with hosts at or below its location permits a comments-only edit.
+
+        Setting a common ancestor as the cluster location succeeds, as does clearing the location.
+        Moving the cluster to a location that excludes an existing host fails and preserves the previous location.
+        """
         location_type = LocationType.objects.create(name="Facility", nestable=True)
         location_type.content_types.add(
             ContentType.objects.get_for_model(Cluster), ContentType.objects.get_for_model(Device)
