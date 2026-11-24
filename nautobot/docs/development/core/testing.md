@@ -35,7 +35,7 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- |
 | Unit        | `nautobot.core.testing.TestCase` or subclass (see below)        | `nautobot/APP/tests/test_*.py`             | `invoke tests`                      |
 | Selenium    | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/selenium/test_*.py`    | `invoke tests --tag integration`    |
-| Playwright  | pytest (no current base class; interim structure — see [Playwright Testing](playwright-testing.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
+| Playwright  | pytest, with page objects from `nautobot.playwright` (see [Writing Playwright Tests](playwright-writing-tests.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
 
 !!! note
@@ -50,7 +50,7 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
     - Form test cases should generally inherit from `nautobot.core.testing.forms.FormTestCases.BaseFormTestCase`.
     - Model test cases should generally inherit from `nautobot.core.testing.models.ModelTestCases.BaseModelTestCase`.
     - View test cases should generally inherit from one or more of the classes in `nautobot.core.testing.views.ViewTestCases`.
-- New integration tests **must always** inherit from `nautobot.core.testing.integration.SeleniumTestCase`. Do not use any other base class for integration tests.
+- New browser tests are Playwright tests in `nautobot/APP/tests/integration/`. [Writing Playwright Tests](playwright-writing-tests.md) covers how to write them.
 
 +/- 2.0.0
     The base test classes moved from `nautobot.utilities.testing` to `nautobot.core.testing`.

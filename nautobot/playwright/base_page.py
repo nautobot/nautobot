@@ -185,6 +185,24 @@ class BasePage:
         self.favorite_modal().locator('button[type="submit"]').click()
 
     # -------------------------------------------------------------------------
+    # Modals
+    # -------------------------------------------------------------------------
+
+    def open_modal(self, opener, modal):
+        """Click the *opener* selector and wait until the Bootstrap modal that matches *modal* has finished opening."""
+        # Bootstrap ignores a hide request while a modal is still opening, so a Cancel click straight after the
+        # opening click would leave the modal open. The shown.bs.modal listener is added before the click, so the
+        # listener cannot miss the event.
+        dialog = self.page.locator(modal)
+        dialog.evaluate(
+            "(element) => { element.removeAttribute('data-nb-shown');"
+            " element.addEventListener('shown.bs.modal', () => { element.setAttribute('data-nb-shown', 'true'); },"
+            " { once: true }); }"
+        )
+        self.page.locator(opener).click()
+        expect(dialog).to_have_attribute("data-nb-shown", "true")
+
+    # -------------------------------------------------------------------------
     # Theme modal
     # -------------------------------------------------------------------------
 
@@ -193,8 +211,8 @@ class BasePage:
         return self.page.locator(self._THEME_MODAL)
 
     def open_theme_modal(self):
-        """Click the theme button in the footer."""
-        self.page.locator(self._THEME_MODAL_BUTTON).click()
+        """Click the theme button in the footer and wait until the theme modal has finished opening."""
+        self.open_modal(self._THEME_MODAL_BUTTON, self._THEME_MODAL)
 
     def cancel_theme_modal(self):
         """Click the theme modal's Cancel button."""

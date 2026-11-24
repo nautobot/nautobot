@@ -6,16 +6,9 @@ under pytest, in their own CI job, and never touch the unittest-based suites.
 unchanged.
 
 !!! warning "Interim structure"
-    The Playwright tests in this release are one-to-one ports of existing Selenium
-    tests, keeping the Selenium file and class names so the migration is traceable.
-    Do not treat their structure, naming, or layout as the standard. The long-term
-    pattern (including generic, per-model test classes) will be defined in a separate
-    proposal before the next release. In the meantime, browser tests for new features
-    should be written as Playwright one-offs following the existing tests' structure,
-    never as new Selenium tests, with the expectation that the long-term pattern may
-    restructure them.
+    The Playwright tests in this release are one-to-one ports of existing Selenium tests. They keep the Selenium file and class names so that each port can be traced to the test it replaced. Do not treat those file and class names as the standard for new tests. Write browser tests for new features as Playwright tests, never as new Selenium tests. A later release may add generic, per-model test classes and restructure the existing tests.
 
-    This page covers how to **run** the suite.
+    This page covers how to **run** the suite. [Writing Playwright Tests](playwright-writing-tests.md) covers how to write tests.
 
 ## Layout
 
@@ -138,10 +131,3 @@ MUST re-export the discovery guard (`from nautobot.playwright import load_tests`
 copied from any existing app's `__init__.py`. Without it, `nautobot-server test`
 discovery imports pytest-only modules and fails in environments without the
 `playwright` dependency group.
-
-If a behavioral assertion reveals the application doing something unexpected, do not
-just change the assertion to match. Note it in the test and raise it for triage.
-
-When writing tests, `poetry run pytest --fixtures nautobot/<app>/tests/integration`
-lists the available fixtures with their docstrings (the path scopes the listing to
-fixtures that suite can use).

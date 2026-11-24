@@ -767,6 +767,7 @@ nav:
           - Style Guide: "development/core/style-guide.md"
           - Testing: "development/core/testing.md"
           - Playwright Testing: "development/core/playwright-testing.md"
+          - Writing Playwright Tests: "development/core/playwright-writing-tests.md"
           - User Preferences: "development/core/user-preferences.md"
           - UI Component Framework: "development/core/ui-component-framework.md"
           - Release Checklist: "development/core/release-checklist.md"

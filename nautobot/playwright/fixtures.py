@@ -23,7 +23,9 @@ development API token.
 # pylint: disable=redefined-outer-name
 
 import os
+import time
 
+from celery.states import READY_STATES
 import pytest
 
 from nautobot.playwright.accessibility import get_axe_core_source
@@ -221,6 +223,31 @@ def api_count(api):
         return response.json()["count"]
 
     return _count
+
+
+@pytest.fixture(scope="session")
+def wait_for_job_result(api):
+    """Return a function that polls a job result over the API until the job finishes, and then returns the job result record.
+
+    The function fails the test, and reports the last status it read, if the job has not finished within *timeout* seconds.
+    """
+
+    def _wait(pk, timeout=60):
+        deadline = time.monotonic() + timeout
+        while True:
+            response = api.get(f"/api/extras/job-results/{pk}/")
+            if not response.ok:
+                pytest.fail(f"GET /api/extras/job-results/{pk}/ returned {response.status}: {response.text()}")
+            job_result = response.json()
+            status = job_result["status"]["value"]
+            if status in READY_STATES:
+                return job_result
+            if time.monotonic() > deadline:
+                pytest.fail(f"Job result {pk} was still {status} after {timeout} seconds. Is a Celery worker running?")
+            # A job has no page element to wait on, so this loop polls the API until the deadline.
+            time.sleep(1)
+
+    return _wait
 
 
 @pytest.fixture
