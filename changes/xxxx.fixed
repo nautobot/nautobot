@@ -1,0 +1,2 @@
+Fixed the "Archive Old Records" system Job deleting log entries without archiving them, or failing part way through, when a log entry of an archived Job result was referenced by another record.
+Fixed the "Archive Old Records" system Job archiving records whose deletion would also delete, or be blocked by, records several relationships away, and holding back records that are only referenced through `SET_NULL`, `SET_DEFAULT` or many-to-many relationships.

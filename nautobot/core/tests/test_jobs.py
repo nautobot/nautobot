@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import ManyToOneRel
 from django.db.models.signals import pre_delete
+from django.test import tag
 from django.utils import timezone
 import time_machine
 import yaml
@@ -22,15 +23,12 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.archive import (
-    _exclude_records_whose_relations_block_deletion,
-    _iterate_records_by_timestamp,
-    ArchiveOldRecords,
-)
+from nautobot.core.jobs.archive import _iterate_records_by_timestamp, ArchiveOldRecords, FORCE_CASCADE_DELETE_HINT
 from nautobot.core.jobs.cleanup import CleanupTypes
-from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.jobs.deletion_utils import exclude_records_whose_relations_block_deletion, find_relations_of_concern
+from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
+from nautobot.dcim.models import DeviceType, FrontPortTemplate, Interface, LocationType, Manufacturer
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobResultStatusChoices,
@@ -469,6 +467,83 @@ class LogsCleanupTestCase(TransactionTestCase):
             self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
             self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
 
+    def make_old_job_result_with_log_entry(self):
+        """Create a `JobResult` that finished long before any cutoff the tests use, with one log entry."""
+        old_job_result = JobResult.objects.create(
+            name="Cleanup Test Job",
+            task_name="nautobot.core.tests.test_jobs.cleanup_test_job",
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+        old_job_result.date_done = LIVE_HISTORY_START - timedelta(days=365)
+        old_job_result.save()
+        log_entry = JobLogEntry.objects.create(
+            job_result=old_job_result, log_level=LogLevelChoices.LOG_INFO, grouping="main", message="cleanup test"
+        )
+        return old_job_result, log_entry
+
+    # The example_app models below are imported inside each test because example_app is an optional app: the
+    # module must still import when it is not installed, and the `example_app` tag skips these tests then.
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_is_restricted_is_not_deleted(self):
+        """
+        Deleting the job result would cascade to the log entry, which a `RESTRICT` reference forbids.
+
+        The job result and its log entry are left in place, and the other old job results are still deleted.
+        """
+        from example_app.models import AnotherExampleModel
+
+        held_job_result, held_log_entry = self.make_old_job_result_with_log_entry()
+        AnotherExampleModel.objects.create(name="Cleanup Restrict Probe", job_log_entry=held_log_entry)
+        free_job_result, _ = self.make_old_job_result_with_log_entry()
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(JobLogEntry.objects.filter(pk=held_log_entry.pk).exists())
+        self.assertFalse(JobResult.objects.filter(pk=free_job_result.pk).exists())
+        self.assertTrue(
+            any(
+                message.startswith("Skipping 1 JobResult records")
+                for message in cleanup_job_result.job_log_entries.values_list("message", flat=True)
+            )
+        )
+
+    @tag("example_app")
+    def test_records_with_many_to_many_links_are_deleted_with_their_links(self):
+        """
+        A record that cascades from a job result is deleted together with its many-to-many links, in both directions.
+
+        Regression test for #9639, where the links were left behind and the run failed on a foreign key violation.
+        """
+        from example_app.models import ExampleModel
+
+        old_job_result, log_entry = self.make_old_job_result_with_log_entry()
+        cascading_record = ExampleModel.objects.create(name="Cleanup M2M Probe", job_log_entry=log_entry)
+        linked_record = ExampleModel.objects.create(name="Cleanup M2M Linked Probe")
+        cascading_record.linked_example_models.add(linked_record)
+        linked_record.linked_example_models.add(cascading_record)
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertFalse(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=linked_record.pk).exists())
+        self.assertFalse(linked_record.linked_example_models.exists())
+        self.assertFalse(linked_record.linking_example_models.exists())
+
 
 class BulkEditTestCase(TransactionTestCase):
     """
@@ -482,8 +557,8 @@ class BulkEditTestCase(TransactionTestCase):
         self.role_ct = ContentType.objects.get_for_model(Role)
         self.ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
         self.tags = [Tag.objects.create(name=f"Example Tag {x}") for x in range(5)]
-        for tag in self.tags:
-            tag.content_types.add(self.namespace_ct)
+        for tag_object in self.tags:
+            tag_object.content_types.add(self.namespace_ct)
 
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
         self.assertJobResultStatus(job_result)
@@ -1993,7 +2068,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_object_changes = _exclude_records_whose_relations_block_deletion(
+            remaining_object_changes = exclude_records_whose_relations_block_deletion(
                 ObjectChange.objects.all(), ObjectChange, (), falsy_force_value, logging.getLogger(__name__)
             )
             self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
@@ -2015,7 +2090,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         ]
         self.assertNotEqual(content_type_relations, [], "ContentType no longer has a relation without a related_name")
 
-        remaining_content_types = _exclude_records_whose_relations_block_deletion(
+        remaining_content_types = exclude_records_whose_relations_block_deletion(
             ContentType.objects.all(), ContentType, (), False, logging.getLogger(__name__)
         )
         # Evaluating the queryset is what raises FieldError when the accessor name is used as a lookup.
@@ -2026,7 +2101,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         DeviceType.objects.create(manufacturer=protected_manufacturer, model="Archive Probe Model")
         unprotected_manufacturer = Manufacturer.objects.create(name="Archive Unprotected Probe")
 
-        remaining_manufacturers = _exclude_records_whose_relations_block_deletion(
+        remaining_manufacturers = exclude_records_whose_relations_block_deletion(
             Manufacturer.objects.all(),
             Manufacturer,
             (),
@@ -2607,7 +2682,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_job_results = _exclude_records_whose_relations_block_deletion(
+            remaining_job_results = exclude_records_whose_relations_block_deletion(
                 JobResult.objects.all(),
                 JobResult,
                 (JobLogEntry, JobConsoleEntry),
@@ -2694,3 +2769,197 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             f"Stopping at batch 1: {archive_failure_message}. Archived 2 JobResult records before stopping."
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(archive_job_result))
+
+    # The example_app models below are imported inside each test because example_app is an optional app: the
+    # module must still import when it is not installed, and the `example_app` tag skips these tests then.
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_is_protected_is_not_archived_even_when_forced(self):
+        """
+        Deleting the job result would cascade to the log entry, which a `RESTRICT` reference forbids.
+
+        Only one of the two log entries is referenced, so a filter that tests each log entry separately would
+        let the job result through on the strength of the other one.
+        """
+        from example_app.models import AnotherExampleModel
+
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+                protecting_record = AnotherExampleModel.objects.create(
+                    name=f"Archive Protect Probe {force_cascade_delete}",
+                    job_log_entry=held_job_result.job_log_entries.first(),
+                )
+                free_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+
+                archive_job_result = self.run_archive_old_records_job(force_cascade_delete=force_cascade_delete)
+
+                self.assertJobResultStatus(archive_job_result)
+                self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+                self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertFalse(ArchivedJobLogEntry.objects.filter(job_result_id=held_job_result.pk).exists())
+                self.assertTrue(ArchivedJobResult.objects.filter(pk=free_job_result.pk).exists())
+                self.assertIn(
+                    "Omitting 1 JobResult records because related records prevent their deletion"
+                    " or would be deleted with them.",
+                    self.get_job_log_messages(archive_job_result),
+                )
+
+                protecting_record.delete()
+
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_would_cascade_is_not_archived(self):
+        """
+        Deleting the job result would cascade through the log entry to a record that is not archived.
+
+        The log entry must not be lost either: it stays live with its job result rather than being skipped by
+        the child archival and then deleted with the job result.
+        """
+        from example_app.models import ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Cascade Probe", job_log_entry=held_job_result.job_log_entries.first()
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertIn(FORCE_CASCADE_DELETE_HINT, self.get_job_log_messages(archive_job_result))
+
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_would_cascade_is_archived_when_forced(self):
+        """The cascaded record's many-to-many links, in both directions, go with it; the linked record stays."""
+        from example_app.models import ExampleModel
+
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Forced Cascade Probe", job_log_entry=old_job_result.job_log_entries.first()
+        )
+        linked_record = ExampleModel.objects.create(name="Archive Forced Cascade Linked Probe")
+        cascading_record.linked_example_models.add(linked_record)
+        linked_record.linked_example_models.add(cascading_record)
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+        self.assertFalse(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=linked_record.pk).exists())
+        self.assertFalse(linked_record.linked_example_models.exists())
+        self.assertFalse(linked_record.linking_example_models.exists())
+
+    @tag("example_app")
+    def test_a_protected_record_beyond_a_forced_cascade_holds_the_job_result(self):
+        """Forcing releases the cascade to `ExampleModel`, but a `PROTECT` reference to that record still blocks it."""
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Nested Protect Probe", job_log_entry=held_job_result.job_log_entries.first()
+        )
+        AnotherExampleModel.objects.create(name="Archive Nested Protect Probe", example_model=cascading_record)
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 1)
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+
+    @tag("example_app")
+    def test_a_dry_run_does_not_count_the_log_entries_of_held_job_results(self):
+        from example_app.models import ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        ExampleModel.objects.create(name="Archive Dry Run Probe", job_log_entry=held_job_result.job_log_entries.first())
+        self.make_job_result(age_in_days=90, log_entry_count=3)
+
+        archive_job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(archive_job_result.result["extras.JobResult"], 1)
+        self.assertEqual(archive_job_result.result["extras.JobLogEntry"], 3)
+
+
+class FindRelationsOfConcernTestCase(TestCase):
+    """Test the relation search that `ArchiveOldRecords` and `LogsCleanup` use to decide what they can delete safely."""
+
+    @tag("example_app")
+    def test_relations_are_found_through_the_children_the_job_archives_itself(self):
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        blocking_relations, cascading_relations = find_relations_of_concern(
+            JobResult, (JobLogEntry, JobConsoleEntry), force_cascade_delete=False
+        )
+
+        self.assertIn(("job_log_entries__more_example_models", AnotherExampleModel), blocking_relations)
+        self.assertIn(("job_log_entries__example_models", ExampleModel), cascading_relations)
+        self.assertIn(("files", FileProxy), cascading_relations)
+        # The children themselves are not a concern, because the job archives them before the job result.
+        reported_lookups = [lookup for lookup, _ in blocking_relations + cascading_relations]
+        self.assertNotIn("job_log_entries", reported_lookups)
+        self.assertNotIn("job_console_entries", reported_lookups)
+
+    @tag("example_app")
+    def test_forcing_follows_a_cascade_to_the_blocking_relations_beyond_it(self):
+        from example_app.models import AnotherExampleModel
+
+        blocking_relations, cascading_relations = find_relations_of_concern(
+            JobResult, (JobLogEntry, JobConsoleEntry), force_cascade_delete=True
+        )
+
+        self.assertIn(("job_log_entries__example_models__more_example_models", AnotherExampleModel), blocking_relations)
+        self.assertEqual(cascading_relations, [])
+
+    def test_relations_that_set_a_value_on_delete_are_not_a_concern(self):
+        """`Interface.bridge` is `SET_NULL`: deleting the bridge leaves the bridged interfaces in place."""
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                blocking_relations, cascading_relations = find_relations_of_concern(
+                    Interface, force_cascade_delete=force_cascade_delete
+                )
+
+                reported_lookups = [lookup for lookup, _ in blocking_relations + cascading_relations]
+                self.assertNotIn("bridged_interfaces", reported_lookups)
+
+    def test_a_forced_cascade_cycle_is_searched_once(self):
+        """
+        `Interface.parent_interface` cascades to child interfaces, whose own children cascade in turn, to any depth.
+
+        Forcing releases the cascade, and the search does not go round the cycle again or hold the records back.
+        """
+        _, unforced_cascading_relations = find_relations_of_concern(Interface, force_cascade_delete=False)
+        forced_blocking_relations, forced_cascading_relations = find_relations_of_concern(
+            Interface, force_cascade_delete=True
+        )
+
+        self.assertIn(("child_interfaces", Interface), unforced_cascading_relations)
+        forced_lookups = [lookup for lookup, _ in forced_blocking_relations + forced_cascading_relations]
+        self.assertNotIn("child_interfaces", forced_lookups)
+        self.assertFalse(any(lookup.startswith("child_interfaces__child_interfaces") for lookup in forced_lookups))
+
+    def test_a_forced_cascade_into_object_metadata_is_not_held(self):
+        """
+        Every `BaseModel` has GenericRelations to `ObjectMetadata` and `DataCompliance`, which are `BaseModel`s too.
+
+        Neither that cycle, nor the reverse `GenericRel` that each of those GenericRelations adds to `ObjectMetadata`
+        and `DataCompliance`, may hold back an `ObjectChange` once the cascade is forced.
+        """
+        blocking_relations, cascading_relations = find_relations_of_concern(ObjectChange, force_cascade_delete=True)
+
+        reported_lookups = [lookup for lookup, _ in blocking_relations + cascading_relations]
+        self.assertFalse(
+            any(
+                lookup.startswith(("associated_object_metadata", "associated_data_compliance"))
+                for lookup in reported_lookups
+            ),
+            reported_lookups,
+        )

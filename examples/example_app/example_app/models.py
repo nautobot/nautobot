@@ -18,6 +18,9 @@ class ExampleModel(OrganizationalModel):
     job_log_entry = models.ForeignKey(
         to="extras.JobLogEntry", on_delete=models.CASCADE, related_name="example_models", null=True, blank=True
     )
+    linked_example_models = models.ManyToManyField(
+        to="self", symmetrical=False, related_name="linking_example_models", blank=True
+    )
 
     class Meta:
         ordering = ["name"]
@@ -38,7 +41,7 @@ class AnotherExampleModel(OrganizationalModel):
     number = models.IntegerField(default=100)
 
     job_log_entry = models.ForeignKey(
-        to="extras.JobLogEntry", on_delete=models.PROTECT, related_name="more_example_models", null=True, blank=True
+        to="extras.JobLogEntry", on_delete=models.RESTRICT, related_name="more_example_models", null=True, blank=True
     )
     example_model = models.ForeignKey(
         to=ExampleModel, on_delete=models.PROTECT, related_name="more_example_models", null=True, blank=True

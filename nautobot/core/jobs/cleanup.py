@@ -1,17 +1,48 @@
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import CASCADE, PROTECT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
 from nautobot.core.choices import ChoiceSet
+from nautobot.core.jobs.deletion_utils import exclude_records_whose_relations_block_deletion
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.jobs import IntegerVar, Job, MultiChoiceVar
-from nautobot.extras.models import JobResult, ObjectChange
+from nautobot.extras.models import JobConsoleEntry, JobLogEntry, JobResult, ObjectChange
 from nautobot.extras.signals import _handle_deleted_object
 
 name = "System Jobs"
+
+# Records loaded into memory and deleted at a time.
+CLEANUP_BATCH_SIZE = 1000
+
+
+def _iterate_pks_in_batches(queryset, batch_size):
+    """
+    Yield the primary keys of the queryset's records, in ascending order, a list of at most `batch_size` at a time.
+
+    Each batch is read after the previous one has been yielded, starting after the last primary key it held. A
+    caller that deletes each batch before asking for the next therefore always gets fresh records, and the loop
+    ends even if a batch is not deleted.
+    """
+    ordered_queryset = queryset.order_by("pk")
+    # Materialized with `list()`, because MySQL cannot use a sliced subquery in a later `pk__in` filter.
+    batch_pks = list(ordered_queryset.values_list("pk", flat=True)[:batch_size])
+    while batch_pks:
+        yield batch_pks
+        batch_pks = list(ordered_queryset.filter(pk__gt=batch_pks[-1]).values_list("pk", flat=True)[:batch_size])
+
+
+def _delete_batch(model, pks, deletion_summary):
+    """
+    Delete the `model` records with the given primary keys, and add what was deleted to `deletion_summary`.
+
+    `QuerySet.delete()` also reports models that it checked but deleted nothing from, so zero counts are dropped.
+    """
+    _, deleted_counts_by_model = model.objects.filter(pk__in=pks).delete()
+    for model_label, deleted_count in deleted_counts_by_model.items():
+        if deleted_count:
+            deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
 
 
 class CleanupTypes(ChoiceSet):
@@ -49,51 +80,34 @@ class LogsCleanup(Job):
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
-    def recursive_delete_with_cascade(self, queryset, deletion_summary):
+    def _delete_records(self, queryset, model, deletion_summary):
         """
-        Recursively deletes all related objects with CASCADE for a given queryset.
+        Delete the records that can be deleted safely, together with everything that cascades from them.
+
+        Records are held back, and reported, when deleting them would fail: see
+        `exclude_records_whose_relations_block_deletion`. Everything else is deleted through `QuerySet.delete()`,
+        so that Django clears many-to-many rows, applies `SET_NULL` and similar options, and follows generic
+        relations, rather than this job reimplementing each case.
+
+        `QuerySet.delete()` loads the records it deletes into memory, so they are deleted in batches. The log and
+        console entries of a batch of job results are deleted first, in batches of their own, because a single job
+        result can carry tens of thousands of them.
 
         Args:
-            queryset (QuerySet): The queryset of objects to delete.
-            deletion_summary (dict): A dictionary to store the count of deleted objects for each model.
+            queryset (QuerySet): The records to delete.
+            model (Model): The model the queryset selects from.
+            deletion_summary (dict): Deleted record counts keyed by model label, updated in place.
         """
-        related_objects = queryset.model._meta.related_objects
-        queryset = queryset.only("id")
-
-        for related_object in related_objects:
-            if related_object.on_delete is CASCADE:
-                related_model = related_object.related_model
-                related_field_name = related_object.field.name
-                cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-                if cascade_queryset.exists():
-                    self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-            elif related_object.on_delete is PROTECT:
-                self.logger.warning(
-                    "Skipping %s records with a protected relationship to %s."
-                    " You must delete the related object(s) first.",
-                    queryset.model._meta.label,
-                    related_object.related_model._meta.label,
-                )
-                items_to_exclude = related_object.related_model.objects.values_list(
-                    related_object.field.name, flat=True
-                )
-                queryset = queryset.exclude(id__in=items_to_exclude)
-                deletion_summary.update({related_object.related_model._meta.label: 0})
-
-        genericrelation_related_fields = [
-            field for field in queryset.model._meta.private_fields if hasattr(field, "bulk_related_objects")
-        ]
-        for gr_related_field in genericrelation_related_fields:
-            related_model = gr_related_field.related_model
-            related_field_name = gr_related_field.related_query_name()
-            cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-            if cascade_queryset.exists():
-                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-
-        deleted_count = queryset._raw_delete(using="default")
-        if deleted_count:
-            deletion_summary.update({queryset.model._meta.label: deleted_count})
-        return deletion_summary
+        queryset = exclude_records_whose_relations_block_deletion(
+            queryset, model, (), force_cascade_delete=True, logger=self.logger
+        )
+        for batch_pks in _iterate_pks_in_batches(queryset, CLEANUP_BATCH_SIZE):
+            if model is JobResult:
+                for child_model in (JobLogEntry, JobConsoleEntry):
+                    child_queryset = child_model.objects.filter(job_result_id__in=batch_pks)
+                    for child_batch_pks in _iterate_pks_in_batches(child_queryset, CLEANUP_BATCH_SIZE):
+                        _delete_batch(child_model, child_batch_pks, deletion_summary)
+            _delete_batch(model, batch_pks, deletion_summary)
 
     def run(self, *, cleanup_types, max_age=None):  # pylint: disable=arguments-differ
         if max_age in (None, ""):
@@ -126,7 +140,7 @@ class LogsCleanup(Job):
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
                 queryset = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff)
                 deletion_summary = {}
-                self.recursive_delete_with_cascade(queryset, deletion_summary)
+                self._delete_records(queryset, JobResult, deletion_summary)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
                 result.update(deletion_summary)
@@ -143,7 +157,7 @@ class LogsCleanup(Job):
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
                 queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
                 deletion_summary = {}
-                self.recursive_delete_with_cascade(queryset, deletion_summary)
+                self._delete_records(queryset, ObjectChange, deletion_summary)
                 result.setdefault("extras.ObjectChange", 0)
                 result.update(deletion_summary)
 

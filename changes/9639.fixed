@@ -1,0 +1,2 @@
+Fixed the "Logs Cleanup" system Job failing with a foreign key violation when a record deleted along with a Job result or change log had many-to-many relationships.
+Fixed the "Logs Cleanup" system Job deleting, or failing to delete, Job results and change logs whose deletion is blocked by a `PROTECT`, `RESTRICT` or `DO_NOTHING` relationship; these records are now skipped and reported.
