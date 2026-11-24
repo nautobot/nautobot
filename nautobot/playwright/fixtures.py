@@ -227,9 +227,9 @@ def api_count(api):
 
 @pytest.fixture(scope="session")
 def wait_for_job_result(api):
-    """Callable that polls a job result over the API until the job finishes, and returns the job result record.
+    """Return a function that polls a job result over the API until the job finishes, and then returns the job result record.
 
-    The callable fails the test, with the last status it read, if the job has not finished within *timeout* seconds.
+    The function fails the test, and reports the last status it read, if the job has not finished within *timeout* seconds.
     """
 
     def _wait(pk, timeout=60):

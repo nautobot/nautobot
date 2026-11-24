@@ -44,7 +44,7 @@ class LocationsPage(ListPage):
         self.apply_filters()
 ```
 
-The test then reads as the steps a user takes:
+The test then calls the page object methods in the order a user takes the steps:
 
 ```python
 class ListViewFilterTestCase:
@@ -113,7 +113,7 @@ Ask one question: could this value still be changing?
 
 A structural test checks that the parts of a page rendered, such as the heading, the table, a column or a panel. A behavioral test checks that the values are right. Mark it with `@pytest.mark.behavioral`. For a feature, write both.
 
-- A filter test asserts three things. The filter narrows the list. The row count equals the API count for the same filter. The list shows every record that the test created to match the filter. The list does not show the decoy record, which the test created so that it does not match.
+- A filter test asserts four things. The filter narrows the list. The row count equals the API count for the same filter. The list shows every record that the test created to match the filter. The list does not show the decoy record, which the test created so that it does not match.
 - A search test asserts that the list narrows and that every visible row contains the search term. Location and prefix search also return parents and children, so for those models assert that the searched record is in the results.
 - A create test submits the form with known values, then checks the new record over the API and on its detail page.
 - A detail test compares the values on the page with the values that the test used to create the record.
@@ -126,7 +126,7 @@ These apply to more than one page. The base classes have a method for each one, 
 |---|---|
 | Select2 options for location and parent pickers show the full ancestry path, so an exact match on the name fails. On other pickers a loose match can pick a different option whose text contains the name. | `pick_filter_value(field, value, exact=False)` for location and parent fields, and the default `exact=True` for the others |
 | Each list view has a Select2 search box in the page for every filter field, so an unscoped search box selector picks the wrong one. | `select2_filter_search()` and `select2_filter_pick()` |
-| Messages that appear after an action show as an alert or as a toast, and a toast hides itself after a delay. | `expect_flash_message(text)`, called straight after the action |
+| Messages that appear after an action are displayed as an alert or as a toast, and a toast hides itself after a delay. | `expect_flash_message(text)`, called straight after the action |
 | Pagination links on a list view replace the table through htmx, so rows checked on one page are gone on the next page. | `select_all_matching(expected)`, which also checks that the selection count is `expected` before the test continues |
 | The Edit Selected button's `formaction` includes the active filter, and another button has the same `formaction`. | `click_edit_selected()` |
 | Sortable column headers contain hidden sort text, and column positions change with table configuration and the checkbox and overview columns. | `get_table_column_headers()` and `get_column_values_by_header()`, never a fixed `td:nth-child()` |

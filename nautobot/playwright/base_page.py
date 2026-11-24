@@ -191,7 +191,8 @@ class BasePage:
     def open_modal(self, opener, modal):
         """Click the *opener* selector and wait until the Bootstrap modal that matches *modal* has finished opening."""
         # Bootstrap ignores a hide request while a modal is still opening, so a Cancel click straight after the
-        # opening click would leave the modal open. The listener is added before the click so it cannot miss the event.
+        # opening click would leave the modal open. The shown.bs.modal listener is added before the click, so the
+        # listener cannot miss the event.
         dialog = self.page.locator(modal)
         dialog.evaluate(
             "(element) => { delete element.dataset.nbShown;"
