@@ -775,6 +775,8 @@ class Device(PrimaryModel, ConfigContextModel):
         else:
             self.clusters.set([cluster])
 
+    assign_cluster.alters_data = True
+
     def clean(self):
         super().clean()
 

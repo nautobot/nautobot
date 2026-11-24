@@ -24,7 +24,7 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
-from nautobot.core.utils.data import deepmerge, render_jinja2
+from nautobot.core.utils.data import coerce_paginate_count, deepmerge, render_jinja2
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_for_view_name
 from nautobot.extras.choices import (
     ButtonClassChoices,
@@ -923,6 +923,14 @@ class SavedView(BaseModel, ChangeLoggedModel):
         # Mirror save() so that form and serializer validation see the value that will actually be persisted.
         if self.is_global_default:
             self.is_shared = True
+
+        if not isinstance(self.config, dict):
+            raise ValidationError({"config": "Saved view configuration must be a JSON object."})
+        if "pagination_count" in self.config:
+            pagination_count = coerce_paginate_count(self.config["pagination_count"])
+            if pagination_count is None:
+                raise ValidationError({"config": "`pagination_count` must be a positive integer."})
+            self.config["pagination_count"] = pagination_count
 
     clean.alters_data = True
 

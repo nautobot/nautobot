@@ -1193,35 +1193,36 @@ class APIViewTestCases:
             # Verify that an empty PATCH results in no change to the object.
             # This is to catch issues like https://github.com/nautobot/nautobot/issues/3533
 
-            # Add object-level permission for GET
-            obj_perm.actions = ["view"]
-            obj_perm.save()
-            # Get initial serialized object representation
-            get_response = self.client.get(url, **self.header)
-            self.assertHttpStatus(get_response, status.HTTP_200_OK)
-            initial_serialized_object = get_response.json()
-            strip_serialized_object(initial_serialized_object)
+            with override_settings(CHANGELOG_SKIP_UNCHANGED_SAVES=True):
+                # Add object-level permission for GET
+                obj_perm.actions = ["view"]
+                obj_perm.save()
+                # Get initial serialized object representation
+                get_response = self.client.get(url, **self.header)
+                self.assertHttpStatus(get_response, status.HTTP_200_OK)
+                initial_serialized_object = get_response.json()
+                strip_serialized_object(initial_serialized_object)
 
-            # Redefine object-level permission for PATCH
-            obj_perm.actions = ["change"]
-            obj_perm.save()
+                # Redefine object-level permission for PATCH
+                obj_perm.actions = ["change"]
+                obj_perm.save()
 
-            # Send empty PATCH request
-            changes_before = lookup.get_changes_for_model(instance)
-            changes_before_count = changes_before.count()
-            changes_before = list(changes_before)
-            response = self.client.patch(url, {}, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            serialized_object = response.json()
-            strip_serialized_object(serialized_object)
-            self.assertEqual(initial_serialized_object, serialized_object)
+                # Send empty PATCH request
+                changes_before = lookup.get_changes_for_model(instance)
+                changes_before_count = changes_before.count()
+                changes_before = list(changes_before)
+                response = self.client.patch(url, {}, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                serialized_object = response.json()
+                strip_serialized_object(serialized_object)
+                self.assertEqual(initial_serialized_object, serialized_object)
 
-            # An empty PATCH changes nothing a reader would see, so it adds no ObjectChange.
-            if hasattr(self.model, "to_objectchange"):
-                objectchanges = lookup.get_changes_for_model(instance)
-                self.assertQuerySetEqual(objectchanges, changes_before)
-                self.assertEqual(objectchanges.count(), changes_before_count)
-                objectchanges.delete()
+                # An empty PATCH changes nothing a reader would see, so it adds no ObjectChange.
+                if hasattr(self.model, "to_objectchange"):
+                    objectchanges = lookup.get_changes_for_model(instance)
+                    self.assertQuerySetEqual(objectchanges, changes_before)
+                    self.assertEqual(objectchanges.count(), changes_before_count)
+                    objectchanges.delete()
 
             # Verify that a PATCH with some data updates that data correctly.
             response = self.client.patch(url, update_data, format="json", **self.header)

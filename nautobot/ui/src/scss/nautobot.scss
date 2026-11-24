@@ -3145,6 +3145,10 @@ pre.version, pre.version-stamp {
   .table {
     tbody > tr {
       cursor: pointer;
+
+      &.disabled {
+        cursor: not-allowed;
+      }
     }
 
     /*

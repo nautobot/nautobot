@@ -319,7 +319,9 @@ class CircuitTerminationForm(LocatableModelFormMixin, NautobotModelForm):
 class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
     model = CircuitTermination
     q = forms.CharField(required=False, label="Search")
-    circuit = DynamicModelMultipleChoiceField(queryset=Circuit.objects.all(), to_field_name="cid", required=False)
+    circuit = DynamicModelMultipleChoiceField(
+        queryset=Circuit.objects.all(), query_params={"sort": "cid"}, to_field_name="cid", required=False
+    )
     provider_network = DynamicModelMultipleChoiceField(
         queryset=ProviderNetwork.objects.all(), to_field_name="name", required=False
     )

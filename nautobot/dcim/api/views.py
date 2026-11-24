@@ -868,6 +868,9 @@ class ConnectedDeviceViewSet(ViewSet):
 
     * `peer_device`: The name of the peer device
     * `peer_interface`: The name of the peer interface
+
+    If the requesting user does not have permission to view the connected device, it is returned in its brief
+    `{id, object_type, url, display}` representation instead of in full.
     """
 
     permission_classes = [IsAuthenticated]
@@ -911,7 +914,7 @@ class ConnectedDeviceViewSet(ViewSet):
         if local_interface is None:
             return Response()
 
-        return Response(serializers.DeviceSerializer(local_interface.device, context={"request": request}).data)
+        return Response(serialize_object_for_user(local_interface.device, request, serializers.DeviceSerializer))
 
 
 #
