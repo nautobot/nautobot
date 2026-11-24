@@ -490,7 +490,11 @@ class LogsCleanupTestCase(TransactionTestCase):
         return old_job_result, log_entry
 
     def test_a_user_without_delete_permission_on_log_entries_fails_the_job(self):
-        """Deleting a job result deletes its log and console entries, so the job asks for both permissions outright."""
+        """
+        Deleting a job result deletes its log and console entries.
+
+        The job therefore checks for permission to delete both models before it deletes anything.
+        """
         self.add_permissions("extras.delete_jobresult")
         old_job_result, _ = self.make_old_job_result_with_log_entry()
 
@@ -2724,8 +2728,9 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         An `add` constraint on the archived log entries is checked against each written copy.
 
-        The permitted entry moves, the other stays live, and so does the job result, so that the remaining entry is
-        not deleted with it. A later run with the constraint lifted finishes the job result.
+        The permitted entry is copied to the archive and deleted. The other entry stays in the live table, and so does
+        the job result, so that the remaining entry is not deleted with it. A later run without the constraint
+        archives the remaining entry and the job result.
         """
         old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
         permitted_message = f"{old_job_result.name} log entry 0"
@@ -2766,7 +2771,8 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         Deleting the job result would delete entries that the user is not permitted to delete.
 
-        Only one of the skipped job result's two entries is out of reach, so the whole job result must be skipped.
+        The user may not delete only one of the skipped job result's two entries, but the whole job result must still
+        be skipped.
         """
         for child_model, related_name in ((JobLogEntry, "job_log_entries"), (JobConsoleEntry, "job_console_entries")):
             child_entry_count_kwarg = "log_entry_count" if child_model is JobLogEntry else "console_entry_count"
@@ -2802,7 +2808,8 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         An `add` constraint on the archived job results is checked against each written copy.
 
-        The entries of a job result whose copy is not permitted are not moved, so nothing of it reaches the archive.
+        The entries of a job result whose copy is not permitted are not archived either, so no part of that job result
+        is copied to the archive.
         """
         permitted_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, name="Permitted Archive Job")
         unpermitted_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, name="Unpermitted Archive Job")
@@ -2995,8 +3002,8 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         Deleting the job result would cascade to the log entry, which a `RESTRICT` reference forbids.
 
-        Only one of the two log entries is referenced, so a filter that tests each log entry separately would
-        let the job result through on the strength of the other one.
+        Only one of the two log entries is referenced. A filter that tests each log entry separately would select the
+        job result for archival, because the other log entry is not referenced.
         """
         from example_app.models import AnotherExampleModel
 
@@ -3031,8 +3038,8 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         """
         Deleting the job result would cascade through the log entry to a record that is not archived.
 
-        The log entry must not be lost either: it stays live with its job result rather than being skipped by
-        the child archival and then deleted with the job result.
+        The log entry must not be lost either. It must stay in the live table with its job result, rather than be
+        skipped when the child entries are archived and then deleted with the job result.
         """
         from example_app.models import ExampleModel
 
@@ -3052,7 +3059,11 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
 
     @tag("example_app")
     def test_a_job_result_whose_log_entry_would_cascade_is_archived_when_forced(self):
-        """The cascaded record's many-to-many links, in both directions, go with it; the linked record stays."""
+        """
+        Deleting the cascaded record also deletes its many-to-many links in both directions.
+
+        The record at the other end of those links is not deleted.
+        """
         from example_app.models import ExampleModel
 
         self.add_permissions("example_app.delete_examplemodel")
@@ -3099,7 +3110,11 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
 
     @tag("example_app")
     def test_a_protected_record_beyond_a_forced_cascade_holds_the_job_result(self):
-        """Forcing releases the cascade to `ExampleModel`, but a `PROTECT` reference to that record still blocks it."""
+        """
+        Forcing allows the cascade to delete the `ExampleModel` record.
+
+        A `PROTECT` reference to that record still prevents its deletion, so the job result is skipped.
+        """
         from example_app.models import AnotherExampleModel, ExampleModel
 
         held_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
@@ -3119,7 +3134,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
     @tag("example_app")
     def test_a_job_result_whose_log_entry_is_referenced_without_a_reverse_relation_is_not_archived(self):
         """
-        `AnotherExampleModel.job_log_entry_without_reverse_relation` cascades, but has no lookup to follow it by.
+        `AnotherExampleModel.job_log_entry_without_reverse_relation` cascades, but no lookup path can include it.
 
         The record it would delete cannot be checked, so the job result is skipped even when the cascade is forced.
         """

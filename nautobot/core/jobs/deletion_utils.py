@@ -16,10 +16,10 @@ class RelationsOfConcern(NamedTuple):
     """
     The relations that `find_relations_of_concern` found, each a list sorted by lookup.
 
-    `blocking`, `cascading` and `followed` hold `(lookup, related_model)` pairs, where `lookup` is a lookup path from
-    the searched model and `related_model` is the model at its end.
+    `blocking`, `cascading` and `followed` contain `(lookup, related_model)` pairs, where `lookup` is a lookup path
+    from the searched model and `related_model` is the model at its end.
 
-    `hidden_blocking` holds `(lookup, field)` pairs for foreign keys that have no reverse lookup, because they are
+    `hidden_blocking` contains `(lookup, field)` pairs for foreign keys that have no reverse lookup, because they are
     declared with a `related_name` ending in `+`. `lookup` reaches the referenced records from the searched model, or
     is empty when they are the searched model's own records, and `field` is the foreign key that references them.
     """
@@ -61,9 +61,9 @@ def _get_hidden_foreign_keys(model):
     """
     List the foreign keys to `model` that have no reverse lookup and that would affect other records on deletion.
 
-    `_meta.related_objects` leaves out a relation whose `related_name` ends in `+`, but deleting a `model` record still
-    follows it. Such a relation cannot be followed by a lookup path, so every `on_delete` other than the `SET...`
-    options is a concern. The foreign keys of an automatically created many-to-many through table are left out,
+    `_meta.related_objects` leaves out a relation whose `related_name` ends in `+`, but Django still applies its
+    `on_delete` when a `model` record is deleted. No lookup path can include such a relation, so every `on_delete`
+    other than the `SET...` options is a concern. The foreign keys of an automatically created many-to-many through table are left out,
     because deleting a record deletes only its rows there.
 
     Returns:
@@ -84,8 +84,8 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
     """
     Find the reverse relations through which deleting `model` records would fail or would delete other records.
 
-    The search follows every relation that a deletion cascades through, so that a relation several steps away
-    from `model` is found as well as one that points at `model` directly. Each relation is reported as a
+    The search continues through every relation that a deletion cascades through, so that it finds a relation several
+    steps away from `model` as well as one that points at `model` directly. Each relation is reported as a
     lookup path from `model`, such as `job_log_entries__example_models`.
 
     - A relation with `on_delete` set to `PROTECT`, `RESTRICT` or `DO_NOTHING` is reported as blocking. A
@@ -96,9 +96,10 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
       referenced record also deletes the referencing records. With `force_cascade_delete` the search continues
       past it instead, to find any blocking relation on the records that the cascade would delete.
     - A cascade that returns to a model whose relations are already being searched is reported as blocking. A
-      lookup path cannot follow it around the cycle to every depth, so the records further round cannot be checked.
+      lookup path cannot repeat the cycle to every depth, so the records deeper in the cycle cannot be checked.
     - A foreign key with no reverse lookup, because its `related_name` ends in `+`, is reported in `hidden_blocking`
-      unless its `on_delete` is one of the `SET...` options. It cannot be followed, so its records cannot be checked.
+      unless its `on_delete` is one of the `SET...` options. No lookup path can include it, so the records that
+      reference through it cannot be checked.
     - A relation with `on_delete` set to `SET_NULL`, `SET_DEFAULT` or `SET(...)`, or a many-to-many relation, is
       not reported. Deleting a record changes or removes only the reference; the referencing records survive.
 
@@ -111,9 +112,9 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
         force_cascade_delete (bool): Whether the caller accepts the deletion of records reached by a cascade.
 
     Returns:
-        (RelationsOfConcern): The relations found. `followed` holds the relations that the search continued through,
-            which are the relations to a preapproved model and, with `force_cascade_delete`, every cascading relation.
-            Their records are deleted along with the `model` records.
+        (RelationsOfConcern): The relations found. `followed` contains the relations that the search continued
+            through, which are the relations to a preapproved model and, with `force_cascade_delete`, every cascading
+            relation. Their records are deleted along with the `model` records.
     """
     # Many models are reached by more than one path. For example, every `BaseModel` has GenericRelations to
     # `ObjectMetadata` and `DataCompliance`, which are `BaseModel`s too. Each model's relations are therefore
@@ -194,8 +195,8 @@ def exclude_records_whose_relations_block_deletion(
     # `exclude()` is used rather than `filter(<lookup>__isnull=True)`. Across a multi-valued relation, `filter()`
     # keeps a record when any one of its related rows has no reference, for example a job result with two log
     # entries of which only one is referenced. `exclude()` removes the record when any related row has a reference.
-    # Blocking relations are checked first, so that a record skipped for both reasons is reported as one that
-    # accepting the cascade cannot release.
+    # Blocking relations are checked first. A record that is skipped for both reasons is then reported as blocked,
+    # because accepting the cascade would still not make it deletable.
     for lookup, related_model in relations.blocking:
         skipped_record_count = queryset.filter(**{f"{lookup}__isnull": False}).distinct().count()
         if skipped_record_count:
@@ -251,8 +252,9 @@ def exclude_records_whose_dependents_the_user_cannot_delete(
     Remove from a queryset the records whose deletion would delete records that the user may not delete.
 
     Deleting a record deletes the records that cascade from it, whatever the user's permissions on them. A user who
-    may delete a record, but not everything that goes with it, would otherwise delete those records too. The records
-    checked are those that `find_relations_of_concern` follows, with the same arguments. A model whose queryset has no
+    may delete a record, but not everything that is deleted with it, would otherwise delete those records too. The
+    records that are checked are those reached through the `followed` relations that `find_relations_of_concern`
+    returns for the same arguments. A model whose queryset has no
     `restrict()` method is not permission-checked, so its records count as permitted. The number of records skipped
     for each relation is logged.
 

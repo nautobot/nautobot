@@ -395,7 +395,7 @@ class ArchiveOldRecords(Job):
 
     def _copy_into_archive(self, archived_model, archived_records):
         """
-        Write archived copies, keeping only those that the user is permitted to add.
+        Write the archived copies that the user is permitted to add, and return their primary keys.
 
         An object permission can constrain `add` to records with particular field values, and such a constraint can
         only be checked against a written record. The copies are therefore written in a savepoint and checked with
@@ -417,7 +417,7 @@ class ArchiveOldRecords(Job):
         bulk_create_kwargs = {
             "update_conflicts": True,
             "update_fields": [field.name for field in archived_model._meta.fields if field.name != "id"],
-            # PostgreSQL needs the conflict column named. MySQL's ON DUPLICATE KEY UPDATE cannot name one, so
+            # PostgreSQL requires the conflict column to be named. MySQL's ON DUPLICATE KEY UPDATE cannot name one, so
             # unique_fields must be empty there.
             "unique_fields": ["id"] if connection.features.supports_update_conflicts_with_target else [],
         }

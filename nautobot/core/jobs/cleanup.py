@@ -16,7 +16,7 @@ from nautobot.extras.signals import _handle_deleted_object
 
 name = "System Jobs"
 
-# Records loaded into memory and deleted at a time.
+# The number of records that are loaded into memory and deleted at one time.
 CLEANUP_BATCH_SIZE = 1000
 
 
@@ -24,9 +24,9 @@ def _iterate_pks_in_batches(queryset, batch_size):
     """
     Yield the primary keys of the queryset's records, in ascending order, a list of at most `batch_size` at a time.
 
-    Each batch is read after the previous one has been yielded, starting after the last primary key it held. A
-    caller that deletes each batch before asking for the next therefore always gets fresh records, and the loop
-    ends even if a batch is not deleted.
+    Each batch is read after the previous one has been yielded, starting after the last primary key in the previous
+    batch. A caller that deletes each batch before it asks for the next one therefore never gets a deleted record,
+    and the loop ends even if a batch is not deleted.
     """
     ordered_queryset = queryset.order_by("pk")
     # Materialized with `list()`, because MySQL cannot use a sliced subquery in a later `pk__in` filter.
@@ -38,9 +38,9 @@ def _iterate_pks_in_batches(queryset, batch_size):
 
 def _delete_batch(model, pks, deletion_summary):
     """
-    Delete the `model` records with the given primary keys, and add what was deleted to `deletion_summary`.
+    Delete the `model` records with the given primary keys, and add the deleted record counts to `deletion_summary`.
 
-    `QuerySet.delete()` also reports models that it checked but deleted nothing from, so zero counts are dropped.
+    The counts include the records of other models that the deletion cascaded to.
     """
     _, deleted_counts_by_model = model.objects.filter(pk__in=pks).delete()
     for model_label, deleted_count in deleted_counts_by_model.items():
@@ -95,7 +95,7 @@ class LogsCleanup(Job):
 
         `QuerySet.delete()` loads the records it deletes into memory, so they are deleted in batches. The log and
         console entries of a batch of job results are deleted first, in batches of their own, because a single job
-        result can carry tens of thousands of them. Each batch commits on its own, which keeps the transactions as
+        result can have tens of thousands of them. Each batch commits on its own, which keeps the transactions as
         small as the batches. If deleting a job result then fails, its entries are already gone and the job result is
         left in place, to be deleted by the next run.
 
