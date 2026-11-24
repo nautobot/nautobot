@@ -185,6 +185,24 @@ class BasePage:
         self.favorite_modal().locator('button[type="submit"]').click()
 
     # -------------------------------------------------------------------------
+    # Modals
+    # -------------------------------------------------------------------------
+
+    def open_modal(self, opener, modal):
+        """Click the *opener* selector and wait until the Bootstrap modal that matches *modal* has finished opening.
+
+        Bootstrap ignores a request to hide a modal while the modal is still opening, so a Cancel click made
+        straight after the opening click would leave the modal open.
+        """
+        # The listener is added before the click, so the event cannot fire before anything listens for it.
+        self.page.locator(modal).evaluate(
+            "(element) => { window.__nautobotModalShown = false;"
+            " element.addEventListener('shown.bs.modal', () => { window.__nautobotModalShown = true; }, { once: true }); }"
+        )
+        self.page.locator(opener).click()
+        self.page.wait_for_function("() => window.__nautobotModalShown === true")
+
+    # -------------------------------------------------------------------------
     # Theme modal
     # -------------------------------------------------------------------------
 
@@ -193,8 +211,8 @@ class BasePage:
         return self.page.locator(self._THEME_MODAL)
 
     def open_theme_modal(self):
-        """Click the theme button in the footer."""
-        self.page.locator(self._THEME_MODAL_BUTTON).click()
+        """Click the theme button in the footer and wait until the theme modal has finished opening."""
+        self.open_modal(self._THEME_MODAL_BUTTON, self._THEME_MODAL)
 
     def cancel_theme_modal(self):
         """Click the theme modal's Cancel button."""
