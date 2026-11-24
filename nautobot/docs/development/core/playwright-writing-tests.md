@@ -66,8 +66,8 @@ A selector written in a test file belongs in a page object method:
 # Wrong: the test knows how the table is built.
 row = auth_page.locator("table tbody tr:has(input[name='pk'])").first
 
-# Right: ListPage already has the method.
-row = devices.data_row(0)
+# Right: LocationsPage inherits data_row() from ListPage.
+row = locations.data_row(0)
 ```
 
 ## Test data
