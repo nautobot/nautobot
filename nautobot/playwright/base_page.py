@@ -195,8 +195,9 @@ class BasePage:
         # listener cannot miss the event.
         dialog = self.page.locator(modal)
         dialog.evaluate(
-            "(element) => { delete element.dataset.nbShown;"
-            " element.addEventListener('shown.bs.modal', () => { element.dataset.nbShown = 'true'; }, { once: true }); }"
+            "(element) => { element.removeAttribute('data-nb-shown');"
+            " element.addEventListener('shown.bs.modal', () => { element.setAttribute('data-nb-shown', 'true'); },"
+            " { once: true }); }"
         )
         self.page.locator(opener).click()
         expect(dialog).to_have_attribute("data-nb-shown", "true")
