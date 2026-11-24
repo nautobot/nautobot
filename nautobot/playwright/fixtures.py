@@ -229,9 +229,7 @@ def api_count(api):
 def wait_for_job_result(api):
     """Callable that polls a job result over the API until the job finishes, and returns the job result record.
 
-    A UI action that starts a job returns before the job runs, so a test checks the job's effects only after
-    the callable returns. The callable fails the test, with the last status it read, if the job has not finished
-    within *timeout* seconds.
+    The callable fails the test, with the last status it read, if the job has not finished within *timeout* seconds.
     """
 
     def _wait(pk, timeout=60):

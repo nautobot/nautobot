@@ -9,7 +9,9 @@ This page covers how to write Playwright tests for Nautobot core and for Nautobo
 | Tests | `nautobot/<app>/tests/integration/test_*.py` | `<app_name>/tests/integration/test_*.py` |
 | Page objects | `nautobot/<app>/tests/integration/pages/` | `<app_name>/tests/integration/pages/` |
 | Fixtures for one app | `nautobot/<app>/tests/integration/conftest.py` | `<app_name>/tests/integration/conftest.py` |
-| Fixtures for every app | `nautobot/playwright/fixtures.py` | provided by Nautobot |
+| Fixtures for every app | `nautobot/playwright/fixtures.py` | `nautobot.playwright.fixtures`, registered with `pytest_plugins = ["nautobot.playwright.fixtures"]` in the app's root `conftest.py` |
+
+A new `tests/integration/` package needs the `load_tests` import in its `__init__.py`, as [Adding a test package](playwright-testing.md#adding-a-test-package) describes. Without it, `nautobot-server test` fails in an environment that does not have the `playwright` dependency group installed.
 
 A test file contains test steps and assertions. It does not contain selectors. Every selector goes in a page object, so a markup change is fixed in one file instead of in every test that reads that element.
 
@@ -45,19 +47,27 @@ class LocationsPage(ListPage):
 The test then reads as the steps a user takes:
 
 ```python
-@pytest.mark.behavioral
-def test_filter_by_parent_narrows_list(self, auth_page, base_url, api_count, created_location_tree):
-    """Filtering by parent shows exactly that parent's children."""
-    parent = created_location_tree["parent"]
-    locations = LocationsPage(auth_page, base_url)
-    locations.navigate()
-    total = locations.get_data_row_count()
+class ListViewFilterTestCase:
+    """The Locations list-view filter drawer."""
 
-    locations.filter_by_parent(parent["name"])
+    @pytest.mark.behavioral
+    def test_filter_by_parent_narrows_list(self, auth_page, base_url, api_count, created_location_tree):
+        """Filtering by parent shows exactly that parent's children."""
+        parent = created_location_tree["parent"]
+        locations = LocationsPage(auth_page, base_url)
+        locations.navigate()
+        total = locations.get_data_row_count()
 
-    expected = api_count("dcim/locations/", parent=parent["id"])
-    assert expected < total, "Applying the parent filter should narrow the list"
-    locations.expect_row_count(expected)
+        locations.filter_by_parent(parent["name"])
+
+        expected = api_count("dcim/locations/", parent=parent["id"])
+        assert expected < total, "Applying the parent filter should narrow the list"
+        locations.expect_row_count(expected)
+        names = locations.get_column_values_by_header("Name")
+        for child in created_location_tree["children"]:
+            assert any(child["name"] in cell for cell in names), f"{child['name']} missing from filtered rows: {names}"
+        decoy_child_name = created_location_tree["decoy_child"]["name"]
+        assert not any(decoy_child_name in cell for cell in names), f"Decoy child leaked into filtered rows: {names}"
 ```
 
 A selector written in a test file belongs in a page object method:
@@ -92,7 +102,7 @@ Ask one question: could this value still be changing?
 
 ## Waiting
 
-- Do not use `page.wait_for_timeout()` or `time.sleep()`. A fixed wait is too short on a slow machine and wastes time on a fast one.
+- Do not use `page.wait_for_timeout()` or `time.sleep()`. A fixed wait is too short on a slow machine and wastes time on a fast one. The one exception is a loop that polls a job result over the API. The `wait_for_job_result` fixture contains that loop, so a test does not need to write one.
 - Do not use `wait_for_load_state("networkidle")`. Pages with Select2 fields or polling keep requests open, so the network does not become idle.
 - Wait for the element the next step uses. Most Nautobot pages load parts of their content with htmx after the page itself loads. List rows load in a second request, so `expect_row_count()` or `expect(page_object.data_row(0)).to_be_visible()` waits for them. The navigation methods in page objects already call `wait_for_load()`.
 - Wait for a Bootstrap dialog to finish opening before you click or type in it. Bootstrap ignores a request to close a dialog while the dialog is still opening, so a test that clicks Cancel straight away leaves the dialog open. In the page object, open the dialog with `open_modal(opener, modal)` from `BasePage`, which waits for the dialog's `shown.bs.modal` event. For an example, see `BasePage.open_theme_modal()`.
@@ -103,10 +113,10 @@ Ask one question: could this value still be changing?
 
 A structural test checks that the parts of a page rendered, such as the heading, the table, a column or a panel. A behavioral test checks that the values are right. Mark it with `@pytest.mark.behavioral`. For a feature, write both.
 
-- A filter test asserts three things. The filter narrows the list. The row count equals the API count for the same filter. Every visible cell in the filtered column matches the filter.
+- A filter test asserts three things. The filter narrows the list. The row count equals the API count for the same filter. The list shows every record that the test created to match the filter. The list does not show the decoy record, which the test created so that it does not match.
 - A search test asserts that the list narrows and that every visible row contains the search term. Location and prefix search also return parents and children, so for those models assert that the searched record is in the results.
 - A create test submits the form with known values, then checks the new record over the API and on its detail page.
-- A detail test compares the values on the page with the values from the API detail endpoint for the same record.
+- A detail test compares the values on the page with the values that the test used to create the record.
 
 ## Shared traps
 
@@ -123,7 +133,7 @@ These apply to more than one page. The base classes have a method for each one, 
 
 ## When the application does something unexpected
 
-Do not change an assertion so that it matches what the application does. Add a comment to the test that describes the difference, mark the test `xfail` with the bug's tracker ID if one exists, and report it for triage.
+Do not change an assertion so that it matches what the application does. Add a comment to the test that describes the difference, mark the test with `@pytest.mark.xfail(strict=True, reason="...")`, and report it for triage. Put the bug's tracker ID in the reason if it has one. With `strict=True`, the test fails once the bug is fixed, and that failure tells the next person to remove the marker.
 
 ## Checklist
 

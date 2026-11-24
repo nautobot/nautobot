@@ -131,10 +131,3 @@ MUST re-export the discovery guard (`from nautobot.playwright import load_tests`
 copied from any existing app's `__init__.py`. Without it, `nautobot-server test`
 discovery imports pytest-only modules and fails in environments without the
 `playwright` dependency group.
-
-If a behavioral assertion reveals the application doing something unexpected, do not
-just change the assertion to match. Note it in the test and raise it for triage.
-
-When writing tests, `poetry run pytest --fixtures nautobot/<app>/tests/integration`
-lists the available fixtures with their docstrings (the path scopes the listing to
-fixtures that suite can use).

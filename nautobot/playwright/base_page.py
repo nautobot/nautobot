@@ -189,18 +189,16 @@ class BasePage:
     # -------------------------------------------------------------------------
 
     def open_modal(self, opener, modal):
-        """Click the *opener* selector and wait until the Bootstrap modal that matches *modal* has finished opening.
-
-        Bootstrap ignores a request to hide a modal while the modal is still opening, so a Cancel click made
-        straight after the opening click would leave the modal open.
-        """
-        # The listener is added before the click, so the event cannot fire before anything listens for it.
-        self.page.locator(modal).evaluate(
-            "(element) => { window.__nautobotModalShown = false;"
-            " element.addEventListener('shown.bs.modal', () => { window.__nautobotModalShown = true; }, { once: true }); }"
+        """Click the *opener* selector and wait until the Bootstrap modal that matches *modal* has finished opening."""
+        # Bootstrap ignores a hide request while a modal is still opening, so a Cancel click straight after the
+        # opening click would leave the modal open. The listener is added before the click so it cannot miss the event.
+        dialog = self.page.locator(modal)
+        dialog.evaluate(
+            "(element) => { delete element.dataset.nbShown;"
+            " element.addEventListener('shown.bs.modal', () => { element.dataset.nbShown = 'true'; }, { once: true }); }"
         )
         self.page.locator(opener).click()
-        self.page.wait_for_function("() => window.__nautobotModalShown === true")
+        expect(dialog).to_have_attribute("data-nb-shown", "true")
 
     # -------------------------------------------------------------------------
     # Theme modal
