@@ -13,7 +13,7 @@ This page covers how to write Playwright tests for Nautobot core and for Nautobo
 
 A new `tests/integration/` package needs the `load_tests` import in its `__init__.py`, as [Adding a test package](playwright-testing.md#adding-a-test-package) describes. Without it, `nautobot-server test` fails in an environment that does not have the `playwright` dependency group installed.
 
-A test file contains test steps and assertions. It does not contain selectors. Every selector goes in a page object, so a markup change is fixed in one file instead of in every test that reads that element.
+A test file contains test steps and assertions. It does not contain selectors. Every selector goes in a page object, so a markup change is fixed in one file instead of in every test that uses that element.
 
 A page object extends one of the base classes in `nautobot.playwright`:
 
