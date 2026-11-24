@@ -4153,7 +4153,11 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
                     label = "" if field_name == "__all__" else f"{field_name}: "
                     messages.error(request, f"{label}{error}")
         else:
-            form = form_class(initial={"pk": self.pk_list})
+            # The form validates `pk` against the queryset restricted to objects the user can change. Leave the other
+            # selected objects out of the hidden `pk` inputs so that submitting the confirmation does not fail validation.
+            form = form_class(
+                initial={"pk": [str(pk) for pk in queryset.filter(pk__in=self.pk_list).values_list("pk", flat=True)]}
+            )
 
         selected_objects = queryset.filter(pk__in=self.pk_list)
 

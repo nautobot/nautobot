@@ -1328,6 +1328,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
             # Hide actions column in the table for bulk destroy view
             if "actions" in table.columns:
                 table.columns.hide("actions")
+            # The confirmation form validates `pk` against the restricted queryset. Leave the selected objects that
+            # the user cannot delete out of self.pk_list, which the renderer turns into the form's hidden `pk` inputs.
+            self.pk_list = [str(pk) for pk in queryset.values_list("pk", flat=True)]
 
         data.update(
             {
@@ -1680,7 +1683,12 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
         action = "_preview" if "_preview" in request.POST else "_apply" if "_apply" in request.POST else None
 
-        form = self.form_class(request.POST if action else None, initial={"pk": query_pks})
+        # The form validates `pk` against the queryset restricted to objects the user can change. Leave the other
+        # selected objects out of the hidden `pk` inputs so that submitting the form does not fail validation.
+        form = self.form_class(
+            request.POST if action else None,
+            initial={"pk": [str(pk) for pk in selected_objects.values_list("pk", flat=True)]},
+        )
 
         if not form.is_valid():
             return self._render_form_response(request, form, selected_objects)

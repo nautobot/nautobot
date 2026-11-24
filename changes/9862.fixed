@@ -1,0 +1,1 @@
+Fixed bulk delete, bulk rename and bulk disconnect failing to apply when the selection included an object that the user does not have permission to delete or change.
