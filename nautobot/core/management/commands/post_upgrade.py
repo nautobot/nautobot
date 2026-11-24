@@ -1,7 +1,7 @@
 import argparse
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 HELP_TEXT = """
 Performs Nautobot common server upgrade operations using a single entrypoint.
@@ -59,6 +59,11 @@ class Command(BaseCommand):
             help="Do not automatically perform any database migrations.",
         )
         parser.add_argument(
+            "--migrate-app",
+            metavar="APP_LABEL",
+            help="Apply migrations for the specified Django app and any migrations they depend on.",
+        )
+        parser.add_argument(
             "--no-remove-stale-contenttypes",
             action="store_false",
             dest="remove_stale_contenttypes",
@@ -97,9 +102,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Run migrate
         if options.get("migrate"):
+            app_label = options.get("migrate_app")
+            if app_label == "":
+                raise CommandError("--migrate-app requires a non-empty app label.")
             self.stdout.write("Performing database migrations...")
             call_command(
                 "migrate",
+                app_label=app_label,
                 skip_checks=False,  # make sure Postgres version check and others are applied
                 interactive=False,
                 traceback=options["traceback"],

@@ -599,6 +599,9 @@ Do not automatically collect static files into a single location.
 `--no-migrate`  
 Do not automatically perform any database migrations.
 
+`--migrate-app APP_LABEL`  
+Only apply migrations for the given Django app and the migrations it depends on, instead of all installed apps.
+
 `--no-remove-stale-contenttypes`  
 Do not automatically remove stale content types.
 
