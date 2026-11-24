@@ -76,6 +76,15 @@ class VirtualServerAPITest(LoadBalancerModelsTestCaseMixin, APIViewTestCases.API
                 "tenant": None,
                 "health_check_monitor": cls.health_check_monitors[1].pk,
             },
+            {
+                "name": "VS12",
+                "vip": None,
+                "dns_name": "lb-3.example.com",
+                "port": 8443,
+                "protocol": choices.ProtocolChoices.PROTOCOL_HTTPS,
+                "load_balancer_type": choices.LoadBalancerTypeChoices.TYPE_LAYER7,
+                "cloud_service": cls.cloud_service2.pk,
+            },
         ]
 
         cls.update_data = {

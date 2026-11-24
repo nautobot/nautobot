@@ -339,6 +339,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
     source_interface = tables.Column(linkify=True)
     source_ipaddress = tables.Column(linkify=True)
     tunnel_interface = tables.Column(linkify=True)
+    cloud_service = tables.Column(linkify=True)
     protected_prefixes_count = LinkedCountColumn(
         viewname="ipam:prefix_list",
         verbose_name="Protected Prefixes",
@@ -362,6 +363,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
+            "cloud_service",
             "protected_prefixes_count",
             "role",
             "tenant",
@@ -375,6 +377,7 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
+            "cloud_service",
             "protected_prefixes_count",
             "role",
             "tenant",

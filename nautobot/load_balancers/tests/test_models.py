@@ -1,5 +1,6 @@
 """Test VirtualServer."""
 
+from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 
 from nautobot.core.testing.models import ModelTestCases
@@ -30,10 +31,20 @@ class TestVirtualServer(LoadBalancerModelsTestCaseMixin, ModelTestCases.BaseMode
         self.assertEqual(virtual_server.name, "VS1")
         self.assertEqual(str(virtual_server), "VS1")
 
-    def test_create_virtualserver_vip_required(self):
-        """Create VirtualServer without vip."""
-        with self.assertRaises(IntegrityError):
-            models.VirtualServer.objects.create(name="VS1")
+    def test_create_virtualserver_vip_required_without_cloud_service(self):
+        """A VirtualServer without a cloud service must have a VIP."""
+        with self.assertRaises(ValidationError) as cm:
+            models.VirtualServer(name="VS1").validated_save()
+        self.assertIn("vip", cm.exception.message_dict)
+
+    def test_create_virtualserver_vip_optional_with_cloud_service(self):
+        """A VirtualServer attached to a cloud service may be reached through a DNS name only."""
+        virtual_server = models.VirtualServer(
+            name="VS1", cloud_service=self.cloud_service1, dns_name="lb.example.com", port=443
+        )
+        virtual_server.validated_save()
+        self.assertIsNone(virtual_server.vip)
+        self.assertEqual(virtual_server.dns_name, "lb.example.com")
 
     def test_create_virtualserver_all_fields_success(self):
         """Create VirtualServer with all fields."""

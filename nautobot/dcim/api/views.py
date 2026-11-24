@@ -18,7 +18,7 @@ from rest_framework.reverse import reverse
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
-from nautobot.cloud.models import CloudAccount
+from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudService
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
@@ -194,6 +194,8 @@ class LocationViewSet(NautobotModelViewSet):
             (VLAN, "location__in"),
             (Circuit, "circuit_terminations__location__in"),
             (VirtualMachine, "cluster__location__in"),
+            (CloudNetwork, "location__in"),
+            (CloudService, "location__in"),
         ]:
             qs = related_model.objects.restrict(request.user, "view").filter(**{query: descendants_pks})
             if distinct or related_model == Circuit:

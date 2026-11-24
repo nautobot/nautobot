@@ -7,7 +7,9 @@ class CloudConfig(NautobotConfig):
     verbose_name = "Cloud"
     searchable_models = [
         "cloudaccount",
+        "cloudaccountgroup",
         "cloudnetwork",
+        "cloudresourcegroup",
         "cloudresourcetype",
         "cloudservice",
     ]

@@ -3,14 +3,18 @@ from rest_framework.response import Response
 
 from nautobot.circuits.tables import CircuitTable
 from nautobot.cloud.api.serializers import (
+    CloudAccountGroupSerializer,
     CloudAccountSerializer,
     CloudNetworkSerializer,
+    CloudResourceGroupSerializer,
     CloudResourceTypeSerializer,
     CloudServiceSerializer,
 )
 from nautobot.cloud.filters import (
     CloudAccountFilterSet,
+    CloudAccountGroupFilterSet,
     CloudNetworkFilterSet,
+    CloudResourceGroupFilterSet,
     CloudResourceTypeFilterSet,
     CloudServiceFilterSet,
 )
@@ -18,9 +22,15 @@ from nautobot.cloud.forms import (
     CloudAccountBulkEditForm,
     CloudAccountFilterForm,
     CloudAccountForm,
+    CloudAccountGroupBulkEditForm,
+    CloudAccountGroupFilterForm,
+    CloudAccountGroupForm,
     CloudNetworkBulkEditForm,
     CloudNetworkFilterForm,
     CloudNetworkForm,
+    CloudResourceGroupBulkEditForm,
+    CloudResourceGroupFilterForm,
+    CloudResourceGroupForm,
     CloudResourceTypeBulkEditForm,
     CloudResourceTypeFilterForm,
     CloudResourceTypeForm,
@@ -28,8 +38,22 @@ from nautobot.cloud.forms import (
     CloudServiceFilterForm,
     CloudServiceForm,
 )
-from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
-from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
+from nautobot.cloud.models import (
+    CloudAccount,
+    CloudAccountGroup,
+    CloudNetwork,
+    CloudResourceGroup,
+    CloudResourceType,
+    CloudService,
+)
+from nautobot.cloud.tables import (
+    CloudAccountGroupTable,
+    CloudAccountTable,
+    CloudNetworkTable,
+    CloudResourceGroupTable,
+    CloudResourceTypeTable,
+    CloudServiceTable,
+)
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     Breadcrumbs,
@@ -40,7 +64,20 @@ from nautobot.core.ui.breadcrumbs import (
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.ipam.tables import PrefixTable
+from nautobot.ipam.tables import IPAddressTable, PrefixTable
+from nautobot.load_balancers.tables import VirtualServerTable
+from nautobot.vpn.tables import VPNTunnelEndpointTable
+
+
+class RelatedObjectsTablePanel(object_detail.ObjectsTablePanel):
+    """An objects table panel that is only rendered when the object has related objects of this kind."""
+
+    def __init__(self, *, related_attribute, **kwargs):
+        self.related_attribute = related_attribute
+        super().__init__(**kwargs)
+
+    def should_render(self, context):
+        return super().should_render(context) and getattr(context["object"], self.related_attribute).exists()
 
 
 class CloudAccountUIViewSet(NautobotUIViewSet):
@@ -68,6 +105,125 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                table_class=CloudResourceGroupTable,
+                table_filter="cloud_account",
+                exclude_columns=["cloud_account"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=CloudNetworkTable,
+                table_filter="cloud_account",
+                exclude_columns=["cloud_account"],
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=CloudServiceTable,
+                table_filter="cloud_account",
+                exclude_columns=["cloud_account"],
+            ),
+        )
+    )
+
+
+class CloudAccountGroupUIViewSet(NautobotUIViewSet):
+    queryset = CloudAccountGroup.objects.all()
+    filterset_class = CloudAccountGroupFilterSet
+    filterset_form_class = CloudAccountGroupFilterForm
+    serializer_class = CloudAccountGroupSerializer
+    table_class = CloudAccountGroupTable
+    form_class = CloudAccountGroupForm
+    bulk_update_form_class = CloudAccountGroupBulkEditForm
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=("name", "parent", "cloud_resource_type", "description"),
+            ),
+            object_detail.ObjectTextPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="extra_config",
+                label="Extra Config",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                table_class=CloudAccountGroupTable,
+                table_filter="parent",
+                table_title="Child Groups",
+                exclude_columns=["cloud_account_count"],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=CloudAccountTable,
+                table_filter="cloud_account_group",
+                exclude_columns=["cloud_account_group"],
+            ),
+        )
+    )
+
+
+class CloudResourceGroupUIViewSet(NautobotUIViewSet):
+    queryset = CloudResourceGroup.objects.all()
+    filterset_class = CloudResourceGroupFilterSet
+    filterset_form_class = CloudResourceGroupFilterForm
+    serializer_class = CloudResourceGroupSerializer
+    table_class = CloudResourceGroupTable
+    form_class = CloudResourceGroupForm
+    bulk_update_form_class = CloudResourceGroupBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("cloud_account")),
+            ]
+        }
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=(
+                    "name",
+                    "provider_resource_id",
+                    "cloud_account",
+                    "cloud_resource_type",
+                    "location",
+                    "description",
+                ),
+            ),
+            object_detail.ObjectTextPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="extra_config",
+                label="Extra Config",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=CloudNetworkTable,
+                table_filter="cloud_resource_group",
+                exclude_columns=["cloud_account", "cloud_resource_group"],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                table_class=CloudServiceTable,
+                table_filter="cloud_resource_group",
+                exclude_columns=["cloud_account", "cloud_resource_group"],
             ),
         )
     )
@@ -97,7 +253,19 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=("name", "cloud_resource_type", "cloud_account", "parent", "description"),
+                fields=(
+                    "name",
+                    "provider_resource_id",
+                    "status",
+                    "role",
+                    "cloud_resource_type",
+                    "cloud_account",
+                    "cloud_resource_group",
+                    "parent",
+                    "location",
+                    "tenant",
+                    "description",
+                ),
             ),
             object_detail.ObjectTextPanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -328,7 +496,18 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=("name", "cloud_account", "cloud_resource_type", "description"),
+                fields=(
+                    "name",
+                    "provider_resource_id",
+                    "status",
+                    "role",
+                    "cloud_account",
+                    "cloud_resource_group",
+                    "cloud_resource_type",
+                    "location",
+                    "tenant",
+                    "description",
+                ),
             ),
             object_detail.ObjectTextPanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -336,6 +515,44 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
                 object_field="extra_config",
                 label="Extra Config",
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=200,
+                table_class=IPAddressTable,
+                table_filter="cloud_services",
+                table_title="IP Addresses",
+                include_columns=["address", "status", "role", "dns_name"],
+                add_button_route=None,
+            ),
+            RelatedObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=300,
+                related_attribute="virtual_servers",
+                table_class=VirtualServerTable,
+                table_filter="cloud_service",
+                table_title="Virtual Servers",
+                include_columns=["name", "vip", "dns_name", "port", "protocol", "load_balancer_pool"],
+                add_button_route=None,
+            ),
+            RelatedObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=400,
+                related_attribute="vpn_tunnel_endpoints",
+                table_class=VPNTunnelEndpointTable,
+                table_filter="cloud_service",
+                table_title="VPN Tunnel Endpoints",
+                include_columns=["name", "source_ipaddress", "vpn_profile"],
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                table_class=CloudNetworkTable,
+                table_filter="cloud_services",
+                table_title="Cloud Networks",
+                exclude_columns=["cloud_service_count"],
+                add_button_route=None,
             ),
         ),
         extra_tabs=(

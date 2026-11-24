@@ -501,6 +501,15 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         verbose_name="Source FQDN",
         help_text="Mutually Exclusive with Source IP Address",
     )
+    cloud_service = models.ForeignKey(
+        to="cloud.CloudService",
+        on_delete=models.PROTECT,
+        related_name="vpn_tunnel_endpoints",
+        blank=True,
+        null=True,
+        verbose_name="Cloud Service",
+        help_text="The cloud VPN gateway this endpoint belongs to. Mutually exclusive with Source Interface.",
+    )
     tunnel_interface = models.OneToOneField(
         to="dcim.Interface",
         on_delete=models.SET_NULL,
@@ -544,6 +553,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         "source_interface",
         "source_ipaddress",
         "source_fqdn",
+        "cloud_service",
         "protected_prefixes",
         "protected_prefixes_dg",
     ]
@@ -563,6 +573,12 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             if self.source_ipaddress:
                 return f"{parent_intf} ({self.source_ipaddress.address})"
             return parent_intf
+        if self.cloud_service:
+            if self.source_ipaddress:
+                return f"{self.cloud_service.name} ({self.source_ipaddress.address})"
+            if self.source_fqdn:
+                return f"{self.cloud_service.name} ({self.source_fqdn})"
+            return self.cloud_service.name
         return self.source_fqdn
 
     def __str__(self):
@@ -577,6 +593,10 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             raise ValidationError("Source Interface or Source IP Address or Source FQDN Is required.")
         if self.source_interface and not self.source_interface.parent:
             raise ValidationError("Source Interface must belong to a device.")
+        if self.cloud_service and (self.source_interface or self.device):
+            raise ValidationError(
+                "Cloud Service and Source Interface or Device are mutually exclusive. Select only one."
+            )
         if (
             self.source_ipaddress
             and self.source_interface

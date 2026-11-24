@@ -30,7 +30,12 @@ from nautobot.tenancy.models import Tenant
 class VirtualServerForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """VirtualServer creation/edit form."""
 
-    vip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), label="VIP")
+    vip = DynamicModelChoiceField(
+        queryset=IPAddress.objects.all(),
+        label="VIP",
+        required=False,
+        help_text="Required unless the virtual server is attached to a cloud service.",
+    )
     load_balancer_type = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(choices.LoadBalancerTypeChoices),
@@ -69,6 +74,7 @@ class VirtualServerForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-
     field_order = [
         "name",
         "vip",
+        "dns_name",
         "port",
         "protocol",
         "enabled",

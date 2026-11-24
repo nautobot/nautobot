@@ -303,4 +303,36 @@
         </div>
         {% include 'inc/paginator.html' with paginator=vpn_tunnel_endpoint_table.paginator page=vpn_tunnel_endpoint_table.page %}
     {% endif %}
+    {% if cloud_network_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Cloud Networks</strong>
+            </div>
+            {% include 'inc/table.html' with table=cloud_network_table %}
+            {% if perms.cloud.add_cloudnetwork %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'cloud:cloudnetwork_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Cloud Network
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=cloud_network_table.paginator page=cloud_network_table.page %}
+    {% endif %}
+    {% if cloud_service_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Cloud Services</strong>
+            </div>
+            {% include 'inc/table.html' with table=cloud_service_table %}
+            {% if perms.cloud.add_cloudservice %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'cloud:cloudservice_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Cloud Service
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=cloud_service_table.paginator page=cloud_service_table.page %}
+    {% endif %}
 {% endblock content_full_width_page %}

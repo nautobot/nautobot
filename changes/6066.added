@@ -1,0 +1,2 @@
+Added validation that the cloud resource type of a `CloudNetwork`, or of a `CloudService` with a cloud account, has the same provider as the cloud account.
+Added validation that a child `CloudNetwork` belongs to the same cloud account as its parent.

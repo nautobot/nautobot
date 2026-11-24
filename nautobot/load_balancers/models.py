@@ -1,5 +1,6 @@
 """Models for Load Balancer Models."""
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
 
@@ -16,7 +17,20 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
     """Virtual Server model for Load Balancer Models app."""
 
     vip = models.ForeignKey(
-        to="ipam.IPAddress", on_delete=models.PROTECT, related_name="virtual_servers", verbose_name="VIP"
+        to="ipam.IPAddress",
+        on_delete=models.PROTECT,
+        related_name="virtual_servers",
+        verbose_name="VIP",
+        blank=True,
+        null=True,
+        help_text="Required unless the virtual server is attached to a cloud service.",
+    )
+    dns_name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        verbose_name="DNS name",
+        help_text="The DNS name clients use to reach this virtual server, such as the DNS name of a cloud "
+        "load balancer.",
     )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     port = models.PositiveIntegerField(blank=True, null=True, validators=[MaxValueValidator(constants.PORT_VALUE_MAX)])
@@ -126,6 +140,14 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    def clean(self):
+        super().clean()
+
+        if self.vip is None and self.cloud_service is None:
+            raise ValidationError(
+                {"vip": "A VIP is required unless the virtual server is attached to a cloud service."}
+            )
 
 
 @extras_features(

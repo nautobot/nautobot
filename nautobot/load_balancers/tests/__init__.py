@@ -98,11 +98,18 @@ def generate_test_data(db=DEFAULT_DB_ALIAS):  # pylint: disable=invalid-name
         name="Test Cloud Resource Type", defaults={"provider": cloud_provider}
     )
     cloud_resource_type.content_types.add(ContentType.objects.using(db).get(app_label="cloud", model="cloudservice"))
+    cloud_service_status = (
+        Status.objects.using(db)
+        .filter(content_types=ContentType.objects.db_manager(db).get_for_model(CloudService))
+        .first()
+    )
     objects["cloud_service1"], _ = CloudService.objects.using(db).get_or_create(
-        name="Test Cloud Service 1", defaults={"cloud_resource_type": cloud_resource_type}
+        name="Test Cloud Service 1",
+        defaults={"cloud_resource_type": cloud_resource_type, "status": cloud_service_status},
     )
     objects["cloud_service2"], _ = CloudService.objects.using(db).get_or_create(
-        name="Test Cloud Service 2", defaults={"cloud_resource_type": cloud_resource_type}
+        name="Test Cloud Service 2",
+        defaults={"cloud_resource_type": cloud_resource_type, "status": cloud_service_status},
     )
 
     # Create Virtual Chassis
@@ -344,6 +351,24 @@ def generate_test_data(db=DEFAULT_DB_ALIAS):  # pylint: disable=invalid-name
             health_check_monitor=objects["health_check_monitors"][0],
             tenant=objects["tenant1"],
             virtual_chassis=objects["virtual_chassis1"],
+        ),
+    )
+
+    # Virtual Servers of cloud load balancers, reached through a DNS name without a VIP
+    objects["cloud_virtual_servers"] = (
+        models.VirtualServer.objects.using(db).create(
+            name="VS10",
+            cloud_service=objects["cloud_service1"],
+            dns_name="lb-1.example.com",
+            protocol=choices.ProtocolChoices.PROTOCOL_HTTPS,
+            port=443,
+        ),
+        models.VirtualServer.objects.using(db).create(
+            name="VS11",
+            cloud_service=objects["cloud_service2"],
+            dns_name="lb-2.example.com",
+            protocol=choices.ProtocolChoices.PROTOCOL_HTTPS,
+            port=443,
         ),
     )
 

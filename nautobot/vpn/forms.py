@@ -4,6 +4,7 @@ import logging
 
 from django import forms
 
+from nautobot.cloud.models import CloudService
 from nautobot.core.forms import add_blank_choice
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import (
@@ -662,6 +663,12 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
             "type": InterfaceTypeChoices.TYPE_TUNNEL,
         },
         help_text="Interface must be of type Tunnel",
+    )
+    cloud_service = DynamicModelChoiceField(
+        queryset=CloudService.objects.all(),
+        required=False,
+        label="Cloud Service",
+        help_text="The cloud VPN gateway this endpoint belongs to.",
     )
     vpn_profile = DynamicModelChoiceField(
         queryset=models.VPNProfile.objects.all(),
