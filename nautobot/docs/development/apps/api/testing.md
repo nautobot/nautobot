@@ -30,3 +30,7 @@ The context manager normalizes queries by replacing quoted string literals and `
 ## Factories
 
 The [`TEST_USE_FACTORIES`](../../../user-guide/administration/configuration/settings.md#test_use_factories) setting defaults to `False` when testing apps, primarily for backwards-compatibility reasons. It can prove a useful way of populating a baseline of Nautobot database data for your tests and save you the trouble of creating a large amount of baseline data yourself. We recommend adding [`factory-boy`](https://pypi.org/project/factory-boy/) to your app's development dependencies and settings `TEST_USE_FACTORIES = True` in your app's development/test `nautobot_config.py` to take advantage of this.
+
+## Browser Tests
+
+Write browser tests for an app with Playwright, using the page objects and fixtures in `nautobot.playwright`. [Writing Playwright Tests](../../core/playwright-writing-tests.md) has the rules for app tests and core tests.
