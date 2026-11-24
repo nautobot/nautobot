@@ -8,7 +8,7 @@ unchanged.
 !!! warning "Interim structure"
     The Playwright tests in this release are one-to-one ports of existing Selenium tests. They keep the Selenium file and class names so that each port can be traced to the test it replaced. Do not treat those file and class names as the standard for new tests. Write browser tests for new features as Playwright tests, never as new Selenium tests. A later release may add generic, per-model test classes and restructure the existing tests.
 
-    This page covers how to **run** the suite. [Writing Playwright Tests](playwright-writing-tests.md) covers how to write tests, and its rules apply now.
+    This page covers how to **run** the suite. [Writing Playwright Tests](playwright-writing-tests.md) covers how to write tests.
 
 ## Layout
 
