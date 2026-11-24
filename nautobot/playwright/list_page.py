@@ -290,7 +290,7 @@ class ListPage(BasePage):
     def apply_bulk_edit(self) -> str:
         """Submit the form and return the job result ID as soon as the browser starts loading the job result page."""
         self.page.locator(self._BULK_EDIT_APPLY).click()
-        return self._wait_for_job_result("Apply")
+        return self._wait_for_job_result_redirect("Apply")
 
     def click_delete_selected(self):
         """Open the dropdown next to Edit Selected, click Delete Selected, and wait for the next page to load."""
@@ -311,9 +311,9 @@ class ListPage(BasePage):
     def confirm_bulk_delete(self) -> str:
         """Confirm the deletion and return the job result ID as soon as the browser starts loading the job result page."""
         self.page.locator(self._BULK_DELETE_CONFIRM).click()
-        return self._wait_for_job_result("Confirm")
+        return self._wait_for_job_result_redirect("Confirm")
 
-    def _wait_for_job_result(self, button) -> str:
+    def _wait_for_job_result_redirect(self, button) -> str:
         """Wait until the browser starts loading a job result page after the caller clicks *button*, and return the job result's ID."""
         try:
             self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")

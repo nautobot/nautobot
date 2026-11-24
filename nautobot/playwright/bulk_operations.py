@@ -133,6 +133,11 @@ class BulkOperationsTestCase:
         actual = self.api_count(self.endpoint, q=self.prefix, **self.model_edit_data)
         assert actual == expected, f"{actual} {self.model_plural} have {self.model_edit_data}, expected {expected}"
 
+    def assert_remaining_count(self, expected):
+        """Assert that *expected* of this test's records are left after a bulk delete."""
+        actual = self.api_count(self.endpoint, q=self.prefix)
+        assert actual == expected, f"{actual} {self.model_plural} are left, expected {expected}"
+
     # -------------------------------------------------------------------------
     # Bulk edit
     # -------------------------------------------------------------------------
@@ -241,6 +246,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(self.expected_counts["all"])
 
         self.confirm_delete()
+        self.assert_remaining_count(0)
 
         self.go_to_model_list_page()
         self.list_page.expect_row_count(0)
@@ -253,6 +259,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(1)
 
         self.confirm_delete()
+        self.assert_remaining_count(self.expected_counts["all"] - 1)
 
         self.go_to_model_list_page()
         self.list_page.expect_row_count(self.expected_counts["all"] - 1)
@@ -266,6 +273,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(self.expected_counts["all"])
 
         self.confirm_delete()
+        self.assert_remaining_count(0)
 
         self.go_to_model_list_page()
         self.list_page.expect_row_count(0)
@@ -281,6 +289,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(self.expected_counts["filtered"])
 
         self.confirm_delete()
+        self.assert_remaining_count(self.expected_counts["all"] - self.expected_counts["filtered"])
 
         self.go_to_model_list_page()
         self.list_page.expect_row_count(self.expected_counts["all"] - self.expected_counts["filtered"])
@@ -296,6 +305,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(1)
 
         self.confirm_delete()
+        self.assert_remaining_count(self.expected_counts["all"] - 1)
 
         self.go_to_model_list_page()
         self.list_page.expect_row_count(self.expected_counts["all"] - 1)
@@ -311,6 +321,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_bulk_delete_count(self.expected_counts["filtered"])
 
         self.confirm_delete()
+        self.assert_remaining_count(self.expected_counts["all"] - self.expected_counts["filtered"])
 
         # The `per_page=1` request above saved a page size of 1 to the user's config, so a
         # list opened without `per_page` would show one record. Ask for 50 to see them all.
