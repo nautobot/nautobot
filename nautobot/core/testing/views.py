@@ -42,7 +42,7 @@ from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
-from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
+from nautobot.core.views.mixins import NautobotViewSetMixin, ObjectBulkRenameViewMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ModularComponentModel
 from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
@@ -2260,6 +2260,50 @@ class ViewTestCases:
                 self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_form_excludes_objects_without_permission(self):
+            """
+            Check that the bulk rename form leaves out a selected object that the user cannot change.
+
+            Submitting the hidden `pk` inputs that the form renders must rename only the permitted object.
+            """
+            try:
+                url = self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            view = lookup.get_view_for_model(self.model)
+            if view is None or not issubclass(view, ObjectBulkRenameViewMixin):
+                self.skipTest(
+                    f"{self.model.__name__} bulk_rename is served by the legacy BulkRenameView, "
+                    "whose form validates `pk` against the unrestricted queryset."
+                )
+            permitted, denied = list(self._get_queryset().exclude(name="")[:2])
+            permitted_name, denied_name = permitted.name, denied.name
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                constraints={"pk": str(permitted.pk)},
+            )
+
+            # Press "Rename Selected" with both objects selected.
+            response = self.client.post(url, {"pk": [permitted.pk, denied.pk]})
+            self.assertHttpStatus(response, 200)
+            hidden_pks = re.findall(r'<input type="hidden" name="pk" value="([^"]+)"', response.content.decode())
+            self.assertEqual(hidden_pks, [str(permitted.pk)])
+
+            # Previewing with the denied object still selected fails form validation,
+            # and the page displays the validation errors.
+            response = self.client.post(url, {"pk": [permitted.pk, denied.pk], "_preview": True, **self.rename_data})
+            self.assertHttpStatus(response, 200)
+            self.assertIn('id="bulk-rename-errors"', response.content.decode())
+
+            # Press "Apply", posting the hidden `pk` inputs that the form rendered.
+            response = self.client.post(url, {"pk": hidden_pks, "_apply": True, **self.rename_data})
+            self.assertHttpStatus(response, 302)
+            permitted.refresh_from_db()
+            denied.refresh_from_db()
+            self.assertEqual(permitted.name, f"{permitted_name}X")
+            self.assertEqual(denied.name, denied_name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename(self):
             """Legacy test, originally specific to DeviceComponentViewTestCase."""
             try:
@@ -2602,6 +2646,48 @@ class ViewTestCases:
             forbidden.refresh_from_db()
             self.assertIsNotNone(allowed.cable)
             self.assertIsNotNone(forbidden.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_form_excludes_objects_without_permission(self):
+            """
+            Check that the bulk disconnect confirmation page leaves out a selected component that the user cannot change.
+
+            Submitting the hidden `pk` inputs that the confirmation page renders must disconnect only the permitted
+            component.
+            """
+            try:
+                url = self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "whose form validates `pk` against the unrestricted queryset."
+                )
+            self.assertTrue(
+                self.cabled_objects and len(self.cabled_objects) >= 2,
+                f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
+            )
+            permitted, denied = self.cabled_objects[0], self.cabled_objects[1]
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                constraints={"pk": str(permitted.pk)},
+            )
+            self.add_permissions("dcim.change_cable")
+
+            # Press "Disconnect Selected" with both components selected.
+            response = self.client.post(url, {"pk": [permitted.pk, denied.pk]})
+            self.assertHttpStatus(response, 200)
+            hidden_pks = re.findall(r'<input type="hidden" name="pk" value="([^"]+)"', response.content.decode())
+            self.assertEqual(hidden_pks, [str(permitted.pk)])
+
+            # Press the confirmation button, posting the hidden `pk` inputs that the confirmation page rendered.
+            response = self.client.post(url, {"pk": hidden_pks, "_confirm": True, "confirm": True})
+            self.assertHttpStatus(response, 302)
+            permitted.refresh_from_db()
+            denied.refresh_from_db()
+            self.assertIsNone(permitted.cable)
+            self.assertIsNotNone(denied.cable)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_disconnect_with_constrained_cable_permission(self):

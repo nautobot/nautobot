@@ -31,13 +31,18 @@
                 </div>
             </div>
             <div class="col-md-5">
-                {% if form.non_field_errors %}
-                    <div class="card border-danger">
+                {% if form.non_field_errors or form.pk.errors %}
+                    <div class="card border-danger" id="bulk-rename-errors">
                         <div class="card-header bg-danger-subtle border-danger text-body">
                             <strong>Errors</strong>
                         </div>
                         <div class="card-body">
                             {{ form.non_field_errors }}
+                            {% for field in form.hidden_fields %}
+                                {% if field.errors %}
+                                    <strong>{{ field.label }}</strong>: {{ field.errors }}
+                                {% endif %}
+                            {% endfor %}
                         </div>
                     </div>
                 {% endif %}

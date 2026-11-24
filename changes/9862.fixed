@@ -1,1 +1,1 @@
-Fixed the bulk delete confirmation page, which reloaded without an error and deleted nothing when the selection included an object the user cannot delete.
+Fixed bulk delete, bulk rename and bulk disconnect failing to apply when the selection included an object that the user does not have permission to delete or change.
