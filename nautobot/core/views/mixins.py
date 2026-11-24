@@ -1328,8 +1328,8 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
             # Hide actions column in the table for bulk destroy view
             if "actions" in table.columns:
                 table.columns.hide("actions")
-            # The confirmation form validates `pk` against the restricted queryset, so drop the selected objects
-            # that the user cannot delete from its hidden inputs.
+            # The confirmation form validates `pk` against the restricted queryset. Leave the selected objects that
+            # the user cannot delete out of self.pk_list, which the renderer turns into the form's hidden `pk` inputs.
             self.pk_list = [str(pk) for pk in queryset.values_list("pk", flat=True)]
 
         data.update(

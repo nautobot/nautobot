@@ -2043,9 +2043,14 @@ class ViewTestCases:
         @mock.patch.object(JobResult, "enqueue_job")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_delete_form_excludes_objects_without_permission(self, mock_enqueue_job):
-            """Confirm a selection that includes an object the user cannot delete, using the form's own hidden inputs."""
+            """
+            Check that the bulk delete confirmation page leaves out a selected object that the user cannot delete.
+
+            Submitting the hidden `pk` inputs that the confirmation page renders must delete only the permitted object.
+            """
             permitted_pk = str(self.get_deletable_object_pks()[0])
-            # The object the user cannot delete is never deleted, so it does not need to be deletable.
+            # The test never deletes the denied object, so it does not have to come from get_deletable_object_pks(),
+            # which returns only objects that no protected foreign key refers to.
             denied_pk = self._get_queryset().exclude(pk=permitted_pk).values_list("pk", flat=True).first()
             self.assertIsNotNone(denied_pk, f"Test requires at least two instances of {self.model._meta.model_name}.")
             pk_list = [permitted_pk, str(denied_pk)]
@@ -2070,7 +2075,8 @@ class ViewTestCases:
             hidden_pks = re.findall(r'<input type="hidden" name="pk" value="([^"]+)"', response.content.decode())
             self.assertEqual(hidden_pks, [permitted_pk])
 
-            # A confirmation that still includes the denied object fails validation and shows why.
+            # Submitting the confirmation with the denied object still selected fails form validation,
+            # and the page displays the validation errors.
             response = self.client.post(
                 self._get_url("bulk_delete"), {"pk": pk_list, "confirm": True, "_confirm": True}
             )

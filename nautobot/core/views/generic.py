@@ -1359,7 +1359,8 @@ class BulkDeleteView(
                 logger.debug("Form validation failed")
 
         else:
-            # The form validates `pk` against the restricted queryset, so leave out the objects the user cannot delete.
+            # The form validates `pk` against the queryset restricted to objects the user can delete. Leave the other
+            # selected objects out of the hidden `pk` inputs so that submitting the confirmation does not fail validation.
             form = form_cls(
                 initial={
                     "pk": pk_list if delete_all else [str(pk) for pk in queryset.values_list("pk", flat=True)],
