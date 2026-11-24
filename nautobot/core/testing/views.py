@@ -2040,6 +2040,56 @@ class ViewTestCases:
                 target_status_code=200,
             )
 
+        @mock.patch.object(JobResult, "enqueue_job")
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_delete_form_excludes_objects_without_permission(self, mock_enqueue_job):
+            """Confirm a selection that includes an object the user cannot delete, using the form's own hidden inputs."""
+            permitted_pk = str(self.get_deletable_object_pks()[0])
+            # The object the user cannot delete is never deleted, so it does not need to be deletable.
+            denied_pk = self._get_queryset().exclude(pk=permitted_pk).values_list("pk", flat=True).first()
+            self.assertIsNotNone(denied_pk, f"Test requires at least two instances of {self.model._meta.model_name}.")
+            pk_list = [permitted_pk, str(denied_pk)]
+
+            obj_perm = users_models.ObjectPermission(
+                name="Test permission",
+                constraints={"pk": permitted_pk},
+                actions=["delete"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            self.add_permissions("extras.view_jobresult")
+
+            job_model = BulkDeleteObjects().job_model
+            job_result = JobResult.objects.create(name=job_model.name, job_model=job_model, user=self.user)
+            mock_enqueue_job.return_value = job_result
+
+            # Press "Delete Selected" with every object selected.
+            response = self.client.post(self._get_url("bulk_delete"), {"pk": pk_list})
+            self.assertHttpStatus(response, 200)
+            hidden_pks = re.findall(r'<input type="hidden" name="pk" value="([^"]+)"', response.content.decode())
+            self.assertEqual(hidden_pks, [permitted_pk])
+
+            # A confirmation that still includes the denied object fails validation and shows why.
+            response = self.client.post(
+                self._get_url("bulk_delete"), {"pk": pk_list, "confirm": True, "_confirm": True}
+            )
+            self.assertHttpStatus(response, 200)
+            self.assertIn('id="bulk-deletion-errors"', response.content.decode())
+            mock_enqueue_job.assert_not_called()
+
+            # Press "Delete these objects", posting the hidden inputs the confirmation page rendered.
+            data = {"pk": hidden_pks, "confirm": True, "_confirm": True}
+            response = self.client.post(self._get_url("bulk_delete"), data)
+            mock_enqueue_job.assert_called_once()
+            self.assertEqual(mock_enqueue_job.call_args.kwargs["job_kwargs"].get("pk_list"), [permitted_pk])
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult", args=[job_result.pk]),
+                status_code=302,
+                target_status_code=200,
+            )
+
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """
         Rename multiple instances.
