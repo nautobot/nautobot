@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import ManyToOneRel
 from django.db.models.signals import pre_delete
+from django.test import tag
 from django.utils import timezone
 import time_machine
 import yaml
@@ -22,15 +23,16 @@ from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
-from nautobot.core.jobs.archive import (
-    _exclude_records_whose_relations_block_deletion,
-    _iterate_records_by_timestamp,
-    ArchiveOldRecords,
-)
+from nautobot.core.jobs.archive import _iterate_records_by_timestamp, ArchiveOldRecords, FORCE_CASCADE_DELETE_HINT
 from nautobot.core.jobs.cleanup import CleanupTypes
-from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.jobs.deletion_utils import (
+    _describe_reference_path,
+    exclude_records_whose_relations_block_deletion,
+    find_relations_of_concern,
+)
+from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
-from nautobot.dcim.models import DeviceType, FrontPortTemplate, LocationType, Manufacturer
+from nautobot.dcim.models import DeviceType, FrontPortTemplate, Interface, LocationType, Manufacturer
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobResultStatusChoices,
@@ -371,6 +373,13 @@ class LogsCleanupTestCase(TransactionTestCase):
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(JobResult))
         obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectChange))
+        # Everything deleted along with a job result or object change must be permitted to the user too.
+        self.add_permissions(
+            "extras.delete_joblogentry",
+            "extras.delete_jobconsoleentry",
+            "extras.delete_objectmetadata",
+            "extras.delete_fileproxy",
+        )
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
@@ -469,6 +478,169 @@ class LogsCleanupTestCase(TransactionTestCase):
             self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
             self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
 
+    def make_old_job_result_with_log_entry(self):
+        """Create a `JobResult` that finished long before any cutoff the tests use, with one log entry."""
+        old_job_result = JobResult.objects.create(
+            name="Cleanup Test Job",
+            task_name="nautobot.core.tests.test_jobs.cleanup_test_job",
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+        old_job_result.date_done = LIVE_HISTORY_START - timedelta(days=365)
+        old_job_result.save()
+        log_entry = JobLogEntry.objects.create(
+            job_result=old_job_result, log_level=LogLevelChoices.LOG_INFO, grouping="main", message="cleanup test"
+        )
+        return old_job_result, log_entry
+
+    def test_a_user_without_delete_permission_on_log_entries_fails_the_job(self):
+        """
+        Deleting a job result deletes its log and console entries.
+
+        The job therefore checks for permission to delete both models before it deletes anything.
+        """
+        self.add_permissions("extras.delete_jobresult")
+        old_job_result, _ = self.make_old_job_result_with_log_entry()
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            username=self.user.username,
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertIn(
+            f'User "{self.user}" does not have permission to delete JobLogEntry records',
+            cleanup_job_result.job_log_entries.values_list("message", flat=True),
+        )
+
+    def test_a_job_result_with_log_entries_the_user_cannot_delete_is_not_deleted(self):
+        """Deleting the job result would delete log entries that the user is not permitted to delete."""
+        self.add_permissions("extras.delete_jobresult", "extras.delete_jobconsoleentry")
+        held_job_result, held_log_entry = self.make_old_job_result_with_log_entry()
+        permitted_job_result, permitted_log_entry = self.make_old_job_result_with_log_entry()
+        self.add_permissions("extras.delete_joblogentry", constraints={"pk__in": [str(permitted_log_entry.pk)]})
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            username=self.user.username,
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(JobLogEntry.objects.filter(pk=held_log_entry.pk).exists())
+        self.assertFalse(JobResult.objects.filter(pk=permitted_job_result.pk).exists())
+        job_log_messages = list(cleanup_job_result.job_log_entries.values_list("message", flat=True))
+        # The factory job results from `setUp` have log entries the user may not delete either, so the counts in the
+        # messages are not asserted.
+        self.assertTrue(
+            any(
+                message.startswith("Skipping ")
+                and message.endswith(
+                    "JobResult records whose deletion would also delete the extras.JobLogEntry records that reference"
+                    f" them through extras.JobLogEntry.job_result. User {self.user} is not permitted to delete those"
+                    " extras.JobLogEntry records."
+                )
+                for message in job_log_messages
+            ),
+            job_log_messages,
+        )
+        self.assertTrue(any(message.startswith("Omitting ") for message in job_log_messages), job_log_messages)
+
+    def test_job_results_are_deleted_across_several_batches(self):
+        """Each batch is read after the previous one is deleted, so paging must not skip or repeat records."""
+        old_job_results = [self.make_old_job_result_with_log_entry()[0] for _ in range(3)]
+        for old_job_result in old_job_results:
+            JobLogEntry.objects.create(
+                job_result=old_job_result, log_level=LogLevelChoices.LOG_INFO, grouping="main", message="second"
+            )
+        old_job_result_pks = [old_job_result.pk for old_job_result in old_job_results]
+        cutoff_job_results = JobResult.objects.filter(date_done__lt=timezone.now() - timedelta(days=60))
+        expected_job_result_count = cutoff_job_results.count()
+        expected_log_entry_count = JobLogEntry.objects.filter(job_result__in=cutoff_job_results).count()
+
+        with mock.patch("nautobot.core.jobs.cleanup.CLEANUP_BATCH_SIZE", 1):
+            cleanup_job_result = create_job_result_and_run_job(
+                "nautobot.core.jobs.cleanup",
+                "LogsCleanup",
+                cleanup_types=[CleanupTypes.JOB_RESULT],
+                max_age=60,
+            )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertFalse(JobResult.objects.filter(pk__in=old_job_result_pks).exists())
+        self.assertFalse(JobLogEntry.objects.filter(job_result_id__in=old_job_result_pks).exists())
+        self.assertEqual(cleanup_job_result.result["extras.JobResult"], expected_job_result_count)
+        self.assertEqual(cleanup_job_result.result["extras.JobLogEntry"], expected_log_entry_count)
+
+    # The example_app models below are imported inside each test because example_app is an optional app: the
+    # module must still import when it is not installed, and the `example_app` tag skips these tests then.
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_is_restricted_is_not_deleted(self):
+        """
+        Deleting the job result would cascade to the log entry, which a `RESTRICT` reference forbids.
+
+        The job result and its log entry are left in place, and the other old job results are still deleted.
+        """
+        from example_app.models import AnotherExampleModel
+
+        held_job_result, held_log_entry = self.make_old_job_result_with_log_entry()
+        AnotherExampleModel.objects.create(name="Cleanup Restrict Probe", job_log_entry=held_log_entry)
+        free_job_result, _ = self.make_old_job_result_with_log_entry()
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(JobLogEntry.objects.filter(pk=held_log_entry.pk).exists())
+        self.assertFalse(JobResult.objects.filter(pk=free_job_result.pk).exists())
+        self.assertTrue(
+            any(
+                message.startswith("Skipping 1 JobResult records")
+                for message in cleanup_job_result.job_log_entries.values_list("message", flat=True)
+            )
+        )
+
+    @tag("example_app")
+    def test_records_with_many_to_many_links_are_deleted_with_their_links(self):
+        """
+        A record that cascades from a job result is deleted together with its many-to-many links, in both directions.
+
+        Regression test for #9639, where the links were left behind and the run failed on a foreign key violation.
+        """
+        from example_app.models import ExampleModel
+
+        old_job_result, log_entry = self.make_old_job_result_with_log_entry()
+        cascading_record = ExampleModel.objects.create(name="Cleanup M2M Probe", job_log_entry=log_entry)
+        linked_record = ExampleModel.objects.create(name="Cleanup M2M Linked Probe")
+        cascading_record.linked_example_models.add(linked_record)
+        linked_record.linked_example_models.add(cascading_record)
+
+        cleanup_job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.cleanup",
+            "LogsCleanup",
+            cleanup_types=[CleanupTypes.JOB_RESULT],
+            max_age=60,
+        )
+
+        self.assertJobResultStatus(cleanup_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertFalse(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=linked_record.pk).exists())
+        self.assertFalse(linked_record.linked_example_models.exists())
+        self.assertFalse(linked_record.linking_example_models.exists())
+
 
 class BulkEditTestCase(TransactionTestCase):
     """
@@ -482,8 +654,8 @@ class BulkEditTestCase(TransactionTestCase):
         self.role_ct = ContentType.objects.get_for_model(Role)
         self.ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
         self.tags = [Tag.objects.create(name=f"Example Tag {x}") for x in range(5)]
-        for tag in self.tags:
-            tag.content_types.add(self.namespace_ct)
+        for tag_object in self.tags:
+            tag_object.content_types.add(self.namespace_ct)
 
     def _common_no_error_test_assertion(self, model, job_result, expected_count, **filter_params):
         self.assertJobResultStatus(job_result)
@@ -1483,6 +1655,8 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         # The job refuses to run without this, because archiving deletes the records it copies.
         self.add_permissions("extras.delete_objectchange")
         self.add_permissions("extras.add_archivedobjectchange")
+        # A forced cascade deletes an object change's metadata too, which the user must be permitted to do.
+        self.add_permissions("extras.delete_objectmetadata")
 
         # Remove any left over models that may exist in order to provide a clean environment
         # for testing
@@ -1952,6 +2126,27 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         self.assertEqual(ArchivedObjectChange.objects.count(), 0)
         self.assertEqual(ObjectMetadata.objects.filter(assigned_object_id=old_object_change.pk).count(), 1)
 
+    def test_object_changes_the_user_cannot_add_to_the_archive_stay_live(self):
+        """An `add` constraint on the archived copies is checked against each written copy, record by record."""
+        permitted_object_change = self.make_object_change(age_in_days=90, object_repr="permitted object")
+        unpermitted_object_change = self.make_object_change(age_in_days=90, object_repr="unpermitted object")
+        self.remove_permissions("extras.add_archivedobjectchange")
+        self.add_permissions("extras.add_archivedobjectchange", constraints={"object_repr": "permitted object"})
+
+        job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(ArchivedObjectChange.objects.filter(pk=permitted_object_change.pk).exists())
+        self.assertFalse(ObjectChange.objects.filter(pk=permitted_object_change.pk).exists())
+        self.assertFalse(ArchivedObjectChange.objects.filter(pk=unpermitted_object_change.pk).exists())
+        self.assertTrue(ObjectChange.objects.filter(pk=unpermitted_object_change.pk).exists())
+        self.assertEqual(job_result.result["extras.ObjectChange"], 1)
+        self.assertIn(
+            f"Not archiving 1 records, because user {self.user} is not permitted to add them to"
+            " extras.ArchivedObjectChange.",
+            self.get_job_log_messages(job_result),
+        )
+
     def test_object_changes_held_hot_are_reported(self):
         self.make_object_change(age_in_days=90)
         held_object_change = self.make_object_change(age_in_days=90)
@@ -1993,7 +2188,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_object_changes = _exclude_records_whose_relations_block_deletion(
+            remaining_object_changes = exclude_records_whose_relations_block_deletion(
                 ObjectChange.objects.all(), ObjectChange, (), falsy_force_value, logging.getLogger(__name__)
             )
             self.assertNotIn(old_object_change, remaining_object_changes, falsy_force_value)
@@ -2015,7 +2210,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         ]
         self.assertNotEqual(content_type_relations, [], "ContentType no longer has a relation without a related_name")
 
-        remaining_content_types = _exclude_records_whose_relations_block_deletion(
+        remaining_content_types = exclude_records_whose_relations_block_deletion(
             ContentType.objects.all(), ContentType, (), False, logging.getLogger(__name__)
         )
         # Evaluating the queryset is what raises FieldError when the accessor name is used as a lookup.
@@ -2026,7 +2221,7 @@ class ArchiveOldRecordsObjectChangeTestCase(TransactionTestCase):
         DeviceType.objects.create(manufacturer=protected_manufacturer, model="Archive Probe Model")
         unprotected_manufacturer = Manufacturer.objects.create(name="Archive Unprotected Probe")
 
-        remaining_manufacturers = _exclude_records_whose_relations_block_deletion(
+        remaining_manufacturers = exclude_records_whose_relations_block_deletion(
             Manufacturer.objects.all(),
             Manufacturer,
             (),
@@ -2101,11 +2296,13 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
     def setUp(self):
         super().setUp()
 
-        # The job refuses to run without this, because archiving deletes the records it copies. The child
-        # entries need no permission of their own; they go wherever their job result goes.
+        # The job refuses to run without the delete and add permissions, because archiving deletes the records it
+        # copies. A job result is also skipped unless the user may delete all of its child entries.
         self.add_permissions("extras.delete_jobresult")
         self.add_permissions("extras.delete_joblogentry")
         self.add_permissions("extras.delete_jobconsoleentry")
+        # A forced cascade deletes a job result's metadata and files too, which the user must be permitted to do.
+        self.add_permissions("extras.delete_objectmetadata", "extras.delete_fileproxy")
         self.add_permissions("extras.add_archivedjobresult")
         self.add_permissions("extras.add_archivedjoblogentry")
         self.add_permissions("extras.add_archivedjobconsoleentry")
@@ -2532,6 +2729,115 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
         self.assertTrue(does_permission_message_exist)
 
+    def test_entries_the_user_cannot_add_to_the_archive_stay_live_with_their_job_result(self):
+        """
+        An `add` constraint on the archived log entries is checked against each written copy.
+
+        The permitted entry is copied to the archive and deleted. The other entry stays in the live table, and so does
+        the job result, so that the remaining entry is not deleted with it. A later run without the constraint
+        archives the remaining entry and the job result.
+        """
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        permitted_message = f"{old_job_result.name} log entry 0"
+        self.remove_permissions("extras.add_archivedjoblogentry")
+        self.add_permissions("extras.add_archivedjoblogentry", constraints={"message": permitted_message})
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(
+            list(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).values_list("message", flat=True)),
+            [permitted_message],
+        )
+        self.assertEqual(
+            list(JobLogEntry.objects.filter(job_result_id=old_job_result.pk).values_list("message", flat=True)),
+            [f"{old_job_result.name} log entry 1"],
+        )
+        job_log_messages = self.get_job_log_messages(archive_job_result)
+        self.assertIn(
+            f"Not archiving 1 records, because user {self.user} is not permitted to add them to"
+            " extras.ArchivedJobLogEntry.",
+            job_log_messages,
+        )
+        self.assertTrue(any(message.startswith("Not deleting 1 JobResult records") for message in job_log_messages))
+
+        self.remove_permissions("extras.add_archivedjoblogentry", constraints={"message": permitted_message})
+        self.add_permissions("extras.add_archivedjoblogentry")
+
+        resumed_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(resumed_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+
+    def test_a_job_result_with_entries_the_user_cannot_delete_is_not_archived(self):
+        """
+        Deleting the job result would delete entries that the user is not permitted to delete.
+
+        The user may not delete only one of the skipped job result's two entries, but the whole job result must still
+        be skipped.
+        """
+        for child_model, related_name in ((JobLogEntry, "job_log_entries"), (JobConsoleEntry, "job_console_entries")):
+            child_entry_count_kwarg = "log_entry_count" if child_model is JobLogEntry else "console_entry_count"
+            with self.subTest(child_model=child_model._meta.label):
+                held_job_result = self.make_job_result(age_in_days=90, **{child_entry_count_kwarg: 2})
+                permitted_job_result = self.make_job_result(age_in_days=90, **{child_entry_count_kwarg: 1})
+                permitted_entry_pks = [
+                    str(getattr(held_job_result, related_name).order_by("pk").first().pk),
+                    str(getattr(permitted_job_result, related_name).get().pk),
+                ]
+                permission_name = f"extras.delete_{child_model._meta.model_name}"
+                self.remove_permissions(permission_name)
+                self.add_permissions(permission_name, constraints={"pk__in": permitted_entry_pks})
+
+                archive_job_result = self.run_archive_old_records_job()
+
+                self.assertJobResultStatus(archive_job_result)
+                self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertEqual(child_model.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+                self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertTrue(ArchivedJobResult.objects.filter(pk=permitted_job_result.pk).exists())
+                self.assertIn(
+                    f"Skipping 1 JobResult records whose deletion would also delete the {child_model._meta.label}"
+                    f" records that reference them through {child_model._meta.label}.job_result. User {self.user} is"
+                    f" not permitted to delete those {child_model._meta.label} records.",
+                    self.get_job_log_messages(archive_job_result),
+                )
+
+                self.remove_permissions(permission_name, constraints={"pk__in": permitted_entry_pks})
+                self.add_permissions(permission_name)
+                held_job_result.delete()
+
+    def test_a_job_result_the_user_cannot_add_to_the_archive_stays_live_with_its_entries(self):
+        """
+        An `add` constraint on the archived job results is checked against each written copy.
+
+        The entries of a job result whose copy is not permitted are not archived either, so no part of that job result
+        is copied to the archive.
+        """
+        permitted_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, name="Permitted Archive Job")
+        unpermitted_job_result = self.make_job_result(age_in_days=90, log_entry_count=1, name="Unpermitted Archive Job")
+        self.remove_permissions("extras.add_archivedjobresult")
+        self.add_permissions("extras.add_archivedjobresult", constraints={"name": "Permitted Archive Job"})
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=permitted_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=permitted_job_result.pk).exists())
+        self.assertTrue(JobResult.objects.filter(pk=unpermitted_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=unpermitted_job_result.pk).count(), 1)
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=unpermitted_job_result.pk).exists())
+        self.assertFalse(ArchivedJobLogEntry.objects.filter(job_result_id=unpermitted_job_result.pk).exists())
+        self.assertEqual(archive_job_result.result["extras.JobResult"], 1)
+        self.assertIn(
+            f"Not archiving 1 records, because user {self.user} is not permitted to add them to"
+            " extras.ArchivedJobResult.",
+            self.get_job_log_messages(archive_job_result),
+        )
+
     def test_job_results_that_have_not_finished_are_not_archived(self):
         """
         A job that is still going has no end time, so a long running one would otherwise be deleted out
@@ -2607,7 +2913,7 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         )
 
         for falsy_force_value in (False, None, 0, ""):
-            remaining_job_results = _exclude_records_whose_relations_block_deletion(
+            remaining_job_results = exclude_records_whose_relations_block_deletion(
                 JobResult.objects.all(),
                 JobResult,
                 (JobLogEntry, JobConsoleEntry),
@@ -2694,3 +3000,295 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
             f"Stopping at batch 1: {archive_failure_message}. Archived 2 JobResult records before stopping."
         )
         self.assertIn(expected_stopping_message, self.get_job_log_messages(archive_job_result))
+
+    # The example_app models below are imported inside each test because example_app is an optional app: the
+    # module must still import when it is not installed, and the `example_app` tag skips these tests then.
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_is_protected_is_not_archived_even_when_forced(self):
+        """
+        Deleting the job result would cascade to the log entry, which a `RESTRICT` reference forbids.
+
+        Only one of the two log entries is referenced. A filter that tests each log entry separately would select the
+        job result for archival, because the other log entry is not referenced.
+        """
+        from example_app.models import AnotherExampleModel
+
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+                protecting_record = AnotherExampleModel.objects.create(
+                    name=f"Archive Protect Probe {force_cascade_delete}",
+                    job_log_entry=held_job_result.job_log_entries.first(),
+                )
+                free_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+
+                archive_job_result = self.run_archive_old_records_job(force_cascade_delete=force_cascade_delete)
+
+                self.assertJobResultStatus(archive_job_result)
+                self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+                self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertFalse(ArchivedJobLogEntry.objects.filter(job_result_id=held_job_result.pk).exists())
+                self.assertTrue(ArchivedJobResult.objects.filter(pk=free_job_result.pk).exists())
+                self.assertTrue(
+                    any(
+                        message.startswith("Omitting 1 JobResult records")
+                        for message in self.get_job_log_messages(archive_job_result)
+                    )
+                )
+
+                protecting_record.delete()
+
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_would_cascade_is_not_archived(self):
+        """
+        Deleting the job result would cascade through the log entry to a record that is not archived.
+
+        The log entry must not be lost either. It must stay in the live table with its job result, rather than be
+        skipped when the child entries are archived and then deleted with the job result.
+        """
+        from example_app.models import ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Cascade Probe", job_log_entry=held_job_result.job_log_entries.first()
+        )
+
+        archive_job_result = self.run_archive_old_records_job()
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertIn(FORCE_CASCADE_DELETE_HINT, self.get_job_log_messages(archive_job_result))
+
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_would_cascade_is_archived_when_forced(self):
+        """
+        Deleting the cascaded record also deletes its many-to-many links in both directions.
+
+        The record at the other end of those links is not deleted.
+        """
+        from example_app.models import ExampleModel
+
+        self.add_permissions("example_app.delete_examplemodel")
+        old_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Forced Cascade Probe", job_log_entry=old_job_result.job_log_entries.first()
+        )
+        linked_record = ExampleModel.objects.create(name="Archive Forced Cascade Linked Probe")
+        cascading_record.linked_example_models.add(linked_record)
+        linked_record.linked_example_models.add(cascading_record)
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertFalse(JobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertTrue(ArchivedJobResult.objects.filter(pk=old_job_result.pk).exists())
+        self.assertEqual(ArchivedJobLogEntry.objects.filter(job_result_id=old_job_result.pk).count(), 2)
+        self.assertFalse(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=linked_record.pk).exists())
+        self.assertFalse(linked_record.linked_example_models.exists())
+        self.assertFalse(linked_record.linking_example_models.exists())
+
+    @tag("example_app")
+    def test_a_forced_cascade_into_a_record_the_user_cannot_delete_holds_the_job_result(self):
+        """Forcing accepts the cascade, but not the deletion of a record the user is not permitted to delete."""
+        from example_app.models import ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Unpermitted Cascade Probe", job_log_entry=held_job_result.job_log_entries.first()
+        )
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+        self.assertIn(
+            "Skipping 1 JobResult records whose deletion would also delete the example_app.ExampleModel records that"
+            " reference them through example_app.ExampleModel.job_log_entry -> extras.JobLogEntry.job_result. User"
+            f" {self.user} is not permitted to delete those example_app.ExampleModel records.",
+            self.get_job_log_messages(archive_job_result),
+        )
+
+    @tag("example_app")
+    def test_a_protected_record_beyond_a_forced_cascade_holds_the_job_result(self):
+        """
+        Forcing allows the cascade to delete the `ExampleModel` record.
+
+        A `PROTECT` reference to that record still prevents its deletion, so the job result is skipped.
+        """
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=1)
+        cascading_record = ExampleModel.objects.create(
+            name="Archive Nested Protect Probe", job_log_entry=held_job_result.job_log_entries.first()
+        )
+        AnotherExampleModel.objects.create(name="Archive Nested Protect Probe", example_model=cascading_record)
+
+        archive_job_result = self.run_archive_old_records_job(force_cascade_delete=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 1)
+        self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+        self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
+
+    @tag("example_app")
+    def test_a_job_result_whose_log_entry_is_referenced_without_a_reverse_relation_is_not_archived(self):
+        """
+        `AnotherExampleModel.job_log_entry_without_reverse_relation` cascades, but no lookup path can include it.
+
+        The record it would delete cannot be checked, so the job result is skipped even when the cascade is forced.
+        """
+        from example_app.models import AnotherExampleModel
+
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+                referencing_record = AnotherExampleModel.objects.create(
+                    name=f"Archive Hidden Relation Probe {force_cascade_delete}",
+                    job_log_entry_without_reverse_relation=held_job_result.job_log_entries.first(),
+                )
+
+                archive_job_result = self.run_archive_old_records_job(force_cascade_delete=force_cascade_delete)
+
+                self.assertJobResultStatus(archive_job_result)
+                self.assertTrue(JobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
+                self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
+                self.assertTrue(AnotherExampleModel.objects.filter(pk=referencing_record.pk).exists())
+                self.assertIn(
+                    "Skipping 1 JobResult records that are still referenced through"
+                    " example_app.AnotherExampleModel.job_log_entry_without_reverse_relation ->"
+                    " extras.JobLogEntry.job_result. To include them, first delete the referencing"
+                    " example_app.AnotherExampleModel records or remove their references.",
+                    self.get_job_log_messages(archive_job_result),
+                )
+
+                referencing_record.delete()
+
+    @tag("example_app")
+    def test_a_dry_run_does_not_count_the_log_entries_of_held_job_results(self):
+        from example_app.models import ExampleModel
+
+        held_job_result = self.make_job_result(age_in_days=90, log_entry_count=2)
+        ExampleModel.objects.create(name="Archive Dry Run Probe", job_log_entry=held_job_result.job_log_entries.first())
+        self.make_job_result(age_in_days=90, log_entry_count=3)
+
+        archive_job_result = self.run_archive_old_records_job(dryrun=True)
+
+        self.assertJobResultStatus(archive_job_result)
+        self.assertEqual(archive_job_result.result["extras.JobResult"], 1)
+        self.assertEqual(archive_job_result.result["extras.JobLogEntry"], 3)
+
+
+class FindRelationsOfConcernTestCase(TestCase):
+    """Test the relation search that `ArchiveOldRecords` and `LogsCleanup` use to decide what they can delete safely."""
+
+    @tag("example_app")
+    def test_relations_are_found_through_the_children_the_job_archives_itself(self):
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        relations = find_relations_of_concern(JobResult, (JobLogEntry, JobConsoleEntry), force_cascade_delete=False)
+
+        self.assertIn(("job_log_entries__more_example_models", AnotherExampleModel), relations.blocking)
+        self.assertIn(("job_log_entries__example_models", ExampleModel), relations.cascading)
+        self.assertIn(("files", FileProxy), relations.cascading)
+        # The children themselves are not a concern, because the job archives them before the job result, but their
+        # records are deleted along with it.
+        reported_lookups = [lookup for lookup, _ in relations.blocking + relations.cascading]
+        self.assertNotIn("job_log_entries", reported_lookups)
+        self.assertNotIn("job_console_entries", reported_lookups)
+        self.assertEqual(
+            relations.followed, [("job_console_entries", JobConsoleEntry), ("job_log_entries", JobLogEntry)]
+        )
+
+    @tag("example_app")
+    def test_forcing_follows_a_cascade_to_the_blocking_relations_beyond_it(self):
+        from example_app.models import AnotherExampleModel, ExampleModel
+
+        relations = find_relations_of_concern(JobResult, (JobLogEntry, JobConsoleEntry), force_cascade_delete=True)
+
+        self.assertIn(("job_log_entries__example_models__more_example_models", AnotherExampleModel), relations.blocking)
+        self.assertEqual(relations.cascading, [])
+        self.assertIn(("job_log_entries__example_models", ExampleModel), relations.followed)
+        self.assertIn(("files", FileProxy), relations.followed)
+
+    @tag("example_app")
+    def test_a_foreign_key_without_a_reverse_relation_is_found(self):
+        """A `related_name` ending in `+` hides the relation from `_meta.related_objects`, but not from deletion."""
+        from example_app.models import AnotherExampleModel
+
+        hidden_field = AnotherExampleModel._meta.get_field("job_log_entry_without_reverse_relation")
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                relations = find_relations_of_concern(
+                    JobResult, (JobLogEntry, JobConsoleEntry), force_cascade_delete=force_cascade_delete
+                )
+
+                self.assertIn(("job_log_entries", hidden_field), relations.hidden_blocking)
+
+    def test_a_reference_path_is_described_by_its_foreign_keys(self):
+        """Each step is named by its foreign key, or by the generic foreign key for a GenericRelation."""
+        self.assertEqual(
+            _describe_reference_path(JobResult, "job_log_entries"),
+            "extras.JobLogEntry.job_result",
+        )
+        self.assertEqual(
+            _describe_reference_path(JobResult, "job_log_entries__associated_object_metadata"),
+            "extras.ObjectMetadata.assigned_object -> extras.JobLogEntry.job_result",
+        )
+
+    def test_relations_that_set_a_value_on_delete_are_not_a_concern(self):
+        """`Interface.bridge` is `SET_NULL`: deleting the bridge leaves the bridged interfaces in place."""
+        for force_cascade_delete in (False, True):
+            with self.subTest(force_cascade_delete=force_cascade_delete):
+                relations = find_relations_of_concern(Interface, force_cascade_delete=force_cascade_delete)
+
+                reported_lookups = [lookup for found_relations in relations for lookup, _ in found_relations]
+                self.assertNotIn("bridged_interfaces", reported_lookups)
+
+    def test_a_forced_cascade_cycle_is_blocking(self):
+        """
+        `Interface.parent_interface` cascades to child interfaces, whose own children cascade in turn, to any depth.
+
+        A lookup path cannot follow the cycle to every depth, so the records it reaches cannot all be checked, and the
+        search does not go round the cycle again.
+        """
+        unforced_relations = find_relations_of_concern(Interface, force_cascade_delete=False)
+        forced_relations = find_relations_of_concern(Interface, force_cascade_delete=True)
+
+        self.assertIn(("child_interfaces", Interface), unforced_relations.cascading)
+        self.assertIn(("child_interfaces", Interface), forced_relations.blocking)
+        self.assertNotIn(("child_interfaces", Interface), forced_relations.followed)
+        all_forced_lookups = [
+            lookup for lookup, _ in forced_relations.blocking + forced_relations.cascading + forced_relations.followed
+        ]
+        self.assertFalse(any(lookup.startswith("child_interfaces__") for lookup in all_forced_lookups))
+
+    def test_a_forced_cascade_into_object_metadata_is_followed(self):
+        """
+        Every `BaseModel` has GenericRelations to `ObjectMetadata` and `DataCompliance`.
+
+        The cascade into an object change's own metadata is followed rather than held back. The reverse `GenericRel`
+        that each model's GenericRelation adds to `ObjectMetadata` and `DataCompliance`, such as
+        `associated_object_metadata_circuits_circuit`, is not a relation of concern at all.
+        """
+        relations = find_relations_of_concern(ObjectChange, force_cascade_delete=True)
+
+        self.assertIn(("associated_object_metadata", ObjectMetadata), relations.followed)
+        reported_lookups = [lookup for lookup, _ in relations.blocking + relations.cascading]
+        self.assertNotIn("associated_object_metadata", reported_lookups)
+        self.assertFalse(
+            any(
+                segment.startswith(("associated_object_metadata_", "associated_data_compliance_"))
+                for lookup in reported_lookups
+                for segment in lookup.split("__")
+            ),
+            reported_lookups,
+        )

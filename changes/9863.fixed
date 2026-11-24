@@ -1,0 +1,5 @@
+Fixed the "Archive Old Records" system Job deleting log entries without archiving them, or failing part way through, when a log entry of an archived Job result was referenced by another record.
+Fixed the "Archive Old Records" system Job archiving records whose deletion would also delete, or be blocked by, records several relationships away.
+Fixed the "Archive Old Records" system Job skipping records that are only referenced through `SET_NULL`, `SET_DEFAULT` or many-to-many relationships.
+Fixed the "Archive Old Records" and "Logs Cleanup" system Jobs deleting records that the user running the Job is not permitted to delete, such as Job log entries or records deleted by a cascade; the records whose deletion would delete them are now skipped and reported.
+Fixed the "Archive Old Records" system Job ignoring object permission constraints on adding archived records; records whose archived copy the user is not permitted to add now stay live and are reported.

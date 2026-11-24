@@ -1,17 +1,50 @@
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import CASCADE, PROTECT
 from django.db.models.signals import pre_delete
 from django.utils import timezone
 
 from nautobot.core.choices import ChoiceSet
+from nautobot.core.jobs.deletion_utils import (
+    exclude_records_whose_dependents_the_user_cannot_delete,
+    exclude_records_whose_relations_block_deletion,
+)
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.extras.jobs import IntegerVar, Job, MultiChoiceVar
-from nautobot.extras.models import JobResult, ObjectChange
+from nautobot.extras.models import JobConsoleEntry, JobLogEntry, JobResult, ObjectChange
 from nautobot.extras.signals import _handle_deleted_object
 
 name = "System Jobs"
+
+# The number of records that are loaded into memory and deleted at one time.
+CLEANUP_BATCH_SIZE = 1000
+
+
+def _iterate_pks_in_batches(queryset, batch_size):
+    """
+    Yield the primary keys of the queryset's records, in ascending order, a list of at most `batch_size` at a time.
+
+    Each batch is read after the previous one has been yielded, starting after the last primary key in the previous
+    batch. A caller that deletes each batch before it asks for the next one therefore never gets a deleted record,
+    and the loop ends even if a batch is not deleted.
+    """
+    ordered_queryset = queryset.order_by("pk")
+    # Materialized with `list()`, because MySQL cannot use a sliced subquery in a later `pk__in` filter.
+    batch_pks = list(ordered_queryset.values_list("pk", flat=True)[:batch_size])
+    while batch_pks:
+        yield batch_pks
+        batch_pks = list(ordered_queryset.filter(pk__gt=batch_pks[-1]).values_list("pk", flat=True)[:batch_size])
+
+
+def _delete_batch(model, pks, deletion_summary):
+    """
+    Delete the `model` records with the given primary keys, and add the deleted record counts to `deletion_summary`.
+
+    The counts include the records of other models that the deletion cascaded to.
+    """
+    _, deleted_counts_by_model = model.objects.filter(pk__in=pks).delete()
+    for model_label, deleted_count in deleted_counts_by_model.items():
+        deletion_summary[model_label] = deletion_summary.get(model_label, 0) + deleted_count
 
 
 class CleanupTypes(ChoiceSet):
@@ -49,51 +82,49 @@ class LogsCleanup(Job):
         description = "Delete ObjectChange and/or JobResult/JobLogEntry records older than a specified cutoff."
         has_sensitive_variables = False
 
-    def recursive_delete_with_cascade(self, queryset, deletion_summary):
+    def _delete_records(self, queryset, model, deletion_summary):
         """
-        Recursively deletes all related objects with CASCADE for a given queryset.
+        Delete the records that can be deleted safely, together with everything that cascades from them.
+
+        Records are skipped, and reported, when deleting them would fail: see
+        `exclude_records_whose_relations_block_deletion`. They are also skipped when the user may not delete every
+        record that would be deleted with them: see `exclude_records_whose_dependents_the_user_cannot_delete`.
+        Everything else is deleted through `QuerySet.delete()`, so that Django clears many-to-many rows, applies
+        `SET_NULL` and similar options, and follows generic relations, rather than this job reimplementing each case.
+
+        `QuerySet.delete()` loads the records it deletes into memory, so they are deleted in batches. The log and
+        console entries of a batch of job results are deleted first, in batches of their own, because a single job
+        result can have tens of thousands of them. Each batch commits on its own, which keeps the transactions as
+        small as the batches. If deleting a job result then fails, its entries are already gone and the job result is
+        left in place, to be deleted by the next run.
 
         Args:
-            queryset (QuerySet): The queryset of objects to delete.
-            deletion_summary (dict): A dictionary to store the count of deleted objects for each model.
+            queryset (QuerySet): The records to delete.
+            model (Model): The model the queryset selects from.
+            deletion_summary (dict): Deleted record counts keyed by model label, updated in place.
         """
-        related_objects = queryset.model._meta.related_objects
-        queryset = queryset.only("id")
-
-        for related_object in related_objects:
-            if related_object.on_delete is CASCADE:
-                related_model = related_object.related_model
-                related_field_name = related_object.field.name
-                cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-                if cascade_queryset.exists():
-                    self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-            elif related_object.on_delete is PROTECT:
-                self.logger.warning(
-                    "Skipping %s records with a protected relationship to %s."
-                    " You must delete the related object(s) first.",
-                    queryset.model._meta.label,
-                    related_object.related_model._meta.label,
-                )
-                items_to_exclude = related_object.related_model.objects.values_list(
-                    related_object.field.name, flat=True
-                )
-                queryset = queryset.exclude(id__in=items_to_exclude)
-                deletion_summary.update({related_object.related_model._meta.label: 0})
-
-        genericrelation_related_fields = [
-            field for field in queryset.model._meta.private_fields if hasattr(field, "bulk_related_objects")
-        ]
-        for gr_related_field in genericrelation_related_fields:
-            related_model = gr_related_field.related_model
-            related_field_name = gr_related_field.related_query_name()
-            cascade_queryset = related_model.objects.filter(**{f"{related_field_name}__id__in": queryset})
-            if cascade_queryset.exists():
-                self.recursive_delete_with_cascade(cascade_queryset, deletion_summary)
-
-        deleted_count = queryset._raw_delete(using="default")
-        if deleted_count:
-            deletion_summary.update({queryset.model._meta.label: deleted_count})
-        return deletion_summary
+        candidate_queryset = queryset
+        queryset = exclude_records_whose_relations_block_deletion(
+            queryset, model, (), force_cascade_delete=True, logger=self.logger
+        )
+        queryset = exclude_records_whose_dependents_the_user_cannot_delete(
+            queryset, model, (), force_cascade_delete=True, user=self.user, logger=self.logger
+        )
+        omitted_record_count = candidate_queryset.count() - queryset.count()
+        if omitted_record_count:
+            self.logger.warning(
+                "Omitting %d %s records because related records prevent their deletion, or may not be deleted by"
+                " this user.",
+                omitted_record_count,
+                model._meta.object_name,
+            )
+        for batch_pks in _iterate_pks_in_batches(queryset, CLEANUP_BATCH_SIZE):
+            if model is JobResult:
+                for child_model in (JobLogEntry, JobConsoleEntry):
+                    child_queryset = child_model.objects.filter(job_result_id__in=batch_pks)
+                    for child_batch_pks in _iterate_pks_in_batches(child_queryset, CLEANUP_BATCH_SIZE):
+                        _delete_batch(child_model, child_batch_pks, deletion_summary)
+            _delete_batch(model, batch_pks, deletion_summary)
 
     def run(self, *, cleanup_types, max_age=None):  # pylint: disable=arguments-differ
         if max_age in (None, ""):
@@ -105,9 +136,16 @@ class LogsCleanup(Job):
                 )
                 return 0
 
-        if CleanupTypes.JOB_RESULT in cleanup_types and not self.user.has_perm("extras.delete_jobresult"):
-            self.logger.error('User "%s" does not have permission to delete JobResult records', self.user)
-            raise PermissionDenied("User does not have delete permissions for JobResult records")
+        if CleanupTypes.JOB_RESULT in cleanup_types:
+            # Deleting a job result also deletes its log and console entries.
+            for model in (JobResult, JobLogEntry, JobConsoleEntry):
+                if not self.user.has_perm(f"extras.delete_{model._meta.model_name}"):
+                    self.logger.error(
+                        'User "%s" does not have permission to delete %s records', self.user, model._meta.object_name
+                    )
+                    raise PermissionDenied(
+                        f"User does not have delete permissions for {model._meta.object_name} records"
+                    )
 
         if CleanupTypes.OBJECT_CHANGE in cleanup_types and not self.user.has_perm("extras.delete_objectchange"):
             self.logger.error('User "%s" does not have permission to delete ObjectChange records', self.user)
@@ -126,7 +164,7 @@ class LogsCleanup(Job):
                 self.logger.info("Deleting JobResult records prior to %s", cutoff)
                 queryset = JobResult.objects.restrict(self.user, "delete").filter(date_done__lt=cutoff)
                 deletion_summary = {}
-                self.recursive_delete_with_cascade(queryset, deletion_summary)
+                self._delete_records(queryset, JobResult, deletion_summary)
                 result.setdefault("extras.JobResult", 0)
                 result.setdefault("extras.JobLogEntry", 0)
                 result.update(deletion_summary)
@@ -143,7 +181,7 @@ class LogsCleanup(Job):
                 self.logger.info("Deleting ObjectChange records prior to %s", cutoff)
                 queryset = ObjectChange.objects.restrict(self.user, "delete").filter(time__lt=cutoff)
                 deletion_summary = {}
-                self.recursive_delete_with_cascade(queryset, deletion_summary)
+                self._delete_records(queryset, ObjectChange, deletion_summary)
                 result.setdefault("extras.ObjectChange", 0)
                 result.update(deletion_summary)
 

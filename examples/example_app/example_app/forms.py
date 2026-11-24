@@ -4,10 +4,12 @@ from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.apps.forms import (
     BootstrapMixin,
     BulkEditForm,
+    DynamicModelChoiceField,
     NautobotBulkEditForm,
     NautobotModelForm,
     TagsBulkEditFormMixin,
 )
+from nautobot.extras.models import JobLogEntry
 
 from example_app.models import AnotherExampleModel, ExampleModel
 
@@ -22,9 +24,11 @@ class ExampleAppConfigForm(BootstrapMixin, forms.Form):
 class ExampleModelForm(NautobotModelForm):
     """Generic create/update form for `ExampleModel` objects."""
 
+    job_log_entry = DynamicModelChoiceField(queryset=JobLogEntry.objects.all(), required=False)
+
     class Meta:
         model = ExampleModel
-        fields = ["name", "number"]
+        fields = ["name", "number", "job_log_entry"]
 
 
 class ExampleModelFilterForm(BootstrapMixin, forms.Form):
@@ -51,17 +55,23 @@ class ExampleModelBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
 class AnotherExampleModelCreateForm(NautobotModelForm):
     """Create only form for `AnotherExampleModel` objects."""
 
+    job_log_entry = DynamicModelChoiceField(queryset=JobLogEntry.objects.all(), required=False)
+    example_model = DynamicModelChoiceField(queryset=ExampleModel.objects.all(), required=False)
+
     class Meta:
         model = AnotherExampleModel
-        fields = ["name", "number"]
+        fields = ["name", "number", "job_log_entry", "example_model"]
 
 
 class AnotherExampleModelUpdateForm(NautobotModelForm):
     """Update only form for `AnotherExampleModel` objects."""
 
+    job_log_entry = DynamicModelChoiceField(queryset=JobLogEntry.objects.all(), required=False)
+    example_model = DynamicModelChoiceField(queryset=ExampleModel.objects.all(), required=False)
+
     class Meta:
         model = AnotherExampleModel
-        fields = ["number", "name"]
+        fields = ["number", "name", "job_log_entry", "example_model"]
 
 
 class AnotherExampleModelFilterForm(BootstrapMixin, forms.Form):
