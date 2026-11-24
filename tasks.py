@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 import concurrent.futures
+import fcntl
 from functools import partial
 import json
 import os
@@ -20,10 +21,14 @@ import platform
 import re
 import shlex
 import shutil
+import struct
+import sys
+import termios
 import time
 
-from invoke import Collection, task as invoke_task
+from invoke import Collection, task as invoke_task, terminals
 from invoke.exceptions import Exit, Failure
+import invoke.runners
 
 try:
     import yaml
@@ -43,6 +48,29 @@ try:
     HAS_RICH = True
 except ModuleNotFoundError:
     HAS_RICH = False
+
+
+if sys.version_info >= (3, 14):
+
+    def _bytes_to_read(input_) -> int:
+        """
+        Return how many bytes are waiting on `input_`, reading `FIONREAD` into a buffer sized for a C `int` (4 bytes).
+
+        Baseline `invoke` passes only a 2-byte buffer here, which Python 3.14 and later rejects as a buffer overflow.
+        https://github.com/pyinvoke/invoke/issues/1070 documents this, but is not yet fixed in any upstream release.
+        Once that's resolved, we can remove this patch.
+        """
+        if terminals.isatty(input_) and terminals.has_fileno(input_):
+            # Original code:
+            # fionread = fcntl.ioctl(input_, termios.FIONREAD, b"  ")
+            # return int(struct.unpack("h", fionread)[0])
+            # Corrected code:
+            fionread = fcntl.ioctl(input_, termios.FIONREAD, struct.pack("i", 0))
+            return struct.unpack("i", fionread)[0]
+        return 1
+
+    # Apply the patched method
+    invoke.runners.bytes_to_read = _bytes_to_read
 
 
 # Base directory path from this file.

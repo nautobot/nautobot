@@ -1,19 +1,20 @@
-import * as GraphiQLPluginExplorer from '@graphiql/plugin-explorer';
+import { explorerPlugin } from '@graphiql/plugin-explorer';
+import { useGraphiQLActions, GraphiQLProvider } from '@graphiql/react';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
-import * as graphqlWs from 'graphql-ws';
 import React from 'react';
-import ReactDOM from 'react-dom';
-import { fetch } from 'whatwg-fetch';
+import ReactDOM from 'react-dom/client';
+import 'graphiql/setup-workers/webpack';
 
-import 'graphiql/graphiql.css';
-import '@graphiql/plugin-explorer/dist/style.css';
+import 'graphiql/style.css';
+import '@graphiql/plugin-explorer/style.css';
 
-GraphiQL.createFetcher = createGraphiQLFetcher;
+window.graphiql ??= {};
 
-window.fetch = fetch;
-window.graphqlWs = graphqlWs;
-window.GraphiQL = GraphiQL;
-window.GraphiQLPluginExplorer = GraphiQLPluginExplorer;
-window.React = React;
-window.ReactDOM = ReactDOM;
+window.graphiql.GraphiQL = GraphiQL;
+window.graphiql.GraphiQLProvider = GraphiQLProvider;
+window.graphiql.createGraphiQLFetcher = createGraphiQLFetcher;
+window.graphiql.explorerPlugin = explorerPlugin;
+window.graphiql.React = React;
+window.graphiql.ReactDOM = ReactDOM;
+window.graphiql.useGraphiQLActions = useGraphiQLActions;

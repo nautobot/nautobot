@@ -58,6 +58,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import coerce_paginate_count
 from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
@@ -907,13 +908,17 @@ class ObjectApprovalWorkflowView(generic.GenericView):
             obj = get_object_or_404(model, **kwargs)
 
         # Gather all changes for this object (and its related objects)
-        approval_workflow = ApprovalWorkflow.objects.get(object_under_review_object_id=obj.pk)
+        approval_workflow = get_object_or_404(
+            ApprovalWorkflow.objects.restrict(request.user, "view"), object_under_review_object_id=obj.pk
+        )
         stage_table = tables.RelatedApprovalWorkflowStageTable(
-            ApprovalWorkflowStage.objects.filter(approval_workflow=approval_workflow),
+            ApprovalWorkflowStage.objects.restrict(request.user, "view").filter(approval_workflow=approval_workflow),
         )
         stage_table.columns.hide("approval_workflow")
         response_table = tables.RelatedApprovalWorkflowStageResponseTable(
-            ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage__approval_workflow=approval_workflow)
+            ApprovalWorkflowStageResponse.objects.restrict(request.user, "view").filter(
+                approval_workflow_stage__approval_workflow=approval_workflow
+            )
         )
 
         base_template = get_base_template(self.base_template, model)
@@ -2967,7 +2972,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 label="Run/Schedule",
                 icon="mdi-play",
                 color=ButtonActionColorChoices.RUN,
-                required_permissions=["extras.job_run"],
+                required_permissions=["extras.run_job"],
             ),
         ],
     )
@@ -3724,10 +3729,12 @@ class SavedViewUIViewSet(
                 return redirect(reverse(view_name))
         pagination_count = param_dict.get("per_page", None)
         if not pagination_count:
-            if derived_instance and derived_instance.config.get("pagination_count", None):
-                pagination_count = derived_instance.config["pagination_count"]
-            else:
-                pagination_count = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            derived_count = None
+            if derived_instance and isinstance(derived_instance.config, dict):
+                derived_count = coerce_paginate_count(derived_instance.config.get("pagination_count", None))
+            pagination_count = derived_count or get_settings_or_config(
+                "PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT
+            )
         sv.config["pagination_count"] = int(pagination_count)
         sort_order = param_dict.get("sort", [])
         if not sort_order:

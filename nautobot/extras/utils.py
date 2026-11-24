@@ -1169,6 +1169,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     with transaction.atomic():
         try:
             change_context.defer_object_changes = True
+            change_context.skip_deleted_object_changes = True
 
             # Snapshot parent PKs first so deletes in earlier batches do not shift later ones.
             parent_pks = list(qs.values_list("pk", flat=True))
@@ -1223,6 +1224,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
             return total_deleted, deleted_by_label
         finally:
             change_context.defer_object_changes = False
+            change_context.skip_deleted_object_changes = False
             change_context.reset_deferred_object_changes()
 
 

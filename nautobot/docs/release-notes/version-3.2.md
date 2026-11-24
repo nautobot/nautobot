@@ -289,6 +289,72 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
 
+## v3.2.10 (2026-11-23)
+
+### Security in v3.2.10
+
+- [GHSA-f79c-pvw4-9rw3](https://github.com/nautobot/nautobot/security/advisories/GHSA-f79c-pvw4-9rw3) - Fixed the `connected-device` REST API endpoint to render the connected device in a brief `{id, object_type, url, display}` form when the requesting user does not have permission to view it.
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Fixed Custom Links rendering a target URL with a disallowed scheme (such as `javascript:`), which could execute script in the browser of a user who clicked the link.
+- [GHSA-v8x2-8vhg-5vc3](https://github.com/nautobot/nautobot/security/advisories/GHSA-v8x2-8vhg-5vc3) - Fixed Git repository sync following a symbolic link that points outside the repository checkout, which could read a worker-local file and store its contents in records such as Export Templates or Config Contexts.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `linkify-it` to `6.1.0` to mitigate several security vulnerabilities.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `markdown-it` to `15.0.3` to mitigate multiple security vulnerabilities.
+- [#9779](https://github.com/nautobot/nautobot/issues/9779) - Fixed the REST API job-run endpoint treating a string `dryrun` value such as `"false"` as truthy, which let a user bypass an applicable approval workflow and run a job immediately.
+- [#9780](https://github.com/nautobot/nautobot/issues/9780) - Fixed user-authored Jinja2 templates (Custom Links, Job Buttons, etc.) being able to call several state-changing model methods, such as cancelling an approval workflow or triggering its scheduled-job callbacks.
+- [#9781](https://github.com/nautobot/nautobot/issues/9781) - Fixed the object approval-workflow view displaying approval stages and responses that the user did not have permission to view.
+- [#9793](https://github.com/nautobot/nautobot/issues/9793) - Fix VM Interface detail page showing information about untagged VLANs to users without VLAN view permission.
+- [#9804](https://github.com/nautobot/nautobot/issues/9804) - Fixed a Saved View with a non-integer `pagination_count` or a non-object `config` causing a server error on list views it was applied to, and added validation that rejects such configuration when a Saved View is created or edited.
+- [#9854](https://github.com/nautobot/nautobot/issues/9854) - Fixed approval workflow stage and approval workflow states being directly modifiable through the REST API, which allowed bypassing approval requirements.
+
+### Added in v3.2.10
+
+- [#9801](https://github.com/nautobot/nautobot/issues/9801) - Added the `window.nb.editor.create()` and `window.nb.editor.dispose()` JavaScript functions, allowing Apps to use the Monaco-based code and diff editor in content that is added to a page after it has loaded.
+- [#9809](https://github.com/nautobot/nautobot/issues/9809) - Added the `DATABASE_HEALTH_CHECK_READ_ONLY` setting to run a read-only `SELECT 1` database health check without enabling maintenance mode.
+
+### Changed in v3.2.10
+
+- [GHSA-gfqr-fp2c-h495](https://github.com/nautobot/nautobot/security/advisories/GHSA-gfqr-fp2c-h495) - Changed Custom Link target URLs to only permit URL schemes listed in the `ALLOWED_URL_SCHEMES` setting (relative URLs are still allowed); a link whose rendered URL uses any other scheme, such as `javascript:`, is now rendered disabled.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Migrated the GraphiQL UI from GraphiQL v2.x to v5.x.
+- [#9494](https://github.com/nautobot/nautobot/issues/9494) - Changed DistinctViewTabs to not render at all, if user lacks permission to view their content.
+- [#9735](https://github.com/nautobot/nautobot/issues/9735) - Changed dynamic dropdowns in forms to sort choices by name by default for models whose default ordering groups records by a related object.
+- [#9735](https://github.com/nautobot/nautobot/issues/9735) - Changed the Circuit dropdown in the Circuit Termination filter form to sort by circuit ID.
+- [#9809](https://github.com/nautobot/nautobot/issues/9809) - Changed the read-only database health check (used in maintenance mode) to run `SELECT 1`, so it confirms that the database answers a query rather than only that it accepts a connection.
+
+### Fixed in v3.2.10
+
+- [#8702](https://github.com/nautobot/nautobot/issues/8702) - Fixed `parse_redis_connection()` producing an invalid Redis URL when `NAUTOBOT_REDIS_USERNAME` or `NAUTOBOT_REDIS_PASSWORD` contains URL-reserved characters such as `#`, `/`, `@` or `:`.
+- [#8892](https://github.com/nautobot/nautobot/issues/8892) - Fixed the `audit_graphql_queries` management command failing with `AttributeError` because it called the nonexistent `ExecutionResult.to_dict()`, and made it report GraphQL syntax errors instead of crashing.
+- [#9747](https://github.com/nautobot/nautobot/issues/9747) - Fixed live Job search results opening the Job detail page instead of the Run/Schedule page.
+- [#9759](https://github.com/nautobot/nautobot/issues/9759) - Fixed an error when saving a Custom Field scope filter that filters by content type.
+- [#9759](https://github.com/nautobot/nautobot/issues/9759) - Fixed Dynamic Group filters rejecting content type selections for models such as Role and Status.
+- [#9763](https://github.com/nautobot/nautobot/issues/9763) - Fixed exported Job console log timestamps not being rendered in the requesting user's configured timezone.
+- [#9788](https://github.com/nautobot/nautobot/issues/9788) - Fixed errors and change log entries with a null `id` and `url` when objects are deleted under deferred change logging, such as during a bulk edit.
+- [#9807](https://github.com/nautobot/nautobot/issues/9807) - Fixed permission name preventing users to run Jobs from Job detail page
+- [#9818](https://github.com/nautobot/nautobot/issues/9818) - Fixed scheduled Jobs being sent to a Job Queue's old name after the Job Queue was renamed.
+- [#9818](https://github.com/nautobot/nautobot/issues/9818) - Fixed dry-runs of scheduled Jobs failing after the scheduled Job's Job Queue was renamed.
+- [#9818](https://github.com/nautobot/nautobot/issues/9818) - Fixed scheduled Jobs being sent to a deleted Job Queue instead of the Job's default Job Queue.
+- [#9820](https://github.com/nautobot/nautobot/issues/9820) - Fixed GraphQL queries for nested generic relations, such as `associated_contacts`, `associated_data_compliance`, and `associated_object_metadata`, performing two additional database queries for every related object.
+- [#9821](https://github.com/nautobot/nautobot/issues/9821) - Fixed the embedded create and search buttons on object forms, whose accessible names included the icon character.
+- [#9822](https://github.com/nautobot/nautobot/issues/9822) - Fixed embedded-action "Add" and "Search" button tooltips remaining visible after opening the modal.
+- [#9847](https://github.com/nautobot/nautobot/issues/9847) - Fixed `run_job_for_testing()` and `create_job_result_and_run_job()` failing to run a job when a test passes a queryset for a `MultiObjectVar` or a model instance for an `ObjectVar`.
+
+### Dependencies in v3.2.10
+
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `@graphiql/plugin-explorer` to `^5.1.5`.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `graphiql` to `^5.4.0`.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `graphql-ws` to `^6.4.2`.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `react` to `^19.3.1`.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM dependency `react-dom` to `^19.3.1`.
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Removed NPM dependency `whatwg-fetch`.
+
+### Housekeeping in v3.2.10
+
+- [#9425](https://github.com/nautobot/nautobot/issues/9425) - Updated NPM development dependency `webpack` to `^5.112.2`.
+- [#9783](https://github.com/nautobot/nautobot/issues/9783) - Fixed OpenTelemetry exporter tests leaking periodic metric reader threads throughout the rest of the test run.
+- [#9789](https://github.com/nautobot/nautobot/issues/9789) - Added a CODEOWNERS file with the `nautobot/product-open-source` team as code owner.
+- [#9820](https://github.com/nautobot/nautobot/issues/9820) - Split the GraphQL N+1 query test into one test class per app so that the parallel test runner can distribute it across processes.
+- [#9835](https://github.com/nautobot/nautobot/issues/9835) - Patched `invoke.runners.bytes_to_read` to prevent a hang when running Invoke developer commands under Python 3.14 and later.
+- [#9841](https://github.com/nautobot/nautobot/issues/9841) - Added optional `artifactory_username` and `artifactory_password` secrets to the upstream app testing workflow, so that apps with private Network to Code dependencies can install those dependencies.
+
 ## v3.2.9 (2026-11-09)
 
 ### Breaking Changes in v3.2.9

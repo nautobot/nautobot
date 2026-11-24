@@ -1,4 +1,7 @@
+from urllib.parse import urlparse
+
 from django import template
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -29,6 +32,15 @@ DROPDOWN = f"""
 """
 LINK_BUTTON = '<a href="{href}"{target} class="btn{css_class}"><span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>{text}</a>\n'
 
+# Leading characters browsers strip from a URL before resolving its scheme (ASCII control chars and space).
+_LEADING_URL_NOISE = "".join(chr(c) for c in range(0x21))
+
+
+def _url_scheme_is_allowed(url):
+    """Check if the rendered target URL uses a scheme in ALLOWED_URL_SCHEMES (relative URLs allowed)."""
+    scheme = urlparse(url.lstrip(_LEADING_URL_NOISE)).scheme.lower()
+    return not scheme or scheme in settings.ALLOWED_URL_SCHEMES
+
 
 @register.simple_tag(takes_context=True)
 def custom_links(context, obj):
@@ -52,7 +64,10 @@ def custom_links(context, obj):
         try:
             text_rendered = render_jinja2(cl.text, link_context)
             if text_rendered:
-                resolved_links.append((cl, text_rendered, render_jinja2(cl.target_url, link_context), None))
+                link_rendered = render_jinja2(cl.target_url, link_context)
+                if not _url_scheme_is_allowed(link_rendered):
+                    raise ValueError("Custom link target URL uses a disallowed scheme")
+                resolved_links.append((cl, text_rendered, link_rendered, None))
         except Exception as e:
             resolved_links.append((cl, cl.name, None, e))
 

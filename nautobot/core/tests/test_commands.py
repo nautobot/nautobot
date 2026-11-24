@@ -8,7 +8,7 @@ import yaml
 
 from nautobot.core.testing import TestCase, TransactionTestCase
 from nautobot.dcim.models import Device
-from nautobot.extras.models import Status
+from nautobot.extras.models import GraphQLQuery, Status
 
 
 class ManagementCommandTestCase(TestCase):
@@ -21,6 +21,23 @@ class ManagementCommandTestCase(TestCase):
         self.user.is_staff = True
         self.user.save()
         self.client.force_login(self.user)
+
+    def test_audit_graphql_queries_valid(self):
+        """The audit_graphql_queries command accepts a valid GraphQLQuery."""
+        GraphQLQuery.objects.create(name="Valid query", query="{ locations { name } }")
+        out, err = StringIO(), StringIO()
+        call_command("audit_graphql_queries", stdout=out, stderr=err)
+        self.assertIn("validated successfully", out.getvalue())
+        self.assertEqual(err.getvalue(), "")
+
+    def test_audit_graphql_queries_invalid(self):
+        """The audit_graphql_queries command reports invalid GraphQLQuery data instead of crashing."""
+        # GraphQLQuery.save() rejects unparseable queries, so use bulk_create to simulate legacy data.
+        GraphQLQuery.objects.bulk_create([GraphQLQuery(name="Syntax error query", query="THIS IS NOT GRAPHQL")])
+        out, err = StringIO(), StringIO()
+        call_command("audit_graphql_queries", stdout=out, stderr=err)
+        self.assertNotIn("validated successfully", out.getvalue())
+        self.assertIn("`Syntax error query` has invalid query data", err.getvalue())
 
     def test_generate_performance_test_endpoints(self):
         """Test the generate_performance_test_endpoints management command."""

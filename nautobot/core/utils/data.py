@@ -217,3 +217,24 @@ def to_int_or_none(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def coerce_paginate_count(value):
+    """
+    Return `value` as a positive integer page size, or None if it isn't a valid one.
+
+    Accepts integers, numeric strings such as `"50"`, and whole-number floats such as `50.0`. Rejects booleans (even
+    though they are `int` instances) and floats with a fractional part rather than truncating them.
+
+    Page sizes may come from user input or from stored data (such as a SavedView's `config`) that was written
+    directly to the database, so this never raises.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, float) and not value.is_integer():
+        return None
+    try:
+        value = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return value if value > 0 else None
