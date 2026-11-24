@@ -23,10 +23,13 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
         location_type.content_types.add(ContentType.objects.get_for_model(Cluster))
 
     def test_host_locations_on_cluster_update(self):
-        """A cluster with hosts at or below its location permits a comments-only edit.
+        """Verify that cluster edits use the same location rule as host assignment.
 
-        Setting a common ancestor as the cluster location succeeds, as does clearing the location.
-        Moving the cluster to a location that excludes an existing host fails and preserves the previous location.
+        Host assignment allowed devices at or below the cluster location. Saving the cluster checked its
+        existing hosts for an exact location match. As a result, a host in a descendant location prevented
+        even a comments-only edit from being saved.
+
+        Editing comments exercises that check while leaving the cluster location and host assignments unchanged.
         """
         location_type = LocationType.objects.create(name="Facility", nestable=True)
         location_type.content_types.add(
@@ -53,18 +56,25 @@ class ClusterTestCase(TestCase):  # TODO: change to BaseModelTestCase
             )
             device.validated_save()
 
+        # Campus includes the host at Campus itself and the hosts in both building branches.
         cluster.location = campus
         cluster.validated_save()
+
+        # An edit unrelated to host placement should still accept those same assignments.
         cluster.comments = "Updated"
         cluster.validated_save()
 
+        # Building A includes the host in Room, but excludes the hosts at Campus and Building B.
         cluster.location = building
         with self.assertRaises(ValidationError) as error:
             cluster.validated_save()
         self.assertIn("location", error.exception.message_dict)
+
+        # Reload the cluster to verify that the rejected move did not change its stored location.
         cluster.refresh_from_db()
         self.assertEqual(cluster.location, campus)
 
+        # Clearing the cluster location removes the location restriction on its existing hosts.
         cluster.location = None
         cluster.validated_save()
 
