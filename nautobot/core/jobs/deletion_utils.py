@@ -2,7 +2,7 @@
 
 from typing import NamedTuple
 
-from django.contrib.contenttypes.fields import GenericRel, GenericRelation
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel, GenericRelation
 from django.db.models import CASCADE, DO_NOTHING, ForeignObjectRel, PROTECT, RESTRICT
 
 from nautobot.core.models.querysets import restrict_queryset
@@ -168,6 +168,49 @@ def find_relations_of_concern(model, preapproved_models_that_can_be_deleted=(), 
     )
 
 
+def _describe_reference_path(model, lookup, referencing_field=None):
+    """
+    Describe how records reference a `model` record, as the chain of foreign keys from the referencing record.
+
+    A reverse lookup path names each step by the name of its reverse relation, which some relations do not have. The
+    description names each step by its foreign key instead, starting from the referencing record. For example, the
+    lookup `job_log_entries__more_example_models` from `JobResult` is described as
+    `example_app.AnotherExampleModel.job_log_entry -> extras.JobLogEntry.job_result`.
+
+    Args:
+        model (Model): The model that `lookup` starts from.
+        lookup (str): A reverse lookup path from `model`, or an empty string.
+        referencing_field (Field): A foreign key with no reverse relation that references the records at the end of
+            `lookup`, or `None`.
+
+    Returns:
+        (str): The foreign keys, joined by ` -> `.
+    """
+    foreign_key_names = []
+    current_model = model
+    for segment in lookup.split("__") if lookup else []:
+        relation = current_model._meta.get_field(segment)
+        referencing_model = relation.related_model
+        if isinstance(relation, GenericRelation):
+            # The step is named by the generic foreign key that matches the GenericRelation's object ID field.
+            foreign_key_name = next(
+                (
+                    generic_foreign_key.name
+                    for generic_foreign_key in referencing_model._meta.private_fields
+                    if isinstance(generic_foreign_key, GenericForeignKey)
+                    and generic_foreign_key.fk_field == relation.object_id_field_name
+                ),
+                relation.object_id_field_name,
+            )
+        else:
+            foreign_key_name = relation.field.name
+        foreign_key_names.append(f"{referencing_model._meta.label}.{foreign_key_name}")
+        current_model = referencing_model
+    if referencing_field is not None:
+        foreign_key_names.append(f"{referencing_field.model._meta.label}.{referencing_field.name}")
+    return " -> ".join(reversed(foreign_key_names))
+
+
 def exclude_records_whose_relations_block_deletion(
     queryset, model, preapproved_models_that_can_be_deleted, force_cascade_delete, logger
 ):
@@ -197,47 +240,40 @@ def exclude_records_whose_relations_block_deletion(
     # entries of which only one is referenced. `exclude()` removes the record when any related row has a reference.
     # Blocking relations are checked first. A record that is skipped for both reasons is then reported as blocked,
     # because accepting the cascade would still not make it deletable.
-    for lookup, related_model in relations.blocking:
-        skipped_record_count = queryset.filter(**{f"{lookup}__isnull": False}).distinct().count()
-        if skipped_record_count:
-            logger.info(
-                "Skipping %d %s records that are referenced by %s records through `%s`, so they cannot be deleted"
-                " safely. To include them, first delete the referencing %s records or remove their references.",
-                skipped_record_count,
-                model_name,
-                related_model._meta.label,
-                lookup,
-                related_model._meta.label,
-            )
-            queryset = queryset.exclude(**{f"{lookup}__isnull": False})
-
+    # Each blocking relation, with or without a reverse relation, is a filter on the queryset and the referencing model.
+    blocking_filters = [
+        ({f"{lookup}__isnull": False}, _describe_reference_path(model, lookup), related_model)
+        for lookup, related_model in relations.blocking
+    ]
     for lookup, field in relations.hidden_blocking:
         referenced_values = field.model._base_manager.filter(**{f"{field.name}__isnull": False}).values(field.attname)
         target_lookup = f"{lookup}__{field.target_field.attname}__in" if lookup else f"{field.target_field.attname}__in"
-        skipped_record_count = queryset.filter(**{target_lookup: referenced_values}).distinct().count()
+        blocking_filters.append(
+            ({target_lookup: referenced_values}, _describe_reference_path(model, lookup, field), field.model)
+        )
+
+    for referenced_filter, reference_path, referencing_model in blocking_filters:
+        skipped_record_count = queryset.filter(**referenced_filter).distinct().count()
         if skipped_record_count:
             logger.info(
-                "Skipping %d %s records that are referenced through `%s%s`, which has no reverse relation, so they"
-                " cannot be deleted safely. To include them, first delete the referencing %s records or remove their"
-                " references.",
+                "Skipping %d %s records that are still referenced through %s. To include them, first delete the"
+                " referencing %s records or remove their references.",
                 skipped_record_count,
                 model_name,
-                f"{lookup} -> " if lookup else "",
-                field,
-                field.model._meta.label,
+                reference_path,
+                referencing_model._meta.label,
             )
-            queryset = queryset.exclude(**{target_lookup: referenced_values})
+            queryset = queryset.exclude(**referenced_filter)
 
     for lookup, related_model in relations.cascading:
         skipped_record_count = queryset.filter(**{f"{lookup}__isnull": False}).distinct().count()
         if skipped_record_count:
             logger.info(
-                "Skipping %d %s records that are referenced by %s records through `%s`, because deleting"
-                " them would also delete those %s records.",
+                "Skipping %d %s records that are referenced through %s, because deleting them would also delete"
+                " those %s records.",
                 skipped_record_count,
                 model_name,
-                related_model._meta.label,
-                lookup,
+                _describe_reference_path(model, lookup),
                 related_model._meta.label,
             )
             queryset = queryset.exclude(**{f"{lookup}__isnull": False})
@@ -284,13 +320,14 @@ def exclude_records_whose_dependents_the_user_cannot_delete(
         skipped_record_count = queryset.filter(**{f"{lookup}__in": unpermitted_related_records}).distinct().count()
         if skipped_record_count:
             logger.info(
-                "Skipping %d %s records whose deletion would also delete %s records through `%s`, which user %s is"
-                " not permitted to delete.",
+                "Skipping %d %s records whose deletion would also delete the %s records that reference them through"
+                " %s. User %s is not permitted to delete those %s records.",
                 skipped_record_count,
                 model_name,
                 related_model._meta.label,
-                lookup,
+                _describe_reference_path(model, lookup),
                 user,
+                related_model._meta.label,
             )
             queryset = queryset.exclude(**{f"{lookup}__in": unpermitted_related_records})
 

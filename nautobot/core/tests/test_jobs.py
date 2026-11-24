@@ -25,7 +25,11 @@ from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.archive import _iterate_records_by_timestamp, ArchiveOldRecords, FORCE_CASCADE_DELETE_HINT
 from nautobot.core.jobs.cleanup import CleanupTypes
-from nautobot.core.jobs.deletion_utils import exclude_records_whose_relations_block_deletion, find_relations_of_concern
+from nautobot.core.jobs.deletion_utils import (
+    _describe_reference_path,
+    exclude_records_whose_relations_block_deletion,
+    find_relations_of_concern,
+)
 from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import DeviceType, FrontPortTemplate, Interface, LocationType, Manufacturer
@@ -539,8 +543,9 @@ class LogsCleanupTestCase(TransactionTestCase):
             any(
                 message.startswith("Skipping ")
                 and message.endswith(
-                    "JobResult records whose deletion would also delete extras.JobLogEntry records through"
-                    f" `job_log_entries`, which user {self.user} is not permitted to delete."
+                    "JobResult records whose deletion would also delete the extras.JobLogEntry records that reference"
+                    f" them through extras.JobLogEntry.job_result. User {self.user} is not permitted to delete those"
+                    " extras.JobLogEntry records."
                 )
                 for message in job_log_messages
             ),
@@ -2795,8 +2800,9 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
                 self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
                 self.assertTrue(ArchivedJobResult.objects.filter(pk=permitted_job_result.pk).exists())
                 self.assertIn(
-                    f"Skipping 1 JobResult records whose deletion would also delete {child_model._meta.label}"
-                    f" records through `{related_name}`, which user {self.user} is not permitted to delete.",
+                    f"Skipping 1 JobResult records whose deletion would also delete the {child_model._meta.label}"
+                    f" records that reference them through {child_model._meta.label}.job_result. User {self.user} is"
+                    f" not permitted to delete those {child_model._meta.label} records.",
                     self.get_job_log_messages(archive_job_result),
                 )
 
@@ -3103,8 +3109,9 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
         self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
         self.assertTrue(ExampleModel.objects.filter(pk=cascading_record.pk).exists())
         self.assertIn(
-            "Skipping 1 JobResult records whose deletion would also delete example_app.ExampleModel records through"
-            f" `job_log_entries__example_models`, which user {self.user} is not permitted to delete.",
+            "Skipping 1 JobResult records whose deletion would also delete the example_app.ExampleModel records that"
+            " reference them through example_app.ExampleModel.job_log_entry -> extras.JobLogEntry.job_result. User"
+            f" {self.user} is not permitted to delete those example_app.ExampleModel records.",
             self.get_job_log_messages(archive_job_result),
         )
 
@@ -3155,12 +3162,11 @@ class ArchiveOldRecordsJobResultTestCase(TransactionTestCase):
                 self.assertEqual(JobLogEntry.objects.filter(job_result_id=held_job_result.pk).count(), 2)
                 self.assertFalse(ArchivedJobResult.objects.filter(pk=held_job_result.pk).exists())
                 self.assertTrue(AnotherExampleModel.objects.filter(pk=referencing_record.pk).exists())
-                self.assertTrue(
-                    any(
-                        message.startswith("Skipping 1 JobResult records that are referenced through")
-                        and "job_log_entry_without_reverse_relation" in message
-                        for message in self.get_job_log_messages(archive_job_result)
-                    ),
+                self.assertIn(
+                    "Skipping 1 JobResult records that are still referenced through"
+                    " example_app.AnotherExampleModel.job_log_entry_without_reverse_relation ->"
+                    " extras.JobLogEntry.job_result. To include them, first delete the referencing"
+                    " example_app.AnotherExampleModel records or remove their references.",
                     self.get_job_log_messages(archive_job_result),
                 )
 
@@ -3226,6 +3232,17 @@ class FindRelationsOfConcernTestCase(TestCase):
                 )
 
                 self.assertIn(("job_log_entries", hidden_field), relations.hidden_blocking)
+
+    def test_a_reference_path_is_described_by_its_foreign_keys(self):
+        """Each step is named by its foreign key, or by the generic foreign key for a GenericRelation."""
+        self.assertEqual(
+            _describe_reference_path(JobResult, "job_log_entries"),
+            "extras.JobLogEntry.job_result",
+        )
+        self.assertEqual(
+            _describe_reference_path(JobResult, "job_log_entries__associated_object_metadata"),
+            "extras.ObjectMetadata.assigned_object -> extras.JobLogEntry.job_result",
+        )
 
     def test_relations_that_set_a_value_on_delete_are_not_a_concern(self):
         """`Interface.bridge` is `SET_NULL`: deleting the bridge leaves the bridged interfaces in place."""
