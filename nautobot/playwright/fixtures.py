@@ -213,12 +213,11 @@ def create_view_only_user(create_object):
         log_in(page, user["username"], user["password"])
 
     The user is not staff or a superuser and belongs to no group. It gets one object permission, with the
-    `view` action on exactly *object_types*, so what it sees depends on those types alone, not on the
-    permissions that the instance's other users or groups happen to have. Log in as it in a test whose browser
-    context starts logged out, with `@pytest.mark.browser_context_args(storage_state=None)`. The `api`
-    fixture still authenticates as the admin.
+    `view` action on exactly *object_types*. Log in as it in a test whose browser context starts logged out,
+    with `@pytest.mark.browser_context_args(storage_state=None)`. The `api` fixture still authenticates as
+    the admin.
 
-    The password is random per user, so it passes Django's password validators and no two users share it.
+    Each user gets a new random password that passes Django's password validators.
     `create_object` deletes the permission and then the user, which deletes the user's saved config with it.
     """
 

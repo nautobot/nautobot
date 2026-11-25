@@ -1,7 +1,6 @@
 """Shared page object for the home page (/), a grid of panels that list items with a count and a link.
 
-A panel or item that the user may not view is missing from the DOM, not hidden. Read text with
-`text_content()`, because `inner_text()` returns '' inside a collapsed panel.
+A panel or item that the user may not view is missing from the DOM, not hidden.
 """
 
 import re
