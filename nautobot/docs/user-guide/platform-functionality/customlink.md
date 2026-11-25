@@ -17,6 +17,9 @@ When viewing a device named Router4, this link would render as:
 
 Custom links appear as buttons at the top right corner of the page. Numeric weighting can be used to influence the ordering of links.
 
+!!! note
+    A link's URL must use a scheme from the [`ALLOWED_URL_SCHEMES`](../administration/configuration/settings.md#allowed_url_schemes) setting, or be a relative URL. Links with any other scheme are rendered disabled.
+
 ## Context Data
 
 The following context data is available within the template when rendering a custom link's text or URL.

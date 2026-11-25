@@ -49,6 +49,18 @@ logger = logging.getLogger(__name__)
 # namedtuple takes a job_result(JobResult instance) and a repository_record(GitRepository instance).
 GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 
+
+def _assert_within_repository(repository_record, file_path):
+    """Raise if `file_path` resolves outside the repository checkout or into its `.git` directory."""
+    repository_root = os.path.realpath(repository_record.filesystem_path)
+    resolved_path = os.path.realpath(file_path)
+    if os.path.commonpath([repository_root, resolved_path]) != repository_root:
+        raise RuntimeError(f"`{file_path}` resolves to a path outside the repository and will not be read")
+    git_dir = os.path.join(repository_root, ".git")
+    if os.path.commonpath([git_dir, resolved_path]) == git_dir:
+        raise RuntimeError(f"`{file_path}` resolves into the repository's .git directory and will not be read")
+
+
 # namedtuple takes from_url(remote git repository url), to_path(local path of git repo), from_branch(git branch)
 GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
 
@@ -250,7 +262,9 @@ def update_git_config_contexts(repository_record, job_result):
             logger.info(msg)
             job_result.log(msg, grouping="config contexts")
             try:
-                with open(os.path.join(config_context_path, file_name), "r") as fd:
+                file_path = os.path.join(config_context_path, file_name)
+                _assert_within_repository(repository_record, file_path)
+                with open(file_path, "r") as fd:
                     # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
                     context_data = yaml.safe_load(fd)
 
@@ -305,7 +319,9 @@ def update_git_config_contexts(repository_record, job_result):
                 logger.info(msg)
                 job_result.log(msg, grouping="config contexts")
                 try:
-                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                    file_path = os.path.join(dir_path, file_name)
+                    _assert_within_repository(repository_record, file_path)
+                    with open(file_path, "r") as fd:
                         # Data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
                         context_data = yaml.safe_load(fd)
 
@@ -344,7 +360,9 @@ def update_git_config_contexts(repository_record, job_result):
                 logger.info(msg)
                 job_result.log(msg, grouping="local config contexts")
                 try:
-                    with open(os.path.join(dir_path, file_name), "r") as fd:
+                    file_path = os.path.join(dir_path, file_name)
+                    _assert_within_repository(repository_record, file_path)
+                    with open(file_path, "r") as fd:
                         context_data = yaml.safe_load(fd)
 
                     import_local_config_context(
@@ -619,7 +637,9 @@ def update_git_config_context_schemas(repository_record, job_result):
             logger.info(msg)
             job_result.log(msg, grouping="config context schemas")
             try:
-                with open(os.path.join(config_context_schema_path, file_name), "r") as fd:
+                file_path = os.path.join(config_context_schema_path, file_name)
+                _assert_within_repository(repository_record, file_path)
+                with open(file_path, "r") as fd:
                     # The data file can be either JSON or YAML; since YAML is a superset of JSON, we load it regardless
                     context_schema_data = yaml.safe_load(fd)
 
@@ -864,6 +884,7 @@ def update_git_export_templates(repository_record, job_result):
         managed_export_templates.setdefault(f"{app_label}.{modelname}", set()).add(file_name)
         template_record = None
         try:
+            _assert_within_repository(repository_record, file_path)
             with open(file_path, "r") as fd:
                 template_content = fd.read()
 
@@ -979,6 +1000,7 @@ def update_git_graphql_queries(repository_record, job_result):
             query_name = file.rsplit(".gql", 1)[0] if file.endswith(".gql") else file
 
             try:
+                _assert_within_repository(repository_record, file_path)
                 with open(file_path, "r") as fd:
                     query_content = fd.read().strip()
 

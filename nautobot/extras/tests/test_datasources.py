@@ -24,6 +24,12 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
+from nautobot.extras.datasources.git import (
+    update_git_config_context_schemas,
+    update_git_config_contexts,
+    update_git_export_templates,
+    update_git_graphql_queries,
+)
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
@@ -808,3 +814,62 @@ class GitTest(TransactionTestCase):
             self.assertEqual(from_url, "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git")
             self.assertEqual(kwargs["depth"], 0)
             self.assertEqual(kwargs["branch"], "main")
+
+    def test_sync_does_not_read_symlink_outside_repository(self):
+        """A symlink in a synced repository that points outside the checkout must not be read."""
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            secret_path = os.path.join(tempdir, "outside_secret.yaml")
+            with open(secret_path, "w") as fd:
+                fd.write("_metadata:\n  name: Leaked Secret Context\nsecret: leaked\n")
+
+            config_context_dir = os.path.join(self.repo.filesystem_path, "config_contexts")
+            os.makedirs(config_context_dir)
+            os.symlink(secret_path, os.path.join(config_context_dir, "leak.yaml"))
+
+            update_git_config_contexts(self.repo, self.job_result)
+
+            self.assertFalse(ConfigContext.objects.filter(name="Leaked Secret Context").exists())
+
+    def test_sync_refuses_symlink_for_other_datasource_types(self):
+        """Config context schemas, export templates, and GraphQL queries also refuse an escaping symlink."""
+        cases = [
+            ("config_context_schemas", update_git_config_context_schemas, ConfigContextSchema),
+            ("export_templates/dcim/device", update_git_export_templates, ExportTemplate),
+            ("graphql_queries", update_git_graphql_queries, GraphQLQuery),
+        ]
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            secret_path = os.path.join(tempdir, "outside_secret")
+            with open(secret_path, "w") as fd:
+                fd.write("leaked contents")
+
+            for subdir, update_function, model in cases:
+                with self.subTest(subdir=subdir):
+                    JobLogEntry.objects.filter(job_result=self.job_result).delete()
+                    target_dir = os.path.join(self.repo.filesystem_path, subdir)
+                    os.makedirs(target_dir, exist_ok=True)
+                    os.symlink(secret_path, os.path.join(target_dir, "leak"))
+
+                    update_function(self.repo, self.job_result)
+
+                    self.assertTrue(
+                        JobLogEntry.objects.filter(
+                            job_result=self.job_result, message__icontains="outside the repository"
+                        ).exists()
+                    )
+                    self.assertFalse(model.objects.filter(name="leak").exists())
+
+    def test_sync_does_not_read_symlink_into_git_directory(self):
+        """A symlink into the repository's `.git` directory must not expose its contents, such as a remote token."""
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            git_dir = os.path.join(self.repo.filesystem_path, ".git")
+            os.makedirs(git_dir)
+            with open(os.path.join(git_dir, "config"), "w") as fd:
+                fd.write('[remote "origin"]\n\turl = https://secret-token@example.com/repo.git\n')
+
+            template_dir = os.path.join(self.repo.filesystem_path, "export_templates", "dcim", "device")
+            os.makedirs(template_dir)
+            os.symlink("../../../.git/config", os.path.join(template_dir, "leak.txt"))
+
+            update_git_export_templates(self.repo, self.job_result)
+
+            self.assertFalse(ExportTemplate.objects.filter(template_code__contains="secret-token").exists())

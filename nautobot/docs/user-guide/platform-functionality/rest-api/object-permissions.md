@@ -70,6 +70,8 @@ Every object returned by these endpoints is serialized according to the user's p
 
 Objects the user cannot view are always restricted rather than omitted, so neither the number of segments returned by `trace` nor the length of the `path` returned by `paths` depends on the requesting user's permissions. This means the shape of a cable path never itself reveals whether objects were hidden, and clients can continue to rely on the position of each element within a segment.
 
+The connected-device endpoint (`/api/dcim/connected-device/`) likewise follows a cable from an interface the user is permitted to view to the device at the far end. If the user is not permitted to view that device, it is returned in the same brief representation plus `display`, regardless of the `?depth` query parameter.
+
 ## Related Objects on Write
 
 When creating (`POST`) or updating (`PATCH`/`PUT`) an object, any related object(s) referenced in the request body, whether single-relation or many-relation, must be object(s) that the user has permission to view. This applies whether the related object is referenced by primary key, by URL, or by a dictionary of attributes, and it honors object-level constraints — a user may only reference related objects that fall within their view constraints.
