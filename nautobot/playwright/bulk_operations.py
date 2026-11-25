@@ -144,7 +144,7 @@ class BulkOperationsTestCase:
     # -------------------------------------------------------------------------
 
     def test_bulk_edit_require_selection(self):
-        """Edit Selected with nothing selected stays on the list view and says nothing was selected."""
+        """Clicking Edit Selected with no rows selected leaves the browser on the list view and displays a message that nothing was selected."""
         self.list_page.click_edit_selected()
 
         self.list_page.expect_on_list()
