@@ -266,7 +266,7 @@ class BulkOperationsTestCase:
         self.list_page.expect_row_count(self.expected_counts["all"] - 1)
 
     def test_bulk_delete_all_items_from_all_pages(self):
-        """Delete All, with one record per page, deletes the records on every page."""
+        """Clicking Delete All on a list that shows one record per page deletes the records on every page."""
         self.go_to_model_list_page(per_page=1)
         self.list_page.select_all_matching(self.expected_counts["all"])
         self.list_page.click_delete_all()
