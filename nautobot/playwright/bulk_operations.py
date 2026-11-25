@@ -213,7 +213,7 @@ class BulkOperationsTestCase:
         self.assert_edited_count(1)
 
     def test_bulk_edit_all_filtered_items_from_all_pages(self):
-        """Edit All on a filtered list, with one record per page, edits every record the filter selects, and no other."""
+        """Clicking Edit All on a filtered list that shows one record per page edits every record the filter selects, and no other."""
         self.go_to_model_list_page(per_page=1)
         self.apply_filter()
 
