@@ -24,7 +24,7 @@ class JobResultPage(DetailPage):
         self.expect_panel_field(self._SUMMARY_PANEL, "Job Description", description)
 
     def expect_status(self, status, timeout=60_000):
-        """Assert that the job reaches *status* (e.g. "Completed") within *timeout* ms.
+        """Assert that the status badge shows *status* (e.g. "Completed") within *timeout* ms.
 
         The job waits for a Celery worker, and the summary panel refreshes every 3 seconds
         until the job finishes, so the badge can take several refreshes to change. The
