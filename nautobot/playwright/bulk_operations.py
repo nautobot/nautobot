@@ -233,7 +233,7 @@ class BulkOperationsTestCase:
     # includes records that this test did not create, the test fails before it deletes them.
 
     def test_bulk_delete_require_selection(self):
-        """Delete Selected with nothing selected stays on the list view and says nothing was selected."""
+        """Clicking Delete Selected with no rows selected leaves the browser on the list view and displays a message that nothing was selected."""
         self.list_page.click_delete_selected()
 
         self.list_page.expect_on_list()
