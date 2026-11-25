@@ -1,0 +1,1 @@
+Fixed cluster edits failing when a host device belongs to a descendant of the cluster location.
