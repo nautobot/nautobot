@@ -2,7 +2,7 @@
 
 import pytest
 
-from nautobot.core.tests.integration.pages.home_page import HomePage
+from nautobot.playwright.home_page import HomePage
 
 
 class ThemeTestCase:

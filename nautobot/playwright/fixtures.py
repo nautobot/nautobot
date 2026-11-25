@@ -23,6 +23,7 @@ development API token.
 # pylint: disable=redefined-outer-name
 
 import os
+from uuid import uuid4
 
 import pytest
 
@@ -202,6 +203,38 @@ def create_object(api):
                 failures.append(f"DELETE /api/{endpoint}{pk}/ returned {response.status}: {response.text()[:200]}")
     if failures:
         pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
+
+
+@pytest.fixture
+def create_view_only_user(create_object):
+    """Return a callable that creates a user who can view only the given object types. Teardown deletes the user.
+
+        user = create_view_only_user("dcim.location", "circuits.circuit")
+        log_in(page, user["username"], user["password"])
+
+    The user is not staff or a superuser and belongs to no group. It gets one object permission, with the
+    `view` action on exactly *object_types*. Log in as it in a test whose browser context starts logged out,
+    with `@pytest.mark.browser_context_args(storage_state=None)`. The `api` fixture still authenticates as
+    the admin.
+
+    Each user gets a new random password that passes Django's password validators.
+    `create_object` deletes the permission and then the user, which deletes the user's saved config with it.
+    """
+
+    def _create(*object_types):
+        username = unique_name()
+        password = f"Pw-{uuid4().hex}-Zz9!"
+        user = create_object("users/users/", username=username, password=password)
+        create_object(
+            "users/permissions/",
+            name=username,
+            object_types=list(object_types),
+            actions=["view"],
+            users=[user["id"]],
+        )
+        return {"username": username, "password": password, "user": user}
+
+    return _create
 
 
 @pytest.fixture(scope="session")
