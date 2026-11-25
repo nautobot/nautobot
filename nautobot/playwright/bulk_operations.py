@@ -40,8 +40,8 @@ class BulkOperationsTestCase:
     # The model's list page object, e.g. DevicesPage. Its LIST_PATH is the list view, and the
     # same path under /api/ is the REST endpoint.
     page_class: type[ListPage]
-    # The model's base view name, e.g. "dcim:device". model_plural adds "s" to the model name in it
-    # to build the plural that the list view's messages show.
+    # The model's base view name, e.g. "dcim:device". model_plural takes the model name after the colon,
+    # replaces each underscore with a space, and adds "s", which gives the plural that the list view's messages show.
     model_base_viewname: str
     # Text fields and values to set on the bulk edit form. assert_edited_count also passes them to
     # the REST API as a filter, to count the records that the bulk edit changed.
