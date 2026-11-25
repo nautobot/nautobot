@@ -1,4 +1,6 @@
 from django.apps import apps
+from django.test import RequestFactory
+from django.urls import reverse
 from django.utils.html import escape
 from jsonschema import Draft7Validator
 
@@ -43,6 +45,45 @@ class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
 
 
 class JobTableTestCase(TestCase):
+    def test_name_links_to_run_with_object_permission(self):
+        """A Job table uses object-scoped run permissions for both row and name destinations."""
+        jobs = list(Job.objects.filter(installed=True)[:2])
+        self.assertEqual(len(jobs), 2)
+        Job.objects.filter(pk__in=[job.pk for job in jobs]).update(enabled=True)
+        for job in jobs:
+            job.refresh_from_db()
+        self.add_permissions("extras.run_job", constraints={"pk": str(jobs[0].pk)})
+        table = JobTable(jobs, user=self.user)
+        rows = list(table.rows)
+        run_url = reverse("extras:job_run", kwargs={"pk": jobs[0].pk})
+        self.assertEqual(table.get_row_url(jobs[0]), run_url)
+        self.assertIn(f'href="{run_url}"', rows[0].get_cell("name"))
+        self.assertIsNone(table.get_row_url(jobs[1]))
+        self.assertNotIn("href=", rows[1].get_cell("name"))
+        self.assertEqual(rows[1].attrs["aria-disabled"], "true")
+
+    def test_disabled_and_uninstalled_jobs_have_no_run_link(self):
+        self.add_permissions("extras.run_job")
+        job = Job.objects.get(job_class_name="TestPassJob")
+        for enabled, installed in ((False, True), (True, False)):
+            with self.subTest(enabled=enabled, installed=installed):
+                job.enabled = enabled
+                job.installed = installed
+                table = JobTable([job], user=self.user)
+                self.assertIsNone(table.get_row_url(job))
+                self.assertNotIn("href=", next(iter(table.rows)).get_cell("name"))
+
+    def test_render_uses_request_user_when_no_user_was_passed(self):
+        """Normal table rendering obtains its permissions from the rendering request."""
+        self.add_permissions("extras.run_job")
+        job = Job.objects.get(job_class_name="TestPassJob")
+        job.enabled = job.installed = True
+        table = JobTable([job])
+        request = RequestFactory().get("/")
+        request.user = self.user
+        table.before_render(request)
+        self.assertEqual(table.get_row_url(job), reverse("extras:job_run", kwargs={"pk": job.pk}))
+
     def test_source_version_column_abbreviates_commit_hash(self):
         """Git commit hashes render abbreviated to 7 characters with the full hash as hover text."""
         repo = GitRepository(

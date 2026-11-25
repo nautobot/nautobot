@@ -2,11 +2,13 @@
 
 Nautobot allows users to define custom templates that can be used when exporting objects. To create an export template, navigate to Extensibility > Automation > Export Templates under the navigation bar. Export templates can also be managed within an external Git repository if desired.
 
-Each export template is associated with a certain type of object. For instance, if you create an export template for VLANs, your custom template will appear under the "Export" button on the VLANs list.
+Each export template is associated with a certain type of object. For instance, if you create an export template for VLANs, your custom template will appear in the **Actions** menu of the VLANs list view, under the **Export Templates** heading. Choosing it exports the list with that template straight away, without opening a dialog.
+
+Exporting with a template runs the `Export Object List` system Job, like any other export from a list view. So you need _run_ permission on that Job, _view_ permission on the object type, and _view_ permission on the export template itself, and the Job's [size and time limits](../feature-guides/import-and-export.md#limits) apply. See [Importing and Exporting Objects](../feature-guides/import-and-export.md) for more about exports, and the [Export Job permission recipe](../administration/guides/permissions.md#export-job).
 
 Export templates must be written in [Jinja2](https://jinja.palletsprojects.com/).
 
-The list of objects returned from the database when rendering an export template is stored in the `queryset` variable, which you'll typically want to iterate through using a `for` loop. Object properties can be access by name. For example:
+The list of objects being exported is stored in the `queryset` variable, which you'll typically want to iterate through using a `for` loop. It contains only the objects the user running the export is permitted to view, filtered and sorted as in the list view the export was started from. Object properties can be accessed by name. For example:
 
 ```jinja2
 {% for rack in queryset %}
@@ -21,7 +23,7 @@ Height: {{ rack.u_height }}U
 
     Similarly, to access `computed fields` of an object within a template, use the `get_computed_field()` method. For example, `{{ obj.get_computed_field("site_code") }}` will return the value (if any) for the computed field with a key of `site_code` on `obj`.
 
-A MIME type and file extension can optionally be defined for each export template. The default MIME type is `text/plain`.
+A file extension can optionally be defined for each export template; it is added to the name of the exported file. A MIME type can also be defined, but exports from the list view don't currently use it.
 
 ## Example
 

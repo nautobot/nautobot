@@ -54,6 +54,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -166,6 +169,8 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
 
         model = ApprovalWorkflow
         fields = "__all__"
+        # The workflow state must only be derived from its stages (or the cancel action).
+        read_only_fields = ["current_state"]
 
 
 class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
@@ -214,11 +219,21 @@ class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
         )
         return ApprovalWorkflowStageResponseSerializer(queryset, many=True, context=self.context).data
 
+    def validate(self, attrs):
+        """Prevent moving an existing stage to a different workflow or stage definition."""
+        if self.instance is not None:
+            for field_name in ("approval_workflow", "approval_workflow_stage_definition"):
+                if field_name in attrs and attrs[field_name] != getattr(self.instance, field_name):
+                    raise serializers.ValidationError({field_name: "This field cannot be changed once set."})
+        return super().validate(attrs)
+
     class Meta:
         """Meta attributes."""
 
         model = ApprovalWorkflowStage
         fields = "__all__"
+        # The stage state must only be derived from approval responses (see the approve/deny actions).
+        read_only_fields = ["state"]
 
 
 #
@@ -1200,6 +1215,31 @@ class ObjectChangeSerializer(BaseModelSerializer):
             return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.changed_object, "changed_object")
         except SerializerNotFound:
             return obj.object_repr
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedObjectChangeSerializer(ObjectChangeSerializer):
+    class Meta(ObjectChangeSerializer.Meta):
+        model = ArchivedObjectChange
+
+
+# This serializer does not inherit from JobResultSerializer. It's easier to start from BaseModelSerializer and add
+# the needed fields than to remove the `files` field that JobResultSerializer includes but ArchivedJobResult lacks.
+class ArchivedJobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
+    status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+
+    class Meta:
+        model = ArchivedJobResult
+        fields = "__all__"
+
+
+class ArchivedJobLogEntrySerializer(JobLogEntrySerializer):
+    class Meta(JobLogEntrySerializer.Meta):
+        model = ArchivedJobLogEntry
 
 
 #

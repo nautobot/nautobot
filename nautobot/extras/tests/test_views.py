@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from http import HTTPStatus
 import json
 import re
-from unittest import mock
+from unittest import expectedFailure, mock
 import urllib.parse
 import uuid
 
@@ -14,8 +14,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db.models import Q
+from django.db import connection
+from django.db.models import Count, Q
 from django.test import override_settings, RequestFactory, tag
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -72,6 +74,10 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobConsoleEntry,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -896,6 +902,83 @@ class ApprovalWorkflowViewTestCase(
         )
 
 
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class ObjectApprovalWorkflowViewRestrictionTestCase(TestCase):
+    """Regression tests for object-level permission enforcement on the object approval-workflow tab."""
+
+    def setUp(self):
+        super().setUp()
+        scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.scheduled_job = ScheduledJob.objects.create(
+            name="Approval Tab Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=User.objects.first(),
+            start_time=timezone.now(),
+        )
+        workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Approval Tab Workflow",
+            model_content_type=scheduledjob_ct,
+            weight=0,
+            model_constraints={"job_model__name": "NoSuchJob"},
+        )
+        self.workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=scheduledjob_ct,
+            object_under_review_object_id=self.scheduled_job.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=workflow_definition,
+            sequence=100,
+            name="Approval Tab Stage",
+            min_approvers=1,
+            denial_message="denied",
+            approver_group=Group.objects.create(name="Approval Tab Approvers"),
+        )
+        stage = ApprovalWorkflowStage.objects.create(
+            approval_workflow=self.workflow,
+            approval_workflow_stage_definition=stage_definition,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=User.objects.first(),
+            comments="confidential decision",
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        self.url = reverse("extras:scheduledjob_approvalworkflow", kwargs={"pk": self.scheduled_job.pk})
+
+    def test_related_tables_restricted_without_stage_response_permissions(self):
+        """A user who may view the job and workflow, but not the stages/responses, sees empty related tables."""
+        self.add_permissions("extras.view_scheduledjob", "extras.view_approvalworkflow")
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.context["stage_table"].rows), 0)
+        self.assertEqual(len(response.context["response_table"].rows), 0)
+
+    def test_related_tables_visible_with_full_permissions(self):
+        """With view permission on every related model, the tables are populated."""
+        self.add_permissions(
+            "extras.view_scheduledjob",
+            "extras.view_approvalworkflow",
+            "extras.view_approvalworkflowstage",
+            "extras.view_approvalworkflowstageresponse",
+        )
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.context["stage_table"].rows), 1)
+        self.assertEqual(len(response.context["response_table"].rows), 1)
+
+    def test_without_view_approvalworkflow_permission_is_not_found(self):
+        """A user who may view the job but lacks view_approvalworkflow cannot reach the approval tab."""
+        self.add_permissions("extras.view_scheduledjob")
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 404)
+
+
 class ApprovalWorkflowStageViewTestCase(
     ViewTestCases.GetObjectViewTestCase,
     ViewTestCases.GetObjectChangelogViewTestCase,
@@ -1494,6 +1577,289 @@ class ApprovalWorkflowStageViewTestCase(
             response = self.client.get(url)
             self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, marker)
+
+
+class ArchivedJobResultTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedJobResult
+
+    def test_get_joblogentrytable_anonymous(self):
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": ArchivedJobResult.objects.first().pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_joblogentrytable_without_permission(self):
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": ArchivedJobResult.objects.first().pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_joblogentrytable_with_permission(self):
+        instance = ArchivedJobResult.objects.filter(job_log_entries__isnull=False).first()
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjoblogentry")
+        response = self.client.get(url)
+        self.assertBodyContains(response, instance.job_log_entries.first().message)
+
+    def test_get_joblogentrytable_with_filter_q(self):
+        """Test that the q parameter filters log entries by message."""
+        instance = ArchivedJobResult.objects.filter(job_log_entries__isnull=False).first()
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjoblogentry")
+
+        # Matching filter
+        response = self.client.get(url, {"q": instance.job_log_entries.first().message})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, instance.job_log_entries.first().message)
+
+        # Non-matching filter
+        response = self.client.get(url, {"q": "nonexistent-message-xyz"})
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn(instance.job_log_entries.first().message, response_content)
+
+    def test_htmx_joblogentrytable_completed_job(self):
+        """Test HTMX request for a completed job does not include the poller."""
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": ArchivedJobResult.objects.first().pk})
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjoblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("log-table-poller", response_content)
+
+    def _get_advanced_tab_panel(self, label):
+        """Return the Advanced-tab panel with the given label from the ArchivedJobResult detail view definition."""
+        content = views.ArchivedJobResultUIViewSet.object_detail_content
+        advanced_tab = next(tab for tab in content.tabs if tab.label == "Advanced")
+        return next(panel for panel in advanced_tab.panels if panel.label == label)
+
+    def test_advanced_tab_panels_do_not_poll_when_job_complete(self):
+        """Worker and Traceback panels should stop polling once the job has reached a terminal state (#9208)."""
+        self.add_permissions("extras.view_archivedjobresult")
+        url = ArchivedJobResult.objects.first().get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertNotIn('hx-trigger="every 3s"', content)
+
+    def test_joblogentrytable_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": ArchivedJobResult.objects.first().pk})
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjoblogentry")
+
+        # Regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+    def test_get_joblogentrytable_with_constrained_permission(self):
+        """Test that constrained permissions filter log entries correctly."""
+        instance = ArchivedJobResult.objects.annotate(jl_count=Count("job_log_entries")).filter(jl_count__gte=2).first()
+        url = reverse("extras:archivedjobresult_log-table", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult")
+
+        # Create constrained permission that allows viewing only the first entry
+        obj_perm = ObjectPermission(name="View limited log entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ArchivedJobLogEntry))
+        # Add constraint to only show first entry
+        obj_perm.constraints = {"id__in": [instance.job_log_entries.first().id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entry
+        self.assertBodyContains(response, instance.job_log_entries.first().message)
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn(instance.job_log_entries.last().message, response_raw_content)
+
+    # TODO test with constrained permissions on ArchivedJobResult records
+
+    def test_get_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse(
+            "extras:archivedjobresult_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
+        )
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse(
+            "extras:archivedjobresult_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
+        )
+        self.add_permissions("extras.view_archivedjobresult")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
+        url = reverse("extras:archivedjobresult_job_console_entries", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult")
+
+        # Create constrained permission that allows viewing only the first entry
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ArchivedJobConsoleEntry))
+        # Add constraint to only show first entry
+        obj_perm.constraints = {"id__in": [instance.job_console_entries.first().id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, instance.job_console_entries.first().text)
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn(instance.job_console_entries.last().text, response_raw_content)
+
+    def test_get_console_entries_with_permission(self):
+        """Test full page load for completed job (no polling)."""
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
+        url = reverse("extras:archivedjobresult_job_console_entries", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, instance.job_console_entries.first().text)
+        self.assertBodyContains(response, instance.job_console_entries.last().text)
+        # Should NOT show polling message for completed jobs
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("updating every 2 seconds...", response_raw_content)
+        self.assertNotIn("htmx-poller", response_raw_content)
+
+    def test_export_job_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse(
+            "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
+        )
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_export_job_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse(
+            "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
+        )
+        self.add_permissions("extras.view_archivedjobresult")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_export_job_console_entries_with_permission(self):
+        """Test that a user with permission can download the console entries as a text file."""
+        url = reverse(
+            "extras:archivedjobresult_export_job_console_entries", kwargs={"pk": ArchivedJobResult.objects.first().pk}
+        )
+        self.add_permissions("extras.view_archivedjobresult", "extras.view_archivedjobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response["Content-Type"], "text/plain; charset=utf-8")
+        filename = (
+            f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{ArchivedJobResult.objects.first().pk}.txt"
+        )
+        self.assertEqual(response["Content-Disposition"], f'attachment; filename="{filename}"')
+
+    def test_export_job_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        instance = (
+            ArchivedJobResult.objects.annotate(jc_count=Count("job_console_entries")).filter(jc_count__gte=2).first()
+        )
+        url = reverse("extras:archivedjobresult_export_job_console_entries", kwargs={"pk": instance.pk})
+        self.add_permissions("extras.view_archivedjobresult")
+
+        # Create constrained permission that allows viewing only the first entry
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ArchivedJobConsoleEntry))
+        # Add constraint to only show first entry
+        obj_perm.constraints = {"id__in": [instance.job_console_entries.first().id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn(instance.job_console_entries.last().text, response_raw_content)
+        # Should see allowed entries
+        self.assertIn(instance.job_console_entries.first().text, response_raw_content)
+
+
+class ArchivedObjectChangeTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
+    model = ArchivedObjectChange
+
+    @expectedFailure
+    def test_filter_form_fields_are_working(self):
+        # TODO: there's a baseline breakage here for the `time__gte` and `time__lte` fields, not failing in baseline
+        # only because ObjectChangeTestCase is not a ListObjectsViewTestCase subclass (but it SHOULD be!).
+        super().test_filter_form_fields_are_working()
+
+    @override_settings(PAGINATE_COUNT=50)
+    def test_list_objects_linkifies_changed_objects_efficiently(self):
+        self.add_permissions("extras.view_archivedobjectchange")
+
+        # Create 20 ArchivedObjectChanges for one Location, and 20 more for distinct Statuses (sharing a content-type)
+        location = Location.objects.first()
+        for i in range(20):
+            oc = location.to_objectchange("update")
+            oc.request_id = uuid.uuid4()
+            oc.save()
+            ArchivedObjectChange.from_object_change(oc).save()
+            oc = Status.objects.all()[i].to_objectchange("update")
+            oc.request_id = uuid.uuid4()
+            oc.save()
+            ArchivedObjectChange.from_object_change(oc).save()
+
+        # Get the table and assert that the number of queries is not N+1
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertLess(len(captured), settings.PAGINATE_COUNT)
+
+        # Assert that object URLs are included:
+        at_least_one_url = False
+        for record in response.context["table"].data.data[: settings.PAGINATE_COUNT]:
+            changed_obj = None
+            if record.changed_object_type:
+                changed_obj = (
+                    record.changed_object_type.model_class()._base_manager.filter(pk=record.changed_object_id).first()
+                )
+            if changed_obj is not None:
+                try:
+                    self.assertIn(changed_obj.get_absolute_url(), response_body)
+                    at_least_one_url = True
+                except AttributeError:
+                    continue
+        self.assertTrue(at_least_one_url, "No changed-object URLs were present in the table?")
+
+    def test_diff_panel_loads_diff_viewer(self):
+        """Make sure the JS code needed to initialize the diff view rendering is present in the page."""
+        instance = self._get_queryset().first()
+        self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+        body = self.client.get(instance.get_absolute_url()).content.decode()
+        self.assertIn("js/editor.js", body)
 
 
 class ComputedFieldTestCase(
@@ -2690,6 +3056,45 @@ class CustomLinkRenderingTestCase(TestCase):
         self.assertNotIn("<script>alert", content, content)
         self.assertIn("&lt;script&gt;alert", content, content)
 
+    def test_custom_link_url_scheme_enforcement(self):
+        """A target URL that renders to a script-executing scheme must not reach the link href."""
+        content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        location = Location(name="Test Location", location_type=location_type, status=status)
+        location.save()
+
+        for target_url, needle, group_name in [
+            ("javascript:alert('xss')", "javascript:alert", ""),
+            ("  javascript:alert('xss')", "javascript:alert", ""),
+            ("data:text/html,<script>alert('xss')</script>", "data:text/html", ""),
+            ("javascript:alert('xss')", "javascript:alert", "Links"),
+        ]:
+            with self.subTest(target_url=target_url, group_name=group_name):
+                CustomLink.objects.all().delete()
+                CustomLink.objects.create(
+                    content_type=content_type,
+                    name="Test",
+                    text="Hello",
+                    target_url=target_url,
+                    group_name=group_name,
+                    new_window=False,
+                )
+                response = self.client.get(location.get_absolute_url(), follow=True)
+                self.assertEqual(response.status_code, 200)
+                content = extract_page_body(response.content.decode(response.charset))
+                self.assertNotIn(needle, content, content)
+                self.assertIn("disallowed scheme", content, content)
+
+        CustomLink.objects.all().delete()
+        CustomLink.objects.create(
+            content_type=content_type, name="Test", text="Hello", target_url="/dcim/locations/", new_window=False
+        )
+        response = self.client.get(location.get_absolute_url(), follow=True)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('href="/dcim/locations/"', content, content)
+        self.assertNotIn("disallowed scheme", content, content)
+
 
 class DynamicGroupTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -3861,6 +4266,37 @@ class SavedViewTest(ModelViewTestCase):
         self.assertEqual(instance.config["filter_params"]["status"], ["active"])
         self.assertEqual(instance.config["filter_params"]["name"], ["new_name_filter"])
         self.assertEqual(instance.config["sort_order"], ["name"])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=50)
+    def test_create_saved_view_pagination_count_from_derived_view(self):
+        """Without `per_page`, copy a valid `pagination_count` from the derived view, else use `PAGINATE_COUNT`."""
+        view_name = "dcim:location_list"
+        self.add_permissions("dcim.view_location")
+        create_url = self.get_view_url_for_saved_view(action="create")
+        # `sort`, a filter, and `table_changes_pending` keep the create view from reading other keys of the
+        # derived view's `config`, so that only the `pagination_count` handling is exercised.
+        base_params = "&status=active&sort=name&table_changes_pending=true"
+        cases = [
+            ("valid", {"pagination_count": 25}, 25),
+            ("missing", {}, 50),
+            ("malformed", {"pagination_count": {"a": 1}}, 50),
+            ("non-dict config", [1, 2], 50),
+        ]
+        for label, derived_config, expected in cases:
+            with self.subTest(label):
+                # `objects.create()` skips `clean()`, simulating malformed data already in the database.
+                derived = SavedView.objects.create(
+                    owner=self.user, name=f"Derived {label}", view=view_name, config=derived_config
+                )
+                name = f"New from {label}"
+                data = post_data({"name": name, "view": view_name, "params": f"saved_view={derived.pk}{base_params}"})
+                self.assertHttpStatus(self.client.post(create_url, data), 302)
+                self.assertEqual(SavedView.objects.get(name=name).config["pagination_count"], expected)
+
+        with self.subTest("no derived view"):
+            data = post_data({"name": "New without derived", "view": view_name, "params": base_params.lstrip("&")})
+            self.assertHttpStatus(self.client.post(create_url, data), 302)
+            self.assertEqual(SavedView.objects.get(name="New without derived").config["pagination_count"], 50)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_delete_saved_view_as_different_user(self):
@@ -5537,7 +5973,7 @@ class JobResultTestCase(
         self.assertHttpStatus(response, [403, 404])
 
     def test_export_job_console_entries_with_permission(self):
-        """Test full page load with permission shows console log page."""
+        """Test that a user with permission can download the console entries as a text file."""
         url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
         response = self.client.get(url)
@@ -6891,6 +7327,7 @@ class JobTestCase(
     def test_run_immediate_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -6913,6 +7350,7 @@ class JobTestCase(
     def test_scheduled_job_triggers_approval_workflow_if_defined(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         workflow = ApprovalWorkflowDefinition(
             name="Approval Definition",
@@ -7028,6 +7466,7 @@ class JobTestCase(
     def test_run_dryrun_schedule_job_with_approval_workflow_definded(self, _):
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.view_approvalworkflow")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",

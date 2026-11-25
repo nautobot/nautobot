@@ -1,44 +1,6 @@
 {% extends 'generic/object_list.html' %}
 {% load helpers %}
 
-{% block extra_styles %}
-    <style>
-        tr a.job_run {
-            display: inline-flex;
-            gap: 0.625rem; /* 10px */
-        }
-
-        tr a.job_run .btn {
-            align-self: flex-start;
-            margin-block: -0.09375rem; /* -1.5px */
-        }
-
-        tr :last-child {
-            margin-bottom: 0;
-        }
-
-        tr.disabled td {
-            color: var(--bs-secondary-color);
-        }
-
-        tr.disabled a.job_run {
-            color: var(--bs-secondary-color);
-            cursor: not-allowed;
-        }
-
-        tr.disabled a.job_run .btn {
-            background-color: var(--bs-secondary-color);
-            border-color: var(--bs-secondary-color);
-            color: var(--bs-body-bg);
-            cursor: inherit;
-        }
-
-        tr.disabled p {
-            color: inherit;
-        }
-    </style>
-{% endblock %}
-
 {% block buttons %}
     <div class="btn-group" role="group">
         <a href="{% django_querystring display='list' %}"

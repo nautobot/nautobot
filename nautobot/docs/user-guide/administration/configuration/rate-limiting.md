@@ -20,11 +20,11 @@ If Redis cannot be reached, the rate limiting _fails open_. Meaning, the request
 
 ## Budget and Window
 
-The per-token budget is specified using the [`NAUTOBOT_RATE_LIMITING_REST_BUDGET`](settings.md#nautobot_rate_limiting_rest_budget) setting. [default `1000`].
+The per-token budget is specified using the [`RATE_LIMITING_REST_BUDGET`](settings.md#rate_limiting_rest_budget) setting. [default `1000`].
 
 The per-token budget is renewed after its window expires.
 
-The per-token budget window is specified using the [`NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`](settings.md#nautobot_rate_limiting_rest_budget_window_in_seconds) setting. [default `60`].
+The per-token budget window is specified using the [`RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`](settings.md#rate_limiting_rest_budget_window_in_seconds) setting. [default `60`].
 
 The per-token budget window only begins on the first request that is charged.
 
@@ -34,7 +34,7 @@ The per-token budget resets when the budget window expires. Charges made during 
 
 ### REST Rate Limiting Modes
 
-Rate limiting can be enabled using the [`NAUTOBOT_RATE_LIMITING_REST_MODE`](settings.md#nautobot_rate_limiting_rest_mode) setting.
+Rate limiting can be enabled using the [`RATE_LIMITING_REST_MODE`](settings.md#rate_limiting_rest_mode) setting.
 
 | Mode      | Behavior                                                                         |
 |-----------|----------------------------------------------------------------------------------|
@@ -67,18 +67,18 @@ The complexity cost process can be overridden using a custom function. See [Cust
 
 | Setting                                                             | Default | Description                                        |
 |---------------------------------------------------------------------|---------|-----------------------------------------------------|
-| [`NAUTOBOT_RATE_LIMITING_REST_MODE`](settings.md#nautobot_rate_limiting_rest_mode)                                  | `off`   | `off`, `report`, or `enforce`.                      |
-| [`NAUTOBOT_RATE_LIMITING_REST_BUDGET`](settings.md#nautobot_rate_limiting_rest_budget)                                | `1000`  | Complexity cost points granted for each token's budget window.           |
-| [`NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`](settings.md#nautobot_rate_limiting_rest_budget_window_in_seconds)              | `60`    | Length of the token's budget window in seconds.                    |
-| [`NAUTOBOT_RATE_LIMITING_REST_READ_COST`](settings.md#nautobot_rate_limiting_rest_read_cost)                             | `1.0`   | Base cost of a REST read request.                        |
-| [`NAUTOBOT_RATE_LIMITING_REST_WRITE_COST`](settings.md#nautobot_rate_limiting_rest_write_cost)                            | `3.0`   | Flat cost of a REST write request.                       |
-| [`NAUTOBOT_RATE_LIMITING_REST_PAGINATION_COST`](settings.md#nautobot_rate_limiting_rest_pagination_cost)                       | `3.0`   | Cost for each page of the request's result set.                    |
-| [`NAUTOBOT_RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST`](settings.md#nautobot_rate_limiting_rest_indexable_lookup_cost)                 | `3.0`   | Cost for each indexable filter.                          |
-| [`NAUTOBOT_RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST`](settings.md#nautobot_rate_limiting_rest_unindexable_lookup_cost)               | `3.0`   | Cost for each unindexable filter.                        |
-| [`NAUTOBOT_RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL`](settings.md#nautobot_rate_limiting_rest_depth_multiplier_per_level)            | `1.0`   | Weight of each level of `depth`.                    |
-| [`NAUTOBOT_RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER`](settings.md#nautobot_rate_limiting_rest_computed_fields_multiplier)            | `3.0`   | Multiplier for each computed_field used          |
-| [`NAUTOBOT_RATE_LIMITING_REST_CSV_MULTIPLIER`](settings.md#nautobot_rate_limiting_rest_csv_multiplier)                        | `3.0`   | Multiplier for `format=csv`.                        |
-| [`NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION`](settings.md#nautobot_rate_limiting_custom_complexity_cost_estimation_function) | `""` | Replaces the built-in cost estimate.        |
+| [`RATE_LIMITING_REST_MODE`](settings.md#rate_limiting_rest_mode)                                  | `off`   | `off`, `report`, or `enforce`.                      |
+| [`RATE_LIMITING_REST_BUDGET`](settings.md#rate_limiting_rest_budget)                                | `1000`  | Complexity cost points granted for each token's budget window.           |
+| [`RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS`](settings.md#rate_limiting_rest_budget_window_in_seconds)              | `60`    | Length of the token's budget window in seconds.                    |
+| [`RATE_LIMITING_REST_READ_COST`](settings.md#rate_limiting_rest_read_cost)                             | `1.0`   | Base cost of a REST read request.                        |
+| [`RATE_LIMITING_REST_WRITE_COST`](settings.md#rate_limiting_rest_write_cost)                            | `3.0`   | Flat cost of a REST write request.                       |
+| [`RATE_LIMITING_REST_PAGINATION_COST`](settings.md#rate_limiting_rest_pagination_cost)                       | `3.0`   | Cost for each page of the request's result set.                    |
+| [`RATE_LIMITING_REST_INDEXABLE_LOOKUP_COST`](settings.md#rate_limiting_rest_indexable_lookup_cost)                 | `3.0`   | Cost for each indexable filter.                          |
+| [`RATE_LIMITING_REST_UNINDEXABLE_LOOKUP_COST`](settings.md#rate_limiting_rest_unindexable_lookup_cost)               | `3.0`   | Cost for each unindexable filter.                        |
+| [`RATE_LIMITING_REST_DEPTH_MULTIPLIER_PER_LEVEL`](settings.md#rate_limiting_rest_depth_multiplier_per_level)            | `1.0`   | Weight of each level of `depth`.                    |
+| [`RATE_LIMITING_REST_COMPUTED_FIELDS_MULTIPLIER`](settings.md#rate_limiting_rest_computed_fields_multiplier)            | `3.0`   | Multiplier for each computed field used          |
+| [`RATE_LIMITING_REST_CSV_MULTIPLIER`](settings.md#rate_limiting_rest_csv_multiplier)                        | `3.0`   | Multiplier for `format=csv`.                        |
+| [`RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION`](settings.md#rate_limiting_custom_complexity_cost_estimation_function) | `""` | Replaces the built-in cost estimate.        |
 
 See [Settings](settings.md) for the full reference on each setting.
 
@@ -106,7 +106,7 @@ X-Nautobot-Cost: 4
 
 ### GraphQL Rate Limiting Modes
 
-Rate limiting can be enabled using the [`NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE`](settings.md#nautobot_rate_limiting_graphql_mode) setting.
+Rate limiting can be enabled using the [`RATE_LIMITING_GRAPHQL_MODE`](settings.md#rate_limiting_graphql_mode) setting.
 
 | Mode      | Behavior                                                                         |
 |-----------|----------------------------------------------------------------------------------|
@@ -128,7 +128,7 @@ Use `report` first to see what your clients actually cost, then switch to `enfor
 
 | Setting                                                             | Default | Description                                        |
 |---------------------------------------------------------------------|---------|-----------------------------------------------------|
-| [`NAUTOBOT_RATE_LIMITING_GRAPHQL_MODE`](settings.md#nautobot_rate_limiting_graphql_mode)                               | `off`   | Mode for token-authenticated GraphQL requests.      |
+| [`RATE_LIMITING_GRAPHQL_MODE`](settings.md#rate_limiting_graphql_mode)                               | `off`   | Mode for token-authenticated GraphQL requests.      |
 
 See [Settings](settings.md) for the full reference on each setting.
 
@@ -144,7 +144,7 @@ The response headers will carry a `Retry-After` header with the number of second
 
 ## Custom Complexity Cost Function
 
-[`NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION`](settings.md#nautobot_rate_limiting_custom_complexity_cost_estimation_function) replaces Nautobot's built-in complexity cost estimation with a custom implementation.
+[`RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION`](settings.md#rate_limiting_custom_complexity_cost_estimation_function) replaces Nautobot's built-in complexity cost estimation with a custom implementation.
 
 Nautobot resolves the path at startup and reports a system check error if it cannot be imported or is not callable.
 
@@ -165,8 +165,8 @@ This function is applied to REST read and write operations, as well as GraphQL o
 ```python
 # nautobot_config.py
 
-NAUTOBOT_RATE_LIMITING_REST_MODE = "enforce"
-NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = "nautobot_config.estimate_request_cost"
+RATE_LIMITING_REST_MODE = "enforce"
+RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = "nautobot_config.estimate_request_cost"
 
 
 def estimate_request_cost(request):
@@ -184,8 +184,8 @@ from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
 )
 
-NAUTOBOT_RATE_LIMITING_REST_MODE = "enforce"
-NAUTOBOT_RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = "nautobot_config.estimate_request_cost"
+RATE_LIMITING_REST_MODE = "enforce"
+RATE_LIMITING_CUSTOM_COMPLEXITY_COST_ESTIMATION_FUNCTION = "nautobot_config.estimate_request_cost"
 
 
 def estimate_request_cost(request):

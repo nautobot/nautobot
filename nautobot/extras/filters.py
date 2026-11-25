@@ -67,6 +67,9 @@ from nautobot.extras.models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -126,6 +129,9 @@ __all__ = (
     "ApprovalWorkflowStageDefinitionFilterSet",
     "ApprovalWorkflowStageFilterSet",
     "ApprovalWorkflowStageResponseFilterSet",
+    "ArchivedJobLogEntryFilterSet",
+    "ArchivedJobResultFilterSet",
+    "ArchivedObjectChangeFilterSet",
     "ComputedFieldFilterSet",
     "ConfigContextFilterSet",
     "ContactFilterSet",
@@ -657,6 +663,113 @@ class ApprovalWorkflowDefinitionFilterSet(NautobotFilterSet):
 
         model = ApprovalWorkflowDefinition
         fields = "__all__"
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "grouping": "icontains",
+            "message": "icontains",
+            "log_level": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ArchivedJobLogEntry
+        fields = [
+            "id",
+            "created",
+            "grouping",
+            "job_result",
+            "log_level",
+            "log_object",
+            "message",
+        ]
+
+
+class ArchivedJobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "user_name": "icontains",
+        }
+    )
+
+    job_model = MultiValueUUIDFilter(
+        field_name="job_model_id",
+        label="Job model (ID)",
+    )
+    status = MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    has_job_console_entries = RelatedMembershipBooleanFilter(
+        field_name="job_console_entries",
+        label="Has Job Console Entries",
+    )
+    cancel_type = MultipleChoiceFilter(
+        choices=JobCancelTypeChoices.CHOICES,
+    )
+
+    class Meta:
+        model = ArchivedJobResult
+        fields = [
+            "id",
+            "canceled_by_user_name",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "user_name",
+        ]
+
+
+class ArchivedContentTypeMultipleChoiceFilter(ContentTypeMultipleChoiceFilter):
+    """
+    Filter a content_type_id field or similar (an IntegerField, not a ForeignKey) by "app_label.model" strings.
+
+    Inherits from ContentTypeMultipleChoiceFilter so that it gets the correct (negation-only) filter extensions added
+    by BaseFilterSet without needing to add a dependency on this extras-specific class in nautobot.core.filters.
+    """
+
+    def get_filter_predicate(self, v):
+        app_label, model = v.lower().strip().split(".")
+        return {self.field_name: ContentType.objects.get_by_natural_key(app_label, model).pk}
+
+
+class ArchivedObjectChangeFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "user_name": "icontains",
+            "object_repr": "icontains",
+        },
+    )
+    changed_object_type = ArchivedContentTypeMultipleChoiceFilter(
+        label="Object Type",
+        field_name="changed_object_type_id",
+        choices=ChangeLoggedModelsQuery().get_choices,
+        conjoined=False,
+    )
+    change_context = MultipleChoiceFilter(label="Change Context", choices=ObjectChangeEventContextChoices)
+    change_context_detail = MultiValueCharFilter(label="Change Context Detail")
+
+    class Meta:
+        model = ArchivedObjectChange
+        fields = [
+            "id",
+            "user_name",
+            "change_context",
+            "change_context_detail",
+            "request_id",
+            "action",
+            "changed_object_type_id",
+            "changed_object_id",
+            "object_repr",
+            "time",
+        ]
 
 
 #

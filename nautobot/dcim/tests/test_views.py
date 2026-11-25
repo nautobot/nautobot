@@ -115,6 +115,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.tables import DeviceModuleBayTable
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.dcim.views import (
     CableCreateView,
@@ -2847,6 +2848,24 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Add virtual device context", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_embedded_action_button_icons_are_aria_hidden(self):
+        """Check that the embedded action icons are `aria-hidden`, so each button's accessible name is its label."""
+        self.add_permissions("dcim.add_device", "tenancy.add_tenant")
+        response = self.client.get(reverse("dcim:device_add"))
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertInHTML(
+            '<span class="mdi mdi-plus-thick" aria-hidden="true"></span>'
+            '<span class="visually-hidden">Add a new tenant</span>',
+            content,
+        )
+        self.assertInHTML(
+            '<span class="mdi mdi-filter" aria-hidden="true"></span>'
+            '<span class="visually-hidden">Search tenants</span>',
+            content,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_detail_with_parent_bay(self):
         parent_device = Device.objects.first()
         parent_device.subdevice_role = "parent"
@@ -2975,7 +2994,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         module.parent_module_bay = root1
         module.validated_save()
 
-        panel = DeviceUIViewSet.DeviceModuleBaysTablePanel(weight=100)
+        panel = DeviceUIViewSet.DeviceModuleBaysTablePanel(weight=100, table_class=DeviceModuleBayTable)
         request = RequestFactory().get(reverse("dcim:device_modulebays", kwargs={"pk": device.pk}))
         request.user = self.user
 

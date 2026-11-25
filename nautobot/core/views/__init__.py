@@ -575,8 +575,14 @@ class LiveSearchView(AccessMixin, View):
                     if hasattr(filtered_queryset, "restrict")
                     else filtered_queryset
                 )[: LIVE_SEARCH_MAX_RESULTS + 1]
+
+                def row_onclick(record):
+                    url = table.get_row_url(record)
+                    return f'window.location.href = "{url}";' if url else None
+
                 table = table_class(
                     restricted_queryset,
+                    user=request.user,
                     # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
                     attrs={"class": "table nb-table-headings"},
                     hide_hierarchy_ui=True,
@@ -584,10 +590,14 @@ class LiveSearchView(AccessMixin, View):
                     orderable=False,
                     row_attrs={
                         # Event handlers and attributes below are defined in order to imitate anchor link behavior.
-                        "role": "link",
-                        "tabindex": 0,
-                        "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
-                        "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
+                        "role": lambda record: "link" if table.get_row_url(record) else None,
+                        "tabindex": lambda record: 0 if table.get_row_url(record) else None,
+                        "onclick": row_onclick,
+                        "onkeydown": lambda record: (
+                            "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }"
+                            if table.get_row_url(record)
+                            else None
+                        ),
                     },
                 )
                 # Hide unnecessary "pk" and "actions" columns, if they would otherwise be displayed.

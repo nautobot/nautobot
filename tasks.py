@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 import concurrent.futures
+import fcntl
 from functools import partial
 import json
 import os
@@ -20,10 +21,14 @@ import platform
 import re
 import shlex
 import shutil
+import struct
+import sys
+import termios
 import time
 
-from invoke import Collection, task as invoke_task
+from invoke import Collection, task as invoke_task, terminals
 from invoke.exceptions import Exit, Failure
+import invoke.runners
 
 try:
     import yaml
@@ -43,6 +48,29 @@ try:
     HAS_RICH = True
 except ModuleNotFoundError:
     HAS_RICH = False
+
+
+if sys.version_info >= (3, 14):
+
+    def _bytes_to_read(input_) -> int:
+        """
+        Return how many bytes are waiting on `input_`, reading `FIONREAD` into a buffer sized for a C `int` (4 bytes).
+
+        Baseline `invoke` passes only a 2-byte buffer here, which Python 3.14 and later rejects as a buffer overflow.
+        https://github.com/pyinvoke/invoke/issues/1070 documents this, but is not yet fixed in any upstream release.
+        Once that's resolved, we can remove this patch.
+        """
+        if terminals.isatty(input_) and terminals.has_fileno(input_):
+            # Original code:
+            # fionread = fcntl.ioctl(input_, termios.FIONREAD, b"  ")
+            # return int(struct.unpack("h", fionread)[0])
+            # Corrected code:
+            fionread = fcntl.ioctl(input_, termios.FIONREAD, struct.pack("i", 0))
+            return struct.unpack("i", fionread)[0]
+        return 1
+
+    # Apply the patched method
+    invoke.runners.bytes_to_read = _bytes_to_read
 
 
 # Base directory path from this file.
@@ -87,6 +115,7 @@ namespace.configure(
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
             "python_ver": "3.14",
+            "postgres_ver": "15",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -188,6 +217,8 @@ def docker_compose(context, command, **kwargs):
     ]
 
     for compose_file in context.nautobot.compose_files:
+        if compose_file == "docker-compose.postgres.yml":
+            compose_file = f"docker-compose.postgres.{context.nautobot.postgres_ver}.yml"
         compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
@@ -208,7 +239,13 @@ def docker_compose(context, command, **kwargs):
         print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
-    env.update({"PYTHON_VER": context.nautobot.python_ver, "NAUTOBOT_VER": NAUTOBOT_VER})
+    env.update(
+        {
+            "NAUTOBOT_VER": NAUTOBOT_VER,
+            "POSTGRES_VER": context.nautobot.postgres_ver,
+            "PYTHON_VER": context.nautobot.python_ver,
+        }
+    )
     if "hide" not in kwargs:
         print_command(compose_command, env=env)
     return context.run(compose_command, env=env, **kwargs)
@@ -615,9 +652,12 @@ def vscode(context, workspace_launch=True):
     except FileNotFoundError:
         lines = []
     finally:
-        cleaned_lines = [og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|PYTHON_VER)=", og_line)]
-        cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")
+        cleaned_lines = [
+            og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|POSTGRES_VER|PYTHON_VER)=", og_line)
+        ]
         cleaned_lines.append(f"NAUTOBOT_VER={get_nautobot_major_minor_version(context)}")
+        cleaned_lines.append(f"POSTGRES_VER={context.nautobot.postgres_ver}")
+        cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")
         with open(env_file_path, "w") as env_file_obj:
             env_file_obj.write("\n".join(cleaned_lines))
 

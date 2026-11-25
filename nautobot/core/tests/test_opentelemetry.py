@@ -337,8 +337,12 @@ class InstrumentExporterBranchTest(OpenTelemetryTestMixin, testing.TestCase):
         # exercising the metrics branch can't leak a global meter provider into later tests.
         self._meter_provider_patcher = patch("nautobot.core.cli.opentelemetry.metrics.set_meter_provider")
         self._meter_provider_patcher.start()
+        # Suppress the periodic metric reader thread that calls collect() every export interval for the rest of the process.
+        self._metric_reader_patcher = patch("nautobot.core.cli.opentelemetry.PeriodicExportingMetricReader")
+        self._metric_reader_patcher.start()
 
     def tearDown(self):
+        self._metric_reader_patcher.stop()
         self._meter_provider_patcher.stop()
         super().tearDown()
 

@@ -3,7 +3,9 @@ import re
 from textwrap import dedent
 
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from django.utils.html import format_html, format_html_join
+from django.utils.text import slugify
 import django_tables2 as tables
 from django_tables2.utils import Accessor
 from jsonschema import Draft7Validator
@@ -32,6 +34,9 @@ from .models import (
     ApprovalWorkflowStage,
     ApprovalWorkflowStageDefinition,
     ApprovalWorkflowStageResponse,
+    ArchivedJobLogEntry,
+    ArchivedJobResult,
+    ArchivedObjectChange,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -73,6 +78,7 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+from .utils import resolve_object_urls
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +88,29 @@ APPROVAL_WORKFLOW_OBJECT = """
 {% else %}
     {{ record.object_under_review }}
 {% endif %}
+"""
+
+ARCHIVEDJOBRESULT_BUTTONS = """
+{% if perms.extras.view_archivedjoblogentry %}
+    <li>
+        <a href="{% url 'extras-api:archivedjoblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_archivedjobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:archivedjobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
+{% endif %}
+"""
+
+ARCHIVEDOBJECTCHANGE_REQUEST_ID = """
+<a href="{% url 'extras:archivedobjectchange_list' %}?request_id={{ value }}">{{ value }}</a>
 """
 
 ASSIGNED_OBJECT = """
@@ -1137,8 +1166,8 @@ class JobTable(BaseTable):
     pk = ToggleColumn()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(
-        attrs={"a": {"class": "job_run", "title": "Run/Schedule"}},
-        linkify=("extras:job_run", {"pk": tables.A("pk")}),
+        attrs={"a": {"class": "job_run d-inline-flex gap-2 align-items-start", "title": "Run/Schedule"}},
+        linkify=lambda record, table: table.get_row_url(record),
     )
     source_version = tables.Column(orderable=False)
     installed = BooleanColumn()
@@ -1175,12 +1204,60 @@ class JobTable(BaseTable):
     tags = TagColumn(url_name="extras:job_list")
     actions = ButtonsColumn(JobModel, prepend_template=JOB_BUTTONS)
 
-    def render_description(self, value):
-        return render_markdown(value)
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        self._runnable_ids = None
+        row_attrs = dict(kwargs.pop("row_attrs", None) or {})
+        row_attrs.update(
+            {
+                "class": lambda record: (
+                    f"collapseme-{slugify(record.grouping)} collapse show nb-transition-none"
+                    + (" disabled" if not self.get_row_url(record) else "")
+                ),
+                "aria-disabled": lambda record: "true" if not self.get_row_url(record) else None,
+                "style": lambda record: (
+                    "--bs-table-color: var(--bs-secondary-color);" if not self.get_row_url(record) else None
+                ),
+            }
+        )
+        super().__init__(*args, user=user, row_attrs=row_attrs, **kwargs)
 
-    def render_name(self, value):
+    def before_render(self, request):
+        super().before_render(request)
+        if self.user != request.user:
+            self.user = request.user
+            self._runnable_ids = None
+
+    def get_row_url(self, record):
+        """Use the same Run/Schedule destination and object permissions in every Job table."""
+        if not record.runnable or self.user is None:
+            return None
+        if self._runnable_ids is None:
+            self._runnable_ids = set(
+                JobModel.objects.restrict(self.user, "run")
+                .filter(pk__in=[job.pk for job in self.data.data])
+                .values_list("pk", flat=True)
+            )
+        if record.pk in self._runnable_ids:
+            return reverse("extras:job_run", kwargs={"pk": record.pk})
+        return None
+
+    def render_description(self, value, record):
         return format_html(
-            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
+            '<div class="nb-rendered-markdown{}">{}</div>',
+            " text-body-secondary" if not self.get_row_url(record) else "",
+            render_markdown(value),
+        )
+
+    def render_name(self, value, record):
+        runnable = bool(self.get_row_url(record))
+        return format_html(
+            '<span class="d-inline-flex column-gap-10 align-items-start{}" style="{}">'
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle flex-shrink-0{}" aria-hidden="true">'
+            '<span class="mdi mdi-play"></span></span>{}</span>',
+            "" if runnable else " text-body-secondary",
+            "" if runnable else "cursor: not-allowed",
+            "" if runnable else " disabled",
             value,
         )
 
@@ -1341,7 +1418,7 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     duration = tables.Column(orderable=False)
-    actions = ButtonsColumn(JobResult, buttons=("none",), prepend_template=JOB_RESULT_BUTTONS)
+    actions = ButtonsColumn(JobResult, buttons=("detail",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
     queue_name = tables.Column(accessor="queue", verbose_name="Queue Name", order_by=("celery_kwargs__queue",))
     cancel_type = tables.TemplateColumn(
@@ -1665,6 +1742,100 @@ class ObjectChangeTable(BaseTable):
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
             logger.warning(error_message)
+
+
+#
+# Archived log models
+#
+
+
+class ArchivedJobLogEntryTable(JobLogEntryTable):
+    pk = None
+
+    class Meta(JobLogEntryTable.Meta):
+        model = ArchivedJobLogEntry
+
+
+class ArchivedJobResultTable(JobResultTable):
+    pk = None
+    canceled_by = None
+    job_model = None
+    scheduled_job = None
+    user = None
+    actions = ButtonsColumn(ArchivedJobResult, buttons=("detail",), prepend_template=ARCHIVEDJOBRESULT_BUTTONS)
+
+    class Meta(JobResultTable.Meta):
+        model = ArchivedJobResult
+        fields = (
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "duration",
+            "user_name",
+            "status",
+            "summary",
+            "console_log",
+            "queue_name",
+            "actions",
+        )
+        default_columns = (
+            "date_created",
+            "name",
+            "user_name",
+            "status",
+            "summary",
+            "actions",
+        )
+
+
+class ArchivedChangedObjectColumn(tables.Column):
+    """
+    Render `object_repr`, linked to the object derived from `changed_object_type_id` and `changed_object_id`, if found.
+    """
+
+    def render(self, record, table):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        url = table.changed_object_urls.get((record.changed_object_type_id, record.changed_object_id))
+        if url:
+            return format_html('<a href="{}">{}</a>', url, record.object_repr)
+        return record.object_repr
+
+
+class ArchivedObjectChangeTable(BaseTable):
+    time = tables.DateTimeColumn(linkify=True, short=True)
+    action = ChoiceFieldColumn()
+    # Not orderable because it isn't a real FK, so it would order by `content_type_id` instead of by ContentType order.
+    changed_object_type = tables.Column(verbose_name="Type", orderable=False)
+    object_repr = ArchivedChangedObjectColumn(verbose_name="Object")
+    request_id = tables.TemplateColumn(template_code=ARCHIVEDOBJECTCHANGE_REQUEST_ID, verbose_name="Request ID")
+
+    class Meta(BaseTable.Meta):
+        model = ArchivedObjectChange
+        fields = (
+            "time",
+            "user_name",
+            "action",
+            "changed_object_type",
+            "object_repr",
+            "request_id",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._changed_object_urls = None
+
+    @property
+    def changed_object_urls(self):
+        """Reusable property mapping each row's (changed_object_type_id, changed_object_id) to its object URL."""
+        if self._changed_object_urls is None:
+            rows = self.paginated_rows
+            self._changed_object_urls = resolve_object_urls(
+                (record.changed_object_type_id, record.changed_object_id)
+                for record in (getattr(row, "record", row) for row in rows)
+            )
+
+        return self._changed_object_urls
 
 
 #

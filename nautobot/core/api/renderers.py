@@ -101,7 +101,7 @@ class NautobotCSVRenderer(BaseRenderer):
 
     def render_directive_row(self, writer, directives):
         """
-        Render `build_import_metadata` as a leading `# nautobot_import_version=1; ...` row.
+        Render `build_import_metadata` as a leading `# nautobot_import_version=3; ...` row.
 
         The version directive doubles as the marker identifying the row as Nautobot's. The directive occupies
         a single cell so it survives spreadsheet open-edit-save cycles; see the matching first-cell parsing

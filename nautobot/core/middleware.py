@@ -640,8 +640,7 @@ class ComplexityCostRateLimitingMiddleware:
 
     def __call__(self, request):
         is_complexity_cost_calculation_enabled = (
-            settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "report"
-            or settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
+            settings.RATE_LIMITING_REST_MODE == "report" or settings.RATE_LIMITING_REST_MODE == "enforce"
         )
         if is_complexity_cost_calculation_enabled is False:
             return self.get_response(request)
@@ -657,7 +656,7 @@ class ComplexityCostRateLimitingMiddleware:
         return response
 
     def perform_rest_api_complexity_cost_rate_limiting(self, request):
-        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_RATE_LIMITING_REST_MODE == "enforce"
+        should_complexity_cost_calculation_enforced = settings.RATE_LIMITING_REST_MODE == "enforce"
 
         # ----------------------------------------------------------------------
         #  Extract Token
@@ -681,13 +680,13 @@ class ComplexityCostRateLimitingMiddleware:
             read_request_features = classify_rest_read_request_features(request)
             request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
         else:
-            request_complexity_cost_estimate = settings.NAUTOBOT_RATE_LIMITING_REST_WRITE_COST
+            request_complexity_cost_estimate = settings.RATE_LIMITING_REST_WRITE_COST
 
         # ----------------------------------------------------------------------
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
-        rate_limit_budget = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET
-        rate_limiting_window_in_seconds = settings.NAUTOBOT_RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS
+        rate_limit_budget = settings.RATE_LIMITING_REST_BUDGET
+        rate_limiting_window_in_seconds = settings.RATE_LIMITING_REST_BUDGET_WINDOW_IN_SECONDS
 
         consumed_budget = 0
         remaining_window_time_in_seconds = rate_limiting_window_in_seconds

@@ -22,7 +22,7 @@ from django.template import Context
 from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
@@ -746,26 +746,48 @@ class DistinctViewTab(Tab):
             return False
 
         self.related_object_count = None
-        if not self.related_object_attribute:
-            return True
-
         obj = get_obj_from_context(context)
-        if not hasattr(obj, self.related_object_attribute):
+        if not self.related_object_attribute:
+            pass
+        elif not hasattr(obj, self.related_object_attribute):
             logger.warning(
                 f"{obj} does not have a related attribute {self.related_object_attribute} to count for tab label."
             )
-            return True
-
-        try:
-            self.related_object_count = getattr(obj, self.related_object_attribute).count()
-        except AttributeError:
-            # Not a warning log, as there are cases where this is expected.
-            logger.debug(
-                f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
-            )
-
-        if self.hide_if_empty and not self.related_object_count:
-            return False
+        else:
+            try:
+                self.related_object_count = getattr(obj, self.related_object_attribute).count()
+            except AttributeError:
+                # Not a warning log, as there are cases where this is expected.
+                logger.debug(
+                    f"{obj}'s attribute {self.related_object_attribute} is not a related manager to count for tab label."
+                )
+            if self.hide_if_empty and not self.related_object_count:
+                return False
+        url_match = None
+        if not self.required_permissions:  # only check if permissions werent specified explicitly
+            try:
+                url_match = resolve(self.get_extra_context(context)["url"])
+            except Exception:  # Getting extra context might not work
+                url_match = None
+        if url_match:
+            view_func = url_match.func
+            view_instance = None
+            request = context["request"]
+            # Check via view_class if available
+            if callable(getattr(view_func, "view_class", None)):
+                view_instance = view_func.view_class()
+            # If nothing was found using the view class, check using @action methods
+            else:
+                view_instance = view_func.cls(request=request, **view_func.initkwargs)
+            try:
+                extra_permissions = getattr(view_instance, "get_required_permission", lambda: None)()
+            except Exception:  # view_instance.get_required_permission() can fail
+                extra_permissions = None
+            if extra_permissions:
+                if isinstance(extra_permissions, str):
+                    extra_permissions = [extra_permissions]
+                if not request.user.has_perms(extra_permissions):
+                    return False
         return True
 
     def should_render_content(self, context: Context):
@@ -1200,6 +1222,8 @@ class ObjectsTablePanel(Panel):
                 "table (table_class, table_filter, table_attribute, distinct, select_related_fields, "
                 "prefetch_related_fields, order_by_fields, hide_hierarchy_ui)."
             )
+        if not (self.context_table_key or self.table_class):
+            raise ValueError("Either `context_table_key` or `table_class` must be specified.")  # pragma: no cover
         if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
         # A subclass that overrides `get_table_data_queryset()` supplies its own data source and so

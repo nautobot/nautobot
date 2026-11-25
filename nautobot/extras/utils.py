@@ -60,6 +60,49 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def resolve_object_urls(references):
+    """
+    Map each `(content_type_id, object_id)` tuple in `references` to that object's URL, for those that resolve at all.
+
+    Used to efficiently support tables of archived log models, such as `ArchivedObjectChange` which has a
+    `content_type_id` and `object_id` instead of the true GenericForeignKey that's present on `ObjectChange`.
+
+    Performs one query per distinct content type provided, which is more efficient than the naive table column
+    implementation which would perform one query per row.
+
+    If the given reference tuple doesn't resolve (missing content-type, no object with the given ID, or no detail URL
+    for the given model), the reference is omitted entirely from the returned result. This is a common scenario.
+
+    Args:
+        references (iterable): `(content_type_id, object_id)` pairs.
+
+    Returns:
+        (dict): Maps each tuple that has a URL to that URL.
+    """
+    by_content_type = collections.defaultdict(set)
+    for content_type_id, object_id in references:
+        if content_type_id is not None and object_id is not None:
+            by_content_type[content_type_id].add(object_id)
+
+    urls = {}
+    for content_type_id, object_ids in by_content_type.items():
+        try:
+            model = ContentType.objects.get_for_id(content_type_id).model_class()
+        except ContentType.DoesNotExist:
+            continue
+        if model is None:
+            continue
+        # Use _base_manager instead of objects, so as to bypass default managers like StaticGroupAssociation.objects,
+        # which apply default filters that would not be desired here.
+        for obj in model._base_manager.filter(pk__in=object_ids):
+            with contextlib.suppress(AttributeError):
+                url = obj.get_absolute_url()
+                if url:
+                    urls[(content_type_id, obj.pk)] = url
+
+    return urls
+
+
 def get_base_template(base_template: Optional[str], model: type[Model]) -> str:
     """
     Attempt to locate the correct base template for an object detail view and related views, if one was not specified.
@@ -452,6 +495,8 @@ def populate_model_features_registry(refresh=False):
         {
             "feature_name": "custom_fields",
             "field_names": ["_custom_field_data"],
+            # Models with `_custom_field_data` can opt out via `is_custom_field_model = False`.
+            "additional_constraints": {"is_custom_field_model": True},
         },
         {
             "feature_name": "export",
@@ -1124,6 +1169,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     with transaction.atomic():
         try:
             change_context.defer_object_changes = True
+            change_context.skip_deleted_object_changes = True
 
             # Snapshot parent PKs first so deletes in earlier batches do not shift later ones.
             parent_pks = list(qs.values_list("pk", flat=True))
@@ -1178,6 +1224,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
             return total_deleted, deleted_by_label
         finally:
             change_context.defer_object_changes = False
+            change_context.skip_deleted_object_changes = False
             change_context.reset_deferred_object_changes()
 
 

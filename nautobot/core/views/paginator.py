@@ -4,15 +4,13 @@ from django.core.paginator import Page, Paginator
 
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import config
+from nautobot.core.utils.data import coerce_paginate_count
 
 
 class EnhancedPaginator(Paginator):
     def __init__(self, object_list, per_page, **kwargs):
-        try:
-            per_page = int(per_page)
-            if per_page < 1:
-                per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
-        except ValueError:
+        per_page = coerce_paginate_count(per_page)
+        if per_page is None:
             per_page = config.get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
 
         max_page_size = config.get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
@@ -62,9 +60,10 @@ def get_paginate_count(request, saved_view=None, save_user_config=True):
         except ValueError:
             pass
 
-    if saved_view is not None:
-        per_page = saved_view.config.get("pagination_count", None)
-        if per_page:
+    if saved_view is not None and isinstance(saved_view.config, dict):
+        # Ignore a missing or malformed value rather than letting it break the list view for everyone.
+        per_page = coerce_paginate_count(saved_view.config.get("pagination_count", None))
+        if per_page is not None:
             return per_page
 
     if request.user.is_authenticated:

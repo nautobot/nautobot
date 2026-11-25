@@ -174,6 +174,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
             # result in an error if `feature` is not found in the `registry["model features"]` dict.
             # In this case use queryset
             queryset_map = {
+                "archived_object_changes": ChangeLoggedModelsQuery,
                 "tags": TaggableClassesQuery,
                 "job_hooks": ChangeLoggedModelsQuery,
                 "roles": RoleModelsQuery,
@@ -234,15 +235,29 @@ def build_filter_dict_from_filterset(
     *,
     logs_prefix: object | None = None,
 ) -> dict[str, Any]:
+    # Get the declared form for any overloaded form field definitions.
+    declared_form = get_form_for_model(filterset_class._meta.model, form_prefix="Filter")
+
+    # A model-backed FilterForm field (e.g. `MultipleContentTypeField`) cleans to model instances, but a filter whose
+    # form field takes plain values (e.g. `ContentTypeMultipleChoiceFilter`) cannot clean those, so give it the values
+    # that the FilterForm field renders instead.
+    plain_values = {}
+    for name, value in form_data.items():
+        declared_field = declared_form.declared_fields.get(name)
+        base_filter = filterset_class.base_filters.get(name)
+        if (
+            isinstance(declared_field, forms.ModelChoiceField)
+            and base_filter is not None
+            and not issubclass(base_filter.field_class, forms.ModelChoiceField)
+        ):
+            plain_values[name] = declared_field.prepare_value(value)
+
     # Populate the filterset from the incoming `form_data`. The filterset's internal form is
     # used for validation, will be used by us to extract cleaned data for final processing.
-    filterset = filterset_class(form_data)
+    filterset = filterset_class({**form_data, **plain_values})
 
     # Use the auto-generated filterset form perform creation of the filter dictionary.
     filterset_form = filterset.form
-
-    # Get the declared form for any overloaded form field definitions.
-    declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
 
     # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
     # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
@@ -258,21 +273,22 @@ def build_filter_dict_from_filterset(
     allowed_fields = filter_fields or filterset_form.fields.keys()
 
     for field_name in allowed_fields:
-        field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
+        value_field = filterset_form.fields[field_name]
+        declared_field = declared_form.declared_fields.get(field_name)
+        # The value comes from the filterset form, so its field decides whether the value is a model instance.
+        key_field = declared_field if isinstance(declared_field, forms.ModelChoiceField) else value_field
         field_value = filterset_form.cleaned_data[field_name]
 
-        # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
-        # and literal FilterSet fields (ex: MultiValueCharFilter).
-        if isinstance(field, forms.ModelMultipleChoiceField):
+        if isinstance(value_field, forms.ModelMultipleChoiceField):
             if not field_value:
                 continue
-            field_to_query = field.to_field_name or "pk"
+            field_to_query = key_field.to_field_name or "pk"
             new_value = [getattr(item, field_to_query) for item in field_value]
 
-        elif isinstance(field, forms.ModelChoiceField):
+        elif isinstance(value_field, forms.ModelChoiceField):
             if not field_value:
                 continue
-            field_to_query = field.to_field_name or "pk"
+            field_to_query = key_field.to_field_name or "pk"
             if isinstance(field_value, list):
                 new_value = [getattr(item, field_to_query) for item in field_value]
             else:

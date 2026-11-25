@@ -6,36 +6,120 @@ This document describes all new features and changes in Nautobot 3.3.
 
 ### Administrators
 
-TODO
+#### Change Records Are Created Only When a Field Value Changes
+
+Saving an object without changing any of its field values no longer creates a change record or triggers webhooks, job hooks, or events. If an integration depends on these, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../user-guide/administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False`.
+
+### App Developers
+
+`Webhook.check_for_conflicts()`, `JobHook.check_for_conflicts()`, and `SeleniumTestCase.assertNoAccessibilityViolations()` have been removed, and static files under `drf_spectacular_sidecar/` are no longer available. Models can opt out of the import and export Jobs by setting `is_importable_model` or `is_exportable_model` to `False`.
 
 ## Release Overview
 
 ### Added
 
-TODO
+#### Enhanced Import and Export
+
+Import and export now support JSON and YAML in addition to CSV. Users can choose which fields to export and in what order, and an import can update (commonly referred to as upsert) existing records as well as create new ones, matching rows on fields such as a device's name. Both actions now run in a job modal from the object list view. For details, see [Importing and Exporting Objects](../user-guide/feature-guides/import-and-export.md).
+
+#### Conditions on Webhooks and Job Hooks
+
+Webhooks and job hooks can now have [conditions](../user-guide/feature-guides/conditions.md), so a hook runs only for the changes you care about, such as a device status changing from "Staged" to "Active". Conditions are built from presets or written as raw Jinja2 expressions.
+
+#### UI Updates
+
+Continous UI improvements include:
+
+- Django Messages now appear as toasts that close on their own.
+- Object list rows can be expanded to show an overview of the object.
+- Any page can be added to the navbar favorites.
+- Favorites can be ordered.
+- Sticky headers on Object list views.
+- Multiple custom links are grouped into a single dropdown.
+
+#### Change Log and Job Result Archiving
+
+The new "Archive Old Records" system Job finds change records and Job results that are older than a given number of days. It moves them, together with the Job results' log and console entries, out of the main tables and into separate archive tables, which are designed so they can later be moved to a separate database. Archiving keeps the main tables small and fast while preserving the full history for audits. Archived records have their own views, APIs, and permissions.
+
+#### REST API Rate Limiting
+
+Nautobot can now [rate limit REST API requests](../user-guide/administration/configuration/rate-limiting.md) per API token, based on a user definable cost of each request. Rate limiting is disabled by default and supports report mode to get started or track.
+
+#### Request Performance Measurements
+
+Nautobot can now report request and database query durations in a `Server-Timing` response header and in Prometheus metrics. See [Request Performance Measurements](../user-guide/administration/configuration/request-performance-measurements.md).
+
+#### `IPAddressAssignment` Records Can No Longer Be Edited
+
+An existing "IP Address Assignment" record can no longer be changed in place, including through the REST API. Delete the assignment and create a new one instead. Assigning IP addresses through the UI is unaffected by this change.
+
+#### Other Additions
+
+- Device Types have optional depth and weight fields, and Module Types have an optional weight field.
+- A [Playwright](../development/core/playwright-testing.md)-based framework for browser tests is now included.
 
 ### Changed
 
-TODO
+#### Unchanged Saves Are No Longer Logged
 
-#### Enhanced Export/Import
+A save that changes none of an object's field values no longer creates a change record or triggers webhooks, job hooks, or events. See [Saves That Change Nothing](../user-guide/platform-functionality/change-logging.md#saves-that-change-nothing).
 
-The object export/import functionality has been enhanced in several ways:
+#### IP Address Assignments Can No Longer Be Edited
 
-- JSON and YAML formats are now supported in addition to the existing CSV format support.
-- Imports can now update existing records as well as create existing records, when requested ("upsert" functionality).
-- CSV export/import now includes a metadata header row, and includes support for a wider range of many-to-many fields.
-
-For more details, refer to the [import and export documentation](../user-guide/feature-guides/import-and-export.md).
+The IP address and interface of an existing IP Address Assignment can no longer be changed, including through the REST API. Delete the assignment and create a new one instead.
 
 ### Dependencies
 
-#### Removed Python 3.10 Support
-
-As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
+As in every Nautobot minor release, 3.3.0 includes updates to many of Nautobot's dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 <!-- towncrier release notes start -->
+
+## v3.3.0b1 (2026-11-20)
+
+### Added in v3.3.0b1
+
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Added long-term retention models for change and job history. `ArchivedObjectChange`, `ArchivedJobResult`, `ArchivedJobLogEntry` and `ArchivedJobConsoleEntry` mirror the existing `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry` models, with foreign keys to other models stored as plain identifier columns.
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Added a database index on `JobConsoleEntry` for retrieving a job result's console output in timestamp order.
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Added the `is_custom_field_model` flag to `CustomFieldModel`, which a model can set to `False` to opt out of custom field support.
+- [#9717](https://github.com/nautobot/nautobot/issues/9717) - Added the `BasePage` methods `select2_filter_search`, `expect_filter_option_count` and `expect_no_filter_options` to `nautobot.playwright`.
+- [#9727](https://github.com/nautobot/nautobot/issues/9727) - Added new System Job `Archive Old Records`, which is used to migrate old `ObjectChange`, `JobResult`, `JobConsoleEntry`, and `JobLogEntry` records to a separate set of database tables.
+- [#9769](https://github.com/nautobot/nautobot/issues/9769) - Added read-only UI and REST API support for archived log models.
+- [#9824](https://github.com/nautobot/nautobot/issues/9824) - Enhanced the Archived Object Change list view to provide a link to the changed object if it still exists.
+- [#9824](https://github.com/nautobot/nautobot/issues/9824) - Added `changed_object_type` filter support for Archived Object Change records.
+- [#9833](https://github.com/nautobot/nautobot/issues/9833) - Added a "Difference" panel with Previous/Next navigation to the ArchivedObjectChange detail view.
+
+### Changed in v3.3.0b1
+
+- [#9717](https://github.com/nautobot/nautobot/issues/9717) - Changed `select2_filter_pick` in `nautobot.playwright.base_page` from a module-level function to a `BasePage` method.
+- [#9840](https://github.com/nautobot/nautobot/issues/9840) - Renamed the settings variables named `NAUTOBOT_RATE_LIMITING_*` to simply `RATE_LIMITING_*`.
+
+### Removed in v3.3.0b1
+
+- [#9839](https://github.com/nautobot/nautobot/issues/9839) - Removed the legacy pattern (`/<list_url>/?export=<export-template-name>`, deprecated since v2.1) for exporting a list of records via an export-template without running the Export Object List job.
+
+### Fixed in v3.3.0b1
+
+- [#9833](https://github.com/nautobot/nautobot/issues/9833) - Fixed the "Related Changes" table in the ObjectChange detail view always being empty.
+
+### Documentation in v3.3.0b1
+
+- [#9832](https://github.com/nautobot/nautobot/issues/9832) - Update the 3.3 release documentation with the new features.
+- [#9839](https://github.com/nautobot/nautobot/issues/9839) - Clarified and corrected the documentation regarding the new and revised import/export features in v3.3.
+
+### Housekeeping in v3.3.0b1
+
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Added `JobConsoleEntryFactory`, `ArchivedObjectChangeFactory`, `ArchivedJobResultFactory`, `ArchivedJobLogEntryFactory` and `ArchivedJobConsoleEntryFactory`, and added their records to `nautobot-server generate_test_data`.
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Changed `ObjectChangeFactory` to group some changes under a shared request, user and change context.
+- [#9669](https://github.com/nautobot/nautobot/issues/9669) - Changed `ObjectChangeFactory` and `JobResultFactory` to generate more recent timestamps, with factory-generated archived history always older than the factory-generated `ObjectChange`, `JobResult`, `JobLogEntry` and `JobConsoleEntry` records it mirrors.
+- [#9696](https://github.com/nautobot/nautobot/issues/9696) - Ported the tests for embedded create and embedded search on object edit forms from Selenium to Playwright, and added the `EmbeddedModal` page component for Core Playwright tests.
+- [#9717](https://github.com/nautobot/nautobot/issues/9717) - Replaced the Selenium tag filter tests with their Playwright equivalents.
+- [#9769](https://github.com/nautobot/nautobot/issues/9769) - Enhanced `JobResultFactory` and `ArchivedJobResultFactory` to create canceled (revoked) records as well.
+- [#9792](https://github.com/nautobot/nautobot/issues/9792) - Added a test to detect schema drift for the archived models populated by the `Archive Old Records` job.
+- [#9812](https://github.com/nautobot/nautobot/issues/9812) - Changed `ObjectChangeFactory` to sometimes create records with a null `object_data`.
+- [#9837](https://github.com/nautobot/nautobot/issues/9837) - Changed the default Docker Compose development environment to use PostgreSQL 15, because PostgreSQL 14 has reached end of life. Note that Nautobot itself continues to support PostgreSQL 14 for the time being.
+- [#9837](https://github.com/nautobot/nautobot/issues/9837) - Added support for overriding the PostgreSQL version used by `tasks.py`.
+- [#9837](https://github.com/nautobot/nautobot/issues/9837) - Changed CI to run the integration tests against PostgreSQL 18. The other CI jobs that use PostgreSQL still run against PostgreSQL 14.
 
 ## v3.3.0a2 (2026-11-13)
 
