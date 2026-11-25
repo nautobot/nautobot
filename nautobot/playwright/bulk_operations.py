@@ -46,9 +46,10 @@ class BulkOperationsTestCase:
     # Text fields and values to set on the bulk edit form. assert_edited_count also passes them to
     # the REST API as a filter, to count the records that the bulk edit changed.
     model_edit_data: dict
-    # Filter drawer fields and the option to pick in each, which select the "filtered" records.
-    # _setup also passes each field and value to the REST API as a filter, so both must accept the value.
-    # "{prefix}" in a value is replaced with the prefix setup_items was given.
+    # The filter drawer fields, and the option to pick in each field, that select the "filtered" records.
+    # _setup also passes each field and value to the REST API as a filter, so the filter drawer and the
+    # REST API must both accept the value.
+    # "{prefix}" in a value is replaced with the prefix that _setup passes to setup_items.
     model_filter_by: dict
     # How many records setup_items creates in all, and how many of them model_filter_by selects.
     model_expected_counts = {
