@@ -2,7 +2,9 @@ import json
 import uuid
 
 from constance.test import override_config
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from nautobot.circuits.models import Circuit, CircuitTermination
 from nautobot.core.testing.forms import FormTestCases
@@ -58,7 +60,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.termination_field_set import CableTerminationFieldSet, detect_termination_type
 from nautobot.extras.models import Role, SecretsGroup, Status
-from nautobot.ipam.models import VLAN
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
@@ -255,6 +257,57 @@ class DeviceTestCase(FormTestCases.BaseFormTestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("position", form.errors)
+
+    def _device_with_interface_ips(self, name, count):
+        """Create a device with `count` interfaces, each with an IPv4 address that has a NAT outside IP."""
+        device = Device.objects.create(
+            name=name,
+            status=self.device_status,
+            device_type=self.device_type,
+            role=self.device_role,
+            location=self.location,
+        )
+        namespace = Namespace.objects.create(name=f"{name} namespace")
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        Prefix.objects.create(prefix="10.0.0.0/16", namespace=namespace, status=ip_status)
+        Prefix.objects.create(prefix="2001:db8::/64", namespace=namespace, status=ip_status)
+        interface_status = Status.objects.get_for_model(Interface).first()
+        for index in range(1, count + 1):
+            interface = Interface.objects.create(
+                device=device, name=f"eth{index}", type=InterfaceTypeChoices.TYPE_VIRTUAL, status=interface_status
+            )
+            inside = IPAddress.objects.create(address=f"10.0.0.{index}/16", namespace=namespace, status=ip_status)
+            IPAddress.objects.create(
+                address=f"10.0.1.{index}/16", namespace=namespace, status=ip_status, nat_inside=inside
+            )
+            ipv6 = IPAddress.objects.create(address=f"2001:db8::{index}/64", namespace=namespace, status=ip_status)
+            interface.add_ip_addresses([inside, ipv6])
+        return device
+
+    def test_primary_ip_choices_queries_do_not_grow_with_ip_assignments(self):
+        """Building the primary IP choices must not run queries per interface IP assignment."""
+        query_counts = []
+        for name, count in (("Device few IPs", 1), ("Device many IPs", 6)):
+            device = self._device_with_interface_ips(name, count)
+            with CaptureQueriesContext(connection) as queries:
+                DeviceForm(instance=device)
+            query_counts.append(len(queries))
+        self.assertEqual(query_counts[0], query_counts[1])
+
+    def test_primary_ip_choices(self):
+        device = self._device_with_interface_ips("Device with IPs", 2)
+        form = DeviceForm(instance=device)
+        ipv4_choices = form.fields["primary_ip4"].choices
+        self.assertEqual(ipv4_choices[0], (None, "---------"))
+        self.assertEqual(ipv4_choices[1][0], "Interface IPs")
+        self.assertCountEqual([label for _, label in ipv4_choices[1][1]], ["10.0.0.1/16 (eth1)", "10.0.0.2/16 (eth2)"])
+        self.assertEqual(ipv4_choices[2][0], "NAT IPs")
+        self.assertCountEqual([label for _, label in ipv4_choices[2][1]], ["10.0.1.1/16 (NAT)", "10.0.1.2/16 (NAT)"])
+        ipv6_choices = form.fields["primary_ip6"].choices
+        self.assertCountEqual(
+            [label for _, label in ipv6_choices[1][1]], ["2001:db8::1/64 (eth1)", "2001:db8::2/64 (eth2)"]
+        )
+        self.assertEqual(ipv6_choices[2], ("NAT IPs", []))
 
     def test_filter_form_dg_priority_correct_value(self):
         """Validate the form allows a string separated by a comma for multiple values."""
