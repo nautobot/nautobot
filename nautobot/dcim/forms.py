@@ -2321,18 +2321,22 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         super().__init__(*args, **kwargs)
 
         if self.instance.present_in_database:
+            # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
+            interface_ids = self.instance.all_interfaces.values_list("pk", flat=True)
+
+            # Load the interface IP assignments once, with their interfaces and NAT IPs, for both IP versions
+            interface_ip_assignments = list(
+                IPAddressToInterface.objects.filter(interface__in=interface_ids)
+                .select_related("ip_address", "interface")
+                .prefetch_related("ip_address__nat_outside_list")
+            )
+
             # Compile list of choices for primary IPv4 and IPv6 addresses
             for ip_version in [4, 6]:
                 ip_choices = [(None, "---------")]
 
-                # Gather PKs of all interfaces belonging to this Device or a peer VirtualChassis member
-                interface_ids = self.instance.all_interfaces.values_list("pk", flat=True)
-
                 # Collect interface IPs
-                interface_ip_assignments = IPAddressToInterface.objects.filter(
-                    interface__in=interface_ids
-                ).select_related("ip_address")
-                if interface_ip_assignments.exists():
+                if interface_ip_assignments:
                     ip_list = [
                         (
                             assignment.ip_address.id,
@@ -2346,8 +2350,6 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                     # Collect NAT IPs
                     nat_ips = []
                     for ip_assignment in interface_ip_assignments:
-                        if not ip_assignment.ip_address.nat_outside_list.exists():
-                            continue
                         nat_ips.extend(
                             [
                                 (ip.id, f"{ip.address} (NAT)")
