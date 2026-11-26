@@ -714,7 +714,9 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
 
     .select2-search--inline {
       .select2-search__field {
-        // Select2 writes a static px width here on init. Cap it so a later reflow cannot push it past the field.
+        // Select2 sets an inline `width` on this input after every selection change and every keystroke.
+        // Without a placeholder, that width is 0.75em per typed character, so a long search term makes the
+        // input wider than the field. Limit the input to the field's width.
         max-width: 100%;
       }
     }
