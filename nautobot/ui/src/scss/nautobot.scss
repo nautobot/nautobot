@@ -711,6 +711,13 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
       // Do not add additional `6px` to padding as above - multi-select badges already have it as their own margin.
       padding-inline-end: $select2-clear-width-lg;
     }
+
+    .select2-search--inline {
+      .select2-search__field {
+        // Select2 writes a static px width here on init. Cap it so a later reflow cannot push it past the field.
+        max-width: 100%;
+      }
+    }
   }
 
   .select2-selection--single,
